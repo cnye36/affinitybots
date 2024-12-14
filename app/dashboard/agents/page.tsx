@@ -3,7 +3,7 @@ import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { PlusCircle, Settings2, Trash2 } from 'lucide-react'
+import { PlusCircle, Settings2, Trash2, MessageSquare } from 'lucide-react'
 import DashboardHeader from '@/components/layout/DashboardHeader'
 import { deleteAgent } from './[id]/delete/action'
 
@@ -58,6 +58,11 @@ export default async function AgentsPage() {
                   </p>
                 </div>
                 <div className="flex space-x-2">
+                  <Link href={`/dashboard/agents/${agent.id}/interact`}>
+                    <Button variant="ghost" size="icon">
+                      <MessageSquare className="h-4 w-4" />
+                    </Button>
+                  </Link>
                   <Link href={`/dashboard/agents/${agent.id}/edit`}>
                     <Button variant="ghost" size="icon">
                       <Settings2 className="h-4 w-4" />
