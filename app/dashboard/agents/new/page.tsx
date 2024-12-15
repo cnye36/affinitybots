@@ -24,8 +24,7 @@ export default function NewAgentPage() {
     const formData = new FormData()
     formData.append('prompt', prompt)
     formData.append('agentType', template.id)
-    formData.append('modelType', template.defaultModel)
-    formData.append('tools', JSON.stringify(template.tools))
+    formData.append('useTemplate', template === AGENT_TEMPLATES[0] ? 'false' : 'true')
 
     const result = await createAgent(formData)
     

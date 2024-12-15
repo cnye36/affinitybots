@@ -25,7 +25,7 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard', req.url))
   }
 
-  const ip = req.id || req.headers.get('x-forwarded-for') || 'unknown';
+  const ip = req.headers.get('x-forwarded-for') || 'unknown';
   const currentTime = Date.now();
 
   if (!ipMap.has(ip)) {

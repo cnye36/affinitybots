@@ -3,6 +3,7 @@
 import { createServerActionClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { revalidatePath } from 'next/cache'
+import { generateAgentConfiguration } from '@/lib/agent-generation'
 
 export async function createAgent(formData: FormData) {
   const supabase = createServerActionClient({ cookies })
@@ -13,16 +14,18 @@ export async function createAgent(formData: FormData) {
 
     const prompt = formData.get('prompt') as string
     const agentType = formData.get('agentType') as string
-    const modelType = formData.get('modelType') as string
-    const tools = JSON.parse(formData.get('tools') as string)
+    const useTemplate = formData.get('useTemplate') === 'true'
+
+    // Generate AI-powered configuration
+    const agentConfig = await generateAgentConfiguration(prompt, agentType)
 
     const { error } = await supabase.from('agents').insert([{
-      name: `AI Agent - ${prompt.slice(0, 30)}...`,
-      description: prompt,
-      model_type: modelType,
-      prompt_template: prompt,
-      config: {},
-      tools,
+      name: agentConfig.name,
+      description: agentConfig.description,
+      model_type: agentConfig.model_type,
+      prompt_template: agentConfig.prompt_template,
+      config: agentConfig.config,
+      tools: agentConfig.tools,
       owner_id: user.id,
       agent_type: agentType
     }])

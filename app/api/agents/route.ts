@@ -1,31 +1,42 @@
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  console.log('GET /api/agents - Start')
   const supabase = createRouteHandlerClient({ cookies })
-
+  
   try {
-    const { data: { session } } = await supabase.auth.getSession()
+    console.log('Checking session...')
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    
+    if (sessionError) {
+      console.error('Session error:', sessionError)
+      return NextResponse.json({ error: 'Session error' }, { status: 401 })
+    }
+    
     if (!session) {
-      return new NextResponse('Unauthorized', { status: 401 })
+      console.log('No session found')
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    console.log('Session found, fetching agents...')
     const { data: agents, error } = await supabase
       .from('agents')
-      .select('*')
+      .select('id, name, description, agent_type')
       .eq('owner_id', session.user.id)
-      .order('created_at', { ascending: false })
 
-    if (error) throw error
+    if (error) {
+      console.error('Database error:', error)
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
 
-    return NextResponse.json(agents)
+    console.log(`Found ${agents?.length || 0} agents`)
+    return NextResponse.json({ agents })
   } catch (error) {
-    console.error('Error fetching agents:', error)
-    return NextResponse.json(
-      { error: 'Error fetching agents' },
-      { status: 500 }
-    )
+    console.error('Unexpected error:', error)
+    return NextResponse.json({ error: 'Error fetching agents' }, { status: 500 })
   }
 }
 

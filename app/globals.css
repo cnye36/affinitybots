@@ -101,6 +101,7 @@
   pointer-events: none;
 }
 
+
 .dark .gradient-border::before {
   background: linear-gradient(
     45deg,
@@ -109,4 +110,3 @@
     hsl(var(--primary) / 0.7) 60%
   );
 }
-

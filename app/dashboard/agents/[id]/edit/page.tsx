@@ -15,6 +15,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { ToolSelector } from '@/components/tools/ToolSelector'
 import { AgentConfig } from '@/types'
 import { SourceUploader } from '@/components/knowledge/SourceUploader'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 export default function EditAgentPage() {
   const params = useParams()
@@ -83,13 +84,103 @@ export default function EditAgentPage() {
           <h1 className="text-3xl font-bold">Configure Agent</h1>
         </div>
 
-        <Tabs defaultValue="knowledge" className="space-y-6">
+        <Tabs defaultValue="general" className="space-y-6">
           <TabsList>
+            <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="knowledge">Knowledge</TabsTrigger>
             <TabsTrigger value="prompts">Prompts</TabsTrigger>
             <TabsTrigger value="tools">Tools</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="general">
+            <Card>
+              <CardHeader>
+                <CardTitle>General Configuration</CardTitle>
+                <CardDescription>Configure your agent's basic settings and behavior</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <Label>Agent Name</Label>
+                  <Input 
+                    value={agent.name}
+                    onChange={(e) => setAgent(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="Enter agent name"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Instructions</Label>
+                  <Textarea 
+                    value={agent.prompt_template}
+                    onChange={(e) => setAgent(prev => ({ ...prev, prompt_template: e.target.value }))}
+                    placeholder="Enter agent instructions"
+                    className="min-h-[200px]"
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    These instructions define your agent's behavior and capabilities
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Model</Label>
+                    <Select 
+                      value={agent.model_type}
+                      onValueChange={(value) => setAgent(prev => ({ ...prev, model_type: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a model" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="gpt-4o-mini">GPT-4o Mini (Free)</SelectItem>
+                        <SelectItem value="gpt-4o">GPT-4o (Pro)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Tone</Label>
+                    <Select 
+                      value={agent.config?.tone || 'default'}
+                      onValueChange={(value) => setAgent(prev => ({ 
+                        ...prev, 
+                        config: { ...prev.config, tone: value }
+                      }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select tone" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="default">Default</SelectItem>
+                        <SelectItem value="professional">Professional</SelectItem>
+                        <SelectItem value="friendly">Friendly</SelectItem>
+                        <SelectItem value="technical">Technical</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Language</Label>
+                    <Select 
+                      value={agent.config?.language || 'en'}
+                      onValueChange={(value) => setAgent(prev => ({ 
+                        ...prev, 
+                        config: { ...prev.config, language: value }
+                      }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select language" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="en">English</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           <TabsContent value="knowledge">
             <Card>
