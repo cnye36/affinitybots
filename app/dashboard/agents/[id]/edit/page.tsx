@@ -12,11 +12,14 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { ToolSelector } from '@/components/tools/ToolSelector'
+import { AgentConfig } from '@/types'
+import { SourceUploader } from '@/components/knowledge/SourceUploader'
 
 export default function EditAgentPage() {
   const params = useParams()
   const router = useRouter()
-  const [agent, setAgent] = useState<any>(null)
+  const [agent, setAgent] = useState<AgentConfig | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
@@ -31,6 +34,7 @@ export default function EditAgentPage() {
       const response = await fetch(`/api/agents/${params.id}`)
       if (!response.ok) throw new Error('Failed to fetch agent')
       const data = await response.json()
+      console.log('Fetched agent data:', data)
       setAgent(data)
       setEnableKnowledge(data.config?.enableKnowledge || false)
     } catch (err) {
@@ -109,17 +113,10 @@ export default function EditAgentPage() {
 
                 {enableKnowledge && (
                   <div className="space-y-4">
-                    <div className="grid gap-4">
-                      <Button variant="outline" className="w-full">
-                        <Upload className="mr-2 h-4 w-4" />
-                        Upload Files
-                      </Button>
-                      <Button variant="outline" className="w-full">
-                        <LinkIcon className="mr-2 h-4 w-4" />
-                        Add URL
-                      </Button>
-                    </div>
-                    
+                    <SourceUploader 
+                      agentId={agent.id}
+                      onSourceAdded={fetchAgent}
+                    />
                     <div className="rounded-lg border p-4">
                       <p className="text-sm text-muted-foreground text-center">
                         No knowledge sources added yet
@@ -131,7 +128,62 @@ export default function EditAgentPage() {
             </Card>
           </TabsContent>
 
-          {/* Additional tab contents will go here */}
+          <TabsContent value="prompts">
+            <Card>
+              <CardHeader>
+                <CardTitle>Prompt Configuration</CardTitle>
+                <CardDescription>Configure your agent's prompts</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {/* Prompt content here */}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="tools">
+            <Card>
+              <CardHeader>
+                <CardTitle>Agent Tools</CardTitle>
+                <CardDescription>
+                  Enable or disable tools that your agent can use
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ToolSelector
+                  selectedTools={agent.tools || []}
+                  onToolToggle={(toolId, enabled, config) => {
+                    const updatedTools = enabled
+                      ? [...(agent.tools || []), toolId]
+                      : (agent.tools || []).filter((t: string) => t !== toolId)
+                    
+                    setAgent((prev: any) => ({
+                      ...prev,
+                      tools: updatedTools,
+                      config: {
+                        ...prev.config,
+                        toolsConfig: {
+                          ...prev.config?.toolsConfig,
+                          [toolId]: config
+                        }
+                      }
+                    }))
+                  }}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="settings">
+            <Card>
+              <CardHeader>
+                <CardTitle>Agent Settings</CardTitle>
+                <CardDescription>Configure general agent settings</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {/* Settings content here */}
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
 
         {error && (

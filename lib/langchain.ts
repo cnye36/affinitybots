@@ -4,6 +4,8 @@ import { PromptTemplate } from '@langchain/core/prompts'
 import { AgentConfig } from '@/types'
 import { BaseMessage } from '@langchain/core/messages'
 import { BufferMemory } from 'langchain/memory'
+import { initializeTools } from './tools'
+import { initializeAgentExecutorWithOptions } from 'langchain/agents'
 
 export class AgentInitializationError extends Error {
   constructor(message: string) {
@@ -12,16 +14,13 @@ export class AgentInitializationError extends Error {
   }
 }
 
-export function initializeLangChain(agent: AgentConfig) {
+export async function initializeLangChain(agent: AgentConfig) {
   try {
     // Validate required fields
-    if (!agent.prompt_template) {
-      throw new AgentInitializationError('Prompt template is required')
-    }
+    validateAgentConfig(agent)
 
-    if (!agent.model_type) {
-      throw new AgentInitializationError('Model type is required')
-    }
+    // Initialize tools
+    const tools = await initializeTools(agent.tools || [], agent.config?.toolsConfig)
 
     // Create a prompt template with error handling
     const prompt = PromptTemplate.fromTemplate(agent.prompt_template)
@@ -45,26 +44,13 @@ export function initializeLangChain(agent: AgentConfig) {
       }]
     })
 
-    // Initialize memory if enabled
-    const memory = agent.config?.use_memory 
-      ? new BufferMemory({
-          memoryKey: "chat_history",
-          returnMessages: true,
-          inputKey: "message",
-          outputKey: "response",
-        })
-      : undefined
-
-    // Create an LLMChain with memory support
-    const chain = new LLMChain({
-      llm,
-      prompt,
-      memory,
+    // Create an agent executor with tools
+    const executor = await initializeAgentExecutorWithOptions(tools, llm, {
+      agentType: "chat-conversational-react-description",
       verbose: process.env.NODE_ENV === 'development',
-      outputKey: "response",
     })
 
-    return chain
+    return executor
   } catch (error) {
     if (error instanceof AgentInitializationError) {
       throw error
@@ -89,10 +75,11 @@ export function validateAgentConfig(config: AgentConfig): void {
   if (!config.model_type) {
     throw new AgentInitializationError('Model type is required')
   }
-  if (config.config?.temperature && (config.config.temperature < 0 || config.config.temperature > 2)) {
+  if (config.config?.temperature !== undefined && (config.config.temperature < 0 || config.config.temperature > 2)) {
     throw new AgentInitializationError('Temperature must be between 0 and 2')
   }
-  if (config.config?.max_tokens && config.config.max_tokens < 1) {
+  if (config.config?.max_tokens !== undefined && config.config.max_tokens < 1) {
     throw new AgentInitializationError('Max tokens must be greater than 0')
   }
+  // Additional validations as needed
 } 

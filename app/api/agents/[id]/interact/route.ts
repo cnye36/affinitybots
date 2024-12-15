@@ -6,7 +6,8 @@ import { LangChainAdapter } from 'ai';
 
 export const runtime = 'edge';
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, props: { params: Promise<{ id: string }> }) {
+  const { id } = await props.params;
   const cookies = new RequestCookies(request.headers);
   const supabase = createRouteHandlerClient({ cookies: () => cookies });
 
@@ -19,56 +20,34 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
     // Parse request body
     const body = await request.json();
-    console.log('Received request body:', body);
-    
-    // Get the last user message from the messages array
-    const lastMessage = body.messages?.[body.messages.length - 1];
-    if (!lastMessage?.content || typeof lastMessage.content !== 'string') {
-      console.log('Invalid message:', lastMessage);
+    const lastMessage = body.messages?.at(-1)?.content;
+
+    if (!lastMessage || typeof lastMessage !== 'string') {
       return NextResponse.json({ error: 'Message must be a non-empty string' }, { status: 400 });
     }
 
-    // Fetch agent configuration
+    // Fetch and validate agent
     const { data: agent, error: fetchError } = await supabase
       .from('agents')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('owner_id', user.id)
       .single();
 
     if (fetchError || !agent) {
-      return NextResponse.json(
-        { error: 'Agent not found or access denied' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Agent not found or access denied' }, { status: 404 });
     }
 
-    // Validate agent configuration
-    try {
-      validateAgentConfig(agent);
-    } catch (error) {
-      if (error instanceof AgentInitializationError) {
-        return NextResponse.json({ error: error.message }, { status: 400 });
-      }
-      throw error;
-    }
-
-    // Initialize LangChain with agent configuration
+    validateAgentConfig(agent);
     const chain = initializeLangChain(agent);
+    const response = await chain.call({ message: lastMessage });
 
-    // Call the chain to get the response
-    const response = await chain.call({ message: lastMessage.content });
-
-    // Return the response as JSON
     return NextResponse.json({ response });
   } catch (error) {
     console.error('Error interacting with agent:', error);
     if (error instanceof AgentInitializationError) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
-    return NextResponse.json(
-      { error: 'An unexpected error occurred' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 });
   }
 }

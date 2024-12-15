@@ -4,11 +4,10 @@ export interface AgentConfig {
   description: string
   model_type: string
   prompt_template: string
-  tools: string[] // Define more specific types based on tools
+  tools: string[]
   config: {
     temperature?: number
     enableKnowledge?: boolean
-    // Add other config parameters as needed
+    toolsConfig?: Record<string, any>
   }
-  // Include other fields from the agents table as necessary
 } 
