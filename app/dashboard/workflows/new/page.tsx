@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import WorkflowBuilder from '../WorkflowBuilder'
+import { WorkflowsBuilder } from '@/components/workflows/WorkflowsBuilder'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
@@ -17,7 +17,7 @@ export default function NewWorkflowPage() {
         </Link>
         <h1 className="text-2xl font-bold">Create New Workflow</h1>
       </div>
-      <WorkflowBuilder />
+      <WorkflowsBuilder />
     </div>
   )
 }

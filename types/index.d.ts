@@ -8,6 +8,8 @@ export interface AgentConfig {
   config: {
     temperature?: number
     enableKnowledge?: boolean
+    tone?: string
+    language?: string
     toolsConfig?: Record<string, any>
   }
 } 

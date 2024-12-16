@@ -104,7 +104,7 @@ export default function EditAgentPage() {
                   <Label>Agent Name</Label>
                   <Input 
                     value={agent.name}
-                    onChange={(e) => setAgent(prev => ({ ...prev, name: e.target.value }))}
+                    onChange={(e) => setAgent(prev => ({ ...prev, name: e.target.value } as AgentConfig))}
                     placeholder="Enter agent name"
                   />
                 </div>
@@ -113,7 +113,7 @@ export default function EditAgentPage() {
                   <Label>Instructions</Label>
                   <Textarea 
                     value={agent.prompt_template}
-                    onChange={(e) => setAgent(prev => ({ ...prev, prompt_template: e.target.value }))}
+                    onChange={(e) => setAgent(prev => ({ ...prev, prompt_template: e.target.value } as AgentConfig))}
                     placeholder="Enter agent instructions"
                     className="min-h-[200px]"
                   />
@@ -127,7 +127,7 @@ export default function EditAgentPage() {
                     <Label>Model</Label>
                     <Select 
                       value={agent.model_type}
-                      onValueChange={(value) => setAgent(prev => ({ ...prev, model_type: value }))}
+                      onValueChange={(value) => setAgent(prev => ({ ...prev, model_type: value } as AgentConfig))}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select a model" />
@@ -146,7 +146,7 @@ export default function EditAgentPage() {
                       onValueChange={(value) => setAgent(prev => ({ 
                         ...prev, 
                         config: { ...prev.config, tone: value }
-                      }))}
+                      } as AgentConfig))}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select tone" />
@@ -167,7 +167,7 @@ export default function EditAgentPage() {
                       onValueChange={(value) => setAgent(prev => ({ 
                         ...prev, 
                         config: { ...prev.config, language: value }
-                      }))}
+                      } as AgentConfig))}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select language" />
