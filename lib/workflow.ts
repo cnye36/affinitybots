@@ -1,32 +1,8 @@
 import { StateGraph } from '@langchain/langgraph'
 import { supabase } from '@/lib/supabase'
+import { Workflow, WorkflowNode, WorkflowEdge } from '@/types/workflow'
 
-interface WorkflowNode {
-  id: string
-  type: string
-  position: { x: number; y: number }
-  data: {
-    label: string
-    [key: string]: any
-  }
-}
-
-interface WorkflowEdge {
-  id: string
-  source: string
-  target: string
-  type: string
-  label?: string
-}
-
-interface WorkflowData {
-  id: string
-  elements: WorkflowNode[]
-  edges: WorkflowEdge[]
-  runs: number
-}
-
-export async function convertToLangGraph(workflow: WorkflowData) {
+export async function convertToLangGraph(workflow: Workflow) {
   const graph = new StateGraph({
     channels: {
       state: {
@@ -40,11 +16,11 @@ export async function convertToLangGraph(workflow: WorkflowData) {
   // Update workflow status to 'Running'
   await supabase
     .from('workflows')
-    .update({ status: 'Running', runs: workflow.runs + 1 })
+    .update({ status: 'Running', runs: workflow.runs || 0 })
     .eq('id', workflow.id)
 
   // Add nodes
-  workflow.elements.forEach((node) => {
+  workflow.nodes.forEach((node) => {
     graph.addNode(node.id, async (state: Record<string, unknown>) => {
       console.log(`Executing node: ${node.data.label}`)
       return state

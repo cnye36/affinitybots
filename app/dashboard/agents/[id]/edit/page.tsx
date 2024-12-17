@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { ToolSelector } from '@/components/tools/ToolSelector'
-import { AgentConfig } from '@/types'
+import { AgentConfig } from '@/types/agent'
 import { SourceUploader } from '@/components/knowledge/SourceUploader'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
@@ -54,7 +54,7 @@ export default function EditAgentPage() {
         body: JSON.stringify({
           ...agent,
           config: {
-            ...agent.config,
+            ...agent?.config,
             enableKnowledge
           }
         })
@@ -145,7 +145,7 @@ export default function EditAgentPage() {
                       value={agent.config?.tone || 'default'}
                       onValueChange={(value) => setAgent(prev => ({ 
                         ...prev, 
-                        config: { ...prev.config, tone: value }
+                        config: { ...prev?.config, tone: value }
                       } as AgentConfig))}
                     >
                       <SelectTrigger>
@@ -166,7 +166,7 @@ export default function EditAgentPage() {
                       value={agent.config?.language || 'en'}
                       onValueChange={(value) => setAgent(prev => ({ 
                         ...prev, 
-                        config: { ...prev.config, language: value }
+                        config: { ...prev?.config, language: value }
                       } as AgentConfig))}
                     >
                       <SelectTrigger>

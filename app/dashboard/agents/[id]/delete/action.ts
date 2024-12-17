@@ -17,9 +17,7 @@ export async function deleteAgent(id: string) {
     if (error) throw error
     
     revalidatePath('/dashboard/agents')
-    return { success: true }
   } catch (error) {
     console.error('Error deleting agent:', error)
-    return { error: 'Failed to delete agent' }
   }
 } 

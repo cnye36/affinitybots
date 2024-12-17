@@ -4,7 +4,6 @@ import { cookies } from 'next/headers'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { PlusCircle, Settings2, Trash2, MessageSquare } from 'lucide-react'
-import DashboardHeader from '@/components/layout/DashboardHeader'
 import { deleteAgent } from './[id]/delete/action'
 
 export default async function AgentsPage() {
@@ -25,10 +24,6 @@ export default async function AgentsPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
-        <DashboardHeader 
-          title="AI Agents" 
-          backHref="/dashboard"
-        />
         <Link href="/dashboard/agents/new">
           <Button>
             <PlusCircle className="mr-2" />

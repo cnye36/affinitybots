@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { Home, Sliders, Bookmark, Settings, X, Menu } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useState } from 'react'
+import { ThemeToggle } from '@/components/theme-toggle'
 
 export default function Navigation() {
   const [isOpen, setIsOpen] = useState(false)
@@ -33,7 +34,7 @@ export default function Navigation() {
           transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} 
           md:translate-x-0 transition-transform duration-200 ease-in-out 
           bg-background border-r border-border
-          z-40
+          z-40 flex flex-col
         `}
       >
         <div className="flex justify-between items-center p-4">
@@ -42,6 +43,8 @@ export default function Navigation() {
             <X className="h-5 w-5" />
           </Button>
         </div>
+        
+        {/* Navigation Items */}
         <ul className="flex-1 p-4 space-y-2">
           {navItems.map((item) => (
             <li key={item.href}>
@@ -57,6 +60,20 @@ export default function Navigation() {
             </li>
           ))}
         </ul>
+
+        {/* Bottom Actions */}
+        <div className="p-4 border-t border-border space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">Theme</span>
+            <ThemeToggle />
+          </div>
+          <form action="/auth/signout" method="post" className="w-full">
+            <Button variant="ghost" className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950">
+              <X className="h-5 w-5 mr-2" />
+              Log Out
+            </Button>
+          </form>
+        </div>
       </nav>
 
       {/* Overlay for Mobile Menu */}

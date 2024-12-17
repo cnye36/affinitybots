@@ -1,6 +1,6 @@
 import { ChatOpenAI } from '@langchain/openai'
 import { PromptTemplate } from '@langchain/core/prompts'
-import { AgentConfig } from '@/types'
+import { AgentConfig } from '@/types/agent'
 
 const nameGeneratorPrompt = PromptTemplate.fromTemplate(`
 Given the following agent description and type, generate a creative and memorable name for the AI agent.

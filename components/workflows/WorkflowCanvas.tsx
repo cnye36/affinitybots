@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback } from 'react'
+import { useCallback, useState, useEffect } from 'react'
 import ReactFlow, {
   Node,
   Edge,
@@ -11,14 +11,22 @@ import ReactFlow, {
   EdgeTypes,
   Connection,
   addEdge,
-  useNodesState,
-  useEdgesState,
+  applyNodeChanges,
+  applyEdgeChanges,
   useReactFlow,
-  BackgroundVariant,
 } from 'reactflow'
 import 'reactflow/dist/style.css'
 import { AgentNode } from './AgentNode'
 import { CustomEdge } from './CustomEdge'
+import axios from 'axios'
+import { AgentConfigModal } from './AgentConfigModal'
+
+interface WorkflowCanvasProps {
+  nodes: Node[]
+  setNodes: React.Dispatch<React.SetStateAction<Node[]>>
+  edges: Edge[]
+  setEdges: React.Dispatch<React.SetStateAction<Edge[]>>
+}
 
 const nodeTypes: NodeTypes = {
   agent: AgentNode,
@@ -28,10 +36,16 @@ const edgeTypes: EdgeTypes = {
   custom: CustomEdge,
 }
 
-export function WorkflowCanvas() {
-  const [nodes, setNodes, onNodesChange] = useNodesState([])
-  const [edges, setEdges, onEdgesChange] = useEdgesState([])
+export function WorkflowCanvas({
+  nodes,
+  setNodes,
+  edges,
+  setEdges,
+}: WorkflowCanvasProps) {
   const reactFlowInstance = useReactFlow()
+  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [agentConfig, setAgentConfig] = useState<any>(null)
 
   const onConnect = useCallback(
     (params: Edge | Connection) => setEdges((eds) => addEdge(params, eds)),
@@ -44,53 +58,103 @@ export function WorkflowCanvas() {
   }, [])
 
   const onDrop = useCallback(
-    (event: React.DragEvent<HTMLDivElement>) => {
+    async (event: React.DragEvent<HTMLDivElement>) => {
       event.preventDefault()
 
-      const type = event.dataTransfer.getData('application/reactflow')
+      const agentId = event.dataTransfer.getData('application/reactflow')
 
-      if (typeof type === 'undefined' || !type) {
+      if (!agentId) {
         return
       }
 
-      // Get the current viewport
-      const viewport = reactFlowInstance.getViewport()
+      try {
+        const response = await axios.get(`/api/agents/${agentId}`)
+        const agent = response.data
 
-      const position = reactFlowInstance.screenToFlowPosition({
-        x: event.clientX,
-        y: event.clientY,
-      })
+        if (!agent) {
+          console.error('Agent not found')
+          return
+        }
 
-      const newNode: Node = {
-        id: `${type}-${nodes.length + 1}`,
-        type,
-        position,
-        data: { label: `${type} node` },
+        const position = reactFlowInstance.screenToFlowPosition({
+          x: event.clientX,
+          y: event.clientY,
+        })
+
+        const newNode = {
+          id: `${agent.id}-${nodes.length + 1}`,
+          type: 'agent',
+          position,
+          data: { agentId: agent.id, label: agent.name },
+        }
+
+        setNodes((nds) => nds.concat(newNode))
+      } catch (error) {
+        console.error('Error fetching agent:', error)
       }
-
-      setNodes((nds) => nds.concat(newNode))
     },
     [nodes, setNodes, reactFlowInstance]
   )
 
+  const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
+    if (node.type === 'agent' && node.data.agentId) {
+      setSelectedAgentId(node.data.agentId)
+      setIsModalOpen(true)
+      // Optionally, fetch the latest config here
+    }
+  }, [])
+
+  const handleSaveConfig = (updatedConfig: any) => {
+    setNodes((nds) =>
+      nds.map((node) =>
+        node.id.startsWith(selectedAgentId || '') ? { ...node, data: { ...node.data, ...updatedConfig } } : node
+      )
+    )
+    setIsModalOpen(false)
+  }
+
+  // Fetch the agent configuration when a node is selected
+  useEffect(() => {
+    const fetchAgentConfig = async () => {
+      if (selectedAgentId) {
+        try {
+          const response = await axios.get(`/api/agents/${selectedAgentId}`)
+          setAgentConfig(response.data)
+        } catch (error) {
+          console.error('Error fetching agent config:', error)
+        }
+      }
+    }
+
+    fetchAgentConfig()
+  }, [selectedAgentId])
+
   return (
-    <div className="w-full h-full">
+    <div className="w-full h-full" onDrop={onDrop} onDragOver={onDragOver}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
+        onNodesChange={(changes) => setNodes((nds) => applyNodeChanges(changes, nds))}
+        onEdgesChange={(changes) => setEdges((eds) => applyEdgeChanges(changes, eds))}
         onConnect={onConnect}
-        onDragOver={onDragOver}
-        onDrop={onDrop}
+        onNodeClick={onNodeClick}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         fitView
       >
         <Controls />
         <MiniMap />
-        <Background variant={"dots" as BackgroundVariant} gap={12} size={1} />
+        <Background variant="dots" gap={12} size={1} />
       </ReactFlow>
+      {selectedAgentId && agentConfig && (
+        <AgentConfigModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          agentId={selectedAgentId}
+          initialConfig={agentConfig}
+          onSave={handleSaveConfig}
+        />
+      )}
     </div>
   )
 }
