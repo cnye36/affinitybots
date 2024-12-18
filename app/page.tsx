@@ -6,7 +6,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="container mx-auto px-4 py-6 flex justify-between items-center">
-        <h1 className="text-2xl font-bold">AgentFlow By AI-Automated</h1>
+        <h1 className="text-2xl font-bold">AgentHub By AI-Automated</h1>
         <div className="flex items-center space-x-4">
           <Link href="/signin">
             <Button variant="ghost">Sign In</Button>

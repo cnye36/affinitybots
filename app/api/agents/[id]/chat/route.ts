@@ -1,7 +1,6 @@
 import OpenAI from 'openai'
 import { streamText } from 'ai'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import supabaseServerClient from '@/lib/supabaseServerClient'
 import { NextResponse } from 'next/server'
 
 const openai = new OpenAI({
@@ -9,15 +8,13 @@ const openai = new OpenAI({
 })
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
-  const supabase = createRouteHandlerClient({ cookies })
-  
   try {
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { user } } = await supabaseServerClient.auth.getUser()
     if (!user) {
       return new NextResponse('Unauthorized', { status: 401 })
     }
 
-    const { data: chats, error } = await supabase
+    const { data: chats, error } = await supabaseServerClient
       .from('agent_chats')
       .select('*')
       .eq('agent_id', params.id)
@@ -34,10 +31,8 @@ export async function GET(request: Request, { params }: { params: { id: string }
 }
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
-  const supabase = createRouteHandlerClient({ cookies })
-  
   try {
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { user } } = await supabaseServerClient.auth.getUser()
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -47,7 +42,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
     // If no chatId, create new chat session
     if (!chatId) {
-      const { data: chat, error } = await supabase
+      const { data: chat, error } = await supabaseServerClient  
         .from('agent_chats')
         .insert([{
           agent_id: params.id,
@@ -67,7 +62,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     }
 
     // Get agent configuration
-    const { data: agent } = await supabase
+    const { data: agent } = await supabaseServerClient
       .from('agents')
       .select('*')
       .eq('id', params.id)
@@ -84,7 +79,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     })
 
     // Store the message in the database
-    await supabase.from('agent_chats')
+    await supabaseServerClient.from('agent_chats')
       .update({
         messages: messages
       })

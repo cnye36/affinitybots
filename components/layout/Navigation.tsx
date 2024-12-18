@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Sliders, Bookmark, Settings, X, Menu } from 'lucide-react'
+import { Home, Sliders, Bookmark, Settings, X, Menu, LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useState } from 'react'
 import { ThemeToggle } from '@/components/theme-toggle'
@@ -13,9 +13,9 @@ export default function Navigation() {
 
   const navItems = [
     { href: '/dashboard', label: 'Dashboard', icon: <Home className="h-5 w-5" /> },
-    { href: '/dashboard/agents', label: 'Agents', icon: <Bookmark className="h-5 w-5" /> },
-    { href: '/dashboard/workflows', label: 'Workflows', icon: <Sliders className="h-5 w-5" /> },
-    { href: '/dashboard/settings', label: 'Settings', icon: <Settings className="h-5 w-5" /> },
+    { href: '/agents', label: 'Agents', icon: <Bookmark className="h-5 w-5" /> },
+    { href: '/workflows', label: 'Workflows', icon: <Sliders className="h-5 w-5" /> },
+    { href: '/settings', label: 'Settings', icon: <Settings className="h-5 w-5" /> },
   ]
 
   return (
@@ -38,7 +38,7 @@ export default function Navigation() {
         `}
       >
         <div className="flex justify-between items-center p-4">
-          <h2 className="text-xl font-bold">AgentFlow By AI-Automated</h2>
+          <h2 className="text-xl font-bold">AgentHub By AI-Automated</h2>
           <Button variant="ghost" onClick={() => setIsOpen(false)} className="md:hidden">
             <X className="h-5 w-5" />
           </Button>
@@ -69,7 +69,7 @@ export default function Navigation() {
           </div>
           <form action="/auth/signout" method="post" className="w-full">
             <Button variant="ghost" className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950">
-              <X className="h-5 w-5 mr-2" />
+              <LogOut className="h-5 w-5 mr-2" />
               Log Out
             </Button>
           </form>

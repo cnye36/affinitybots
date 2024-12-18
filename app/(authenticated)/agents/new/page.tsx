@@ -8,7 +8,7 @@ import { AGENT_TEMPLATES } from './templates'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { ArrowLeft, Search, Pencil, MessageSquare, BarChart, Sparkles } from 'lucide-react'
+import { ArrowLeft, Sparkles } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 export default function NewAgentPage() {
@@ -32,7 +32,7 @@ export default function NewAgentPage() {
       setError(result.error)
       setIsSubmitting(false)
     } else {
-      router.push('/dashboard/agents')
+      router.push('/agents')
     }
   }
 

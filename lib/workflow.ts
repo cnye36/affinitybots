@@ -1,5 +1,5 @@
 import { StateGraph } from '@langchain/langgraph'
-import { supabase } from '@/lib/supabase'
+import { supabase } from '@/lib/supabaseClient'
 import { Workflow, WorkflowNode, WorkflowEdge } from '@/types/workflow'
 
 export async function convertToLangGraph(workflow: Workflow) {

@@ -8,16 +8,22 @@ export async function deleteAgent(id: string) {
   const supabase = createServerActionClient({ cookies })
   
   try {
+    console.log(`Attempting to delete agent with ID: ${id}`)
+    
     const { error } = await supabase
       .from('agents')
       .delete()
       .eq('id', id)
       .single()
 
-    if (error) throw error
+    if (error) {
+      console.error('Error deleting agent:', error)
+      throw error
+    }
     
-    revalidatePath('/dashboard/agents')
+    console.log(`Successfully deleted agent with ID: ${id}`)
+    revalidatePath('/agents')
   } catch (error) {
-    console.error('Error deleting agent:', error)
+    console.error('Unexpected error in deleteAgent:', error)
   }
-} 
+}

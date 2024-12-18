@@ -1,10 +1,8 @@
 import { redirect } from 'next/navigation'
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import supabaseServerClient from '@/lib/supabaseServerClient'
 import Link from 'next/link'
-import { ThemeToggle } from '@/components/theme-toggle'
 import { Button } from '@/components/ui/button'
-import { PlusCircle, Settings, LogOut, MessageSquare, Settings2 } from 'lucide-react'
+import { PlusCircle, Settings, MessageSquare, Settings2 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Tooltip,
@@ -14,8 +12,7 @@ import {
 } from "@/components/ui/tooltip"
 
 export default async function Dashboard() {
-  const cookieStore = await cookies()
-  const supabase = createServerComponentClient({ cookies: () => cookieStore })
+  const supabase = supabaseServerClient
   
   // Get the current user and log their ID
   const { data: { user }, error: userError } = await supabase.auth.getUser()

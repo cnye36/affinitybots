@@ -1,18 +1,16 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import supabaseServerClient from '@/lib/supabaseServerClient'
 import { NextResponse } from 'next/server'
 
 export async function GET(request: Request, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
-  const supabase = createRouteHandlerClient({ cookies })
 
   try {
-    const { data: { session } } = await supabase.auth.getSession()
+    const { data: { session } } = await supabaseServerClient.auth.getSession()
     if (!session) {
       return new NextResponse('Unauthorized', { status: 401 })
     }
 
-    const { data: agent, error } = await supabase
+    const { data: agent, error } = await supabaseServerClient
       .from('agents')
       .select('*')
       .eq('id', params.id)
@@ -36,10 +34,9 @@ export async function GET(request: Request, props: { params: Promise<{ id: strin
 
 export async function PUT(request: Request, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
-  const supabase = createRouteHandlerClient({ cookies })
 
   try {
-    const { data: { session } } = await supabase.auth.getSession()
+    const { data: { session } } = await supabaseServerClient.auth.getSession()
     if (!session) {
       return new NextResponse('Unauthorized', { status: 401 })
     }
@@ -55,7 +52,7 @@ export async function PUT(request: Request, props: { params: Promise<{ id: strin
       config
     } = json
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseServerClient
       .from('agents')
       .update({
         name,
@@ -89,15 +86,14 @@ export async function PUT(request: Request, props: { params: Promise<{ id: strin
 
 export async function DELETE(request: Request, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
-  const supabase = createRouteHandlerClient({ cookies })
 
   try {
-    const { data: { session } } = await supabase.auth.getSession()
+    const { data: { session } } = await supabaseServerClient.auth.getSession()
     if (!session) {
       return new NextResponse('Unauthorized', { status: 401 })
     }
 
-    const { error } = await supabase
+    const { error } = await supabaseServerClient
       .from('agents')
       .delete()
       .eq('id', params.id)

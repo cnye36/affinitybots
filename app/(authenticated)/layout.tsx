@@ -4,15 +4,13 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import Navigation from '@/components/layout/Navigation'
 
-export default async function DashboardLayout({
+export default async function AuthenticatedLayout({
   children,
 }: {
   children: ReactNode
 }) {
   const cookieStore = await cookies()
-  const supabase = createServerComponentClient({
-    cookies
-  })
+  const supabase = createServerComponentClient({ cookies: () => cookieStore })
 
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -30,4 +28,4 @@ export default async function DashboardLayout({
       </div>
     </div>
   )
-} 
+}

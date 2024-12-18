@@ -1,19 +1,17 @@
 "use client"
 
 import { useEffect, useState } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import supabaseClient from '@/lib/supabaseClient'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { PlusCircle, Settings2, Trash2, MessageSquare } from 'lucide-react'
-import { deleteAgent } from './[id]/delete/action'
+import { deleteAgent } from '../../api/agents/[id]/delete/action'
 import { AgentChatDialog } from '@/components/agents/AgentChatDialog'
-import { useRouter } from 'next/navigation'
 
 export default function AgentsPage() {
   const [agents, setAgents] = useState<any[]>([])
   const [selectedAgent, setSelectedAgent] = useState<{id: string, name: string} | null>(null)
-  const supabase = createClientComponentClient()
-  const router = useRouter()
+  const supabase = supabaseClient
 
   const loadAgents = async () => {
     const { data: agents, error } = await supabase
@@ -36,7 +34,7 @@ export default function AgentsPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
-        <Link href="/dashboard/agents/new">
+        <Link href="/agents/new">
           <Button>
             <PlusCircle className="mr-2" />
             Create Agent
@@ -65,7 +63,7 @@ export default function AgentsPage() {
                 >
                   <MessageSquare className="h-4 w-4" />
                 </Button>
-                <Link href={`/dashboard/agents/${agent.id}/edit`}>
+                <Link href={`/agents/${agent.id}/edit`}>
                   <Button variant="ghost" size="icon">
                     <Settings2 className="h-4 w-4" />
                   </Button>
