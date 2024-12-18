@@ -14,7 +14,7 @@ interface WorkflowsState {
   setWorkflows: (workflows: Workflow[]) => void
 }
 
-export const useWorkflowsStore = create<WorkflowsState>((set) => ({
+export const useWorkflowsStore = create<WorkflowsState>()((set) => ({
   workflows: [],
   addWorkflow: (workflow: Workflow) => set((state: WorkflowsState) => ({ workflows: [...state.workflows, workflow] })),
   setWorkflows: (workflows: Workflow[]) => set({ workflows }),
