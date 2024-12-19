@@ -6,6 +6,7 @@ import { Home, Sliders, Bookmark, Settings, X, Menu, LogOut } from 'lucide-react
 import { Button } from '@/components/ui/button'
 import { useState } from 'react'
 import { ThemeToggle } from '@/components/theme-toggle'
+import { signOut } from '@/app/auth/signout/action'
 
 export default function Navigation() {
   const [isOpen, setIsOpen] = useState(false)
@@ -67,12 +68,14 @@ export default function Navigation() {
             <span className="text-sm text-muted-foreground">Theme</span>
             <ThemeToggle />
           </div>
-          <form action="/auth/signout" method="post" className="w-full">
-            <Button variant="ghost" className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950">
-              <LogOut className="h-5 w-5 mr-2" />
-              Log Out
-            </Button>
-          </form>
+          <Button 
+            variant="ghost" 
+            formAction={signOut}
+            className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-950"
+          >
+            <LogOut className="h-5 w-5 mr-2" />
+            Log Out
+          </Button>
         </div>
       </nav>
 

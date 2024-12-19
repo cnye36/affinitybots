@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import supabaseServerClient from '@/lib/supabaseServerClient'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
 
 export async function GET(request: NextRequest) {
+  const supabase = createRouteHandlerClient({ cookies })
+  
   // Debug: Log that we're starting the request
   console.log('GET /api/workflows - Starting request')
   
-  const { data: { session }, error: sessionError } = await supabaseServerClient.auth.getSession()
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession()
   
   // Debug: Log session status
   if (sessionError) {
@@ -27,7 +30,7 @@ export async function GET(request: NextRequest) {
   if (workflowId) {
     console.log('GET /api/workflows - Fetching single workflow:', workflowId)
     // Fetch single workflow
-    const { data: workflow, error } = await supabaseServerClient
+    const { data: workflow, error } = await supabase
       .from('workflows')
       .select('*')
       .eq('id', workflowId)
@@ -52,7 +55,7 @@ export async function GET(request: NextRequest) {
 
   // Fetch all workflows
   console.log('GET /api/workflows - Fetching all workflows for user:', session.user.id)
-  const { data: workflows, error } = await supabaseServerClient
+  const { data: workflows, error } = await supabase
     .from('workflows')
     .select('*')
     .eq('owner_id', session.user.id)
@@ -70,10 +73,12 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(req: Request) {
+  const supabase = createRouteHandlerClient({ cookies })
+  
   console.log('POST /api/workflows - Starting request')
   
   // Check authentication
-  const { data: { session }, error: sessionError } = await supabaseServerClient.auth.getSession()
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession()
   if (sessionError || !session) {
     console.error('POST /api/workflows - Auth error:', sessionError)
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -111,7 +116,7 @@ export async function POST(req: Request) {
     console.log('POST /api/workflows - Creating workflow for user:', session.user.id)
     
     // Create the workflow
-    const { data: workflow, error } = await supabaseServerClient
+    const { data: workflow, error } = await supabase
       .from('workflows')
       .insert([workflowData])
       .select()
@@ -143,10 +148,10 @@ export async function POST(req: Request) {
 }
 
 export async function PUT(req: Request) {
-  console.log('PUT /api/workflows - Starting request')
+  const supabase = createRouteHandlerClient({ cookies })
   
   // Check authentication
-  const { data: { session }, error: sessionError } = await supabaseServerClient.auth.getSession()
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession()
   if (sessionError || !session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
@@ -177,7 +182,7 @@ export async function PUT(req: Request) {
     }
 
     // Verify ownership
-    const { data: existingWorkflow, error: fetchError } = await supabaseServerClient
+    const { data: existingWorkflow, error: fetchError } = await supabase
       .from('workflows')
       .select('owner_id')
       .eq('id', data.id)
@@ -200,7 +205,7 @@ export async function PUT(req: Request) {
     }
 
     // Update the workflow
-    const { data: workflow, error } = await supabaseServerClient
+    const { data: workflow, error } = await supabase
       .from('workflows')
       .update(workflowData)
       .eq('id', data.id)

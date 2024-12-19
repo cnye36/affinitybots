@@ -1,17 +1,19 @@
-import supabaseServerClient from '@/lib/supabaseServerClient'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 
 export async function POST(request: Request, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
+  const supabase = createRouteHandlerClient({ cookies })
 
   // Check if user is authenticated
-  const { data: { session } } = await supabaseServerClient.auth.getSession()
+  const { data: { session } } = await supabase.auth.getSession()
   if (!session) {
     return new NextResponse('Unauthorized', { status: 401 })
   }
 
   try {
-    const { error } = await supabaseServerClient
+    const { error } = await supabase
       .from('agents')
       .delete()
       .eq('id', params.id)

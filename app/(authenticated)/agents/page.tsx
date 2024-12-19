@@ -1,22 +1,32 @@
 "use client"
 
 import { useEffect, useState } from 'react'
-import supabaseClient from '@/lib/supabaseClient'
+import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { PlusCircle, Settings2, Trash2, MessageSquare } from 'lucide-react'
 import { deleteAgent } from '../../api/agents/[id]/delete/action'
 import { AgentChatDialog } from '@/components/agents/AgentChatDialog'
+import { useRouter } from 'next/navigation'
 
 export default function AgentsPage() {
   const [agents, setAgents] = useState<any[]>([])
   const [selectedAgent, setSelectedAgent] = useState<{id: string, name: string} | null>(null)
-  const supabase = supabaseClient
+  const supabase = createClient()
+  const router = useRouter()
 
   const loadAgents = async () => {
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    
+    if (userError || !user) {
+      console.error('Error loading user:', userError)
+      return
+    }
+
     const { data: agents, error } = await supabase
       .from('agents')
       .select('*')
+      .eq('owner_id', user.id)
       .order('created_at', { ascending: false })
 
     if (error) {

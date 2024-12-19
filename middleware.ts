@@ -1,50 +1,57 @@
-import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+import { createServerClient } from '@supabase/ssr'
+import { NextResponse, type NextRequest } from 'next/server'
 
-const RATE_LIMIT = 100; // Number of requests
-const WINDOW_SIZE = 60 * 1000; // 1 minute
+export async function middleware(request: NextRequest) {
+  const response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  })
 
-const ipMap = new Map<string, { count: number; firstRequest: number }>();
-
-export async function middleware(req: NextRequest) {
-  const res = NextResponse.next()
-  const supabase = createMiddlewareClient({ req, res })
-
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  // If user is not signed in and the current path is not /signin or /signup, redirect to /signin
-  if (!session && !['/signin', '/signup'].includes(req.nextUrl.pathname)) {
-    return NextResponse.redirect(new URL('/signin', req.url))
-  }
-
-  // If user is signed in and the current path is /signin or /signup, redirect to /dashboard
-  if (session && ['/signin', '/signup'].includes(req.nextUrl.pathname)) {
-    return NextResponse.redirect(new URL('/dashboard', req.url))
-  }
-
-  const ip = req.headers.get('x-forwarded-for') || 'unknown';
-  const currentTime = Date.now();
-
-  if (!ipMap.has(ip)) {
-    ipMap.set(ip, { count: 1, firstRequest: currentTime });
-  } else {
-    const data = ipMap.get(ip)!;
-    if (currentTime - data.firstRequest < WINDOW_SIZE) {
-      data.count += 1;
-      if (data.count > RATE_LIMIT) {
-        return new NextResponse('Too Many Requests', { status: 429 });
-      }
-    } else {
-      ipMap.set(ip, { count: 1, firstRequest: currentTime });
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return request.cookies.get(name)?.value
+        },
+        set(name: string, value: string, options: any) {
+          response.cookies.set({
+            name,
+            value,
+            ...options,
+          })
+        },
+        remove(name: string, options: any) {
+          response.cookies.set({
+            name,
+            value: '',
+            ...options,
+          })
+        },
+      },
     }
+  )
+
+  const { data: { user } } = await supabase.auth.getUser()
+
+  // If user is signed in and the current path is / redirect the user to /dashboard
+  if (user && request.nextUrl.pathname === '/') {
+    return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
-  return res
+  // If user is not signed in and the current path is not / redirect the user to /
+  if (!user && request.nextUrl.pathname !== '/' && 
+      !request.nextUrl.pathname.startsWith('/signin') && 
+      !request.nextUrl.pathname.startsWith('/signup') &&
+      !request.nextUrl.pathname.startsWith('/error')) {
+    return NextResponse.redirect(new URL('/signin', request.url))
+  }
+
+  return response
 }
 
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
-} 
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+}

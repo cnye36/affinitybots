@@ -2,10 +2,10 @@
 
 import { Button } from '@/components/ui/button'
 import { useState } from 'react'
-import { supabase } from '@/lib/supabaseClient'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { createClient } from '@/utils/supabase/server'
 
 export default function SettingsPage() {
   const [email, setEmail] = useState('')
@@ -19,6 +19,7 @@ export default function SettingsPage() {
     setSuccess(false)
 
     try {
+      const supabase = await createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
 

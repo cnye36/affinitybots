@@ -1,6 +1,5 @@
 import { ReactNode } from 'react'
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import Navigation from '@/components/layout/Navigation'
 
@@ -9,9 +8,7 @@ export default async function AuthenticatedLayout({
 }: {
   children: ReactNode
 }) {
-  const cookieStore = await cookies()
-  const supabase = createServerComponentClient({ cookies: () => cookieStore })
-
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {

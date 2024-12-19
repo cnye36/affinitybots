@@ -61,7 +61,7 @@ export default function EditAgentPage() {
       })
       
       if (!response.ok) throw new Error('Failed to update agent')
-      router.push('/dashboard/agents')
+      router.push('/agents')
     } catch (err) {
       setError('Failed to save changes')
     } finally {

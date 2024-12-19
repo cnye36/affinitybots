@@ -29,7 +29,7 @@ Agent Type: {agentType}
 Provide the following information in a clear format:
 
 1. NAME: Create a creative and memorable name (1-3 words)
-2. DESCRIPTION: Write a detailed description of the agent's capabilities
+2. DESCRIPTION: Write a summary of the agent's capabilities
 3. PROMPT_TEMPLATE: Write a comprehensive system prompt for the agent
 4. TOOLS: List recommended tools, separated by commas
 5. MODEL_TYPE: Specify the recommended model
@@ -42,7 +42,7 @@ Do not include any additional formatting or explanation.
 
 export async function generateAgentName(description: string, agentType: string): Promise<string> {
   const model = new ChatOpenAI({
-    modelName: 'gpt-4o-mini',
+    modelName: 'gpt-4o',
     temperature: 0.7
   })
 
@@ -60,7 +60,7 @@ export async function generateAgentConfiguration(
   agentType: string
 ): Promise<AgentConfig> {
   const model = new ChatOpenAI({
-    modelName: 'gpt-4o-mini',
+    modelName: 'gpt-4o',
     temperature: 0.7
   })
 

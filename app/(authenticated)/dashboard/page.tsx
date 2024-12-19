@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
-import supabaseServerClient from '@/lib/supabaseServerClient'
+import { createClient } from '@/utils/supabase/server'
+import { cookies } from 'next/headers'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { PlusCircle, Settings, MessageSquare, Settings2 } from 'lucide-react'
@@ -12,11 +13,9 @@ import {
 } from "@/components/ui/tooltip"
 
 export default async function Dashboard() {
-  const supabase = supabaseServerClient
-  
-  // Get the current user and log their ID
+  const supabase = await createClient()
   const { data: { user }, error: userError } = await supabase.auth.getUser()
-  
+
   if (userError) {
     console.error('Error fetching user:', userError)
   }
@@ -24,8 +23,6 @@ export default async function Dashboard() {
   if (!user) {
     redirect('/signin')
   }
-
-  console.log('Current user ID:', user.id) // Debug log
 
   // Fetch latest agents
   const { data: latestAgents, error: agentsError } = await supabase

@@ -1,11 +1,7 @@
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import React from 'react'
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
-import { Database } from '@/lib/database.types' // Adjust the import based on your Supabase types
-import { useRouter } from 'next/navigation'
-import dynamic from 'next/dynamic'
+import { createClient } from '@/utils/supabase/server'
 
 interface Workflow {
   id: string
@@ -14,18 +10,25 @@ interface Workflow {
   updated_at: string
 }
 
-const WorkflowCanvas = dynamic(() => import('@/components/workflows/WorkflowCanvas'), {
-  loading: () => <p>Loading...</p>,
-})
-
 export default async function WorkflowsPage() {
-  const supabase = createServerComponentClient<Database>({ cookies })
+  const supabase = await createClient()
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
   const pageSize = 10
   const currentPage = 1
+
+  if (userError || !user) {
+    return (
+      <div className="container mx-auto py-6">
+        <h1 className="text-2xl font-bold mb-4">My Workflows</h1>
+        <div className="text-red-500">Error fetching user: {userError?.message}</div>
+      </div>
+    )
+  }
 
   const { data: workflows, error } = await supabase
     .from('workflows')
     .select('id, name, created_at, updated_at')
+    .eq('owner_id', user.id)
     .order('created_at', { ascending: false })
     .range((currentPage - 1) * pageSize, currentPage * pageSize - 1)
 
