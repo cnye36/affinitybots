@@ -76,7 +76,7 @@ export default function EditAgentPage() {
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center mb-8">
-          <Link href="/dashboard/agents" className="mr-4">
+          <Link href="/agents" className="mr-4">
             <Button variant="ghost" size="icon">
               <ArrowLeft className="h-4 w-4" />
             </Button>
@@ -284,7 +284,7 @@ export default function EditAgentPage() {
         )}
 
         <div className="flex justify-end mt-6 space-x-4">
-          <Button variant="outline" onClick={() => router.push('/dashboard/agents')}>
+          <Button variant="outline" onClick={() => router.push('/agents')}>
             Cancel
           </Button>
           <Button onClick={handleSave} disabled={isSaving}>

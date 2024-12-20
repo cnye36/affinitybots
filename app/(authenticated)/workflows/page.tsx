@@ -45,7 +45,7 @@ export default async function WorkflowsPage() {
     <div className="container mx-auto py-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">My Workflows</h1>
-        <Link href="/dashboard/workflows/new">
+        <Link href="/workflows/new">
           <Button>Create New Workflow</Button>
         </Link>
       </div>
@@ -53,7 +53,7 @@ export default async function WorkflowsPage() {
       {workflows && workflows.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {workflows.map((workflow: Workflow) => (
-            <Link href={`/dashboard/workflows/${workflow.id}`} key={workflow.id}>
+            <Link href={`/workflows/${workflow.id}`} key={workflow.id}>
               <div className="border rounded-lg p-6 hover:shadow-lg transition-shadow">
                 <h2 className="text-xl font-semibold mb-2">{workflow.name}</h2>
                 <p className="text-sm text-muted-foreground">

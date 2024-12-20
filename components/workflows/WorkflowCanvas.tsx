@@ -14,6 +14,7 @@ import ReactFlow, {
   applyNodeChanges,
   applyEdgeChanges,
   useReactFlow,
+  BackgroundVariant,
 } from 'reactflow'
 import 'reactflow/dist/style.css'
 import { AgentNode } from './AgentNode'
@@ -144,7 +145,7 @@ export function WorkflowCanvas({
       >
         <Controls />
         <MiniMap />
-        <Background variant="dots" gap={12} size={1} />
+        <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
       </ReactFlow>
       {selectedAgentId && agentConfig && (
         <AgentConfigModal

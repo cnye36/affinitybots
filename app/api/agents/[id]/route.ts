@@ -1,14 +1,13 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { createClient } from '@/utils/supabase/server'
 import { NextResponse } from 'next/server'
 
 export async function GET(request: Request, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
-  const supabase = createRouteHandlerClient({ cookies })
+  const supabase = await createClient()
 
   try {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
       return new NextResponse('Unauthorized', { status: 401 })
     }
 
@@ -16,7 +15,7 @@ export async function GET(request: Request, props: { params: Promise<{ id: strin
       .from('agents')
       .select('*')
       .eq('id', params.id)
-      .eq('owner_id', session.user.id)
+      .eq('owner_id', user.id)
       .single()
 
     if (error) throw error
@@ -36,11 +35,11 @@ export async function GET(request: Request, props: { params: Promise<{ id: strin
 
 export async function PUT(request: Request, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
-  const supabase = createRouteHandlerClient({ cookies })
+  const supabase = await createClient()
 
   try {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
       return new NextResponse('Unauthorized', { status: 401 })
     }
 
@@ -68,7 +67,7 @@ export async function PUT(request: Request, props: { params: Promise<{ id: strin
         updated_at: new Date().toISOString()
       })
       .eq('id', params.id)
-      .eq('owner_id', session.user.id)
+      .eq('owner_id', user.id)
       .select()
       .single()
 
@@ -89,11 +88,11 @@ export async function PUT(request: Request, props: { params: Promise<{ id: strin
 
 export async function DELETE(request: Request, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
-  const supabase = createRouteHandlerClient({ cookies })
+  const supabase = await createClient()
 
   try {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
       return new NextResponse('Unauthorized', { status: 401 })
     }
 
@@ -101,7 +100,7 @@ export async function DELETE(request: Request, props: { params: Promise<{ id: st
       .from('agents')
       .delete()
       .eq('id', params.id)
-      .eq('owner_id', session.user.id)
+      .eq('owner_id', user.id)
 
     if (error) throw error
 

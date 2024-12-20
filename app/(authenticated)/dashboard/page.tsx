@@ -1,9 +1,9 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
-import { cookies } from 'next/headers'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { PlusCircle, Settings, MessageSquare, Settings2 } from 'lucide-react'
+import { AgentChatDialogWrapper } from '@/components/agents/AgentChatDialogWrapper'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Tooltip,
@@ -55,7 +55,7 @@ export default async function Dashboard() {
         
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-          <Link href="/dashboard/agents/new" className="group">
+          <Link href="/agents/new" className="group">
             <div className="relative p-6 rounded-lg overflow-hidden border group-hover:border-primary transition-colors">
               <div className="flex items-center space-x-4">
                 <PlusCircle className="h-8 w-8 text-primary" />
@@ -67,7 +67,7 @@ export default async function Dashboard() {
             </div>
           </Link>
 
-          <Link href="/dashboard/workflows/new" className="group">
+          <Link href="/workflows/new" className="group">
             <div className="relative p-6 rounded-lg overflow-hidden border group-hover:border-primary transition-colors">
               <div className="flex items-center space-x-4">
                 <PlusCircle className="h-8 w-8 text-primary" />
@@ -79,7 +79,7 @@ export default async function Dashboard() {
             </div>
           </Link>
 
-          <Link href="/dashboard/settings" className="group">
+          <Link href="/settings" className="group">
             <div className="relative p-6 rounded-lg overflow-hidden border group-hover:border-primary transition-colors">
               <div className="flex items-center space-x-4">
                 <Settings className="h-8 w-8 text-primary" />
@@ -96,7 +96,7 @@ export default async function Dashboard() {
         <div className="mb-12">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-xl font-semibold">Latest Agents</h3>
-            <Link href="/dashboard/agents">
+            <Link href="/agents">
               <Button variant="ghost">View All</Button>
             </Link>
           </div>
@@ -131,11 +131,8 @@ export default async function Dashboard() {
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Link href={`/dashboard/agents/${agent.id}/interact`}>
-                              <Button variant="ghost" size="icon">
-                                <MessageSquare className="h-4 w-4" />
-                              </Button>
-                            </Link>
+                            
+                          <AgentChatDialogWrapper agentId={agent.id} agentName={agent.name} />
                           </TooltipTrigger>
                           <TooltipContent>
                             <p>Chat with Agent</p>
@@ -145,7 +142,7 @@ export default async function Dashboard() {
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Link href={`/dashboard/agents/${agent.id}/edit`}>
+                            <Link href={`/agents/${agent.id}/edit`}>
                               <Button variant="ghost" size="icon">
                                 <Settings2 className="h-4 w-4" />
                               </Button>
@@ -175,7 +172,7 @@ export default async function Dashboard() {
                 <p className="text-muted-foreground mb-4">
                   Create your first AI agent to get started
                 </p>
-                <Link href="/dashboard/agents/new">
+                <Link href="/agents/new">
                   <Button>
                     <PlusCircle className="mr-2" />
                     Create Agent
@@ -190,7 +187,7 @@ export default async function Dashboard() {
         <div>
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-xl font-semibold">Latest Workflows</h3>
-            <Link href="/dashboard/workflows">
+            <Link href="/workflows">
               <Button variant="ghost">View All</Button>
             </Link>
           </div>
@@ -210,7 +207,7 @@ export default async function Dashboard() {
               ))
             ) : latestWorkflows.length > 0 ? (
               latestWorkflows.map((workflow) => (
-                <Link href={`/dashboard/workflows/${workflow.id}`} key={workflow.id}>
+                <Link href={`/workflows/${workflow.id}`} key={workflow.id}>
                   <div className="border rounded-lg p-6 hover:border-primary transition-colors">
                     <h2 className="text-xl font-semibold mb-2">{workflow.name}</h2>
                     <div className="space-y-1">
@@ -230,7 +227,7 @@ export default async function Dashboard() {
                 <p className="text-muted-foreground mb-4">
                   Create your first workflow to get started
                 </p>
-                <Link href="/dashboard/workflows/new">
+                <Link href="/workflows/new">
                   <Button>
                     <PlusCircle className="mr-2" />
                     Create Workflow

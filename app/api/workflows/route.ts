@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { createClient } from '@/utils/supabase/server'
 
 export async function GET(request: NextRequest) {
-  const supabase = createRouteHandlerClient({ cookies })
+  const supabase = await createClient()
   
   // Debug: Log that we're starting the request
   console.log('GET /api/workflows - Starting request')
@@ -73,7 +72,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(req: Request) {
-  const supabase = createRouteHandlerClient({ cookies })
+  const supabase = await createClient()
   
   console.log('POST /api/workflows - Starting request')
   
@@ -148,7 +147,7 @@ export async function POST(req: Request) {
 }
 
 export async function PUT(req: Request) {
-  const supabase = createRouteHandlerClient({ cookies })
+  const supabase = await createClient()
   
   // Check authentication
   const { data: { session }, error: sessionError } = await supabase.auth.getSession()

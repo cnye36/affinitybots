@@ -1,12 +1,11 @@
 'use server'
 
-import { createServerActionClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { generateAgentConfiguration } from '@/lib/agent-generation'
 
 export async function createAgent(formData: FormData) {
-  const supabase = createServerActionClient({ cookies })
+  const supabase = await createClient()
   
   try {
     const { data: { user } } = await supabase.auth.getUser()

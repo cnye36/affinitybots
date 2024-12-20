@@ -1,45 +1,37 @@
-"use client"
-
-import { useEffect, useState } from 'react'
-import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { PlusCircle, Settings2, Trash2, MessageSquare } from 'lucide-react'
-import { deleteAgent } from '../../api/agents/[id]/delete/action'
-import { AgentChatDialog } from '@/components/agents/AgentChatDialog'
-import { useRouter } from 'next/navigation'
+import { createClient } from '@/utils/supabase/server'
+import { AgentChatDialogWrapper } from '@/components/agents/AgentChatDialogWrapper'
+import { deleteAgent } from '@/app/api/agents/[id]/delete/action'
 
-export default function AgentsPage() {
-  const [agents, setAgents] = useState<any[]>([])
-  const [selectedAgent, setSelectedAgent] = useState<{id: string, name: string} | null>(null)
-  const supabase = createClient()
-  const router = useRouter()
+export default async function AgentsPage() {
+  const supabase = await createClient()
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
 
-  const loadAgents = async () => {
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    
-    if (userError || !user) {
-      console.error('Error loading user:', userError)
-      return
-    }
-
-    const { data: agents, error } = await supabase
-      .from('agents')
-      .select('*')
-      .eq('owner_id', user.id)
-      .order('created_at', { ascending: false })
-
-    if (error) {
-      console.error('Error loading agents:', error)
-      return
-    }
-
-    setAgents(agents || [])
+  if (userError || !user) {
+    return (
+      <div className="container mx-auto py-6">
+        <h1 className="text-2xl font-bold mb-4">My Agents</h1>
+        <div className="text-red-500">Error fetching user: {userError?.message}</div>
+      </div>
+    )
   }
 
-  useEffect(() => {
-    loadAgents()
-  }, [])
+  const { data: agents, error } = await supabase
+    .from('agents')
+    .select('*')
+    .eq('owner_id', user.id)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    return (
+      <div className="container mx-auto py-6">
+        <h1 className="text-2xl font-bold mb-4">My Agents</h1>
+        <div className="text-red-500">Error fetching agents: {error.message}</div>
+      </div>
+    )
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -66,13 +58,7 @@ export default function AgentsPage() {
                 </p>
               </div>
               <div className="flex space-x-2">
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  onClick={() => setSelectedAgent({ id: agent.id, name: agent.name })}
-                >
-                  <MessageSquare className="h-4 w-4" />
-                </Button>
+                <AgentChatDialogWrapper agentId={agent.id} agentName={agent.name} />
                 <Link href={`/agents/${agent.id}/edit`}>
                   <Button variant="ghost" size="icon">
                     <Settings2 className="h-4 w-4" />
@@ -97,15 +83,6 @@ export default function AgentsPage() {
           </div>
         ))}
       </div>
-
-      {selectedAgent && (
-        <AgentChatDialog
-          isOpen={!!selectedAgent}
-          onClose={() => setSelectedAgent(null)}
-          agentId={selectedAgent.id}
-          agentName={selectedAgent.name}
-        />
-      )}
     </div>
   )
 } 

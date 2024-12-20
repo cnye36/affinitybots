@@ -32,7 +32,7 @@ Provide the following information in a clear format:
 2. DESCRIPTION: Write a summary of the agent's capabilities
 3. PROMPT_TEMPLATE: Write a comprehensive system prompt for the agent
 4. TOOLS: List recommended tools, separated by commas
-5. MODEL_TYPE: Specify the recommended model
+5. MODEL_TYPE: Specify gpt-4o
 6. TEMPERATURE: Provide a number between 0 and 1
 7. MAX_TOKENS: Provide a number for maximum tokens
 

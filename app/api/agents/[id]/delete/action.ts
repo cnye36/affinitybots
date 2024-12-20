@@ -1,11 +1,10 @@
 'use server'
 
-import { createServerActionClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 
 export async function deleteAgent(id: string) {
-  const supabase = createServerActionClient({ cookies })
+  const supabase = await createClient()
   
   try {
     console.log(`Attempting to delete agent with ID: ${id}`)
