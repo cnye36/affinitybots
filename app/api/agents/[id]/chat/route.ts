@@ -1,128 +1,152 @@
-import { NextRequest, NextResponse } from "next/server";
-import { Message as VercelChatMessage, StreamingTextResponse, createStreamDataTransformer } from "ai";
+import { StreamingTextResponse, LangChainStream } from 'ai'
 import { createClient } from '@/utils/supabase/server'
-import { ChatOpenAI } from "@langchain/openai";
-import { PromptTemplate } from "@langchain/core/prompts";
-import { HttpResponseOutputParser } from "langchain/output_parsers";
+import { ChatOpenAI } from '@langchain/openai'
+import { AIMessage, HumanMessage, SystemMessage } from '@langchain/core/messages'
+import { cookies } from 'next/headers'
 
-export const runtime = "edge";
+export const runtime = 'edge'
 
-const formatMessage = (message: VercelChatMessage) => {
-  return `${message.role}: ${message.content}`;
-};
+// GET handler for loading chat sessions
+export async function GET(req: Request, { params }: { params: { id: string } }) {
+  const cookieStore = cookies()
+  const supabase = await createClient()
+  
+  // Get current user
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  if (userError || !user) {
+    return new Response('Unauthorized', { status: 401 })
+  }
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
-  try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  // Get the agent
+  const { data: agent, error: agentError } = await supabase
+    .from('agents')
+    .select('*')
+    .eq('id', params.id)
+    .eq('owner_id', user.id)
+    .single()
+
+  if (agentError || !agent) {
+    return new Response('Agent not found', { status: 404 })
+  }
+
+  // Get chat messages for this agent
+  const { data: messages, error: messagesError } = await supabase
+    .from('agent_chats')
+    .select('*')
+    .eq('agent_id', params.id)
+    .order('created_at', { ascending: true })
+
+  if (messagesError) {
+    return new Response('Error fetching messages', { status: 500 })
+  }
+
+  // Format messages for the chat interface
+  const formattedMessages = messages?.map(msg => ({
+    id: msg.id,
+    content: msg.content,
+    role: msg.role,
+    createdAt: msg.created_at
+  })) || []
+
+  return new Response(JSON.stringify({ 
+    messages: formattedMessages,
+    agent: {
+      ...agent,
     }
+  }))
+}
 
-    // Get all chat sessions for this agent and user
-    const { data: chats, error } = await supabase
-      .from('agent_chats')
-      .select('*')
-      .eq('agent_id', params.id)
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
+// POST handler for chat messages
+export async function POST(req: Request, { params }: { params: { id: string } }) {
+  const cookieStore = cookies()
+  const supabase = await createClient()
+  
+  // Get current user
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  if (userError || !user) {
+    return new Response('Unauthorized', { status: 401 })
+  }
 
-    if (error) throw error
+  // Get the agent
+  const { data: agent, error: agentError } = await supabase
+    .from('agents')
+    .select('*')
+    .eq('id', params.id)
+    .eq('owner_id', user.id)
+    .single()
 
-    return NextResponse.json(chats)
-  } catch (error) {
-    console.error('Error fetching chats:', error)
-    return NextResponse.json(
-      { error: 'Failed to load chat sessions' }, 
-      { status: 500 }
+  if (agentError || !agent) {
+    return new Response('Agent not found', { status: 404 })
+  }
+
+  // Get the messages from the request
+  const { messages } = await req.json()
+  const lastMessage = messages[messages.length - 1]
+
+  // Generate a name for the chat message based on timestamp
+  const timestamp = new Date().toISOString()
+  const chatName = `Chat with ${agent.name} at ${timestamp}`
+
+  // Create a new chat message
+  const { data: chat, error: chatError } = await supabase
+    .from('agent_chats')
+    .insert({
+      agent_id: params.id,
+      content: lastMessage.content,
+      role: 'user',
+      user_id: user.id,
+      name: chatName // Add the required name field
+    })
+    .select()
+    .single()
+
+  if (chatError) {
+    console.error('Error creating chat:', chatError)
+    return new Response('Error creating chat', { status: 500 })
+  }
+
+  // Convert messages to LangChain format
+  const systemMessage = new SystemMessage(agent.prompt_template || 'You are a helpful AI assistant.')
+  const langchainMessages = [
+    systemMessage,
+    ...messages.map((m: any) => 
+      m.role === 'user' 
+        ? new HumanMessage(m.content)
+        : new AIMessage(m.content)
     )
-  }
-}
+  ]
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const body = await req.json();
-    const messages = body.messages ?? [];
-    const { chatId, name } = body;
-
-    // If name is provided, we're creating a new chat session
-    if (name) {
-      const { data: newChat, error } = await supabase
+  // Create a streaming response
+  const { stream, handlers } = LangChainStream({
+    async onCompletion(completion) {
+      // Store the assistant's response
+      const { error: assistantMsgError } = await supabase
         .from('agent_chats')
-        .insert([{
-          name,
+        .insert({
           agent_id: params.id,
+          content: completion,
+          role: 'assistant',
           user_id: user.id,
-          messages: [],
-          created_at: new Date().toISOString()
-        }])
-        .select()
-        .single()
+          name: chatName // Use the same chat name for the response
+        })
 
-      if (error) throw error
-      return NextResponse.json(newChat)
-    }
+      if (assistantMsgError) {
+        console.error('Error storing assistant message:', assistantMsgError)
+      }
+    },
+  })
 
-    // Get agent configuration
-    const { data: agent } = await supabase
-      .from('agents')
-      .select('*')
-      .eq('id', params.id)
-      .single()
+  // Initialize the model with the agent's configuration
+  const model = new ChatOpenAI({
+    modelName: agent.model_type || 'gpt-3.5-turbo',
+    streaming: true,
+    temperature: agent.temperature || 0.7,
+  })
 
-    if (!agent) {
-      return NextResponse.json({ error: 'Agent not found' }, { status: 404 })
-    }
+  // Call the model and stream the response
+  model
+    .call(langchainMessages, {}, [handlers])
+    .catch(console.error)
 
-    // Create template using agent's configuration
-    const TEMPLATE = `${agent.prompt_template}
-
-Current conversation:
-{chat_history}
-
-User: {input}
-Assistant:`;
-
-    const formattedPreviousMessages = messages.slice(0, -1).map(formatMessage);
-    const currentMessageContent = messages[messages.length - 1].content;
-    const prompt = PromptTemplate.fromTemplate(TEMPLATE);
-
-    const model = new ChatOpenAI({
-      modelName: agent.model_type,
-      temperature: agent.config?.temperature ?? 0.7,
-      streaming: true,
-    });
-
-    const outputParser = new HttpResponseOutputParser();
-    const chain = prompt.pipe(model).pipe(outputParser);
-
-    // Store the message in Supabase if chatId is provided
-    if (chatId) {
-      const { error: updateError } = await supabase
-        .from('agent_chats')
-        .update({ messages })
-        .eq('id', chatId)
-        .eq('user_id', user.id) // Ensure user owns this chat
-
-      if (updateError) throw updateError
-    }
-
-    const stream = await chain.stream({
-      chat_history: formattedPreviousMessages.join("\n"),
-      input: currentMessageContent,
-    });
-
-    return new StreamingTextResponse(
-      stream.pipeThrough(createStreamDataTransformer())
-    );
-  } catch (e: any) {
-    console.error('Error in chat:', e);
-    return NextResponse.json({ error: e.message }, { status: e.status ?? 500 });
-  }
-}
+  return new StreamingTextResponse(stream)
+} 

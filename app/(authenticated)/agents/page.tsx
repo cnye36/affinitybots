@@ -1,9 +1,9 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { PlusCircle, Settings2, Trash2, MessageSquare } from 'lucide-react'
+import { PlusCircle, Settings2, Trash2 } from 'lucide-react'
 import { createClient } from '@/utils/supabase/server'
-import { AgentChatDialogWrapper } from '@/components/agents/AgentChatDialogWrapper'
 import { deleteAgent } from '@/app/api/agents/[id]/delete/action'
+import { AgentChatDialog } from '@/components/agents/AgentChatDialog'
 
 export default async function AgentsPage() {
   const supabase = await createClient()
@@ -18,20 +18,36 @@ export default async function AgentsPage() {
     )
   }
 
-  const { data: agents, error } = await supabase
+  // First get the agents
+  const { data: agents, error: agentsError } = await supabase
     .from('agents')
     .select('*')
     .eq('owner_id', user.id)
     .order('created_at', { ascending: false })
 
-  if (error) {
+  if (agentsError) {
     return (
       <div className="container mx-auto py-6">
         <h1 className="text-2xl font-bold mb-4">My Agents</h1>
-        <div className="text-red-500">Error fetching agents: {error.message}</div>
+        <div className="text-red-500">Error fetching agents: {agentsError.message}</div>
       </div>
     )
   }
+
+  // Then get the tools for each agent
+  const agentsWithTools = await Promise.all(
+    agents.map(async (agent) => {
+      const { data: tools } = await supabase
+        .from('workflow_agents')
+        .select('*')
+        .eq('agent_id', agent.id)
+      
+      return {
+        ...agent,
+        tools: tools || []
+      }
+    })
+  )
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -45,7 +61,7 @@ export default async function AgentsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {agents.map((agent) => (
+        {agentsWithTools.map((agent) => (
           <div
             key={agent.id}
             className="border rounded-lg p-6 hover:border-primary transition-colors"
@@ -58,7 +74,13 @@ export default async function AgentsPage() {
                 </p>
               </div>
               <div className="flex space-x-2">
-                <AgentChatDialogWrapper agentId={agent.id} agentName={agent.name} />
+                <AgentChatDialog 
+                  agentId={agent.id} 
+                  agentName={agent.name}
+                  description={agent.description}
+                  modelType={agent.model_type}
+                  tools={agent.tools}
+                />
                 <Link href={`/agents/${agent.id}/edit`}>
                   <Button variant="ghost" size="icon">
                     <Settings2 className="h-4 w-4" />

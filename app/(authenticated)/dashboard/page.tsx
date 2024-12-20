@@ -3,7 +3,7 @@ import { createClient } from '@/utils/supabase/server'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { PlusCircle, Settings, MessageSquare, Settings2 } from 'lucide-react'
-import { AgentChatDialogWrapper } from '@/components/agents/AgentChatDialogWrapper'
+// import { AgentChatDialogWrapper } from '@/_archived/AgentChatDialogWrapper'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Tooltip,
@@ -132,7 +132,7 @@ export default async function Dashboard() {
                         <Tooltip>
                           <TooltipTrigger asChild>
                             
-                          <AgentChatDialogWrapper agentId={agent.id} agentName={agent.name} />
+                          {/* <AgentChatDialogWrapper agentId={agent.id} agentName={agent.name} /> */}
                           </TooltipTrigger>
                           <TooltipContent>
                             <p>Chat with Agent</p>
