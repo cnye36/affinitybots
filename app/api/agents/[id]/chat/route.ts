@@ -6,11 +6,12 @@ import { cookies } from 'next/headers'
 
 export const runtime = 'edge'
 
-// GET handler for loading chat sessions
-export async function GET(req: Request, { params }: { params: { id: string } }) {
-  const cookieStore = cookies()
+// GET handler for loading chat messages
+export async function GET(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
+  const cookieStore = await cookies()
   const supabase = await createClient()
-  
+
   // Get current user
   const { data: { user }, error: userError } = await supabase.auth.getUser()
   if (userError || !user) {
@@ -29,12 +30,22 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     return new Response('Agent not found', { status: 404 })
   }
 
-  // Get chat messages for this agent
-  const { data: messages, error: messagesError } = await supabase
+  // Get URL parameters
+  const { searchParams } = new URL(req.url)
+  const threadId = searchParams.get('threadId')
+
+  // Get chat messages for this thread
+  const query = supabase
     .from('agent_chats')
     .select('*')
     .eq('agent_id', params.id)
     .order('created_at', { ascending: true })
+
+  if (threadId) {
+    query.eq('thread_id', threadId)
+  }
+
+  const { data: messages, error: messagesError } = await query
 
   if (messagesError) {
     return new Response('Error fetching messages', { status: 500 })
@@ -45,7 +56,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     id: msg.id,
     content: msg.content,
     role: msg.role,
-    createdAt: msg.created_at
+    createdAt: msg.created_at,
+    threadId: msg.thread_id
   })) || []
 
   return new Response(JSON.stringify({ 
@@ -56,11 +68,31 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   }))
 }
 
-// POST handler for chat messages
-export async function POST(req: Request, { params }: { params: { id: string } }) {
-  const cookieStore = cookies()
-  const supabase = await createClient()
+// Helper function to generate a thread title based on the first message
+async function generateThreadTitle(content: string, model: ChatOpenAI) {
+  const prompt = new SystemMessage(
+    'Generate a very short (3-5 words) title for a conversation that starts with this message. ' +
+    'The title should capture the main topic or intent. Respond with just the title, no quotes or punctuation.'
+  )
   
+  try {
+    const response = await model.call([
+      prompt,
+      new HumanMessage(content)
+    ])
+    return response.content.toString().trim()
+  } catch (error) {
+    console.error('Error generating thread title:', error)
+    return 'New Conversation'
+  }
+}
+
+// POST handler for chat messages
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
+  const cookieStore = await cookies()
+  const supabase = await createClient()
+
   // Get current user
   const { data: { user }, error: userError } = await supabase.auth.getUser()
   if (userError || !user) {
@@ -79,13 +111,39 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     return new Response('Agent not found', { status: 404 })
   }
 
-  // Get the messages from the request
-  const { messages } = await req.json()
+  // Get the messages and thread ID from the request
+  const { messages, threadId: existingThreadId } = await req.json()
   const lastMessage = messages[messages.length - 1]
 
-  // Generate a name for the chat message based on timestamp
-  const timestamp = new Date().toISOString()
-  const chatName = `Chat with ${agent.name} at ${timestamp}`
+  // Initialize the model
+  const model = new ChatOpenAI({
+    modelName: agent.model_type || 'gpt-3.5-turbo',
+    temperature: agent.temperature || 0.7,
+    streaming: true,
+  })
+
+  let threadId = existingThreadId
+
+  // Create new thread if needed
+  if (!existingThreadId) {
+    const title = await generateThreadTitle(lastMessage.content, model)
+    const { data: thread, error: threadError } = await supabase
+      .from('chat_threads')
+      .insert({
+        agent_id: params.id,
+        user_id: user.id,
+        title
+      })
+      .select()
+      .single()
+
+    if (threadError) {
+      console.error('Error creating thread:', threadError)
+      return new Response('Error creating thread', { status: 500 })
+    }
+
+    threadId = thread.id
+  }
 
   // Create a new chat message
   const { data: chat, error: chatError } = await supabase
@@ -95,7 +153,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       content: lastMessage.content,
       role: 'user',
       user_id: user.id,
-      name: chatName // Add the required name field
+      thread_id: threadId
     })
     .select()
     .single()
@@ -105,42 +163,47 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     return new Response('Error creating chat', { status: 500 })
   }
 
+  // Get all messages for this thread for context
+  const { data: threadMessages } = await supabase
+    .from('agent_chats')
+    .select('content, role')
+    .eq('thread_id', threadId)
+    .order('created_at', { ascending: true })
+
   // Convert messages to LangChain format
   const systemMessage = new SystemMessage(agent.prompt_template || 'You are a helpful AI assistant.')
   const langchainMessages = [
     systemMessage,
-    ...messages.map((m: any) => 
+    ...(threadMessages || []).map((m: any) => 
       m.role === 'user' 
         ? new HumanMessage(m.content)
         : new AIMessage(m.content)
     )
   ]
 
+  let responseContent = ''
+
   // Create a streaming response
   const { stream, handlers } = LangChainStream({
-    async onCompletion(completion) {
-      // Store the assistant's response
+    onToken: (token: string) => {
+      responseContent += token
+    },
+    async onFinal() {
+      // Store the complete assistant's response
       const { error: assistantMsgError } = await supabase
         .from('agent_chats')
         .insert({
           agent_id: params.id,
-          content: completion,
+          content: responseContent,
           role: 'assistant',
           user_id: user.id,
-          name: chatName // Use the same chat name for the response
+          thread_id: threadId
         })
 
       if (assistantMsgError) {
         console.error('Error storing assistant message:', assistantMsgError)
       }
-    },
-  })
-
-  // Initialize the model with the agent's configuration
-  const model = new ChatOpenAI({
-    modelName: agent.model_type || 'gpt-3.5-turbo',
-    streaming: true,
-    temperature: agent.temperature || 0.7,
+    }
   })
 
   // Call the model and stream the response
