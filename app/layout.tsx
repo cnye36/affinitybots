@@ -7,7 +7,7 @@ import { ThemeProvider } from '@/components/theme-provider'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata = {
-  title: 'AgentHub By AI-Automated',
+  title: 'AgentHub',
   description: 'Build and manage AI agent workflows',
   icons: {
     icon: '/favicon.ico',

@@ -3,8 +3,23 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { MessageSquare, Plus } from 'lucide-react'
+import { MessageSquare, Plus, MoreVertical, Pencil, Trash } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 
 interface ChatThread {
   id: string
@@ -28,23 +43,72 @@ export function ChatThreads({
 }: ChatThreadsProps) {
   const [threads, setThreads] = useState<ChatThread[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false)
+  const [threadToRename, setThreadToRename] = useState<ChatThread | null>(null)
+  const [newTitle, setNewTitle] = useState('')
 
   useEffect(() => {
-    async function loadThreads() {
-      try {
-        const response = await fetch(`/api/agents/${agentId}/threads`)
-        if (!response.ok) throw new Error('Failed to load chat threads')
-        const data = await response.json()
-        setThreads(data.threads)
-      } catch (error) {
-        console.error('Error loading threads:', error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
     loadThreads()
   }, [agentId])
+
+  async function loadThreads() {
+    try {
+      const response = await fetch(`/api/agents/${agentId}/threads`)
+      if (!response.ok) throw new Error('Failed to load chat threads')
+      const data = await response.json()
+      setThreads(data.threads)
+    } catch (error) {
+      console.error('Error loading threads:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleRename = async (thread: ChatThread) => {
+    setThreadToRename(thread)
+    setNewTitle(thread.name)
+    setRenameDialogOpen(true)
+  }
+
+  const handleRenameSubmit = async () => {
+    if (!threadToRename || !newTitle.trim()) return
+
+    try {
+      const response = await fetch(`/api/agents/${agentId}/threads/${threadToRename.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: newTitle }),
+      })
+
+      if (!response.ok) throw new Error('Failed to rename thread')
+      
+      setThreads(threads.map(t => 
+        t.id === threadToRename.id ? { ...t, name: newTitle } : t
+      ))
+      setRenameDialogOpen(false)
+    } catch (error) {
+      console.error('Error renaming thread:', error)
+    }
+  }
+
+  const handleDelete = async (threadId: string) => {
+    if (!confirm('Are you sure you want to delete this conversation?')) return
+
+    try {
+      const response = await fetch(`/api/agents/${agentId}/threads/${threadId}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) throw new Error('Failed to delete thread')
+      
+      setThreads(threads.filter(t => t.id !== threadId))
+      if (currentThreadId === threadId) {
+        onNewThread()
+      }
+    } catch (error) {
+      console.error('Error deleting thread:', error)
+    }
+  }
 
   return (
     <div className="w-64 border-r flex flex-col h-full">
@@ -61,25 +125,53 @@ export function ChatThreads({
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-2">
           {threads.map((thread) => (
-            <Button
+            <div
               key={thread.id}
-              variant="ghost"
               className={cn(
-                'w-full justify-start text-left h-auto py-3',
+                'group flex items-center gap-2',
                 currentThreadId === thread.id && 'bg-secondary'
               )}
-              onClick={() => onThreadSelect(thread.id)}
             >
-              <MessageSquare className="h-4 w-4 mr-2 flex-shrink-0" />
-              <div className="truncate">
-                <div className="font-medium truncate">{thread.name}</div>
-                {thread.last_message && (
-                  <div className="text-xs text-muted-foreground truncate">
-                    {thread.last_message}
-                  </div>
-                )}
-              </div>
-            </Button>
+              <Button
+                variant="ghost"
+                className="flex-1 justify-start text-left h-auto py-3"
+                onClick={() => onThreadSelect(thread.id)}
+              >
+                <MessageSquare className="h-4 w-4 mr-2 flex-shrink-0" />
+                <div className="truncate">
+                  <div className="font-medium truncate">{thread.name}</div>
+                  {thread.last_message && (
+                    <div className="text-xs text-muted-foreground truncate">
+                      {thread.last_message}
+                    </div>
+                  )}
+                </div>
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 opacity-0 group-hover:opacity-100"
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleRename(thread)}>
+                    <Pencil className="h-4 w-4 mr-2" />
+                    Rename
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => handleDelete(thread.id)}
+                    className="text-destructive"
+                  >
+                    <Trash className="h-4 w-4 mr-2" />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           ))}
           {isLoading && (
             <div className="text-sm text-muted-foreground text-center py-4">
@@ -93,6 +185,27 @@ export function ChatThreads({
           )}
         </div>
       </ScrollArea>
+
+      <Dialog open={renameDialogOpen} onOpenChange={setRenameDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rename Chat</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Input
+              value={newTitle}
+              onChange={(e) => setNewTitle(e.target.value)}
+              placeholder="Enter new title"
+            />
+            <div className="flex justify-end gap-2">
+              <DialogClose asChild>
+                <Button variant="outline">Cancel</Button>
+              </DialogClose>
+              <Button onClick={handleRenameSubmit}>Save</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 } 

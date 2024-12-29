@@ -35,12 +35,29 @@ export function AgentChatDialog({
   const [currentThreadId, setCurrentThreadId] = useState<string>()
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   
-  const { messages, input, handleInputChange, handleSubmit, isLoading, error, setMessages } = useChat({
+  const { messages, input, handleInputChange, handleSubmit, isLoading, error, setMessages } = useChat({ 
     api: `/api/agents/${agentId}/chat`,
     id: currentThreadId,
     body: {
       agentId,
       threadId: currentThreadId
+    },
+    onFinish: async (message) => {
+      if (!currentThreadId) {
+        const threadsResponse = await fetch(`/api/agents/${agentId}/threads`);
+        if (threadsResponse.ok) {
+          const data = await threadsResponse.json();
+          if (data.threads?.[0]) {
+            setCurrentThreadId(data.threads[0].id);
+            // Load messages for the new thread
+            const messagesResponse = await fetch(`/api/agents/${agentId}/chat?threadId=${data.threads[0].id}`);
+            if (messagesResponse.ok) {
+              const messageData = await messagesResponse.json();
+              setMessages(messageData.messages);
+            }
+          }
+        }
+      }
     },
     onError: (error) => {
       console.error('Chat error:', error)
@@ -173,7 +190,7 @@ export function AgentChatDialog({
                       className={cn(
                         'rounded-lg px-4 py-2 max-w-[80%]',
                         message.role === 'user'
-                          ? 'bg-primary text-primary-foreground'
+                          ? 'bg-primary text-primary-foreground dark:bg-primary/10'
                           : 'bg-muted'
                       )}
                     >

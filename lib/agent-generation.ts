@@ -28,7 +28,7 @@ Agent Type: {agentType}
 
 Provide the following information in a clear format:
 
-1. NAME: Create a creative and memorable name (1-3 words)
+1. NAME: Create a creative name for the agent
 2. DESCRIPTION: Write a summary of the agent's capabilities
 3. PROMPT_TEMPLATE: Write a comprehensive system prompt for the agent
 4. TOOLS: List recommended tools, separated by commas

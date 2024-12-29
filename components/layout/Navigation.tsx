@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { Home, Sliders, Bookmark, Settings, X, Menu, LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -38,8 +39,9 @@ export default function Navigation() {
           z-40 flex flex-col
         `}
       >
-        <div className="flex justify-between items-center p-4">
-          <h2 className="text-xl font-bold">AgentHub By AI-Automated</h2>
+        <div className="flex justify-start items-center p-4">
+          <Image src="/AgentHub-Logo.png" alt="AgentHub By AI-Automated" width={100} height={100} />
+          <h2 className="text-xl font-bold">AgentHub</h2>
           <Button variant="ghost" onClick={() => setIsOpen(false)} className="md:hidden">
             <X className="h-5 w-5" />
           </Button>

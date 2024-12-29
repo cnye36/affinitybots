@@ -3,26 +3,30 @@
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 
-export async function deleteAgent(id: string) {
+export async function deleteAgent(agentId: string) {
   const supabase = await createClient()
   
-  try {
-    console.log(`Attempting to delete agent with ID: ${id}`)
-    
-    const { error } = await supabase
-      .from('agents')
-      .delete()
-      .eq('id', id)
-      .single()
+  // First delete all chat threads (this will cascade to agent_chats)
+  const { error: threadError } = await supabase
+    .from('chat_threads')
+    .delete()
+    .eq('agent_id', agentId)
 
-    if (error) {
-      console.error('Error deleting agent:', error)
-      throw error
-    }
-    
-    console.log(`Successfully deleted agent with ID: ${id}`)
-    revalidatePath('/agents')
-  } catch (error) {
-    console.error('Unexpected error in deleteAgent:', error)
+  if (threadError) {
+    console.error('Error deleting chat threads:', threadError)
+    return { error: 'Failed to delete chat threads' }
   }
+
+  // Then delete the agent
+  const { error: agentError } = await supabase
+    .from('agents')
+    .delete()
+    .eq('id', agentId)
+
+  if (agentError) {
+    console.error('Error deleting agent:', agentError)
+    return { error: 'Failed to delete agent' }
+  }
+
+  return { success: true }
 }
