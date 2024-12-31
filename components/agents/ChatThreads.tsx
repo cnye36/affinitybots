@@ -23,7 +23,7 @@ import { Input } from "@/components/ui/input"
 
 interface ChatThread {
   id: string
-  name: string
+  title: string
   created_at: string
   last_message?: string
 }
@@ -49,7 +49,7 @@ export function ChatThreads({
 
   useEffect(() => {
     loadThreads()
-  }, [agentId])
+  }, [agentId, currentThreadId])
 
   async function loadThreads() {
     try {
@@ -66,7 +66,7 @@ export function ChatThreads({
 
   const handleRename = async (thread: ChatThread) => {
     setThreadToRename(thread)
-    setNewTitle(thread.name)
+    setNewTitle(thread.title)
     setRenameDialogOpen(true)
   }
 
@@ -83,7 +83,7 @@ export function ChatThreads({
       if (!response.ok) throw new Error('Failed to rename thread')
       
       setThreads(threads.map(t => 
-        t.id === threadToRename.id ? { ...t, name: newTitle } : t
+        t.id === threadToRename.id ? { ...t, title: newTitle } : t
       ))
       setRenameDialogOpen(false)
     } catch (error) {
@@ -111,8 +111,8 @@ export function ChatThreads({
   }
 
   return (
-    <div className="w-64 border-r flex flex-col h-full">
-      <div className="p-4 border-b">
+    <div className="w-80 border-r flex flex-col min-h-0 bg-background">
+      <div className="flex-shrink-0 p-4 border-b">
         <Button 
           variant="secondary" 
           className="w-full justify-start" 
@@ -128,7 +128,7 @@ export function ChatThreads({
             <div
               key={thread.id}
               className={cn(
-                'group flex items-center gap-2',
+                'group flex items-center gap-2 rounded-lg',
                 currentThreadId === thread.id && 'bg-secondary'
               )}
             >
@@ -139,12 +139,7 @@ export function ChatThreads({
               >
                 <MessageSquare className="h-4 w-4 mr-2 flex-shrink-0" />
                 <div className="truncate">
-                  <div className="font-medium truncate">{thread.name}</div>
-                  {thread.last_message && (
-                    <div className="text-xs text-muted-foreground truncate">
-                      {thread.last_message}
-                    </div>
-                  )}
+                  <div className="font-medium truncate">{thread.title}</div>
                 </div>
               </Button>
               <DropdownMenu>
@@ -152,12 +147,12 @@ export function ChatThreads({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 opacity-0 group-hover:opacity-100"
+                    className="h-8 w-8 opacity-0 group-hover:opacity-100 relative z-50"
                   >
                     <MoreVertical className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
+                <DropdownMenuContent align="end" className="z-50">
                   <DropdownMenuItem onClick={() => handleRename(thread)}>
                     <Pencil className="h-4 w-4 mr-2" />
                     Rename

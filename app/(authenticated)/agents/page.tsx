@@ -1,53 +1,83 @@
+'use client'
+
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { PlusCircle, Settings2, Trash2 } from 'lucide-react'
-import { createClient } from '@/utils/supabase/server'
+import { PlusCircle } from 'lucide-react'
 import { deleteAgent } from '@/app/api/agents/[id]/delete/action'
-import { AgentChatDialog } from '@/components/agents/AgentChatDialog'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 
-export default async function AgentsPage() {
-  const supabase = await createClient()
-  const { data: { user }, error: userError } = await supabase.auth.getUser()
+interface Agent {
+  id: string
+  name: string
+  description?: string
+  model_type?: string
+  tools?: { name: string }[]
+}
 
-  if (userError || !user) {
-    return (
-      <div className="container mx-auto py-6">
-        <h1 className="text-2xl font-bold mb-4">My Agents</h1>
-        <div className="text-red-500">Error fetching user: {userError?.message}</div>
-      </div>
-    )
-  }
+export default function AgentsPage() {
+  const [agents, setAgents] = useState<Agent[]>([])
+  const [error, setError] = useState<string>()
+  const [isLoading, setIsLoading] = useState(true)
+  const router = useRouter()
 
-  // First get the agents
-  const { data: agents, error: agentsError } = await supabase
-    .from('agents')
-    .select('*')
-    .eq('owner_id', user.id)
-    .order('created_at', { ascending: false })
-
-  if (agentsError) {
-    return (
-      <div className="container mx-auto py-6">
-        <h1 className="text-2xl font-bold mb-4">My Agents</h1>
-        <div className="text-red-500">Error fetching agents: {agentsError.message}</div>
-      </div>
-    )
-  }
-
-  // Then get the tools for each agent
-  const agentsWithTools = await Promise.all(
-    agents.map(async (agent) => {
-      const { data: tools } = await supabase
-        .from('workflow_agents')
-        .select('*')
-        .eq('agent_id', agent.id)
-      
-      return {
-        ...agent,
-        tools: tools || []
+  useEffect(() => {
+    async function loadAgents() {
+      try {
+        const response = await fetch('/api/agents')
+        if (!response.ok) throw new Error('Failed to load agents')
+        const data = await response.json()
+        setAgents(data.agents)
+      } catch (error) {
+        console.error('Error loading agents:', error)
+        setError(error instanceof Error ? error.message : 'Failed to load agents')
+      } finally {
+        setIsLoading(false)
       }
-    })
-  )
+    }
+
+    loadAgents()
+  }, [])
+
+  const handleDelete = async (agentId: string) => {
+    const confirmed = confirm('Are you sure you want to delete this agent?')
+    if (!confirmed) return
+
+    try {
+      const result = await deleteAgent(agentId)
+      if ('error' in result) {
+        console.error('Error deleting agent:', result.error)
+      } else {
+        // Refresh the agents list
+        const response = await fetch('/api/agents')
+        if (response.ok) {
+          const data = await response.json()
+          setAgents(data.agents)
+        }
+      }
+    } catch (error) {
+      console.error('Error deleting agent:', error)
+    }
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto py-6">
+        <h1 className="text-2xl font-bold mb-4">My Agents</h1>
+        <div className="text-red-500">Error: {error}</div>
+      </div>
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto py-6">
+        <h1 className="text-2xl font-bold mb-4">My Agents</h1>
+        <div>Loading agents...</div>
+      </div>
+    )
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -61,10 +91,11 @@ export default async function AgentsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {agentsWithTools.map((agent) => (
+        {agents.map((agent) => (
           <div
             key={agent.id}
-            className="border rounded-lg p-6 hover:border-primary transition-colors"
+            className="border rounded-lg p-6 hover:border-primary transition-colors cursor-pointer"
+            onClick={() => router.push(`/agents/${agent.id}`)}
           >
             <div className="flex justify-between items-start mb-4">
               <div>
@@ -72,25 +103,6 @@ export default async function AgentsPage() {
                 <p className="text-sm text-muted-foreground line-clamp-2">
                   {agent.description || 'No description provided'}
                 </p>
-              </div>
-              <div className="flex space-x-2">
-                <AgentChatDialog 
-                  agentId={agent.id} 
-                  agentName={agent.name}
-                  description={agent.description}
-                  modelType={agent.model_type}
-                  tools={agent.tools}
-                />
-                <Link href={`/agents/${agent.id}/edit`}>
-                  <Button variant="ghost" size="icon">
-                    <Settings2 className="h-4 w-4" />
-                  </Button>
-                </Link>
-                <form action={deleteAgent.bind(null, agent.id)}>
-                  <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </form>
               </div>
             </div>
             <div className="flex items-center text-sm text-muted-foreground">

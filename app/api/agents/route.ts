@@ -1,30 +1,51 @@
 import { createClient } from '@/utils/supabase/server'
 import { NextResponse } from 'next/server'
 
-export async function GET(request: Request) {
-  const supabase = await createClient()
-
+export async function GET() {
   try {
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-    if (sessionError || !session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const supabase = await createClient()
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+
+    if (userError || !user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
     }
 
-    const { data: agents, error } = await supabase
+    // Get agents
+    const { data: agents, error: agentsError } = await supabase
       .from('agents')
       .select('*')
-      .eq('owner_id', session.user.id)
+      .eq('owner_id', user.id)
       .order('created_at', { ascending: false })
 
-    if (error) {
-      console.error('Error fetching agents:', error)
-      return NextResponse.json({ error: 'Error fetching agents' }, { status: 500 })
+    if (agentsError) {
+      throw agentsError
     }
 
-    return NextResponse.json({ agents })
+    // Get tools for each agent
+    const agentsWithTools = await Promise.all(
+      agents.map(async (agent) => {
+        const { data: tools } = await supabase
+          .from('workflow_agents')
+          .select('*')
+          .eq('agent_id', agent.id)
+        
+        return {
+          ...agent,
+          tools: tools || []
+        }
+      })
+    )
+
+    return NextResponse.json({ agents: agentsWithTools })
   } catch (error) {
-    console.error('Error fetching agents:', error)
-    return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 })
+    console.error('Error in GET /api/agents:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
   }
 }
 

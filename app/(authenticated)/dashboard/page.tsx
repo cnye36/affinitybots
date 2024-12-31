@@ -142,7 +142,7 @@ export default async function Dashboard() {
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Link href={`/agents/${agent.id}/edit`}>
+                            <Link href={`/agents/${agent.id}`}>
                               <Button variant="ghost" size="icon">
                                 <Settings2 className="h-4 w-4" />
                               </Button>

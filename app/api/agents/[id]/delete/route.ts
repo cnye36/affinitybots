@@ -1,7 +1,8 @@
 import { createClient } from '@/utils/supabase/server'
 import { NextResponse } from 'next/server'
+import { deleteAgent } from './action'
 
-export async function POST(request: Request, props: { params: Promise<{ id: string }> }) {
+export async function DELETE(request: Request, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   const supabase = await createClient()
 
@@ -12,14 +13,11 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
   }
 
   try {
-    const { error } = await supabase
-      .from('agents')
-      .delete()
-      .eq('id', params.id)
-      .eq('owner_id', session.user.id)
-      .single()
-
-    if (error) throw error
+    const result = await deleteAgent(params.id)
+    
+    if (result.error) {
+      throw new Error(result.error)
+    }
 
     return NextResponse.json({ success: true })
   } catch (error) {
