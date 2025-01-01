@@ -123,14 +123,22 @@ export const AgentConfigModal: React.FC<AgentConfigModalProps> = ({
         <Tabs defaultValue="general" className="space-y-6">
           <TabsList>
             <TabsTrigger value="general">General</TabsTrigger>
+            <TabsTrigger value="knowledge">Knowledge</TabsTrigger>
             <TabsTrigger value="prompts">Prompts</TabsTrigger>
             <TabsTrigger value="tools">Tools</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
-            <TabsTrigger value="knowledge">Knowledge</TabsTrigger>
           </TabsList>
 
           <TabsContent value="general">
             <GeneralConfig config={config} onChange={handleChange} />
+          </TabsContent>
+
+          <TabsContent value="knowledge">
+            <KnowledgeConfig
+              agentId={agentId}
+              knowledgeBase={config.config.knowledgeBase || { documents: [], urls: [] }}
+              onKnowledgeUpdate={onSave}
+            />
           </TabsContent>
 
           <TabsContent value="prompts">
@@ -146,14 +154,6 @@ export const AgentConfigModal: React.FC<AgentConfigModalProps> = ({
 
           <TabsContent value="settings">
             <SettingsConfig config={config} onChange={handleNestedChange} />
-          </TabsContent>
-
-          <TabsContent value="knowledge">
-            <KnowledgeConfig
-              agentId={agentId}
-              knowledgeBase={config.config.knowledgeBase || { documents: [], urls: [] }}
-              onKnowledgeUpdate={onSave}
-            />
           </TabsContent>
         </Tabs>
 

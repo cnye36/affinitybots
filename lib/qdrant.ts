@@ -1,11 +1,33 @@
 import { QdrantClient } from '@qdrant/js-client-rest'
 import { QdrantVectorStore } from '@langchain/qdrant'
 import { OpenAIEmbeddings } from '@langchain/openai'
+import { v4 as uuidv4 } from 'uuid'
 
-const client = new QdrantClient({
-  url: process.env.QDRANT_URL || 'http://localhost:6333',
-  apiKey: process.env.QDRANT_API_KEY,
+if (!process.env.OPENAI_API_KEY) {
+  throw new Error('OPENAI_API_KEY is not set in environment variables')
+}
+
+// Initialize OpenAI embeddings with API key
+const embeddings = new OpenAIEmbeddings({
+  openAIApiKey: process.env.OPENAI_API_KEY,
+  modelName: 'text-embedding-3-small', // Explicitly specify the model
+  batchSize: 512, // Process more texts at once
+  stripNewLines: true, // Clean text before embedding
 })
+
+// Use cloud configuration if QDRANT_URL is set, otherwise use local Docker
+const client = new QdrantClient(
+  process.env.QDRANT_URL
+    ? {
+        url: process.env.QDRANT_URL,
+        apiKey: process.env.QDRANT_API_KEY,
+        timeout: 60000, // 60 second timeout
+      }
+    : {
+        url: 'http://localhost:6333',
+        timeout: 60000, // 60 second timeout
+      }
+)
 
 export async function createCollection(collectionName: string) {
   try {
@@ -30,20 +52,43 @@ export async function storeEmbeddings(
   metadata: Record<string, any>[],
   collectionName: string
 ) {
-  const embeddings = new OpenAIEmbeddings()
-  const embeddingVectors = await embeddings.embedDocuments(texts)
+  try {
+    // Create embeddings using OpenAI
+    console.log('Creating embeddings for', texts.length, 'chunks')
+    const embeddingVectors = await embeddings.embedDocuments(texts)
+    console.log('Successfully created embeddings')
 
-  const points = embeddingVectors.map((vector, index) => ({
-    id: metadata[index].source, // Ensure unique external IDs
-    vector,
-    payload: metadata[index],
-  }))
+    // Format points according to Qdrant's expected structure
+    const points = embeddingVectors.map((vector, index) => ({
+      id: uuidv4(),
+      vector: vector,
+      payload: {
+        ...metadata[index],
+        text: texts[index],
+      }
+    }))
 
-  await client.upsert(collectionName, {
-    points,
-  })
+    // Break points into smaller batches to avoid connection issues
+    const batchSize = 100
+    console.log('Storing embeddings in batches of', batchSize)
+    for (let i = 0; i < points.length; i += batchSize) {
+      const batch = points.slice(i, i + batchSize)
+      await client.upsert(collectionName, {
+        wait: true, // Wait for operation to complete
+        points: batch
+      })
+      console.log(`Stored batch ${Math.floor(i/batchSize) + 1} of ${Math.ceil(points.length/batchSize)}`)
+    }
 
-  return true
+    return true
+  } catch (error) {
+    console.error('Detailed error in storeEmbeddings:', {
+      error,
+      message: error instanceof Error ? error.message : 'Unknown error',
+      cause: error instanceof Error ? error.cause : undefined
+    })
+    throw error
+  }
 }
 
 export async function searchSimilar(
@@ -51,8 +96,7 @@ export async function searchSimilar(
   collectionName: string,
   limit: number = 5
 ) {
-  const embeddings = new OpenAIEmbeddings()
-  
+  // Use the same embeddings instance for consistency
   const vectorStore = new QdrantVectorStore(embeddings, {
     client,
     collectionName,

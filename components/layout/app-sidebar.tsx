@@ -18,6 +18,7 @@ import {
   SidebarHeader,
   SidebarRail,
 } from "@/components/ui/sidebar"
+import Image from "next/image"
 
 // Navigation data structure
 const data = {
@@ -26,7 +27,6 @@ const data = {
       title: "Dashboard",
       url: "/dashboard",
       icon: Home,
-      isActive: true,
     },
     {
       title: "Agents",
@@ -85,7 +85,13 @@ export function AppSidebar({ user, ...props }: React.ComponentProps<typeof Sideb
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader className="border-b">
         <div className="flex h-[60px] items-center px-6">
-          <Command className="mr-2 h-6 w-6" />
+          <Image 
+            src="/AgentHub-Logo.png" 
+            alt="AgentHub Logo" 
+            width={64} 
+            height={64} 
+            className="mr-2" 
+          />
           <span className="font-semibold">AgentHub</span>
         </div>
       </SidebarHeader>
