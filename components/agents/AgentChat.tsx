@@ -105,17 +105,17 @@ export function AgentChat({
   }
 
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 flex flex-col h-full">
       <ScrollArea 
         ref={scrollAreaRef} 
-        className="flex-1 px-4 py-6 overflow-y-auto"
+        className="flex-1 px-4 py-6"
         type="hover"
       >
         <div className="space-y-4 max-w-4xl mx-auto">
           {messages.length === 0 && !isLoading && (
-            <div className="text-center py-6">
-              <Bot className="h-12 w-12 text-muted-foreground/50 mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">
+            <div className="text-center py-12">
+              <Bot className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
+              <p className="text-lg text-muted-foreground">
                 Start a new conversation with {agentName}!
               </p>
             </div>
@@ -124,7 +124,7 @@ export function AgentChat({
             <div
               key={message.id}
               className={cn(
-                'flex gap-2 items-start',
+                'flex gap-3 items-start',
                 message.role === 'user' ? 'justify-end' : 'justify-start'
               )}
             >
@@ -135,7 +135,7 @@ export function AgentChat({
               )}
               <div
                 className={cn(
-                  'rounded-lg px-4 py-2 max-w-[80%]',
+                  'rounded-lg px-4 py-2 max-w-[85%]',
                   message.role === 'user'
                     ? 'bg-primary text-primary-foreground dark:bg-primary/10'
                     : 'bg-muted'
@@ -143,7 +143,7 @@ export function AgentChat({
               >
                 <ReactMarkdown
                   className={cn(
-                    'prose prose-sm max-w-none',
+                    'prose prose-sm max-w-none break-words',
                     message.role === 'user' 
                       ? 'prose-invert' 
                       : 'prose-stone dark:prose-invert'
@@ -172,11 +172,11 @@ export function AgentChat({
             </div>
           ))}
           {isLoading && (
-            <div className="flex gap-2 items-start">
+            <div className="flex gap-3 items-start">
               <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
                 <Bot className="h-4 w-4 text-primary" />
               </div>
-              <div className="bg-muted rounded-lg px-4 py-2 max-w-[80%]">
+              <div className="bg-muted rounded-lg px-4 py-2 max-w-[85%]">
                 <Loader2 className="h-4 w-4 animate-spin" />
               </div>
             </div>
@@ -191,11 +191,11 @@ export function AgentChat({
         </div>
       </ScrollArea>
 
-      <div className="flex-shrink-0 border-t bg-background px-4 py-3">
+      <div className="flex-shrink-0 border-t bg-background p-4">
         <div className="max-w-4xl mx-auto">
           <form
             onSubmit={onSubmit}
-            className="flex items-center gap-2"
+            className="flex items-center gap-3"
           >
             <Input
               placeholder={`Message ${agentName}...`}

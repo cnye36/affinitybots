@@ -20,7 +20,7 @@ import 'reactflow/dist/style.css'
 import { AgentNode } from './AgentNode'
 import { CustomEdge } from './CustomEdge'
 import axios from 'axios'
-import { AgentConfigModal } from './AgentConfigModal'
+import { AgentConfigModal } from '../configuration/AgentConfigModal'
 
 interface WorkflowCanvasProps {
   nodes: Node[]

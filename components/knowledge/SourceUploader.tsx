@@ -26,10 +26,11 @@ export function SourceUploader({ agentId, onSourceAdded }: SourceUploaderProps) 
 
     const formData = new FormData()
     formData.append('file', files[0])
+    formData.append('url', '') // Ensure no URL is sent
     formData.append('agentId', agentId)
 
     try {
-      const response = await fetch('/api/knowledge/upload', {
+      const response = await fetch(`/api/agents/${agentId}/knowledge/upload`, {
         method: 'POST',
         body: formData,
       })
@@ -50,7 +51,7 @@ export function SourceUploader({ agentId, onSourceAdded }: SourceUploaderProps) 
     setError(null)
 
     try {
-      const response = await fetch('/api/knowledge/url', {
+      const response = await fetch(`/api/agents/${agentId}/knowledge/upload`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url, agentId }),
@@ -75,18 +76,21 @@ export function SourceUploader({ agentId, onSourceAdded }: SourceUploaderProps) 
           className="hidden"
           id="file-upload"
           onChange={handleFileUpload}
-          accept=".pdf,.doc,.docx,.txt"
+          accept=".pdf,.doc,.docx,.txt,.csv,.xls,.xlsx"
         />
-        <label htmlFor="file-upload">
-          <Button variant="outline" className="w-full" disabled={isUploading}>
-            {isUploading ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Upload className="mr-2 h-4 w-4" />
-            )}
-            Upload Files
-          </Button>
-        </label>
+        <Button
+          variant="outline"
+          className="w-full"
+          disabled={isUploading}
+          onClick={() => document.getElementById('file-upload')?.click()}
+        >
+          {isUploading ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Upload className="mr-2 h-4 w-4" />
+          )}
+          Upload Files
+        </Button>
 
         {showUrlInput ? (
           <div className="flex gap-2">
@@ -108,6 +112,7 @@ export function SourceUploader({ agentId, onSourceAdded }: SourceUploaderProps) 
             variant="outline"
             className="w-full"
             onClick={() => setShowUrlInput(true)}
+            disabled={isUploading}
           >
             <LinkIcon className="mr-2 h-4 w-4" />
             Add URL

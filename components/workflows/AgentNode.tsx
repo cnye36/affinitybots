@@ -4,7 +4,7 @@ import { Card, CardHeader, CardTitle } from '@/components/ui/card'
 import axios from 'axios'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Activity, CircleCheck, Settings } from 'lucide-react'
-import { AgentConfigModal } from './AgentConfigModal'
+import { AgentConfigModal } from '../configuration/AgentConfigModal'
 
 interface AgentNodeProps {
   data: {

@@ -16,7 +16,10 @@ export async function createCollection(collectionName: string) {
       },
     })
     return true
-  } catch (error) {
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message.includes('already exists')) {
+      return true
+    }
     console.error('Error creating collection:', error)
     return false
   }
@@ -28,18 +31,19 @@ export async function storeEmbeddings(
   collectionName: string
 ) {
   const embeddings = new OpenAIEmbeddings()
-  
-  const vectorStore = await QdrantVectorStore.fromTexts(
-    texts,
-    metadata,
-    embeddings,
-    {
-      client,
-      collectionName,
-    }
-  )
+  const embeddingVectors = await embeddings.embedDocuments(texts)
 
-  return vectorStore
+  const points = embeddingVectors.map((vector, index) => ({
+    id: metadata[index].source, // Ensure unique external IDs
+    vector,
+    payload: metadata[index],
+  }))
+
+  await client.upsert(collectionName, {
+    points,
+  })
+
+  return true
 }
 
 export async function searchSimilar(
@@ -56,6 +60,22 @@ export async function searchSimilar(
 
   const results = await vectorStore.similaritySearch(query, limit)
   return results
+}
+
+export async function deleteEmbedding(
+  collectionName: string,
+  externalId: string
+) {
+  try {
+    await client.delete(
+      collectionName,
+      { points: [externalId] }
+    )
+    return true
+  } catch (error) {
+    console.error('Error deleting embedding:', error)
+    return false
+  }
 }
 
 export { client } 

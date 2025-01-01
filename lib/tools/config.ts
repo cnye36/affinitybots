@@ -2,11 +2,11 @@ import {
   Search, 
   Globe, 
   FileText, 
-  Table, 
   MessageSquare, 
   Calendar,
-  Database
 } from 'lucide-react'
+import { FaTwitter } from 'react-icons/fa'
+import { SiNotion } from 'react-icons/si'
 
 export interface ToolConfig {
   id: string
@@ -66,130 +66,89 @@ export const AVAILABLE_TOOLS: ToolConfig[] = [
     ]
   },
   {
-    id: 'document_reader',
-    name: 'Read Document',
-    description: 'Extract and analyze content from documents using Unstructured API',
-    icon: FileText,
-    category: 'analysis',
-    requiredEnvVars: ['UNSTRUCTURED_API_KEY'],
-    configOptions: [
-      {
-        name: 'fileTypes',
-        type: 'text',
-        required: false,
-        default: 'pdf,docx,txt',
-        description: 'Comma-separated list of supported file types'
-      }
-    ]
-  },
-  {
-    id: 'spreadsheet',
-    name: 'Insert Row',
-    description: 'Add data to Google Sheets',
-    icon: Table,
+    id: 'notion_add_row',
+    name: 'Add Row to Notion Database',
+    description: 'Add a new row to a specified Notion database',
+    icon: SiNotion,
     category: 'automation',
     requiresAuth: true,
-    requiredEnvVars: ['GOOGLE_SERVICE_ACCOUNT_KEY'],
+    requiredEnvVars: ['NOTION_API_KEY', 'NOTION_DATABASE_ID'],
     configOptions: [
       {
-        name: 'spreadsheetId',
+        name: 'databaseId',
         type: 'text',
         required: true,
-        description: 'The ID of the Google Sheet to interact with'
+        description: 'The ID of the Notion database to use'
       },
       {
-        name: 'sheetName',
+        name: 'authToken',
         type: 'text',
-        required: false,
-        default: 'Sheet1',
-        description: 'Name of the sheet within the spreadsheet'
+        required: true,
+        description: 'Authentication token for Notion API'
       }
     ]
   },
   {
-    id: 'chat_memory',
-    name: 'Conversation Memory',
-    description: 'Remember context from previous conversations',
-    icon: MessageSquare,
+    id: 'notion_update_row',
+    name: 'Update Row in Notion Database',
+    description: 'Update an existing row in a Notion database',
+    icon: SiNotion,
+    category: 'automation',
+    requiresAuth: true,
+    requiredEnvVars: ['NOTION_API_KEY', 'NOTION_DATABASE_ID'],
+    configOptions: [
+      {
+        name: 'databaseId',
+        type: 'text',
+        required: true,
+        description: 'The ID of the Notion database to use'
+      },
+      {
+        name: 'rowId',
+        type: 'text',
+        required: true,
+        description: 'The ID of the row to update'
+      },
+      {
+        name: 'authToken',
+        type: 'text',
+        required: true,
+        description: 'Authentication token for Notion API'
+      }
+    ]
+  },
+  {
+    id: 'twitter_post',
+    name: 'Post Tweet',
+    description: 'Create and post a tweet on Twitter',
+    icon: FaTwitter,
     category: 'content',
-    configOptions: [
-      {
-        name: 'memoryKey',
-        type: 'text',
-        required: false,
-        default: 'chat_history',
-        description: 'Key to store chat history under'
-      },
-      {
-        name: 'maxMessages',
-        type: 'number',
-        required: false,
-        default: 10,
-        description: 'Maximum number of messages to remember'
-      }
-    ]
-  },
-  {
-    id: 'task_scheduler',
-    name: 'Task Scheduler',
-    description: 'Schedule and manage tasks',
-    icon: Calendar,
-    category: 'automation',
-    configOptions: [
-      {
-        name: 'timezone',
-        type: 'text',
-        required: false,
-        default: 'UTC',
-        description: 'Timezone for scheduling tasks'
-      }
-    ]
-  },
-  {
-    id: 'database_query',
-    name: 'Query Database',
-    description: 'Execute database queries and retrieve data',
-    icon: Database,
-    category: 'data',
     requiresAuth: true,
-    requiredEnvVars: ['DATABASE_URL'],
+    requiredEnvVars: ['TWITTER_API_KEY', 'TWITTER_API_SECRET'],
     configOptions: [
       {
-        name: 'databaseUrl',
+        name: 'apiKey',
         type: 'text',
         required: true,
-        description: 'Database connection URL'
+        description: 'Twitter API Key'
       },
       {
-        name: 'maxRows',
-        type: 'number',
-        required: false,
-        default: 1000,
-        description: 'Maximum number of rows to return'
-      }
-    ]
-  },
-  {
-    id: 'knowledge_retrieval',
-    name: 'Knowledge Base',
-    description: 'Search through uploaded documents and knowledge base using Qdrant',
-    icon: Database,
-    category: 'data',
-    requiredEnvVars: ['QDRANT_API_KEY', 'QDRANT_URL'],
-    configOptions: [
-      {
-        name: 'collection',
+        name: 'apiSecret',
         type: 'text',
         required: true,
-        default: 'default',
-        description: 'Name of the Qdrant collection to search'
+        description: 'Twitter API Secret'
       },
       {
-        name: 'limit',
-        type: 'number',
+        name: 'accessToken',
+        type: 'text',
         required: false,
-        default: 5,
-        description: 'Maximum number of results to return'
+        description: 'Twitter Access Token'
+      },
+      {
+        name: 'accessSecret',
+        type: 'text',
+        required: false,
+        description: 'Twitter Access Secret'
       }
     ]
   }
