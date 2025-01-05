@@ -6,24 +6,30 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import axios from 'axios'
-import { GeneralConfig } from './GeneralConfig'
-import { PromptsConfig } from './PromptsConfig'
-import { ToolSelector } from '@/components/configuration/ToolSelector'
-import { SettingsConfig } from './SettingsConfig'
-import { AgentConfig } from '@/types/agent'
-import { KnowledgeConfig } from './KnowledgeConfig'
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import axios from "axios";
+import { GeneralConfig } from "./GeneralConfig";
+import { PromptsConfig } from "./PromptsConfig";
+import { ToolSelector } from "@/components/configuration/ToolSelector";
+import { SettingsConfig } from "./SettingsConfig";
+import { KnowledgeConfig } from "@/components/configuration/KnowledgeConfig";
+import { AgentConfig } from "@/types/agent";
+import { useRouter } from "next/navigation";
 
 interface AgentConfigModalProps {
-  isOpen: boolean
-  onClose: () => void
-  agentId: string
-  initialConfig: AgentConfig
-  onSave: () => void
+  isOpen: boolean;
+  onClose: () => void;
+  agentId: string;
+  initialConfig: AgentConfig;
+  onSave?: (config: AgentConfig) => void;
 }
 
 export const AgentConfigModal: React.FC<AgentConfigModalProps> = ({
@@ -31,38 +37,41 @@ export const AgentConfigModal: React.FC<AgentConfigModalProps> = ({
   onClose,
   agentId,
   initialConfig,
-  onSave,
 }) => {
-  const [config, setConfig] = useState<AgentConfig>(initialConfig)
-  const [loading, setLoading] = useState<boolean>(false)
-  const [error, setError] = useState<string | null>(null)
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
-  const [isDeleting, setIsDeleting] = useState(false)
-  const [deleteError, setDeleteError] = useState<string | null>(null)
-  const [toolConfigs, setToolConfigs] = useState<Record<string, any>>({})
+  const [config, setConfig] = useState<AgentConfig>(initialConfig);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
-    setConfig(initialConfig)
-  }, [initialConfig])
+    setConfig(initialConfig);
+  }, [initialConfig]);
 
-  const handleChange = (field: keyof AgentConfig, value: any) => {
+  const handleChange = (field: keyof AgentConfig, value: unknown) => {
     setConfig((prev) => ({
       ...prev,
       [field]: value,
-    }))
-  }
+    }));
+  };
 
-  const handleNestedChange = (section: keyof AgentConfig['config'], value: any) => {
+  const handleNestedChange = (
+    section: keyof AgentConfig["config"],
+    value: unknown
+  ) => {
     setConfig((prev) => ({
       ...prev,
       config: {
         ...prev.config,
         [section]: value,
       },
-    }))
-  }
+    }));
+  };
 
-  const handleToggleTool = (toolId: string, enabled: boolean, config?: any) => {
+  const handleToggleTool = (
+    toolId: string,
+    enabled: boolean,
+    toolConfig?: Record<string, unknown>
+  ) => {
     setConfig((prev) => ({
       ...prev,
       tools: enabled
@@ -72,43 +81,26 @@ export const AgentConfigModal: React.FC<AgentConfigModalProps> = ({
         ...prev.config,
         toolsConfig: {
           ...prev.config.toolsConfig,
-          [toolId]: config,
+          [toolId]: toolConfig,
         },
       },
-    }))
-  }
-
-  const handleToolConfigChange = (toolId: string, newConfig: any) => {
-    setToolConfigs((prev) => ({
-      ...prev,
-      [toolId]: newConfig,
-    }))
-    setConfig((prev) => ({
-      ...prev,
-      config: {
-        ...prev.config,
-        toolsConfig: {
-          ...prev.config.toolsConfig,
-          [toolId]: newConfig,
-        },
-      },
-    }))
-  }
+    }));
+  };
 
   const handleSubmit = async () => {
-    setLoading(true)
-    setError(null)
+    setLoading(true);
+    setError(null);
     try {
-      await axios.put(`/api/agents/${agentId}`, config)
-      onSave()
-      onClose()
+      await axios.put(`/api/agents/${agentId}`, config);
+      onClose();
+      router.refresh();
     } catch (err) {
-      console.error('Error updating agent:', err)
-      setError('Failed to update agent configuration.')
+      console.error("Error updating agent:", err);
+      setError("Failed to update agent configuration.");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -123,22 +115,14 @@ export const AgentConfigModal: React.FC<AgentConfigModalProps> = ({
         <Tabs defaultValue="general" className="space-y-6">
           <TabsList>
             <TabsTrigger value="general">General</TabsTrigger>
-            <TabsTrigger value="knowledge">Knowledge</TabsTrigger>
             <TabsTrigger value="prompts">Prompts</TabsTrigger>
             <TabsTrigger value="tools">Tools</TabsTrigger>
+            <TabsTrigger value="knowledge">Knowledge</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
 
           <TabsContent value="general">
             <GeneralConfig config={config} onChange={handleChange} />
-          </TabsContent>
-
-          <TabsContent value="knowledge">
-            <KnowledgeConfig
-              agentId={agentId}
-              knowledgeBase={config.config.knowledgeBase || { documents: [], urls: [] }}
-              onKnowledgeUpdate={onSave}
-            />
           </TabsContent>
 
           <TabsContent value="prompts">
@@ -150,6 +134,10 @@ export const AgentConfigModal: React.FC<AgentConfigModalProps> = ({
               selectedTools={config.tools}
               onToolToggle={handleToggleTool}
             />
+          </TabsContent>
+
+          <TabsContent value="knowledge">
+            <KnowledgeConfig config={config} onChange={handleNestedChange} />
           </TabsContent>
 
           <TabsContent value="settings">
@@ -168,10 +156,10 @@ export const AgentConfigModal: React.FC<AgentConfigModalProps> = ({
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={loading}>
-            {loading ? 'Saving...' : 'Save Changes'}
+            {loading ? "Saving..." : "Save Changes"}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
-}
+  );
+};

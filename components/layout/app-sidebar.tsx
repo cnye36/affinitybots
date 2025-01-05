@@ -1,24 +1,18 @@
 "use client"
 
 import * as React from "react"
-import {
-  Home,
-  Bot,
-  Sliders,
-  Settings2,
-  Command,
-} from "lucide-react"
+import { Home, Bot, Sliders } from "lucide-react";
 
-import { NavMain } from "@/components/layout/nav-main"
-import { NavUser } from "@/components/layout/nav-user"
+import { NavMain } from "@/components/layout/nav-main";
+import { NavUser } from "@/components/layout/nav-user";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
   SidebarRail,
-} from "@/components/ui/sidebar"
-import Image from "next/image"
+} from "@/components/ui/sidebar";
+import Image from "next/image";
 
 // Navigation data structure
 const data = {
@@ -58,41 +52,33 @@ const data = {
         },
       ],
     },
-    {
-      title: "Settings",
-      url: "/settings",
-      icon: Settings2,
-      items: [
-        {
-          title: "General",
-          url: "/settings",
-        },
-        {
-          title: "Profile",
-          url: "/settings/profile",
-        },
-        {
-          title: "Billing",
-          url: "/settings/billing",
-        },
-      ],
-    },
   ],
+};
+
+interface User {
+  name?: string;
+  email: string;
+  image?: string;
 }
 
-export function AppSidebar({ user, ...props }: React.ComponentProps<typeof Sidebar> & { user?: any }) {
+export function AppSidebar({
+  user,
+  ...props
+}: React.ComponentProps<typeof Sidebar> & { user?: User }) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader className="border-b">
         <div className="flex h-[60px] items-center px-6">
-          <Image 
-            src="/AgentHub-Logo.png" 
-            alt="AgentHub Logo" 
-            width={64} 
-            height={64} 
-            className="mr-2" 
+          <Image
+            src="/AgentHub-Logo.png"
+            alt="AgentHub Logo"
+            width={64}
+            height={64}
+            className="mr-2 group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:w-8 group-data-[collapsible=icon]:h-8"
           />
-          <span className="font-semibold">AgentHub</span>
+          <span className="font-semibold group-data-[collapsible=icon]:hidden">
+            AgentHub
+          </span>
         </div>
       </SidebarHeader>
       <SidebarContent>
@@ -103,5 +89,5 @@ export function AppSidebar({ user, ...props }: React.ComponentProps<typeof Sideb
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
-  )
+  );
 }

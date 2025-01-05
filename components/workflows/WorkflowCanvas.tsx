@@ -21,12 +21,21 @@ import { AgentNode } from './AgentNode'
 import { CustomEdge } from './CustomEdge'
 import axios from 'axios'
 import { AgentConfigModal } from '../configuration/AgentConfigModal'
+import { AgentConfig } from '@/types/agent'
 
 interface WorkflowCanvasProps {
   nodes: Node[]
   setNodes: React.Dispatch<React.SetStateAction<Node[]>>
   edges: Edge[]
   setEdges: React.Dispatch<React.SetStateAction<Edge[]>>
+}
+
+interface AgentConfigModalProps {
+  isOpen: boolean
+  onClose: () => void
+  agentId: string
+  initialConfig: any
+  onSave: (config: any) => void
 }
 
 const nodeTypes: NodeTypes = {
@@ -69,7 +78,7 @@ export function WorkflowCanvas({
       }
 
       try {
-        const response = await axios.get(`/api/agents/${agentId}`)
+        const response = await axios.get(`/(authenticated)/api/agents/${agentId}`)
         const agent = response.data
 
         if (!agent) {
@@ -105,7 +114,7 @@ export function WorkflowCanvas({
     }
   }, [])
 
-  const handleSaveConfig = (updatedConfig: any) => {
+  const handleSaveConfig = (updatedConfig: AgentConfig) => {
     setNodes((nds) =>
       nds.map((node) =>
         node.id.startsWith(selectedAgentId || '') ? { ...node, data: { ...node.data, ...updatedConfig } } : node
@@ -119,7 +128,7 @@ export function WorkflowCanvas({
     const fetchAgentConfig = async () => {
       if (selectedAgentId) {
         try {
-          const response = await axios.get(`/api/agents/${selectedAgentId}`)
+          const response = await axios.get(`/(authenticated)/api/agents/${selectedAgentId}`)
           setAgentConfig(response.data)
         } catch (error) {
           console.error('Error fetching agent config:', error)

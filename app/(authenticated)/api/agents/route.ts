@@ -1,17 +1,24 @@
 import { createClient } from '@/utils/supabase/server'
 import { NextResponse } from 'next/server'
 
+// Add debug logging
+console.log('Loading agents API route...')
+
 export async function GET() {
+  console.log('GET /agents - Starting request')
   try {
     const supabase = await createClient()
     const { data: { user }, error: userError } = await supabase.auth.getUser()
 
     if (userError || !user) {
+      console.log('GET /agents - Unauthorized')
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       )
     }
+
+    console.log('GET /agents - Fetching agents for user:', user.id)
 
     // Get agents
     const { data: agents, error: agentsError } = await supabase

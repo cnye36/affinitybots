@@ -52,7 +52,7 @@ export function WorkflowsBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
 
       setLoading(true)
       try {
-        const response = await axios.get(`/api/workflows?id=${initialWorkflowId}`)
+        const response = await axios.get(`/(authenticated)/api/workflows?id=${initialWorkflowId}`)
         const workflow = response.data
         setWorkflowName(workflow.name)
         setNodes(workflow.nodes)
@@ -81,7 +81,7 @@ export function WorkflowsBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
   useEffect(() => {
     const fetchAgents = async () => {
       try {
-        const response = await axios.get('/api/agents')
+        const response = await axios.get('/(authenticated)/api/agents')
         setAgents(response.data.agents)
       } catch (err: any) {
         console.error('Error fetching agents:', err)
@@ -130,7 +130,7 @@ export function WorkflowsBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
 
       if (initialWorkflowId) {
         // Update existing workflow
-        const response = await axios.put('/api/workflows', {
+        const response = await axios.put('/(authenticated)/api/workflows', {
           ...workflowData,
           id: initialWorkflowId
         })
@@ -151,7 +151,7 @@ export function WorkflowsBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
         }
       } else {
         // Create new workflow
-        const response = await axios.post('/api/workflows', workflowData)
+        const response = await axios.post('/(authenticated)/api/workflows', workflowData)
         
         if (response.data && response.data.id) {
           toast.update(saveToast, {

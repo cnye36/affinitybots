@@ -29,36 +29,33 @@ export function AgentChat({
   
   const { messages, input, handleInputChange, handleSubmit, isLoading, error, setMessages } = useChat({ 
     api: `/api/agents/${agentId}/chat`,
-    id: threadId,
-    body: {
-      agentId,
-      threadId
-    },
-    onResponse: async (response) => {
-      // Save chat after first interaction if no threadId exists
-      if (!threadId && messages.length === 1) {
-        try {
-          const saveResponse = await fetch(`/api/agents/${agentId}/threads`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              title: messages[0].content.slice(0, 100),
-              messages: messages
-            })
-          });
-          
-          if (!saveResponse.ok) throw new Error('Failed to save chat');
-          const data = await saveResponse.json();
-          window.location.href = `/agents/${agentId}?thread=${data.threadId}`;
-        } catch (error) {
-          console.error('Error saving chat:', error);
-        }
-      }
+    id: threadId || undefined,
+    onResponse: (response) => {
+      if (response.ok) saveThread()
     },
     onError: (error) => {
       console.error('Chat error:', error)
     }
   })
+
+  const saveThread = async () => {
+    try {
+      const saveResponse = await fetch(`/api/agents/${agentId}/threads`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: messages[0].content.slice(0, 100),
+          messages: messages
+        })
+      });
+      
+      if (!saveResponse.ok) throw new Error('Failed to save chat');
+      const data = await saveResponse.json();
+      window.location.href = `/agents/${agentId}?thread=${data.threadId}`;
+    } catch (error) {
+      console.error('Error saving chat:', error);
+    }
+  }
 
   // Load messages when thread changes
   useEffect(() => {

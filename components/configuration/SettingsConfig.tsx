@@ -5,8 +5,8 @@ import { Label } from '@/components/ui/label'
 import { AgentConfig } from '@/types/agent'
 
 interface SettingsConfigProps {
-  config: AgentConfig
-  onChange: (field: keyof AgentConfig['config'], value: any) => void
+  config: AgentConfig;
+  onChange: (field: keyof AgentConfig["config"], value: any) => void;
 }
 
 export const SettingsConfig: React.FC<SettingsConfigProps> = ({ config, onChange }) => {

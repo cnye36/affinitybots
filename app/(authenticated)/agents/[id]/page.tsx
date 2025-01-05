@@ -77,7 +77,10 @@ export default function AgentPage() {
             onClose={() => setIsConfigModalOpen(false)}
             agentId={agent.id}
             initialConfig={agent}
-            onSave={mutate}
+            onSave={async (config) => {
+              await mutate(config, false)
+              setIsConfigModalOpen(false)
+            }}
           />
         )}
 

@@ -5,6 +5,7 @@ import axios from 'axios'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Activity, CircleCheck, Settings } from 'lucide-react'
 import { AgentConfigModal } from '../configuration/AgentConfigModal'
+import { AgentConfig } from '@/types/agent'
 
 interface AgentNodeProps {
   data: {
@@ -13,24 +14,8 @@ interface AgentNodeProps {
   }
 }
 
-interface Agent {
-  id: string
-  name: string
-  description?: string
-  model_type: string
-  prompt_template: string
-  tools: string[]
-  config: {
-    temperature?: number
-    enableKnowledge?: boolean
-    tone?: string
-    language?: string
-    toolsConfig?: Record<string, any>
-  }
-}
-
 export const AgentNode = memo(({ data }: AgentNodeProps) => {
-  const [agent, setAgent] = useState<Agent | null>(null)
+  const [agent, setAgent] = useState<AgentConfig | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false)
@@ -38,7 +23,7 @@ export const AgentNode = memo(({ data }: AgentNodeProps) => {
   useEffect(() => {
     const fetchAgent = async () => {
       try {
-        const response = await axios.get(`/api/agents/${data.agentId}`)
+        const response = await axios.get(`/(authenticated)/api/agents/${data.agentId}`)
         setAgent(response.data)
       } catch (err) {
         console.error('Error fetching agent:', err)
@@ -56,9 +41,9 @@ export const AgentNode = memo(({ data }: AgentNodeProps) => {
     setIsConfigModalOpen(true)
   }
 
-  const handleConfigSave = async (updatedConfig: any) => {
+  const handleConfigSave = async (updatedConfig: AgentConfig) => {
     try {
-      const response = await axios.put(`/api/agents/${data.agentId}`, updatedConfig)
+      const response = await axios.put(`/(authenticated)/api/agents/${data.agentId}`, updatedConfig)
       setAgent(response.data)
       setIsConfigModalOpen(false)
     } catch (err) {
