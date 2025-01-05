@@ -20,7 +20,6 @@ interface DocumentMatch {
   similarity: number;
 }
 
-export const runtime = "edge";
 export const maxDuration = 30;
 
 export async function POST(
@@ -81,14 +80,20 @@ export async function POST(
     }
 
     // 5. Save user message
-    await supabase.from("agent_chats").insert([
+    const { error: chatError } = await supabase.from("agent_chats").insert([
       {
         thread_id: currentThreadId,
         agent_id: params.id,
+        user_id: user.id,
         role: "user",
         content: messages[messages.length - 1].content,
       },
     ]);
+
+    if (chatError) {
+      console.error("Error saving user message:", chatError);
+      throw chatError;
+    }
 
     // 6. Initialize tools
     const { tools } = await initializeTools(
@@ -163,14 +168,21 @@ export async function POST(
         },
         async close() {
           // Save assistant response
-          await supabase.from("agent_chats").insert([
-            {
-              thread_id: currentThreadId,
-              agent_id: params.id,
-              role: "assistant",
-              content: fullResponse,
-            },
-          ]);
+          const { error: assistantError } = await supabase
+            .from("agent_chats")
+            .insert([
+              {
+                thread_id: currentThreadId,
+                agent_id: params.id,
+                user_id: user.id,
+                role: "assistant",
+                content: fullResponse,
+              },
+            ]);
+
+          if (assistantError) {
+            console.error("Error saving assistant response:", assistantError);
+          }
         },
       })
     );

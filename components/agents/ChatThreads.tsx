@@ -1,121 +1,133 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Button } from '@/components/ui/button'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { MessageSquare, Plus, MoreVertical, Pencil, Trash } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { useState, useEffect, useCallback } from "react";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { MessageSquare, Plus, MoreVertical, Pencil, Trash } from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogClose,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 
 interface ChatThread {
-  id: string
-  title: string
-  created_at: string
-  last_message?: string
+  id: string;
+  title: string;
+  created_at: string;
+  last_message?: string;
 }
 
 interface ChatThreadsProps {
-  agentId: string
-  currentThreadId?: string
-  onThreadSelect: (threadId: string) => void
-  onNewThread: () => void
+  agentId: string;
+  currentThreadId?: string;
+  onThreadSelect: (threadId: string) => void;
+  onNewThread: () => void;
 }
 
-export function ChatThreads({ 
-  agentId, 
+export function ChatThreads({
+  agentId,
   currentThreadId,
   onThreadSelect,
-  onNewThread
+  onNewThread,
 }: ChatThreadsProps) {
-  const [threads, setThreads] = useState<ChatThread[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [renameDialogOpen, setRenameDialogOpen] = useState(false)
-  const [threadToRename, setThreadToRename] = useState<ChatThread | null>(null)
-  const [newTitle, setNewTitle] = useState('')
+  const [threads, setThreads] = useState<ChatThread[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+  const [threadToRename, setThreadToRename] = useState<ChatThread | null>(null);
+  const [newTitle, setNewTitle] = useState("");
+
+  const loadThreads = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/agents/${agentId}/threads`);
+      if (!response.ok) throw new Error("Failed to load chat threads");
+      const data = await response.json();
+      setThreads(data.threads);
+    } catch (error) {
+      console.error("Error loading threads:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [agentId]);
 
   useEffect(() => {
-    loadThreads()
-  }, [agentId, currentThreadId])
+    loadThreads();
+  }, [loadThreads, currentThreadId]);
 
-  async function loadThreads() {
-    try {
-      const response = await fetch(`/api/agents/${agentId}/threads`)
-      if (!response.ok) throw new Error('Failed to load chat threads')
-      const data = await response.json()
-      setThreads(data.threads)
-    } catch (error) {
-      console.error('Error loading threads:', error)
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  useEffect(() => {
+    const interval = setInterval(loadThreads, 5000);
+    return () => clearInterval(interval);
+  }, [loadThreads]);
 
   const handleRename = async (thread: ChatThread) => {
-    setThreadToRename(thread)
-    setNewTitle(thread.title)
-    setRenameDialogOpen(true)
-  }
+    setThreadToRename(thread);
+    setNewTitle(thread.title);
+    setRenameDialogOpen(true);
+  };
 
   const handleRenameSubmit = async () => {
-    if (!threadToRename || !newTitle.trim()) return
+    if (!threadToRename || !newTitle.trim()) return;
 
     try {
-      const response = await fetch(`/api/agents/${agentId}/threads/${threadToRename.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: newTitle }),
-      })
+      const response = await fetch(
+        `/api/agents/${agentId}/threads/${threadToRename.id}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title: newTitle }),
+        }
+      );
 
-      if (!response.ok) throw new Error('Failed to rename thread')
-      
-      setThreads(threads.map(t => 
-        t.id === threadToRename.id ? { ...t, title: newTitle } : t
-      ))
-      setRenameDialogOpen(false)
+      if (!response.ok) throw new Error("Failed to rename thread");
+
+      setThreads(
+        threads.map((t) =>
+          t.id === threadToRename.id ? { ...t, title: newTitle } : t
+        )
+      );
+      setRenameDialogOpen(false);
     } catch (error) {
-      console.error('Error renaming thread:', error)
+      console.error("Error renaming thread:", error);
     }
-  }
+  };
 
   const handleDelete = async (threadId: string) => {
-    if (!confirm('Are you sure you want to delete this conversation?')) return
+    if (!confirm("Are you sure you want to delete this conversation?")) return;
 
     try {
-      const response = await fetch(`/api/agents/${agentId}/threads/${threadId}`, {
-        method: 'DELETE',
-      })
+      const response = await fetch(
+        `/api/agents/${agentId}/threads/${threadId}`,
+        {
+          method: "DELETE",
+        }
+      );
 
-      if (!response.ok) throw new Error('Failed to delete thread')
-      
-      setThreads(threads.filter(t => t.id !== threadId))
+      if (!response.ok) throw new Error("Failed to delete thread");
+
+      setThreads(threads.filter((t) => t.id !== threadId));
       if (currentThreadId === threadId) {
-        onNewThread()
+        onNewThread();
       }
     } catch (error) {
-      console.error('Error deleting thread:', error)
+      console.error("Error deleting thread:", error);
     }
-  }
+  };
 
   return (
     <div className="w-80 border-r flex flex-col min-h-0 bg-background">
       <div className="flex-shrink-0 p-4 border-b">
-        <Button 
-          variant="secondary" 
-          className="w-full justify-start" 
+        <Button
+          variant="secondary"
+          className="w-full justify-start"
           onClick={onNewThread}
         >
           <Plus className="h-4 w-4 mr-2" />
@@ -128,8 +140,8 @@ export function ChatThreads({
             <div
               key={thread.id}
               className={cn(
-                'group flex items-center gap-2 rounded-lg',
-                currentThreadId === thread.id && 'bg-secondary'
+                "group flex items-center gap-2 rounded-lg",
+                currentThreadId === thread.id && "bg-secondary"
               )}
             >
               <Button
@@ -157,7 +169,7 @@ export function ChatThreads({
                     <Pencil className="h-4 w-4 mr-2" />
                     Rename
                   </DropdownMenuItem>
-                  <DropdownMenuItem 
+                  <DropdownMenuItem
                     onClick={() => handleDelete(thread.id)}
                     className="text-destructive"
                   >
@@ -202,5 +214,5 @@ export function ChatThreads({
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 } 

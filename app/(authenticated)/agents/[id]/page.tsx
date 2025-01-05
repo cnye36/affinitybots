@@ -1,57 +1,63 @@
 "use client"
 
-import { useState } from 'react'
-import { useRouter, useParams } from 'next/navigation'
-import Link from 'next/link'
-import { Button } from '@/components/ui/button'
-import { ArrowLeft } from 'lucide-react'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { AgentChat } from '@/components/agents/AgentChat'
-import { AgentConfigModal } from '@/components/configuration/AgentConfigModal'
-import { ChatThreads } from '@/components/agents/ChatThreads'
-import { useAgent } from '@/hooks/useAgent'
-import { SidebarInset } from "@/components/ui/sidebar"
+import { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
+import { AgentChat } from "@/components/agents/AgentChat";
+import { AgentConfigModal } from "@/components/configuration/AgentConfigModal";
+import { ChatThreads } from "@/components/agents/ChatThreads";
+import { useAgent } from "@/hooks/useAgent";
+import { SidebarInset } from "@/components/ui/sidebar";
 
 export default function AgentPage() {
-  const params = useParams()
-  const router = useRouter()
-  const { agent, isLoading, isError, mutate } = useAgent(params.id as string)
-  const [isSaving, setIsSaving] = useState(false)
-  const [enableKnowledge, setEnableKnowledge] = useState(false)
-  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false)
-  const [currentThreadId, setCurrentThreadId] = useState<string | undefined>(undefined)
+  const params = useParams();
+  const { agent, isLoading, isError, mutate } = useAgent(params.id as string);
+  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
+  const [currentThreadId, setCurrentThreadId] = useState<string | undefined>(
+    undefined
+  );
 
-  const handleSave = async () => {
-    setIsSaving(true)
-    try {
-      const response = await fetch(`/api/agents/${params.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...agent,
-          config: {
-            ...agent?.config,
-            enableKnowledge
-          }
-        })
-      })
-      
-      if (!response.ok) throw new Error('Failed to update agent')
-      await mutate() // Refresh the SWR cache
-      router.push('/agents')
-    } catch (err) {
-      // Handle error appropriately
-    } finally {
-      setIsSaving(false)
+  // Load initial thread state
+  useEffect(() => {
+    async function loadInitialThread() {
+      try {
+        const response = await fetch(`/api/agents/${params.id}/threads`);
+        if (!response.ok) throw new Error("Failed to load threads");
+        const data = await response.json();
+
+        // If there are threads, set the most recent one as current
+        if (data.threads && data.threads.length > 0) {
+          setCurrentThreadId(data.threads[0].id);
+        }
+      } catch (error) {
+        console.error("Error loading initial thread:", error);
+      }
     }
-  }
 
-  if (isLoading) return <div>Loading...</div>
-  if (isError || !agent) return <div>Agent not found</div>
+    loadInitialThread();
+  }, [params.id]);
 
-  const handleNewConfigure = () => {
-    setIsConfigModalOpen(true)
-  }
+  // Handle URL thread parameter
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const threadId = searchParams.get("thread");
+    if (threadId) {
+      setCurrentThreadId(threadId);
+    }
+  }, []);
+
+  const handleNewThread = () => {
+    setCurrentThreadId(undefined);
+    // Remove thread parameter from URL
+    const url = new URL(window.location.href);
+    url.searchParams.delete("thread");
+    window.history.replaceState({}, "", url.toString());
+  };
+
+  if (isLoading) return <div>Loading...</div>;
+  if (isError || !agent) return <div>Agent not found</div>;
 
   return (
     <SidebarInset>
@@ -65,12 +71,11 @@ export default function AgentPage() {
             </Link>
             <h1 className="text-3xl font-bold">Agent: {agent.name}</h1>
           </div>
-          <Button onClick={handleNewConfigure}>
+          <Button onClick={() => setIsConfigModalOpen(true)}>
             Configure Agent
           </Button>
         </div>
-          
-        {/* Agent Configuration Modal */}
+
         {agent && (
           <AgentConfigModal
             isOpen={isConfigModalOpen}
@@ -78,8 +83,8 @@ export default function AgentPage() {
             agentId={agent.id}
             initialConfig={agent}
             onSave={async (config) => {
-              await mutate(config, false)
-              setIsConfigModalOpen(false)
+              await mutate(config, false);
+              setIsConfigModalOpen(false);
             }}
           />
         )}
@@ -89,7 +94,7 @@ export default function AgentPage() {
             agentId={params.id as string}
             currentThreadId={currentThreadId}
             onThreadSelect={setCurrentThreadId}
-            onNewThread={() => setCurrentThreadId(undefined)}
+            onNewThread={handleNewThread}
           />
 
           <AgentChat
@@ -98,13 +103,7 @@ export default function AgentPage() {
             threadId={currentThreadId}
           />
         </div>
-
-        {isError && (
-          <Alert variant="destructive" className="m-4">
-            <AlertDescription>Failed to load agent.</AlertDescription>
-          </Alert>
-        )}
       </div>
     </SidebarInset>
-  )
+  );
 }
