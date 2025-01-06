@@ -72,34 +72,40 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(req: Request) {
-  const supabase = await createClient()
-  
-  console.log('POST /api/workflows - Starting request')
-  
+  const supabase = await createClient();
+
+  console.log("POST /api/workflows - Starting request");
+
   // Check authentication
-  const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+  const {
+    data: { session },
+    error: sessionError,
+  } = await supabase.auth.getSession();
   if (sessionError || !session) {
-    console.error('POST /api/workflows - Auth error:', sessionError)
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    console.error("POST /api/workflows - Auth error:", sessionError);
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
-    const data = await req.json()
-    console.log('POST /api/workflows - Received data:', { name: data.name, nodeCount: data.nodes?.length })
-    
+    const data = await req.json();
+    console.log("POST /api/workflows - Received data:", {
+      name: data.name,
+      nodeCount: data.nodes?.length,
+    });
+
     // Validate the required fields
     if (!data.name) {
       return NextResponse.json(
-        { error: 'Workflow name is required' },
+        { error: "Workflow name is required" },
         { status: 400 }
-      )
+      );
     }
 
     if (!data.nodes || !Array.isArray(data.nodes) || data.nodes.length === 0) {
       return NextResponse.json(
-        { error: 'At least one node is required' },
+        { error: "At least one node is required" },
         { status: 400 }
-      )
+      );
     }
 
     // Prepare the workflow data
@@ -109,90 +115,105 @@ export async function POST(req: Request) {
       edges: JSON.stringify(data.edges || []),
       owner_id: session.user.id,
       created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    }
+      updated_at: new Date().toISOString(),
+    };
 
-    console.log('POST /api/workflows - Creating workflow for user:', session.user.id)
-    
+    console.log(
+      "POST /api/workflows - Creating workflow for user:",
+      session.user.id
+    );
+
     // Create the workflow
     const { data: workflow, error } = await supabase
-      .from('workflows')
+      .from("workflows")
       .insert([workflowData])
       .select()
-      .single()
+      .single();
 
     if (error) {
-      console.error('POST /api/workflows - Error creating workflow:', error)
+      console.error("POST /api/workflows - Error creating workflow:", error);
       return NextResponse.json(
-        { error: error.message || 'Error creating workflow' },
+        { error: error.message || "Error creating workflow" },
         { status: 500 }
-      )
+      );
     }
 
-    console.log('POST /api/workflows - Successfully created workflow:', workflow.id)
+    console.log(
+      "POST /api/workflows - Successfully created workflow:",
+      workflow.id
+    );
 
     // Parse the JSON strings back to objects for the response
     return NextResponse.json({
       ...workflow,
       nodes: JSON.parse(workflow.nodes),
-      edges: JSON.parse(workflow.edges)
-    })
-  } catch (error: any) {
-    console.error('POST /api/workflows - Error:', error)
+      edges: JSON.parse(workflow.edges),
+    });
+  } catch (error: unknown) {
+    console.error("POST /api/workflows - Error:", error);
     return NextResponse.json(
-      { error: error.message || 'Error creating workflow' },
+      {
+        error:
+          error instanceof Error ? error.message : "Error creating workflow",
+      },
       { status: 500 }
-    )
+    );
   }
 }
 
 export async function PUT(req: Request) {
-  const supabase = await createClient()
-  
+  const supabase = await createClient();
+
   // Check authentication
-  const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+  const {
+    data: { session },
+    error: sessionError,
+  } = await supabase.auth.getSession();
   if (sessionError || !session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
-    const data = await req.json()
-    
+    const data = await req.json();
+
     // Validate the required fields
     if (!data.id) {
       return NextResponse.json(
-        { error: 'Workflow ID is required' },
+        { error: "Workflow ID is required" },
         { status: 400 }
-      )
+      );
     }
 
     if (!data.name) {
       return NextResponse.json(
-        { error: 'Workflow name is required' },
+        { error: "Workflow name is required" },
         { status: 400 }
-      )
+      );
     }
 
     if (!data.nodes || !Array.isArray(data.nodes) || data.nodes.length === 0) {
       return NextResponse.json(
-        { error: 'At least one node is required' },
+        { error: "At least one node is required" },
         { status: 400 }
-      )
+      );
     }
 
     // Verify ownership
     const { data: existingWorkflow, error: fetchError } = await supabase
-      .from('workflows')
-      .select('owner_id')
-      .eq('id', data.id)
-      .single()
+      .from("workflows")
+      .select("owner_id")
+      .eq("id", data.id)
+      .single();
 
     if (fetchError || !existingWorkflow) {
-      return NextResponse.json({ error: 'Workflow not found' }, { status: 404 })
+      return NextResponse.json(
+        { error: "Workflow not found" },
+        { status: 404 }
+      );
     }
 
     if (existingWorkflow.owner_id !== session.user.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
     // Prepare the workflow data
@@ -200,36 +221,39 @@ export async function PUT(req: Request) {
       name: data.name,
       nodes: JSON.stringify(data.nodes),
       edges: JSON.stringify(data.edges || []),
-      updated_at: new Date().toISOString()
-    }
+      updated_at: new Date().toISOString(),
+    };
 
     // Update the workflow
     const { data: workflow, error } = await supabase
-      .from('workflows')
+      .from("workflows")
       .update(workflowData)
-      .eq('id', data.id)
+      .eq("id", data.id)
       .select()
-      .single()
+      .single();
 
     if (error) {
-      console.error('Error updating workflow:', error)
+      console.error("Error updating workflow:", error);
       return NextResponse.json(
-        { error: error.message || 'Error updating workflow' },
+        { error: error.message || "Error updating workflow" },
         { status: 500 }
-      )
+      );
     }
 
     // Parse the JSON strings back to objects for the response
     return NextResponse.json({
       ...workflow,
       nodes: JSON.parse(workflow.nodes),
-      edges: JSON.parse(workflow.edges)
-    })
-  } catch (error: any) {
-    console.error('Error updating workflow:', error)
+      edges: JSON.parse(workflow.edges),
+    });
+  } catch (error: unknown) {
+    console.error("Error updating workflow:", error);
     return NextResponse.json(
-      { error: error.message || 'Error updating workflow' },
+      {
+        error:
+          error instanceof Error ? error.message : "Error updating workflow",
+      },
       { status: 500 }
-    )
+    );
   }
 }

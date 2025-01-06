@@ -19,6 +19,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { supabase } from "@/lib/supabase";
 
 interface ChatThread {
   id: string;
@@ -59,14 +60,33 @@ export function ChatThreads({
     }
   }, [agentId]);
 
+  // Load threads initially and when currentThreadId changes
   useEffect(() => {
     loadThreads();
   }, [loadThreads, currentThreadId]);
 
+  // Subscribe to thread updates
   useEffect(() => {
-    const interval = setInterval(loadThreads, 5000);
-    return () => clearInterval(interval);
-  }, [loadThreads]);
+    const channel = supabase
+      .channel("chat_threads_changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "chat_threads",
+          filter: `agent_id=eq.${agentId}`,
+        },
+        () => {
+          loadThreads();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [agentId, loadThreads]);
 
   const handleRename = async (thread: ChatThread) => {
     setThreadToRename(thread);

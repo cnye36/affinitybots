@@ -6,18 +6,22 @@ import { Label } from '@/components/ui/label'
 import { AgentConfig } from '@/types/agent'
 
 interface GeneralConfigProps {
-  config: AgentConfig
-  onChange: (field: keyof AgentConfig, value: any) => void
+  config: AgentConfig;
+  onChange: (field: keyof AgentConfig, value: unknown) => void;
 }
 
 export const GeneralConfig: React.FC<GeneralConfigProps> = ({ config, onChange }) => {
+  const handleConfigChange = (field: string, value: string) => {
+    onChange("config", { ...config.config, [field]: value });
+  };
+
   return (
     <div className="space-y-4">
       <div>
         <Label>Name</Label>
         <Input
           value={config.name}
-          onChange={(e) => onChange('name', e.target.value)}
+          onChange={(e) => onChange("name", e.target.value)}
           placeholder="Enter agent name"
         />
       </div>
@@ -25,8 +29,8 @@ export const GeneralConfig: React.FC<GeneralConfigProps> = ({ config, onChange }
       <div>
         <Label>Description</Label>
         <Textarea
-          value={config.description || ''}
-          onChange={(e) => onChange('description', e.target.value)}
+          value={config.description || ""}
+          onChange={(e) => onChange("description", e.target.value)}
           placeholder="Enter agent description"
         />
       </div>
@@ -34,9 +38,9 @@ export const GeneralConfig: React.FC<GeneralConfigProps> = ({ config, onChange }
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Label>Model</Label>
-          <Select 
+          <Select
             value={config.model_type}
-            onValueChange={(value) => onChange('model_type', value)}
+            onValueChange={(value) => onChange("model_type", value)}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select a model" />
@@ -51,9 +55,9 @@ export const GeneralConfig: React.FC<GeneralConfigProps> = ({ config, onChange }
 
         <div>
           <Label>Tone</Label>
-          <Select 
-            value={config.config?.tone || 'default'}
-            onValueChange={(value) => onChange('tone', value)}
+          <Select
+            value={config.config?.tone || "default"}
+            onValueChange={(value) => handleConfigChange("tone", value)}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select tone" />
@@ -69,9 +73,9 @@ export const GeneralConfig: React.FC<GeneralConfigProps> = ({ config, onChange }
 
         <div>
           <Label>Language</Label>
-          <Select 
-            value={config.config?.language || 'en'}
-            onValueChange={(value) => onChange('language', value)}
+          <Select
+            value={config.config?.language || "en"}
+            onValueChange={(value) => handleConfigChange("language", value)}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select language" />
@@ -84,5 +88,5 @@ export const GeneralConfig: React.FC<GeneralConfigProps> = ({ config, onChange }
         </div>
       </div>
     </div>
-  )
-}
+  );
+};

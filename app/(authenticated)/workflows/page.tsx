@@ -57,10 +57,12 @@ export default async function WorkflowsPage() {
               <div className="border rounded-lg p-6 hover:shadow-lg transition-shadow">
                 <h2 className="text-xl font-semibold mb-2">{workflow.name}</h2>
                 <p className="text-sm text-muted-foreground">
-                  Created on: {new Date(workflow.created_at).toLocaleDateString()}
+                  Created on:{" "}
+                  {new Date(workflow.created_at).toLocaleDateString()}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Last updated: {new Date(workflow.updated_at).toLocaleDateString()}
+                  Last updated:{" "}
+                  {new Date(workflow.updated_at).toLocaleDateString()}
                 </p>
               </div>
             </Link>
@@ -68,9 +70,12 @@ export default async function WorkflowsPage() {
         </div>
       ) : (
         <div className="text-center text-muted-foreground">
-          <p>No workflows found. Click "Create New Workflow" to get started.</p>
+          <p>
+            No workflows found. Click &quot;Create New Workflow&quot; to get
+            started.
+          </p>
         </div>
       )}
     </div>
-  )
+  );
 }

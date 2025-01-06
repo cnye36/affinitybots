@@ -30,14 +30,6 @@ interface WorkflowCanvasProps {
   setEdges: React.Dispatch<React.SetStateAction<Edge[]>>
 }
 
-interface AgentConfigModalProps {
-  isOpen: boolean
-  onClose: () => void
-  agentId: string
-  initialConfig: any
-  onSave: (config: any) => void
-}
-
 const nodeTypes: NodeTypes = {
   agent: AgentNode,
 }
@@ -55,7 +47,7 @@ export function WorkflowCanvas({
   const reactFlowInstance = useReactFlow()
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [agentConfig, setAgentConfig] = useState<any>(null)
+  const [agentConfig, setAgentConfig] = useState<AgentConfig | null>(null);
 
   const onConnect = useCallback(
     (params: Edge | Connection) => setEdges((eds) => addEdge(params, eds)),

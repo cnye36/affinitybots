@@ -42,9 +42,9 @@ Do not include any additional formatting or explanation.
 
 export async function generateAgentName(description: string, agentType: string): Promise<string> {
   const model = new ChatOpenAI({
-    modelName: 'gpt-4o',
-    temperature: 0.7
-  })
+    modelName: "gpt-4o",
+    temperature: 0.9,
+  });
 
   const formattedPrompt = await nameGeneratorPrompt.format({
     description,
@@ -74,42 +74,65 @@ export async function generateAgentConfiguration(
   
   // Parse the response into structured data
   const lines = responseText.split('\n').filter(line => line.trim())
-  const config: Record<string, any> = {}
-  
-  lines.forEach(line => {
-    const [key, ...valueParts] = line.split(':')
-    const value = valueParts.join(':').trim()
-    
-    switch (key.trim().toUpperCase()) {
-      case 'NAME':
-        config.name = value
-        break
-      case 'DESCRIPTION':
-        config.description = value
-        break
-      case 'PROMPT_TEMPLATE':
-        config.prompt_template = value
-        break
-      case 'TOOLS':
-        config.tools = value.split(',').map(t => t.trim())
-        break
-      case 'MODEL_TYPE':
-        config.model_type = value
-        break
-      case 'TEMPERATURE':
-        config.config = {
-          ...config.config,
-          temperature: parseFloat(value)
-        }
-        break
-      case 'MAX_TOKENS':
-        config.config = {
-          ...config.config,
-          max_tokens: parseInt(value)
-        }
-        break
-    }
-  })
+  const parsedConfig: Partial<AgentConfig> = {
+    config: { temperature: 0.7 }, // Default config
+  };
 
-  return config as AgentConfig
+  lines.forEach((line) => {
+    const [key, ...valueParts] = line.split(":");
+    const value = valueParts.join(":").trim();
+
+    switch (key.trim().toUpperCase()) {
+      case "NAME":
+        parsedConfig.name = value;
+        break;
+      case "DESCRIPTION":
+        parsedConfig.description = value;
+        break;
+      case "PROMPT_TEMPLATE":
+        parsedConfig.prompt_template = value;
+        break;
+      case "TOOLS":
+        parsedConfig.tools = value.split(",").map((t) => t.trim());
+        break;
+      case "MODEL_TYPE":
+        parsedConfig.model_type = value;
+        break;
+      case "TEMPERATURE":
+        parsedConfig.config = {
+          ...parsedConfig.config,
+          temperature: parseFloat(value),
+        };
+        break;
+      case "MAX_TOKENS":
+        parsedConfig.config = {
+          ...parsedConfig.config,
+          max_tokens: parseInt(value),
+        };
+        break;
+    }
+  });
+
+  // Ensure all required fields are present
+  if (
+    !parsedConfig.name ||
+    !parsedConfig.description ||
+    !parsedConfig.model_type ||
+    !parsedConfig.prompt_template
+  ) {
+    throw new Error("Missing required fields in agent configuration");
+  }
+
+  return {
+    id: "", // Will be set by the database
+    owner_id: "", // Will be set by the server
+    name: parsedConfig.name,
+    description: parsedConfig.description,
+    model_type: parsedConfig.model_type,
+    prompt_template: parsedConfig.prompt_template,
+    tools: parsedConfig.tools || [],
+    config: parsedConfig.config || { temperature: 0.7 },
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
 } 

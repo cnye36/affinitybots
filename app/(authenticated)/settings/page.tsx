@@ -19,19 +19,21 @@ export default function SettingsPage() {
     setSuccess(false)
 
     try {
-      const supabase = await createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Not authenticated')
+      const supabase = await createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
 
       const { error } = await supabase
-        .from('profiles')
-        .upsert({ id: user.id, email, username })
+        .from("profiles")
+        .upsert({ id: user.id, email, username });
 
-      if (error) throw error
+      if (error) throw error;
 
-      setSuccess(true)
-    } catch (err: any) {
-      setError(err.message)
+      setSuccess(true);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
     }
   }
 

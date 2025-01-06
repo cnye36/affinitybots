@@ -61,7 +61,8 @@ export default function NewAgentPage() {
                 Describe Your AI Agent
               </h2>
               <p className="text-muted-foreground mb-4">
-                Tell us what you want your AI agent to do, and we'll configure it with the right capabilities.
+                Tell us what you want your AI agent to do, and we&apos;ll
+                configure it with the right capabilities.
               </p>
               <Textarea
                 placeholder="Example: I need an agent that can analyze my company's quarterly reports and provide key insights..."
@@ -69,12 +70,12 @@ export default function NewAgentPage() {
                 onChange={(e) => setCustomPrompt(e.target.value)}
                 className="h-32 mb-4"
               />
-              <Button 
+              <Button
                 onClick={() => handleCreateAgent(customPrompt)}
                 disabled={isSubmitting || !customPrompt.trim()}
                 className="w-full"
               >
-                {isSubmitting ? 'Creating your agent...' : 'Generate AI Agent'}
+                {isSubmitting ? "Creating your agent..." : "Generate AI Agent"}
               </Button>
             </div>
           </TabsContent>
@@ -85,13 +86,17 @@ export default function NewAgentPage() {
                 <div
                   key={template.id}
                   className="gradient-border p-6 rounded-lg cursor-pointer hover:scale-[1.02] transition-transform"
-                  onClick={() => handleCreateAgent(template.basePrompt, template)}
+                  onClick={() =>
+                    handleCreateAgent(template.basePrompt, template)
+                  }
                 >
                   <div className="flex items-center space-x-4">
                     <template.icon className="h-8 w-8 text-primary" />
                     <div>
                       <h3 className="text-lg font-semibold">{template.name}</h3>
-                      <p className="text-sm text-muted-foreground">{template.description}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {template.description}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -107,5 +112,5 @@ export default function NewAgentPage() {
         )}
       </div>
     </div>
-  )
+  );
 } 

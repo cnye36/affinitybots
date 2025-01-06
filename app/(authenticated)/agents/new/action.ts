@@ -12,8 +12,7 @@ export async function createAgent(formData: FormData) {
     if (!user) throw new Error('Not authenticated')
 
     const prompt = formData.get('prompt') as string
-    const agentType = formData.get('agentType') as string
-    const useTemplate = formData.get('useTemplate') === 'true'
+    const agentType = formData.get("agentType") as string;
 
     // Generate AI-powered configuration
     const agentConfig = await generateAgentConfiguration(prompt, agentType)

@@ -1,27 +1,22 @@
-import { 
-  Search, 
-  Globe, 
-  FileText, 
-  MessageSquare, 
-  Calendar,
-} from 'lucide-react'
-import { FaTwitter } from 'react-icons/fa'
-import { SiNotion } from 'react-icons/si'
+import { Search, Globe } from "lucide-react";
+import { IconType } from "react-icons";
+import { FaTwitter } from "react-icons/fa";
+import { SiNotion } from "react-icons/si";
 
 export interface ToolConfig {
-  id: string
-  name: string
-  description: string
-  icon: any
-  category: 'data' | 'content' | 'automation' | 'analysis'
-  requiresAuth?: boolean
-  requiredEnvVars?: string[]
+  id: string;
+  name: string;
+  description: string;
+  icon: IconType;
+  category: "data" | "content" | "automation" | "analysis";
+  requiresAuth?: boolean;
+  requiredEnvVars?: string[];
   configOptions?: {
     name: string
-    type: 'text' | 'number' | 'boolean'
-    required?: boolean
-    default?: any
-    description?: string
+    type: "text" | "number" | "boolean";
+    required?: boolean;
+    default?: string | number | boolean;
+    description?: string;
   }[]
 }
 

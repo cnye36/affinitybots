@@ -5,7 +5,7 @@ import { AgentConfig } from '@/types/agent'
 
 interface PromptsConfigProps {
   config: AgentConfig
-  onChange: (field: keyof AgentConfig, value: any) => void
+  onChange: (field: keyof AgentConfig, value: unknown) => void
 }
 
 export const PromptsConfig: React.FC<PromptsConfigProps> = ({ config, onChange }) => {
@@ -20,7 +20,7 @@ export const PromptsConfig: React.FC<PromptsConfigProps> = ({ config, onChange }
           className="min-h-[200px]"
         />
         <p className="text-sm text-muted-foreground mt-1">
-          These instructions define your agent's behavior and capabilities
+          These instructions define your agent&apos;s behavior and capabilities
         </p>
       </div>
     </div>

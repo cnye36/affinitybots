@@ -17,7 +17,7 @@ interface AgentSidebarProps {
       enableKnowledge?: boolean
       tone?: string
       language?: string
-      toolsConfig?: Record<string, any>
+      toolsConfig?: Record<string, unknown>
     }
   }[]
   loading: boolean

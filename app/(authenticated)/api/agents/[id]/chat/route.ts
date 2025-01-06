@@ -4,14 +4,34 @@ import { NextResponse } from "next/server";
 import { generateChatName } from "@/lib/chat-utils";
 import { initializeTools } from "@/lib/tools";
 import { openai } from "@ai-sdk/openai";
+import { retrieveRelevantDocuments } from "@/lib/retrieval";
 
 // Define type for tools
-interface Tool {
+interface ChatTool {
   description: string;
   parameters: Record<string, unknown>;
-  invoke?: (args: Record<string, unknown>) => Promise<string>;
+  execute: (args: Record<string, unknown>) => Promise<string>;
 }
 
+type ToolParams = {
+  web_search: { query: string; maxResults?: number };
+  web_scraper: { url: string; selector?: string };
+  knowledge_base: { query: string; collection?: string; limit?: number };
+  document_reader: { documentId: string; fileType?: string };
+  spreadsheet: {
+    operation: "read" | "write" | "append";
+    data?: Record<string, unknown>;
+    range?: string;
+    sheetName?: string;
+  };
+  task_scheduler: {
+    task: string;
+    dueDate?: string;
+    priority?: "low" | "medium" | "high";
+    timezone?: string;
+  };
+  database_query: { query: string; maxRows?: number };
+};
 
 export const maxDuration = 30;
 
@@ -73,13 +93,14 @@ export async function POST(
     }
 
     // 5. Save user message
+    const userMessage = messages[messages.length - 1].content;
     const { error: chatError } = await supabase.from("agent_chats").insert([
       {
         thread_id: currentThreadId,
         agent_id: params.id,
         user_id: user.id,
         role: "user",
-        content: messages[messages.length - 1].content,
+        content: userMessage,
       },
     ]);
 
@@ -95,16 +116,53 @@ export async function POST(
       .eq("thread_id", currentThreadId)
       .order("created_at", { ascending: true });
 
-    // 7. Initialize tools and get response
-    const { tools } = await initializeTools(
-      agent.tools || [],
-      agent.config?.toolsConfig
+    // 7. Retrieve relevant documents based on the latest user message
+    const relevantDocuments = await retrieveRelevantDocuments(userMessage, 5);
+    const documentContents = relevantDocuments
+      .map((doc) => doc.pageContent)
+      .join("\n");
+
+    // 8. Initialize tools and get response
+    const initializedTools = await initializeTools(agent.tools || [], {
+      toolConfig: agent.config?.toolsConfig || {},
+    });
+
+    const chatTools = Object.entries(initializedTools).reduce(
+      (acc, [name, tool]) => {
+        if (!tool) return acc;
+
+        acc[name] = {
+          description: tool.description,
+          parameters: tool.parameters,
+          execute: async (args: Record<string, unknown>) => {
+            try {
+              // Type assertion based on tool name
+              return await tool.invoke(
+                args as ToolParams[typeof name extends keyof ToolParams
+                  ? typeof name
+                  : never]
+              );
+            } catch (error) {
+              console.error(`Error executing tool ${name}:`, error);
+              return `Error executing ${name}: ${
+                error instanceof Error ? error.message : "Unknown error"
+              }`;
+            }
+          },
+        };
+        return acc;
+      },
+      {} as Record<string, ChatTool>
     );
 
     const result = await streamText({
       model: openai(agent.model_type || "gpt-4o"),
       messages: [
         { role: "system", content: agent.prompt_template },
+        {
+          role: "system",
+          content: `Here is some relevant context:\n${documentContents}`,
+        },
         ...(threadMessages || []).map((msg) => ({
           role: msg.role,
           content: msg.content,
@@ -112,32 +170,7 @@ export async function POST(
       ],
       temperature: agent.config?.temperature || 0.7,
       maxTokens: agent.config?.max_tokens,
-      tools: tools
-        ? Object.entries(tools).reduce(
-            (acc, [name, tool]) => {
-              const typedTool = tool as Tool;
-              acc[name] = {
-                description: typedTool.description,
-                parameters: typedTool.parameters,
-                execute: async (args: Record<string, unknown>) => {
-                  if (typedTool.invoke) {
-                    return await typedTool.invoke(args);
-                  }
-                  return "Tool execution not implemented";
-                },
-              };
-              return acc;
-            },
-            {} as Record<
-              string,
-              {
-                description: string;
-                parameters: Record<string, unknown>;
-                execute: (args: Record<string, unknown>) => Promise<string>;
-              }
-            >
-          )
-        : undefined,
+      tools: Object.keys(chatTools).length > 0 ? chatTools : undefined,
     });
 
     // Set up a callback to save the complete response

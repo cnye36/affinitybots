@@ -6,7 +6,7 @@ import { AgentConfig } from '@/types/agent'
 
 interface SettingsConfigProps {
   config: AgentConfig;
-  onChange: (field: keyof AgentConfig["config"], value: any) => void;
+  onChange: (field: keyof AgentConfig["config"], value: unknown) => void;
 }
 
 export const SettingsConfig: React.FC<SettingsConfigProps> = ({ config, onChange }) => {

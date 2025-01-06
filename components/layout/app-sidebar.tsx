@@ -57,7 +57,7 @@ const data = {
 
 interface User {
   name?: string;
-  email: string;
+  email?: string;
   image?: string;
 }
 
