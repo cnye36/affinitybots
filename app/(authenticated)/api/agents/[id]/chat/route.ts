@@ -4,7 +4,6 @@ import { NextResponse } from "next/server";
 import { generateChatName } from "@/lib/chat-utils";
 import { initializeTools } from "@/lib/tools";
 import { openai } from "@ai-sdk/openai";
-import { OpenAIEmbeddings } from "@langchain/openai";
 
 // Define type for tools
 interface Tool {
@@ -13,12 +12,6 @@ interface Tool {
   invoke?: (args: Record<string, unknown>) => Promise<string>;
 }
 
-interface DocumentMatch {
-  id: string;
-  content: string;
-  metadata: Record<string, unknown>;
-  similarity: number;
-}
 
 export const maxDuration = 30;
 
@@ -95,39 +88,27 @@ export async function POST(
       throw chatError;
     }
 
-    // 6. Initialize tools
+    // 6. Get all messages for this thread to maintain context
+    const { data: threadMessages } = await supabase
+      .from("agent_chats")
+      .select("*")
+      .eq("thread_id", currentThreadId)
+      .order("created_at", { ascending: true });
+
+    // 7. Initialize tools and get response
     const { tools } = await initializeTools(
       agent.tools || [],
       agent.config?.toolsConfig
     );
 
-    // 7. Get relevant documents if knowledge is enabled
-    let contextText = "";
-    if (agent.config?.enableKnowledge) {
-      const embedding = await new OpenAIEmbeddings().embedQuery(
-        messages[messages.length - 1].content
-      );
-
-      const { data: documents } = (await supabase.rpc("match_documents", {
-        query_embedding: embedding,
-        match_threshold: 0.8,
-        match_count: 5,
-        agent_id: params.id,
-      })) as { data: DocumentMatch[] };
-
-      if (documents?.length > 0) {
-        contextText = `\nRelevant context from documents:\n${documents
-          .map((doc: DocumentMatch) => doc.content)
-          .join("\n")}`;
-      }
-    }
-
-    // 8. Generate response using AI SDK's streamText
     const result = await streamText({
-      model: openai(agent.model_type || "gpt-4"),
+      model: openai(agent.model_type || "gpt-4o"),
       messages: [
-        { role: "system", content: agent.prompt_template + contextText },
-        ...messages,
+        { role: "system", content: agent.prompt_template },
+        ...(threadMessages || []).map((msg) => ({
+          role: msg.role,
+          content: msg.content,
+        })),
       ],
       temperature: agent.config?.temperature || 0.7,
       maxTokens: agent.config?.max_tokens,

@@ -1,32 +1,31 @@
 'use client'
 
-import { useRef, useEffect } from 'react'
-import { useChat } from 'ai/react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { SendHorizontal, Bot, Loader2 } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
-import rehypeRaw from 'rehype-raw'
-import rehypeSanitize from 'rehype-sanitize'
-import rehypeHighlight from 'rehype-highlight'
-import 'highlight.js/styles/github-dark.css'
+import { useRef, useEffect, useState } from "react";
+import { useChat } from "ai/react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { SendHorizontal, Bot, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import rehypeRaw from "rehype-raw";
+import rehypeSanitize from "rehype-sanitize";
+import rehypeHighlight from "rehype-highlight";
+import "highlight.js/styles/github-dark.css";
 
 interface AgentChatProps {
-  agentId: string
-  agentName: string
-  threadId?: string
+  agentId: string;
+  agentName: string;
+  threadId?: string;
 }
 
-export function AgentChat({ 
-  agentId, 
-  agentName,
-  threadId,
-}: AgentChatProps) {
-  const scrollAreaRef = useRef<HTMLDivElement>(null)
-  
+export function AgentChat({ agentId, agentName, threadId }: AgentChatProps) {
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const [currentThreadId, setCurrentThreadId] = useState<string | undefined>(
+    threadId
+  );
+
   const {
     messages,
     input,
@@ -37,11 +36,15 @@ export function AgentChat({
     setMessages,
   } = useChat({
     api: `/api/agents/${agentId}/chat`,
-    id: threadId || undefined,
+    id: currentThreadId,
+    body: {
+      threadId: currentThreadId,
+    },
     onResponse: (response) => {
       if (response.ok) {
         const newThreadId = response.headers.get("X-Thread-Id");
-        if (newThreadId && !threadId) {
+        if (newThreadId && !currentThreadId) {
+          setCurrentThreadId(newThreadId);
           window.history.replaceState(
             {},
             "",
@@ -57,15 +60,15 @@ export function AgentChat({
 
   // Load messages when thread changes
   useEffect(() => {
-    async function loadMessages() {
-      if (!threadId) {
+    const loadMessages = async () => {
+      if (!currentThreadId) {
         setMessages([]);
         return;
       }
 
       try {
         const response = await fetch(
-          `/api/agents/${agentId}/chat?threadId=${threadId}`
+          `/api/agents/${agentId}/chat?threadId=${currentThreadId}`
         );
         if (!response.ok) throw new Error("Failed to load messages");
         const data = await response.json();
@@ -73,10 +76,15 @@ export function AgentChat({
       } catch (error) {
         console.error("Error loading messages:", error);
       }
-    }
+    };
 
     loadMessages();
-  }, [threadId, agentId, setMessages]);
+  }, [currentThreadId, agentId, setMessages]);
+
+  // Update currentThreadId when prop changes
+  useEffect(() => {
+    setCurrentThreadId(threadId);
+  }, [threadId]);
 
   // Auto scroll to bottom when new messages arrive
   useEffect(() => {

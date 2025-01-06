@@ -15,10 +15,9 @@ export interface AgentBaseConfig {
   temperature?: number;
   max_tokens?: number;
   use_memory?: boolean;
-  enableKnowledge?: boolean;
   tone?: string;
   language?: string;
-  toolsConfig?: Record<string, any>;
+  toolsConfig?: Record<string, unknown>;
   knowledgeBase?: KnowledgeBase;
 }
 

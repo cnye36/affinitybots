@@ -1,55 +1,65 @@
-import { memo, useEffect, useState } from 'react'
-import { Handle, Position, NodeProps } from 'reactflow'
-import { Card, CardHeader, CardTitle } from '@/components/ui/card'
-import axios from 'axios'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { Activity, CircleCheck, Settings } from 'lucide-react'
-import { AgentConfigModal } from '../configuration/AgentConfigModal'
-import { AgentConfig } from '@/types/agent'
+import React, { memo, useEffect, useState } from "react";
+import { Handle, Position } from "reactflow";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import axios from "axios";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Activity, Settings } from "lucide-react";
+import { AgentConfigModal } from "../configuration/AgentConfigModal";
+import { AgentConfig } from "@/types/agent";
 
 interface AgentNodeProps {
   data: {
-    label: string
-    agentId: string
-  }
+    label: string;
+    agentId: string;
+  };
 }
 
 export const AgentNode = memo(({ data }: AgentNodeProps) => {
-  const [agent, setAgent] = useState<AgentConfig | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false)
+  const [agent, setAgent] = useState<AgentConfig | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchAgent = async () => {
       try {
-        const response = await axios.get(`/(authenticated)/api/agents/${data.agentId}`)
-        setAgent(response.data)
+        const response = await axios.get(
+          `/(authenticated)/api/agents/${data.agentId}`
+        );
+        setAgent(response.data);
       } catch (err) {
-        console.error('Error fetching agent:', err)
-        setError('Failed to load agent')
+        console.error("Error fetching agent:", err);
+        setError("Failed to load agent");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    fetchAgent()
-  }, [data.agentId])
+    fetchAgent();
+  }, [data.agentId]);
 
   const handleSettingsClick = (e: React.MouseEvent) => {
-    e.stopPropagation() // Prevent node selection in ReactFlow
-    setIsConfigModalOpen(true)
-  }
+    e.stopPropagation(); // Prevent node selection in ReactFlow
+    setIsConfigModalOpen(true);
+  };
 
   const handleConfigSave = async (updatedConfig: AgentConfig) => {
     try {
-      const response = await axios.put(`/(authenticated)/api/agents/${data.agentId}`, updatedConfig)
-      setAgent(response.data)
-      setIsConfigModalOpen(false)
+      const response = await axios.put(
+        `/(authenticated)/api/agents/${data.agentId}`,
+        updatedConfig
+      );
+      setAgent(response.data);
+      setIsConfigModalOpen(false);
     } catch (err) {
-      console.error('Error updating agent:', err)
+      console.error("Error updating agent:", err);
     }
-  }
+  };
 
   if (loading) {
     return (
@@ -60,7 +70,7 @@ export const AgentNode = memo(({ data }: AgentNodeProps) => {
         <Handle type="target" position={Position.Top} className="w-2 h-2" />
         <Handle type="source" position={Position.Bottom} className="w-2 h-2" />
       </Card>
-    )
+    );
   }
 
   if (error || !agent) {
@@ -72,49 +82,40 @@ export const AgentNode = memo(({ data }: AgentNodeProps) => {
         <Handle type="target" position={Position.Top} className="w-2 h-2" />
         <Handle type="source" position={Position.Bottom} className="w-2 h-2" />
       </Card>
-    )
+    );
   }
 
   const getStatusIcon = () => {
-    return agent.config.enableKnowledge ? (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <CircleCheck className="text-green-500" size={16} />
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Knowledge Base Enabled</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    ) : (
+    return (
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
             <Activity className="text-gray-500" size={16} />
           </TooltipTrigger>
           <TooltipContent>
-            <p>Knowledge Base Disabled</p>
+            <p>Agent Status</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-    )
-  }
+    );
+  };
 
   return (
     <>
-      <Card className={`w-40 border-${agent.config.enableKnowledge ? 'green' : 'gray'}-300`}>
+      <Card className="w-40">
         <CardHeader className="p-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-sm truncate flex-1">{agent.name}</CardTitle>
+            <CardTitle className="text-sm truncate flex-1">
+              {agent.name}
+            </CardTitle>
             <div className="flex items-center gap-1">
               {getStatusIcon()}
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Settings 
-                      className="text-gray-500 cursor-pointer hover:text-gray-700" 
-                      size={16} 
+                    <Settings
+                      className="text-gray-500 cursor-pointer hover:text-gray-700"
+                      size={16}
                       onClick={handleSettingsClick}
                     />
                   </TooltipTrigger>
@@ -139,8 +140,7 @@ export const AgentNode = memo(({ data }: AgentNodeProps) => {
         />
       )}
     </>
-  )
-})
+  );
+});
 
-AgentNode.displayName = 'AgentNode'
-
+AgentNode.displayName = "AgentNode";
