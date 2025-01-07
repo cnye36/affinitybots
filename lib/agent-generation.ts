@@ -1,6 +1,7 @@
 import { ChatOpenAI } from '@langchain/openai'
 import { PromptTemplate } from '@langchain/core/prompts'
 import { AgentConfig } from '@/types/agent'
+import { AVAILABLE_TOOLS } from "./tools/config";
 
 const nameGeneratorPrompt = PromptTemplate.fromTemplate(`
 Given the following agent description and type, generate a creative and memorable name for the AI agent.
@@ -17,7 +18,7 @@ Requirements:
 - Should not include the words "AI", "Bot", or "Assistant"
 
 Return only the name, nothing else.
-`)
+`);
 
 const configurationPrompt = PromptTemplate.fromTemplate(`
 Create a comprehensive configuration for an AI agent based on the following description.
@@ -31,28 +32,31 @@ Provide the following information in a clear format:
 1. NAME: Create a creative name for the agent
 2. DESCRIPTION: Write a summary of the agent's capabilities
 3. PROMPT_TEMPLATE: Write a comprehensive system prompt for the agent
-4. TOOLS: List recommended tools, separated by commas
+4. TOOLS: List any additional tools needed beyond web search and knowledge base, separated by commas
 5. MODEL_TYPE: Specify gpt-4o
 6. TEMPERATURE: Provide a number between 0 and 1
 7. MAX_TOKENS: Provide a number for maximum tokens
 
 Format each response on a new line with the label, followed by a colon and the value.
 Do not include any additional formatting or explanation.
-`)
+`);
 
-export async function generateAgentName(description: string, agentType: string): Promise<string> {
+export async function generateAgentName(
+  description: string,
+  agentType: string
+): Promise<string> {
   const model = new ChatOpenAI({
-    modelName: "gpt-4o",
+    modelName: "gpt-4o-mini",
     temperature: 0.9,
   });
 
   const formattedPrompt = await nameGeneratorPrompt.format({
     description,
-    agentType
-  })
+    agentType,
+  });
 
-  const response = await model.invoke(formattedPrompt)
-  return response.content.toString().trim()
+  const response = await model.invoke(formattedPrompt);
+  return response.content.toString().trim();
 }
 
 export async function generateAgentConfiguration(
@@ -60,23 +64,28 @@ export async function generateAgentConfiguration(
   agentType: string
 ): Promise<AgentConfig> {
   const model = new ChatOpenAI({
-    modelName: 'gpt-4o',
-    temperature: 0.7
-  })
+    modelName: "gpt-4o",
+    temperature: 0.7,
+  });
 
   const formattedPrompt = await configurationPrompt.format({
     description,
-    agentType
-  })
+    agentType,
+  });
 
-  const response = await model.invoke(formattedPrompt)
-  const responseText = response.content.toString()
-  
+  const response = await model.invoke(formattedPrompt);
+  const responseText = response.content.toString();
+
   // Parse the response into structured data
-  const lines = responseText.split('\n').filter(line => line.trim())
+  const lines = responseText.split("\n").filter((line) => line.trim());
   const parsedConfig: Partial<AgentConfig> = {
     config: { temperature: 0.7 }, // Default config
   };
+
+  // Get core tools
+  const coreTools = AVAILABLE_TOOLS.filter((tool) => tool.isCore).map(
+    (tool) => tool.id
+  );
 
   lines.forEach((line) => {
     const [key, ...valueParts] = line.split(":");
@@ -93,7 +102,9 @@ export async function generateAgentConfiguration(
         parsedConfig.prompt_template = value;
         break;
       case "TOOLS":
-        parsedConfig.tools = value.split(",").map((t) => t.trim());
+        // Combine core tools with any additional tools specified
+        const additionalTools = value.split(",").map((t) => t.trim());
+        parsedConfig.tools = [...new Set([...coreTools, ...additionalTools])];
         break;
       case "MODEL_TYPE":
         parsedConfig.model_type = value;
@@ -123,6 +134,9 @@ export async function generateAgentConfiguration(
     throw new Error("Missing required fields in agent configuration");
   }
 
+  // Ensure core tools are always included
+  parsedConfig.tools = parsedConfig.tools || [...coreTools];
+
   return {
     id: "", // Will be set by the database
     owner_id: "", // Will be set by the server
@@ -130,7 +144,7 @@ export async function generateAgentConfiguration(
     description: parsedConfig.description,
     model_type: parsedConfig.model_type,
     prompt_template: parsedConfig.prompt_template,
-    tools: parsedConfig.tools || [],
+    tools: parsedConfig.tools,
     config: parsedConfig.config || { temperature: 0.7 },
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
