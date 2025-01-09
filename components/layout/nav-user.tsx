@@ -7,7 +7,7 @@ import {
   User,
   Settings2,
 } from "lucide-react"
-import { signOut } from "@/app/auth/actions";
+import { signOut } from "@/app/(auth)/actions";
 import { ThemeToggle } from '@/components/theme-toggle'
 
 import {

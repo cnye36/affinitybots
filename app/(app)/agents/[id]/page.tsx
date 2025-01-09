@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
@@ -9,7 +9,6 @@ import { AgentChat } from "@/components/agents/AgentChat";
 import { AgentConfigModal } from "@/components/configuration/AgentConfigModal";
 import { ChatThreads } from "@/components/agents/ChatThreads";
 import { useAgent } from "@/hooks/useAgent";
-import { SidebarInset } from "@/components/ui/sidebar";
 
 export default function AgentPage() {
   const params = useParams();
@@ -60,50 +59,48 @@ export default function AgentPage() {
   if (isError || !agent) return <div>Agent not found</div>;
 
   return (
-    <SidebarInset>
-      <div className="h-[calc(100vh-4rem)] flex flex-col">
-        <div className="flex items-center justify-between p-4 border-b">
-          <div className="flex items-center">
-            <Link href="/agents" className="mr-4">
-              <Button variant="ghost" size="icon">
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-            </Link>
-            <h1 className="text-3xl font-bold">Agent: {agent.name}</h1>
-          </div>
-          <Button onClick={() => setIsConfigModalOpen(true)}>
-            Configure Agent
-          </Button>
+    <div className="h-[calc(100vh-4rem)] flex flex-col">
+      <div className="flex items-center justify-between p-4 border-b">
+        <div className="flex items-center">
+          <Link href="/agents" className="mr-4">
+            <Button variant="ghost" size="icon">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <h1 className="text-3xl font-bold">Agent: {agent.name}</h1>
         </div>
-
-        {agent && (
-          <AgentConfigModal
-            isOpen={isConfigModalOpen}
-            onClose={() => setIsConfigModalOpen(false)}
-            agentId={agent.id}
-            initialConfig={agent}
-            onSave={async (config) => {
-              await mutate(config, false);
-              setIsConfigModalOpen(false);
-            }}
-          />
-        )}
-
-        <div className="flex-1 flex overflow-hidden">
-          <ChatThreads
-            agentId={params.id as string}
-            currentThreadId={currentThreadId}
-            onThreadSelect={setCurrentThreadId}
-            onNewThread={handleNewThread}
-          />
-
-          <AgentChat
-            agentId={params.id as string}
-            agentName={agent.name}
-            threadId={currentThreadId}
-          />
-        </div>
+        <Button onClick={() => setIsConfigModalOpen(true)}>
+          Configure Agent
+        </Button>
       </div>
-    </SidebarInset>
+
+      {agent && (
+        <AgentConfigModal
+          isOpen={isConfigModalOpen}
+          onClose={() => setIsConfigModalOpen(false)}
+          agentId={agent.id}
+          initialConfig={agent}
+          onSave={async (config) => {
+            await mutate(config, false);
+            setIsConfigModalOpen(false);
+          }}
+        />
+      )}
+
+      <div className="flex-1 flex overflow-hidden">
+        <ChatThreads
+          agentId={params.id as string}
+          currentThreadId={currentThreadId}
+          onThreadSelect={setCurrentThreadId}
+          onNewThread={handleNewThread}
+        />
+
+        <AgentChat
+          agentId={params.id as string}
+          agentName={agent.name}
+          threadId={currentThreadId}
+        />
+      </div>
+    </div>
   );
 }

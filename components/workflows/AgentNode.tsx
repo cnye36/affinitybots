@@ -28,9 +28,7 @@ export const AgentNode = memo(({ data }: AgentNodeProps) => {
   useEffect(() => {
     const fetchAgent = async () => {
       try {
-        const response = await axios.get(
-          `/(authenticated)/api/agents/${data.agentId}`
-        );
+        const response = await axios.get(`/api/agents/${data.agentId}`);
         setAgent(response.data);
       } catch (err) {
         console.error("Error fetching agent:", err);
@@ -51,7 +49,7 @@ export const AgentNode = memo(({ data }: AgentNodeProps) => {
   const handleConfigSave = async (updatedConfig: AgentConfig) => {
     try {
       const response = await axios.put(
-        `/(authenticated)/api/agents/${data.agentId}`,
+        `/api/agents/${data.agentId}`,
         updatedConfig
       );
       setAgent(response.data);

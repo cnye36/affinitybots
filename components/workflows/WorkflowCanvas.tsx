@@ -70,7 +70,7 @@ export function WorkflowCanvas({
       }
 
       try {
-        const response = await axios.get(`/(authenticated)/api/agents/${agentId}`)
+        const response = await axios.get(`/api/agents/${agentId}`);
         const agent = response.data
 
         if (!agent) {
@@ -120,7 +120,7 @@ export function WorkflowCanvas({
     const fetchAgentConfig = async () => {
       if (selectedAgentId) {
         try {
-          const response = await axios.get(`/(authenticated)/api/agents/${selectedAgentId}`)
+          const response = await axios.get(`/api/agents/${selectedAgentId}`);
           setAgentConfig(response.data)
         } catch (error) {
           console.error('Error fetching agent config:', error)

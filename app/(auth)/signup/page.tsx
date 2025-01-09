@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import Link from 'next/link'
-import { signUp } from "../auth/actions";
+import Link from "next/link";
+import { signUp } from "../actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -85,4 +85,3 @@ export default function SignUpPage() {
     </div>
   );
 }
-
