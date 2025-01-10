@@ -70,7 +70,7 @@ export function AppSidebar({
       <SidebarHeader className="border-b">
         <div className="flex h-[60px] items-center px-6">
           <Image
-            src="/AgentHub-Logo.png"
+            src="/logo.png"
             alt="AgentHub Logo"
             width={64}
             height={64}

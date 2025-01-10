@@ -76,6 +76,7 @@ export function WorkflowCanvas({
           return;
         }
 
+        const { zoom } = reactFlowInstance.getViewport();
         const position = reactFlowInstance.screenToFlowPosition({
           x: event.clientX,
           y: event.clientY,
@@ -89,10 +90,12 @@ export function WorkflowCanvas({
             agentId: agent.id,
             label: agent.name,
             workflowId: initialWorkflowId,
+            avatar: agent.avatar,
           },
         };
 
         setNodes((nds) => nds.concat(newNode));
+        reactFlowInstance.setViewport({ x: 0, y: 0, zoom });
       } catch (error) {
         console.error("Error fetching agent:", error);
       }
@@ -115,9 +118,13 @@ export function WorkflowCanvas({
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         defaultViewport={{ x: 0, y: 0, zoom: 1.5 }}
+        defaultEdgeOptions={{
+          type: "custom",
+          animated: true,
+        }}
         minZoom={0.2}
         maxZoom={4}
-        fitView
+        fitView={false}
       >
         <Controls />
         <MiniMap />

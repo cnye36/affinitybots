@@ -6,14 +6,19 @@ import React, { useState, useEffect } from "react";
 import { Trash2, Settings } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { createClient } from "@/utils/supabase/client";
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 
 interface Workflow {
   id: string;
   name: string;
   created_at: string;
   updated_at: string;
+  nodes: Array<{
+    data: {
+      agentId: string;
+      label: string;
+    };
+  }>;
 }
 
 export default function WorkflowsPage() {
@@ -37,7 +42,7 @@ export default function WorkflowsPage() {
 
         const { data, error } = await supabase
           .from("workflows")
-          .select("id, name, created_at, updated_at")
+          .select("id, name, created_at, updated_at, nodes")
           .eq("owner_id", user.id)
           .order("created_at", { ascending: false });
 
@@ -109,7 +114,6 @@ export default function WorkflowsPage() {
 
   return (
     <div className="container mx-auto py-6">
-      <ToastContainer position="bottom-right" />
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">My Workflows</h1>
         <Link href="/workflows/new">
@@ -122,15 +126,15 @@ export default function WorkflowsPage() {
           {workflows.map((workflow) => (
             <div
               key={workflow.id}
-              className="border rounded-lg p-6 hover:shadow-lg transition-shadow relative group"
+              className="bg-card border rounded-xl p-6 hover:shadow-lg transition-all duration-200 relative group"
             >
-              <div className="absolute top-2 right-2 flex space-x-2">
+              <div className="absolute top-4 right-4 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
                 <Link
                   href={`/workflows/${workflow.id}`}
                   className={buttonVariants({ variant: "ghost", size: "icon" })}
                   title="Configure Workflow"
                 >
-                  <Settings className="h-5 w-5 text-muted-foreground group-hover:text-foreground" />
+                  <Settings className="h-4 w-4 text-muted-foreground group-hover:text-foreground" />
                 </Link>
                 <button
                   type="button"
@@ -143,19 +147,45 @@ export default function WorkflowsPage() {
                   })}
                   title="Delete Workflow"
                 >
-                  <Trash2 className="h-5 w-5 text-destructive" />
+                  <Trash2 className="h-4 w-4 text-destructive" />
                 </button>
               </div>
-              <h2 className="text-xl font-semibold mb-2 pr-12">
-                {workflow.name}
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                Created on: {new Date(workflow.created_at).toLocaleDateString()}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Last updated:{" "}
-                {new Date(workflow.updated_at).toLocaleDateString()}
-              </p>
+
+              <div className="space-y-4">
+                <div>
+                  <h2 className="text-xl font-semibold mb-1">
+                    {workflow.name}
+                  </h2>
+                  <div className="flex items-center space-x-2 text-xs text-muted-foreground">
+                    <span>
+                      Created{" "}
+                      {new Date(workflow.created_at).toLocaleDateString()}
+                    </span>
+                    <span>•</span>
+                    <span>
+                      Updated{" "}
+                      {new Date(workflow.updated_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex -space-x-2 overflow-hidden">
+                  {workflow.nodes?.map((node, index) => (
+                    <div
+                      key={`${workflow.id}-agent-${index}`}
+                      className="inline-block h-8 w-8 rounded-full ring-2 ring-background"
+                      style={{
+                        backgroundColor: `hsl(${
+                          (index * 360) / (workflow.nodes?.length || 1)
+                        }, 70%, 50%)`,
+                      }}
+                    >
+                      {/* This will be replaced with actual agent avatars */}
+                      <span className="sr-only">Agent in workflow</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           ))}
         </div>

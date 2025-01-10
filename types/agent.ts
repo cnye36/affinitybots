@@ -23,13 +23,17 @@ export interface AgentBaseConfig {
 
 export interface AgentConfig {
   id: string;
-  owner_id: string;
   name: string;
-  description: string;
+  description?: string;
   model_type: string;
   prompt_template: string;
   tools: string[];
-  config: AgentBaseConfig;
-  created_at?: string;
-  updated_at?: string;
+  avatar?: string;
+  config: {
+    temperature?: number;
+    enableKnowledge?: boolean;
+    tone?: string;
+    language?: string;
+    toolsConfig?: Record<string, unknown>;
+  };
 }

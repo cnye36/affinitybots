@@ -2,7 +2,10 @@ import { createClient } from "@/utils/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { TaskRun, TaskRunStatus } from "@/types/workflow";
 
-export async function GET(request: NextRequest, context: { params: { id: string } }) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+): Promise<NextResponse> {
   try {
     const supabase = await createClient();
     const {
@@ -14,7 +17,7 @@ export async function GET(request: NextRequest, context: { params: { id: string 
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = context.params;
+    const { id } = params;
 
     const { data: taskRun, error } = await supabase
       .from("task_runs")
@@ -45,9 +48,9 @@ export async function GET(request: NextRequest, context: { params: { id: string 
 }
 
 export async function PUT(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { id: string } }
-) {
+): Promise<NextResponse> {
   try {
     const supabase = await createClient();
     const {
@@ -59,6 +62,7 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = params;
     const json = await request.json();
     const {
       status,
@@ -76,7 +80,7 @@ export async function PUT(
     const { data: taskRun, error: fetchError } = await supabase
       .from("task_runs")
       .select("workflow_run_id, metadata")
-      .eq("id", params.id)
+      .eq("id", id)
       .single();
 
     if (fetchError || !taskRun) {
@@ -125,7 +129,7 @@ export async function PUT(
     const { data: run, error } = await supabase
       .from("task_runs")
       .update(updateData)
-      .eq("id", params.id)
+      .eq("id", id)
       .select()
       .single();
 
@@ -145,9 +149,9 @@ export async function PUT(
 }
 
 export async function DELETE(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { id: string } }
-) {
+): Promise<NextResponse> {
   try {
     const supabase = await createClient();
     const {
@@ -159,11 +163,13 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = params;
+
     // Verify task run exists and user has access through workflow run
     const { data: taskRun, error: fetchError } = await supabase
       .from("task_runs")
       .select("workflow_run_id")
-      .eq("id", params.id)
+      .eq("id", id)
       .single();
 
     if (fetchError || !taskRun) {
@@ -191,10 +197,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    const { error } = await supabase
-      .from("task_runs")
-      .delete()
-      .eq("id", params.id);
+    const { error } = await supabase.from("task_runs").delete().eq("id", id);
 
     if (error) {
       console.error("Error deleting task run:", error);

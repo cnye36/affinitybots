@@ -9,7 +9,6 @@ import { WorkflowCanvas } from "./WorkflowCanvas";
 import { SidebarTrigger } from "./SidebarTrigger";
 import axios, { isAxiosError } from "axios";
 import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
