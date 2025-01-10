@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect } from 'react'
-import { Edge, ReactFlowProvider, Node } from "reactflow";
+import { Edge, ReactFlowProvider, Node, useReactFlow } from "reactflow";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AgentSidebar } from "./AgentSidebar";
@@ -11,6 +11,7 @@ import axios, { isAxiosError } from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 
 interface Agent {
   id: string;
@@ -32,7 +33,7 @@ interface WorkflowsBuilderProps {
   initialWorkflowId?: string;
 }
 
-export function WorkflowsBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
+function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
   const router = useRouter();
   const [workflowName, setWorkflowName] = useState("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -57,7 +58,16 @@ export function WorkflowsBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
         );
         const workflow = response.data;
         setWorkflowName(workflow.name);
-        setNodes(workflow.nodes);
+        // Update nodes to include workflowId
+        setNodes(
+          workflow.nodes.map((node: Node) => ({
+            ...node,
+            data: {
+              ...node.data,
+              workflowId: initialWorkflowId,
+            },
+          }))
+        );
         setEdges(workflow.edges);
       } catch (err: unknown) {
         console.error("Error loading workflow:", err);
@@ -120,15 +130,7 @@ export function WorkflowsBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
     try {
       const workflowData = {
         name: workflowName.trim(),
-        nodes: nodes.map((node) => ({
-          ...node,
-          data: {
-            ...node.data,
-            label:
-              agents.find((a) => a.id === node.data.agentId)?.name ||
-              node.data.label,
-          },
-        })),
+        nodes,
         edges,
       };
 
@@ -164,7 +166,16 @@ export function WorkflowsBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
             autoClose: 3000,
           });
 
-          setNodes(response.data.nodes);
+          // Update nodes with the new workflowId
+          setNodes(
+            nodes.map((node) => ({
+              ...node,
+              data: {
+                ...node.data,
+                workflowId: response.data.id,
+              },
+            }))
+          );
           setEdges(response.data.edges);
 
           router.push(`/workflows/${response.data.id}`);
@@ -240,12 +251,22 @@ export function WorkflowsBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
         theme="light"
       />
       <div className="flex items-center justify-between p-4 border-b">
-        <Input
-          placeholder="Enter workflow name"
-          value={workflowName}
-          onChange={(e) => setWorkflowName(e.target.value)}
-          className="max-w-xs"
-        />
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            onClick={() => router.push("/workflows")}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Workflows
+          </Button>
+          <Input
+            placeholder="Enter workflow name"
+            value={workflowName}
+            onChange={(e) => setWorkflowName(e.target.value)}
+            className="max-w-xs"
+          />
+        </div>
         <Button onClick={handleSave} disabled={saving}>
           {saving
             ? "Saving..."
@@ -261,6 +282,7 @@ export function WorkflowsBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
             setNodes={setNodes}
             edges={edges}
             setEdges={setEdges}
+            initialWorkflowId={initialWorkflowId}
           />
         </ReactFlowProvider>
         <SidebarTrigger onHover={handleMouseEnter} />
@@ -274,6 +296,15 @@ export function WorkflowsBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
         />
       </div>
     </div>
+  );
+}
+
+// Wrap the component with ReactFlowProvider
+export function WorkflowsBuilder(props: WorkflowsBuilderProps) {
+  return (
+    <ReactFlowProvider>
+      <WorkflowBuilder {...props} />
+    </ReactFlowProvider>
   );
 }
 

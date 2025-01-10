@@ -7,9 +7,11 @@ export async function DELETE(request: Request, props: { params: Promise<{ id: st
   const supabase = await createClient()
 
   // Check if user is authenticated
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session) {
-    return new NextResponse('Unauthorized', { status: 401 })
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return new NextResponse("Unauthorized", { status: 401 });
   }
 
   try {
