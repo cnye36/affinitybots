@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect } from 'react'
-import { Edge, ReactFlowProvider, Node, useReactFlow } from "reactflow";
+import { Edge, ReactFlowProvider, Node } from "reactflow";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AgentSidebar } from "./AgentSidebar";

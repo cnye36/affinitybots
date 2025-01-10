@@ -6,6 +6,8 @@ import React, { useState, useEffect } from "react";
 import { Trash2, Settings } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { createClient } from "@/utils/supabase/client";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 interface Workflow {
   id: string;
@@ -56,9 +58,12 @@ export default function WorkflowsPage() {
     fetchWorkflows();
   }, [supabase]);
 
-  const handleDeleteWorkflow = async (workflowId: string) => {
+  const handleDeleteWorkflow = async (
+    workflowId: string,
+    workflowName: string
+  ) => {
     const confirmDelete = window.confirm(
-      "Are you absolutely sure you want to delete this workflow? " +
+      `Are you absolutely sure you want to delete the workflow "${workflowName}"? ` +
         "This will permanently delete the workflow and ALL associated tasks. " +
         "This action cannot be undone."
     );
@@ -76,9 +81,13 @@ export default function WorkflowsPage() {
 
         // Remove the workflow from the local state
         setWorkflows(workflows.filter((w) => w.id !== workflowId));
+
+        // Show success toast
+        toast.success(`Workflow "${workflowName}" deleted successfully`);
       } catch (error) {
         console.error("Error deleting workflow:", error);
-        window.alert(
+        // Show error toast
+        toast.error(
           error instanceof Error ? error.message : "Failed to delete workflow"
         );
       }
@@ -100,6 +109,7 @@ export default function WorkflowsPage() {
 
   return (
     <div className="container mx-auto py-6">
+      <ToastContainer position="bottom-right" />
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">My Workflows</h1>
         <Link href="/workflows/new">
@@ -124,7 +134,9 @@ export default function WorkflowsPage() {
                 </Link>
                 <button
                   type="button"
-                  onClick={() => handleDeleteWorkflow(workflow.id)}
+                  onClick={() =>
+                    handleDeleteWorkflow(workflow.id, workflow.name)
+                  }
                   className={buttonVariants({
                     variant: "ghost",
                     size: "icon",
