@@ -1,11 +1,8 @@
 import { createClient } from "@/utils/supabase/server";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { TaskRun, TaskRunStatus } from "@/types/workflow";
 
-export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, context: { params: { id: string } }) {
   try {
     const supabase = await createClient();
     const {
@@ -17,16 +14,12 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { data: run, error } = await supabase
+    const { id } = context.params;
+
+    const { data: taskRun, error } = await supabase
       .from("task_runs")
-      .select(
-        `
-        *,
-        task:tasks(*),
-        workflow_run:workflow_runs(*)
-      `
-      )
-      .eq("id", params.id)
+      .select("*, task:tasks(*), workflow:workflows(*)")
+      .eq("id", id)
       .single();
 
     if (error) {
@@ -34,32 +27,14 @@ export async function GET(
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    if (!run) {
+    if (!taskRun) {
       return NextResponse.json(
         { error: "Task run not found" },
         { status: 404 }
       );
     }
 
-    // Verify user has access to the workflow run
-    const { data: workflowRun, error: workflowRunError } = await supabase
-      .from("workflow_runs")
-      .select("created_by")
-      .eq("id", run.workflow_run_id)
-      .single();
-
-    if (workflowRunError || !workflowRun) {
-      return NextResponse.json(
-        { error: "Workflow run not found" },
-        { status: 404 }
-      );
-    }
-
-    if (workflowRun.created_by !== user.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
-
-    return NextResponse.json(run);
+    return NextResponse.json(taskRun);
   } catch (error) {
     console.error("Error in GET /api/task-runs/[id]:", error);
     return NextResponse.json(

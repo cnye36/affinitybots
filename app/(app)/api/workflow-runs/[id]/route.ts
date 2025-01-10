@@ -1,10 +1,10 @@
 import { createClient } from "@/utils/supabase/server";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { WorkflowRun, WorkflowRunStatus } from "@/types/workflow";
 
 export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  context: { params: { id: string } }
 ) {
   try {
     const supabase = await createClient();
@@ -16,6 +16,8 @@ export async function GET(
     if (userError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const { id } = context.params;
 
     const { data: run, error } = await supabase
       .from("workflow_runs")
@@ -29,7 +31,7 @@ export async function GET(
         )
       `
       )
-      .eq("id", params.id)
+      .eq("id", id)
       .eq("created_by", user.id)
       .single();
 
@@ -56,8 +58,8 @@ export async function GET(
 }
 
 export async function PUT(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  context: { params: { id: string } }
 ) {
   try {
     const supabase = await createClient();
@@ -70,6 +72,7 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = context.params;
     const json = await request.json();
     const {
       status,
@@ -85,7 +88,7 @@ export async function PUT(
     const { data: existingRun, error: fetchError } = await supabase
       .from("workflow_runs")
       .select("created_by, metadata")
-      .eq("id", params.id)
+      .eq("id", id)
       .single();
 
     if (fetchError || !existingRun) {
@@ -119,7 +122,7 @@ export async function PUT(
     const { data: run, error } = await supabase
       .from("workflow_runs")
       .update(updateData)
-      .eq("id", params.id)
+      .eq("id", id)
       .select()
       .single();
 
@@ -139,8 +142,8 @@ export async function PUT(
 }
 
 export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  context: { params: { id: string } }
 ) {
   try {
     const supabase = await createClient();
@@ -153,11 +156,13 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = context.params;
+
     // Verify run exists and user has access
     const { data: existingRun, error: fetchError } = await supabase
       .from("workflow_runs")
       .select("created_by")
-      .eq("id", params.id)
+      .eq("id", id)
       .single();
 
     if (fetchError || !existingRun) {
@@ -174,7 +179,7 @@ export async function DELETE(
     const { error } = await supabase
       .from("workflow_runs")
       .delete()
-      .eq("id", params.id);
+      .eq("id", id);
 
     if (error) {
       console.error("Error deleting workflow run:", error);

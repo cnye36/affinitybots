@@ -1,9 +1,9 @@
 import { createClient } from "@/utils/supabase/server";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  context: { params: { id: string } }
 ) {
   try {
     const supabase = await createClient();
@@ -16,10 +16,12 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = context.params;
+
     const { data: task, error } = await supabase
       .from("tasks")
       .select("*, agent:agents(*)")
-      .eq("id", params.id)
+      .eq("id", id)
       .single();
 
     if (error) {
@@ -42,8 +44,8 @@ export async function GET(
 }
 
 export async function PUT(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  context: { params: { id: string } }
 ) {
   try {
     const supabase = await createClient();
@@ -56,6 +58,7 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = context.params;
     const json = await request.json();
     const { name, description, type, config, order } = json;
 
@@ -63,7 +66,7 @@ export async function PUT(
     const { data: existingTask, error: fetchError } = await supabase
       .from("tasks")
       .select("workflow_id")
-      .eq("id", params.id)
+      .eq("id", id)
       .single();
 
     if (fetchError || !existingTask) {
@@ -98,7 +101,7 @@ export async function PUT(
         order,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", params.id)
+      .eq("id", id)
       .select()
       .single();
 
@@ -118,8 +121,8 @@ export async function PUT(
 }
 
 export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  context: { params: { id: string } }
 ) {
   try {
     const supabase = await createClient();
@@ -132,11 +135,13 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = context.params;
+
     // Verify task exists and user has access
     const { data: existingTask, error: fetchError } = await supabase
       .from("tasks")
       .select("workflow_id")
-      .eq("id", params.id)
+      .eq("id", id)
       .single();
 
     if (fetchError || !existingTask) {
@@ -161,7 +166,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    const { error } = await supabase.from("tasks").delete().eq("id", params.id);
+    const { error } = await supabase.from("tasks").delete().eq("id", id);
 
     if (error) {
       console.error("Error deleting task:", error);
