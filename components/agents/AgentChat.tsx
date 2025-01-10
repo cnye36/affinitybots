@@ -160,7 +160,12 @@ export function AgentChat({ agentId, agentName, threadId }: AgentChatProps) {
                         {...props}
                       />
                     ),
-                    code: ({ inline, ...props }) =>
+                    code: ({
+                      inline,
+                      ...props
+                    }: {
+                      inline?: boolean;
+                    } & React.HTMLAttributes<HTMLElement>) =>
                       inline ? (
                         <code
                           className="bg-zinc-800 rounded px-1 py-0.5"

@@ -7,6 +7,8 @@ import { Trash2, Settings } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { createClient } from "@/utils/supabase/client";
 import { toast } from "react-toastify";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 interface Workflow {
   id: string;
@@ -19,48 +21,100 @@ interface Workflow {
       label: string;
     };
   }>;
+  workflow_agents: Array<{
+    agent: {
+      id: string;
+      name: string;
+      avatar: string;
+    };
+  }>;
 }
 
 export default function WorkflowsPage() {
+  const router = useRouter();
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const supabase = createClient();
 
   useEffect(() => {
+    const checkSession = async () => {
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
+      if (sessionError || !session) {
+        router.push("/auth/login");
+        return;
+      }
+    };
+
+    checkSession();
+  }, [supabase.auth, router]);
+
+  useEffect(() => {
+    let mounted = true;
+
     async function fetchWorkflows() {
       try {
         const {
-          data: { user },
-          error: userError,
-        } = await supabase.auth.getUser();
+          data: { session },
+        } = await supabase.auth.getSession();
 
-        if (userError || !user) {
-          setError(userError?.message || "Unauthorized");
+        if (!session) {
+          setError("Please sign in to view workflows");
           return;
         }
 
-        const { data, error } = await supabase
+        const { data, error: fetchError } = await supabase
           .from("workflows")
-          .select("id, name, created_at, updated_at, nodes")
-          .eq("owner_id", user.id)
+          .select(
+            `
+            id, 
+            name, 
+            created_at, 
+            updated_at, 
+            nodes,
+            workflow_agents:workflow_agents(
+              agent:agents(
+                id,
+                name,
+                avatar
+              )
+            )
+          `
+          )
+          .eq("owner_id", session.user.id)
           .order("created_at", { ascending: false });
 
-        if (error) {
-          setError(error.message);
-        } else {
+        if (fetchError) {
+          throw fetchError;
+        }
+
+        if (mounted) {
           setWorkflows(data || []);
+          setError(null);
         }
       } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "An unexpected error occurred"
-        );
+        if (mounted) {
+          console.error("Error fetching workflows:", err);
+          setError(
+            err instanceof Error ? err.message : "An unexpected error occurred"
+          );
+        }
       } finally {
-        setIsLoading(false);
+        if (mounted) {
+          setIsLoading(false);
+        }
       }
     }
 
     fetchWorkflows();
+
+    return () => {
+      mounted = false;
+    };
   }, [supabase]);
 
   const handleDeleteWorkflow = async (
@@ -170,18 +224,31 @@ export default function WorkflowsPage() {
                 </div>
 
                 <div className="flex -space-x-2 overflow-hidden">
-                  {workflow.nodes?.map((node, index) => (
+                  {workflow.workflow_agents?.map(({ agent }) => (
                     <div
-                      key={`${workflow.id}-agent-${index}`}
+                      key={`${workflow.id}-agent-${agent.id}`}
                       className="inline-block h-8 w-8 rounded-full ring-2 ring-background"
-                      style={{
-                        backgroundColor: `hsl(${
-                          (index * 360) / (workflow.nodes?.length || 1)
-                        }, 70%, 50%)`,
-                      }}
                     >
-                      {/* This will be replaced with actual agent avatars */}
-                      <span className="sr-only">Agent in workflow</span>
+                      {agent.avatar ? (
+                        <Image
+                          src={agent.avatar}
+                          alt={agent.name}
+                          width={32}
+                          height={32}
+                          className="h-full w-full rounded-full object-cover"
+                        />
+                      ) : (
+                        <div
+                          className="h-full w-full rounded-full flex items-center justify-center text-xs font-medium text-white"
+                          style={{
+                            backgroundColor: `hsl(${
+                              (agent.name.length * 30) % 360
+                            }, 70%, 50%)`,
+                          }}
+                        >
+                          {agent.name.slice(0, 2).toUpperCase()}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
