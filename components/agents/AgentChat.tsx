@@ -1,71 +1,39 @@
 'use client'
 
-import { useRef, useEffect, useState } from "react";
-import { useChat } from "ai/react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { SendHorizontal, Bot, Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import rehypeRaw from "rehype-raw";
-import rehypeSanitize from "rehype-sanitize";
-import rehypeHighlight from "rehype-highlight";
-import "highlight.js/styles/github-dark.css";
+
+interface Message {
+  role: "user" | "assistant";
+  content: string;
+}
 
 interface AgentChatProps {
   agentId: string;
-  agentName: string;
-  threadId?: string;
+  currentThreadId?: string;
+  onThreadCreated?: (threadId: string) => void;
 }
 
-export function AgentChat({ agentId, agentName, threadId }: AgentChatProps) {
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const [currentThreadId, setCurrentThreadId] = useState<string | undefined>(
-    threadId
-  );
+export default function AgentChat({
+  agentId,
+  currentThreadId,
+  onThreadCreated,
+}: AgentChatProps) {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const {
-    messages,
-    input,
-    handleInputChange,
-    handleSubmit,
-    isLoading,
-    error,
-    setMessages,
-  } = useChat({
-    api: `/api/agents/${agentId}/chat`,
-    id: currentThreadId,
-    body: {
-      threadId: currentThreadId,
-    },
-    onResponse: (response) => {
-      if (response.ok) {
-        const newThreadId = response.headers.get("X-Thread-Id");
-        if (newThreadId && !currentThreadId) {
-          setCurrentThreadId(newThreadId);
-          window.history.replaceState(
-            {},
-            "",
-            `/agents/${agentId}?thread=${newThreadId}`
-          );
-        }
-      }
-    },
-    onError: (error) => {
-      console.error("Chat error:", error);
-    },
-  });
-
-  // Load messages when thread changes
+  // Load existing messages for thread
   useEffect(() => {
-    const loadMessages = async () => {
-      if (!currentThreadId) {
-        setMessages([]);
-        return;
-      }
+    if (!currentThreadId) {
+      setMessages([]);
+      return;
+    }
 
+    const loadMessages = async () => {
       try {
         const response = await fetch(
           `/api/agents/${agentId}/chat?threadId=${currentThreadId}`
@@ -73,163 +41,146 @@ export function AgentChat({ agentId, agentName, threadId }: AgentChatProps) {
         if (!response.ok) throw new Error("Failed to load messages");
         const data = await response.json();
         setMessages(data.messages);
-      } catch (error) {
-        console.error("Error loading messages:", error);
+      } catch (err) {
+        console.error("Error loading messages:", err);
+        setError("Failed to load messages");
       }
     };
 
     loadMessages();
-  }, [currentThreadId, agentId, setMessages]);
+  }, [agentId, currentThreadId]);
 
-  // Update currentThreadId when prop changes
-  useEffect(() => {
-    setCurrentThreadId(threadId);
-  }, [threadId]);
-
-  // Auto scroll to bottom when new messages arrive
-  useEffect(() => {
-    if (scrollAreaRef.current) {
-      const scrollArea = scrollAreaRef.current;
-      const isAtBottom =
-        scrollArea.scrollHeight - scrollArea.scrollTop <=
-        scrollArea.clientHeight + 100;
-
-      if (isAtBottom) {
-        scrollArea.scrollTo({
-          top: scrollArea.scrollHeight,
-          behavior: "smooth",
-        });
-      }
-    }
-  }, [messages]);
-
-  // Handle form submission
-  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (input.trim()) {
-      handleSubmit(e);
+    if (!input.trim() || isLoading) return;
+
+    const userMessage = input.trim();
+    setInput("");
+    setIsLoading(true);
+    setError(null);
+
+    // Add user message to UI immediately
+    setMessages((prev) => [...prev, { role: "user", content: userMessage }]);
+
+    try {
+      const response = await fetch(`/api/agents/${agentId}/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: userMessage,
+          threadId: currentThreadId,
+        }),
+      });
+
+      if (!response.ok) throw new Error("Failed to send message");
+
+      // Get thread ID from response
+      const newThreadId = response.headers.get("X-Thread-Id");
+      if (newThreadId && onThreadCreated) {
+        onThreadCreated(newThreadId);
+      }
+
+      // Add placeholder for assistant message
+      setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
+
+      // Process the stream
+      const reader = response.body?.getReader();
+      let assistantMessage = "";
+
+      if (reader) {
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            // Decode and process the chunk
+            const text = new TextDecoder().decode(value);
+            const lines = text.split("\n");
+
+            for (const line of lines) {
+              if (line.startsWith("data: ")) {
+                try {
+                  const data = JSON.parse(line.slice(5));
+                  assistantMessage = data.content;
+
+                  // Update the last message in real time
+                  setMessages((prev) => {
+                    const updated = [...prev];
+                    const lastMessage = updated[updated.length - 1];
+                    if (lastMessage?.role === "assistant") {
+                      lastMessage.content = assistantMessage;
+                    }
+                    return updated;
+                  });
+                } catch (e) {
+                  console.error("Error parsing SSE data:", e);
+                }
+              }
+            }
+          }
+        } finally {
+          reader.releaseLock();
+        }
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+      // Remove the assistant message if there was an error
+      setMessages((prev) => prev.slice(0, -1));
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  return (
-    <div className="flex-1 flex flex-col h-full">
-      <ScrollArea ref={scrollAreaRef} className="flex-1 px-4 py-6" type="hover">
-        <div className="space-y-4 max-w-4xl mx-auto">
-          {messages.length === 0 && !isLoading && (
-            <div className="text-center py-12">
-              <Bot className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
-              <p className="text-lg text-muted-foreground">
-                Start a new conversation with {agentName}!
-              </p>
-            </div>
-          )}
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={cn(
-                "flex gap-3 items-start",
-                message.role === "user" ? "justify-end" : "justify-start"
-              )}
-            >
-              {message.role !== "user" && (
-                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <Bot className="h-4 w-4 text-primary" />
-                </div>
-              )}
-              <div
-                className={cn(
-                  "rounded-lg px-4 py-2 max-w-[85%]",
-                  message.role === "user"
-                    ? "bg-primary text-primary-foreground dark:bg-primary/10"
-                    : "bg-muted"
-                )}
-              >
-                <ReactMarkdown
-                  className={cn(
-                    "prose prose-sm max-w-none break-words",
-                    message.role === "user"
-                      ? "prose-invert"
-                      : "prose-stone dark:prose-invert"
-                  )}
-                  remarkPlugins={[remarkGfm]}
-                  rehypePlugins={[rehypeRaw, rehypeSanitize, rehypeHighlight]}
-                  components={{
-                    pre: ({ ...props }) => (
-                      <pre
-                        className="bg-zinc-950 rounded-md p-4 overflow-x-auto"
-                        {...props}
-                      />
-                    ),
-                    code: ({
-                      inline,
-                      ...props
-                    }: {
-                      inline?: boolean;
-                    } & React.HTMLAttributes<HTMLElement>) =>
-                      inline ? (
-                        <code
-                          className="bg-zinc-800 rounded px-1 py-0.5"
-                          {...props}
-                        />
-                      ) : (
-                        <code {...props} />
-                      ),
-                  }}
-                >
-                  {message.content}
-                </ReactMarkdown>
-              </div>
-              {message.role === "user" && (
-                <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground flex-shrink-0">
-                  {message.content[0].toUpperCase()}
-                </div>
-              )}
-            </div>
-          ))}
-          {isLoading && (
-            <div className="flex gap-3 items-start">
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                <Bot className="h-4 w-4 text-primary" />
-              </div>
-              <div className="bg-muted rounded-lg px-4 py-2 max-w-[85%]">
-                <Loader2 className="h-4 w-4 animate-spin" />
-              </div>
-            </div>
-          )}
-          {error && (
-            <div className="flex justify-center">
-              <div className="bg-destructive/10 text-destructive text-sm rounded-lg px-4 py-2">
-                Error: {error.message}
-              </div>
-            </div>
-          )}
-        </div>
-      </ScrollArea>
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
-      <div className="flex-shrink-0 border-t bg-background p-4">
-        <div className="max-w-4xl mx-auto">
-          <form onSubmit={onSubmit} className="flex items-center gap-3">
-            <Input
-              placeholder={`Message ${agentName}...`}
-              value={input}
-              onChange={handleInputChange}
-              disabled={isLoading}
-              className="flex-1"
-            />
-            <Button
-              type="submit"
-              size="icon"
-              disabled={isLoading || !input.trim()}
+  return (
+    <div className="flex-1 flex flex-col h-full border-l">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {currentThreadId ? (
+          messages.map((message, index) => (
+            <div
+              key={index}
+              className={`flex ${
+                message.role === "assistant" ? "justify-start" : "justify-end"
+              }`}
             >
-              {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <SendHorizontal className="h-4 w-4" />
-              )}
-            </Button>
-          </form>
-        </div>
+              <div
+                className={`max-w-[80%] rounded-lg p-3 ${
+                  message.role === "assistant"
+                    ? "bg-secondary text-secondary-foreground"
+                    : "bg-primary text-primary-foreground"
+                }`}
+              >
+                <p className="whitespace-pre-wrap">{message.content}</p>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="flex-1 flex items-center justify-center text-muted-foreground">
+            <p>Start a new conversation with your agent</p>
+          </div>
+        )}
+        <div ref={messagesEndRef} />
       </div>
+
+      {error && <div className="p-4 text-sm text-red-500">Error: {error}</div>}
+
+      <form onSubmit={handleSubmit} className="p-4 border-t">
+        <div className="flex gap-2">
+          <Input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Type a message..."
+            disabled={isLoading}
+          />
+          <Button type="submit" disabled={isLoading}>
+            {isLoading ? "Sending..." : "Send"}
+          </Button>
+        </div>
+      </form>
     </div>
   );
 } 

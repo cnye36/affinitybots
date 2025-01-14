@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
-import { AgentChat } from "@/components/agents/AgentChat";
+import AgentChat from "@/components/agents/AgentChat";
 import { AgentConfigModal } from "@/components/configuration/AgentConfigModal";
 import { ChatThreads } from "@/components/agents/ChatThreads";
 import { useAgent } from "@/hooks/useAgent";
@@ -97,8 +97,8 @@ export default function AgentPage() {
 
         <AgentChat
           agentId={params.id as string}
-          agentName={agent.name}
-          threadId={currentThreadId}
+          currentThreadId={currentThreadId}
+          onThreadCreated={setCurrentThreadId}
         />
       </div>
     </div>
