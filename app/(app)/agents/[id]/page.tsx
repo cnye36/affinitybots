@@ -99,6 +99,11 @@ export default function AgentPage() {
           agentId={params.id as string}
           currentThreadId={currentThreadId}
           onThreadCreated={setCurrentThreadId}
+          onThreadUpdated={() => {
+            // Trigger a refresh of the threads list
+            const event = new Event("threadUpdated");
+            window.dispatchEvent(event);
+          }}
         />
       </div>
     </div>

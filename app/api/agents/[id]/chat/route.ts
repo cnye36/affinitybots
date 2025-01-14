@@ -177,14 +177,27 @@ export async function POST(
       async transform(chunk, controller) {
         try {
           console.log("[Transform] Processing chunk:", chunk);
-          // Get the assistant's message from the state
+
+          // For token streaming, check if we have a direct token
+          if (chunk.token) {
+            // Stream the token immediately
+            const data = `data: ${JSON.stringify({
+              content: chunk.token,
+              done: false,
+            })}\n\n`;
+            controller.enqueue(new TextEncoder().encode(data));
+            console.log("[Transform] Streamed token:", chunk.token);
+            return;
+          }
+
+          // For final message handling
           const messages = chunk?.model?.messages || [];
           const lastMessage = messages[messages.length - 1];
           const text = lastMessage?.content || "";
           console.log("[Transform] Extracted text:", text);
 
           if (text.trim()) {
-            // Save assistant message to database
+            // Save complete message to database
             console.log("[Transform] Saving assistant message");
             await supabase.from("agent_chats").insert([
               {
@@ -196,10 +209,13 @@ export async function POST(
               },
             ]);
 
-            // Format as SSE and forward
-            const data = `data: ${JSON.stringify({ content: text })}\n\n`;
+            // Send final message with done flag
+            const data = `data: ${JSON.stringify({
+              content: text,
+              done: true,
+            })}\n\n`;
             controller.enqueue(new TextEncoder().encode(data));
-            console.log("[Transform] Sent message to client");
+            console.log("[Transform] Sent complete message to client");
           }
         } catch (error) {
           console.error("[Transform] Error:", error);

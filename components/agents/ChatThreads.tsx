@@ -88,6 +88,17 @@ export function ChatThreads({
     };
   }, [agentId, loadThreads]);
 
+  // Listen for thread updates
+  useEffect(() => {
+    const handleThreadUpdate = () => {
+      loadThreads();
+    };
+
+    window.addEventListener("threadUpdated", handleThreadUpdate);
+    return () =>
+      window.removeEventListener("threadUpdated", handleThreadUpdate);
+  }, [agentId, loadThreads]);
+
   const handleRename = async (thread: ChatThread) => {
     setThreadToRename(thread);
     setNewTitle(thread.title);
