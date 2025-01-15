@@ -9,6 +9,13 @@ export interface ChatState {
     workflowId?: string;
     taskId?: string;
   };
+  toolUsage?: {
+    toolId: string;
+    input: string;
+    output?: string;
+    status: "pending" | "approved" | "rejected" | "completed";
+    requiresApproval: boolean;
+  }[];
 }
 
 export interface ChatConfig {

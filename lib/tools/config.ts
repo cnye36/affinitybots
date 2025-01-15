@@ -1,4 +1,4 @@
-import { Search } from "lucide-react";
+import { Search, Calculator, BookOpen, Code } from "lucide-react";
 import { IconType } from "react-icons";
 
 export interface ToolConfig {
@@ -42,5 +42,41 @@ export const AVAILABLE_TOOLS: ToolConfig[] = [
         description: "Maximum number of search results to return",
       },
     ],
+  },
+  {
+    id: "calculator",
+    name: "Calculator",
+    description: "Perform mathematical calculations and conversions",
+    icon: Calculator,
+    category: "analysis",
+    isCore: true,
+    requiresAuth: false,
+  },
+  {
+    id: "wikipedia",
+    name: "Wikipedia",
+    description: "Search and retrieve information from Wikipedia",
+    icon: BookOpen,
+    category: "data",
+    isCore: true,
+    requiresAuth: false,
+    configOptions: [
+      {
+        name: "maxResults",
+        type: "number",
+        required: false,
+        default: 2,
+        description: "Maximum number of Wikipedia results to return",
+      },
+    ],
+  },
+  {
+    id: "code_interpreter",
+    name: "Code Interpreter",
+    description: "Execute Python code for data analysis and computation",
+    icon: Code,
+    category: "analysis",
+    isCore: true,
+    requiresAuth: false,
   },
 ];

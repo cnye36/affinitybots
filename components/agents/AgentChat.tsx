@@ -1,8 +1,11 @@
 'use client'
 
 import { useEffect, useRef, useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Message } from "@/types/chat";
 import ReactMarkdown from "react-markdown";
+import { ToolUsage } from "./ToolUsage";
 
 interface AgentChatProps {
   agentId: string;
@@ -11,7 +14,7 @@ interface AgentChatProps {
   onThreadUpdated?: () => void;
 }
 
-export default function AgentChat({
+export function AgentChat({
   agentId,
   currentThreadId,
   onThreadCreated,
@@ -22,58 +25,61 @@ export default function AgentChat({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [toolUsage, setToolUsage] = useState<
+    {
+      toolId: string;
+      input: string;
+      output?: string;
+      status: "pending" | "approved" | "rejected" | "completed";
+      requiresApproval: boolean;
+    }[]
+  >([]);
 
   // Load existing messages for thread
   useEffect(() => {
-    if (!currentThreadId) {
-      setMessages([]);
-      return;
+    if (currentThreadId) {
+      fetch(`/api/agents/${agentId}/chat?threadId=${currentThreadId}`)
+        .then((res) => res.json())
+        .then((data) => {
+          setMessages(data.messages || []);
+        })
+        .catch((err) => {
+          console.error("Error loading messages:", err);
+          setError("Failed to load messages");
+        });
     }
-
-    const loadMessages = async () => {
-      try {
-        const response = await fetch(
-          `/api/agents/${agentId}/chat?threadId=${currentThreadId}`
-        );
-        if (!response.ok) throw new Error("Failed to load messages");
-        const data = await response.json();
-        setMessages(data.messages);
-      } catch (err) {
-        console.error("Error loading messages:", err);
-        setError("Failed to load messages");
-      }
-    };
-
-    loadMessages();
   }, [agentId, currentThreadId]);
 
-  // Add typing indicator state
-  const [isTyping, setIsTyping] = useState(false);
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim()) return;
+    if (!input.trim() || isLoading) return;
 
     const userMessage = input;
     setInput("");
-    setIsLoading(true);
-    setIsTyping(true);
-    setError(null);
-
-    // Add user message immediately
     setMessages((prev) => [...prev, { role: "user", content: userMessage }]);
+    setIsLoading(true);
+    setError(null);
 
     try {
       const response = await fetch(`/api/agents/${agentId}/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           message: userMessage,
           threadId: currentThreadId,
         }),
       });
 
-      if (!response.ok) throw new Error("Failed to send message");
+      if (!response.ok) {
+        throw new Error("Failed to send message");
+      }
 
       // Get thread ID from response headers if it's a new thread
       const threadId = response.headers.get("X-Thread-Id");
@@ -81,15 +87,11 @@ export default function AgentChat({
         onThreadCreated(threadId);
       }
 
-      // Add placeholder for assistant message
-      setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
-      const isFirstMessage = messages.length === 0;
-      let accumulatedContent = "";
-
       const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
+      if (!reader) throw new Error("No response stream");
 
-      if (!reader) throw new Error("No response body");
+      let assistantMessage = "";
+      const decoder = new TextDecoder();
 
       while (true) {
         const { done, value } = await reader.read();
@@ -101,130 +103,220 @@ export default function AgentChat({
         for (const line of lines) {
           if (line.startsWith("data: ")) {
             try {
-              const data = JSON.parse(line.slice(6));
+              const data = JSON.parse(line.slice(5));
 
-              // Accumulate content and update immediately for smooth streaming
-              accumulatedContent += data.content || "";
-              setMessages((prev) => {
-                const newMessages = [...prev];
-                const lastMessage = newMessages[newMessages.length - 1];
-                if (lastMessage.role === "assistant") {
-                  lastMessage.content = accumulatedContent;
-                }
-                return newMessages;
-              });
+              // Handle tool usage updates
+              if (data.toolUsage) {
+                setToolUsage((prev) => [...prev, data.toolUsage]);
+              }
 
-              // If this is the final message and it was the first exchange, rename the chat
-              if (data.done && isFirstMessage && threadId) {
-                try {
-                  await fetch(`/api/agents/${agentId}/threads/rename`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                      threadId,
-                      messages: [
-                        { role: "user", content: userMessage },
-                        { role: "assistant", content: accumulatedContent },
-                      ],
-                    }),
-                  });
-                  // Notify parent to refresh thread list
-                  onThreadUpdated?.();
-                } catch (error) {
-                  console.error("Failed to rename thread:", error);
-                }
+              // Handle message content
+              if (data.content) {
+                assistantMessage += data.content;
+                setMessages((prev) => {
+                  const newMessages = [...prev];
+                  if (
+                    newMessages[newMessages.length - 1]?.role === "assistant"
+                  ) {
+                    newMessages[newMessages.length - 1].content =
+                      assistantMessage;
+                  } else {
+                    newMessages.push({
+                      role: "assistant",
+                      content: assistantMessage,
+                    });
+                  }
+                  return newMessages;
+                });
               }
 
               if (data.done) {
-                setIsTyping(false);
+                // If this is the first message, trigger thread rename
+                if (messages.length === 0 && threadId) {
+                  try {
+                    await fetch(`/api/agents/${agentId}/threads/rename`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        threadId,
+                        messages: [
+                          { role: "user", content: userMessage },
+                          { role: "assistant", content: assistantMessage },
+                        ],
+                      }),
+                    });
+                    // Notify parent to refresh thread list
+                    onThreadUpdated?.();
+                  } catch (error) {
+                    console.error("Failed to rename thread:", error);
+                  }
+                }
                 break;
               }
             } catch (e) {
-              console.error("Error parsing SSE data:", e);
+              console.error("Error parsing SSE:", e);
             }
           }
         }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-      setIsTyping(false);
+      console.error("Error sending message:", err);
+      setError("Failed to send message");
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Scroll to bottom when messages change
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  const handleToolApproval = async (toolId: string, approved: boolean) => {
+    setToolUsage((prev) =>
+      prev.map((tool) =>
+        tool.toolId === toolId
+          ? {
+              ...tool,
+              status: approved ? "approved" : "rejected",
+            }
+          : tool
+      )
+    );
+
+    // Send approval/rejection message
+    const message = approved ? "approve" : "reject";
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/agents/${agentId}/chat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message,
+          threadId: currentThreadId,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to send message");
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("No response stream");
+
+      let assistantMessage = "";
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split("\n");
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            try {
+              const data = JSON.parse(line.slice(5));
+
+              // Handle tool usage updates
+              if (data.toolUsage) {
+                setToolUsage((prev) => [...prev, data.toolUsage]);
+              }
+
+              // Handle message content
+              if (data.content) {
+                assistantMessage += data.content;
+                setMessages((prev) => {
+                  const newMessages = [...prev];
+                  if (
+                    newMessages[newMessages.length - 1]?.role === "assistant"
+                  ) {
+                    newMessages[newMessages.length - 1].content =
+                      assistantMessage;
+                  } else {
+                    newMessages.push({
+                      role: "assistant",
+                      content: assistantMessage,
+                    });
+                  }
+                  return newMessages;
+                });
+              }
+
+              if (data.done) {
+                break;
+              }
+            } catch (e) {
+              console.error("Error parsing SSE:", e);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Error sending message:", err);
+      setError("Failed to send message");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
-    <div className="flex-1 flex flex-col h-full border-l">
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((message, index) => (
-          <div
-            key={index}
-            className={`flex ${
-              message.role === "user" ? "justify-end" : "justify-start"
-            }`}
-          >
+    <div className="flex flex-col h-full">
+      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        {messages.map((message, i) => (
+          <div key={i} className="space-y-4">
             <div
-              className={`max-w-[80%] rounded-lg p-4 ${
-                message.role === "user"
-                  ? "bg-blue-500 text-white dark:bg-blue-600"
-                  : "bg-gray-200 text-gray-900 dark:bg-gray-800"
+              className={`flex ${
+                message.role === "assistant" ? "justify-start" : "justify-end"
               }`}
             >
-              <ReactMarkdown className="prose dark:prose-invert max-w-none">
-                {message.content}
-              </ReactMarkdown>
-            </div>
-          </div>
-        ))}
-        {isTyping && (
-          <div className="flex justify-start">
-            <div className="bg-gray-200 text-gray-900 dark:bg-gray-800 rounded-lg p-4">
-              <div className="flex space-x-2">
-                <div
-                  className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"
-                  style={{ animationDelay: "0ms" }}
-                />
-                <div
-                  className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"
-                  style={{ animationDelay: "150ms" }}
-                />
-                <div
-                  className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"
-                  style={{ animationDelay: "300ms" }}
-                />
+              <div
+                className={`max-w-[80%] rounded-lg p-4 shadow-sm ${
+                  message.role === "assistant"
+                    ? "bg-muted/50 dark:bg-muted/20"
+                    : "bg-primary text-primary-foreground"
+                }`}
+              >
+                <ReactMarkdown
+                  className={`prose ${
+                    message.role === "assistant"
+                      ? "prose-neutral dark:prose-invert"
+                      : "prose-invert"
+                  } max-w-none prose-p:leading-relaxed prose-pre:p-0`}
+                >
+                  {message.content}
+                </ReactMarkdown>
               </div>
             </div>
+            {toolUsage
+              .filter((tool) => tool.status === "pending")
+              .map((tool) => (
+                <ToolUsage
+                  key={tool.toolId}
+                  {...tool}
+                  onApprove={() => handleToolApproval(tool.toolId, true)}
+                  onReject={() => handleToolApproval(tool.toolId, false)}
+                />
+              ))}
           </div>
-        )}
+        ))}
         <div ref={messagesEndRef} />
       </div>
-
-      {error && <div className="p-4 text-red-500 text-center">{error}</div>}
-
-      <form onSubmit={handleSubmit} className="p-4 border-t">
-        <div className="flex gap-2">
-          <input
-            type="text"
+      <div className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-6">
+        <form onSubmit={handleSubmit} className="flex space-x-4">
+          <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Type your message..."
-            className="flex-1 p-2 border rounded"
+            placeholder="Type a message..."
             disabled={isLoading}
+            className="flex-1"
           />
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
-          >
+          <Button type="submit" disabled={isLoading || !input.trim()}>
             {isLoading ? "Sending..." : "Send"}
-          </button>
-        </div>
-      </form>
+          </Button>
+        </form>
+        {error && <p className="text-sm text-destructive mt-2">{error}</p>}
+      </div>
     </div>
   );
 } 

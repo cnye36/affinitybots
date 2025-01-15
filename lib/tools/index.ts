@@ -1,6 +1,9 @@
 import { TavilySearchResults } from "@langchain/community/tools/tavily_search";
 import { Tool } from "@langchain/core/tools";
 import { createClient } from "@/utils/supabase/server";
+import { Calculator } from "@langchain/community/tools/calculator";
+import { WikipediaQueryRun } from "@langchain/community/tools/wikipedia_query_run";
+import { PythonInterpreterTool } from "@langchain/community/experimental/tools/pyinterpreter";
 
 interface ToolConfig {
   maxResults?: number;
@@ -26,47 +29,63 @@ export async function initializeTools(
 ): Promise<Tool[]> {
   const tools: Tool[] = [];
 
-  // Only proceed if web_search is in toolIds
-  if (!toolIds.includes("web_search")) {
-    return tools;
+  // Initialize basic tools that don't require auth
+  if (toolIds.includes("calculator")) {
+    tools.push(new Calculator());
   }
 
-  // Check if tool is connected if userId is provided
-  if (config.userId) {
-    const isConnected = await getToolConnectionState(config.userId);
-    if (!isConnected) {
-      console.warn(
-        "Web search tool requires authentication but is not connected"
-      );
-      return tools;
-    }
-  }
-
-  try {
-    if (!process.env.TAVILY_API_KEY) {
-      console.warn("Tavily API key not found, skipping web search tool");
-      return tools;
-    }
-
-    const userConfig = config.toolConfig?.web_search || {};
-
+  if (toolIds.includes("wikipedia")) {
+    const userConfig = config.toolConfig?.wikipedia || {};
     tools.push(
-      new TavilySearchResults({
-        apiKey: process.env.TAVILY_API_KEY,
-        maxResults: userConfig.maxResults || 3,
+      new WikipediaQueryRun({
+        topKResults: userConfig.maxResults || 2,
       })
     );
-  } catch (error) {
-    console.error("Error initializing web search tool:", error);
+  }
+
+  if (toolIds.includes("code_interpreter")) {
+    tools.push(new PythonInterpreterTool({}));
+  }
+
+  // Initialize web search if selected and authenticated
+  if (toolIds.includes("web_search")) {
+    // Check if tool is connected if userId is provided
     if (config.userId) {
-      const supabase = await createClient();
-      await supabase.from("tool_connections").upsert({
-        user_id: config.userId,
-        tool_id: "web_search",
-        is_connected: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-        last_checked: new Date().toISOString(),
-      });
+      const isConnected = await getToolConnectionState(config.userId);
+      if (!isConnected) {
+        console.warn(
+          "Web search tool requires authentication but is not connected"
+        );
+        return tools;
+      }
+    }
+
+    try {
+      if (!process.env.TAVILY_API_KEY) {
+        console.warn("Tavily API key not found, skipping web search tool");
+        return tools;
+      }
+
+      const userConfig = config.toolConfig?.web_search || {};
+
+      tools.push(
+        new TavilySearchResults({
+          apiKey: process.env.TAVILY_API_KEY,
+          maxResults: userConfig.maxResults || 3,
+        })
+      );
+    } catch (error) {
+      console.error("Error initializing web search tool:", error);
+      if (config.userId) {
+        const supabase = await createClient();
+        await supabase.from("tool_connections").upsert({
+          user_id: config.userId,
+          tool_id: "web_search",
+          is_connected: false,
+          error: error instanceof Error ? error.message : "Unknown error",
+          last_checked: new Date().toISOString(),
+        });
+      }
     }
   }
 
