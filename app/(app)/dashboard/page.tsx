@@ -2,14 +2,25 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Settings2 } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+  PlusCircle,
+  Settings2,
+  Activity,
+  AlertCircle,
+  Clock,
+  BarChart3,
+  Zap,
+  CheckCircle2,
+  User,
+} from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 export default async function Dashboard() {
   const supabase = await createClient();
@@ -41,7 +52,7 @@ export default async function Dashboard() {
   // Fetch latest workflows
   const { data: latestWorkflows, error: workflowsError } = await supabase
     .from("workflows")
-    .select("id, name, created_at, updated_at")
+    .select("id, name, created_at, updated_at, status")
     .eq("owner_id", user.id)
     .order("created_at", { ascending: false })
     .limit(3);
@@ -50,207 +61,262 @@ export default async function Dashboard() {
     console.error("Error fetching workflows:", workflowsError);
   }
 
+  // Placeholder data for stats
+  const stats = {
+    activeWorkflows:
+      latestWorkflows?.filter((w) => w.status === "active")?.length || 0,
+    totalAgents: latestAgents?.length || 0,
+    successRate: "98%",
+    averageResponseTime: "1.2s",
+  };
+
+  // Placeholder data for recent activity
+  const recentActivity = [
+    {
+      type: "workflow_completed",
+      message: "Data Processing Workflow completed successfully",
+      time: "2 hours ago",
+    },
+    {
+      type: "agent_created",
+      message: 'New AI Agent "Research Assistant" created',
+      time: "5 hours ago",
+    },
+    {
+      type: "workflow_error",
+      message: 'Error in "Document Analysis" workflow',
+      time: "1 day ago",
+    },
+  ];
+
   return (
-    <>
-      <div className="min-h-screen bg-background">
-        <div className="container mx-auto px-4 py-8">
-          <h1 className="text-2xl font-bold mb-4">
-            Welcome to your AI Workspace
-          </h1>
-
-          {/* Quick Actions */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-            <Link href="/agents/new" className="group">
-              <div className="relative p-6 rounded-lg overflow-hidden border group-hover:border-primary transition-colors">
-                <div className="flex items-center space-x-4">
-                  <PlusCircle className="h-8 w-8 text-primary" />
-                  <div>
-                    <h3 className="text-lg font-semibold mb-1">
-                      Create New Agent
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      Design a custom AI agent with specific capabilities
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </Link>
-
-            <Link href="/workflows/new" className="group">
-              <div className="relative p-6 rounded-lg overflow-hidden border group-hover:border-primary transition-colors">
-                <div className="flex items-center space-x-4">
-                  <PlusCircle className="h-8 w-8 text-primary" />
-                  <div>
-                    <h3 className="text-lg font-semibold mb-1">New Workflow</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Build a multi-agent workflow from scratch
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </Link>
-
-            <Link href="/settings" className="group">
-              <div className="relative p-6 rounded-lg overflow-hidden border group-hover:border-primary transition-colors">
-                <div className="flex items-center space-x-4">
-                  <Settings2 className="h-8 w-8 text-primary" />
-                  <div>
-                    <h3 className="text-lg font-semibold mb-1">Settings</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Configure your workspace and preferences
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </Link>
-          </div>
-
-          {/* Latest Agents */}
-          <div className="mb-12">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-semibold">Latest Agents</h3>
-              <Link href="/agents">
-                <Button variant="ghost">View All</Button>
-              </Link>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {agentsError ? (
-                <div className="col-span-full border border-destructive rounded-lg p-4">
-                  <p className="text-destructive text-center">
-                    Error loading agents: {agentsError.message}
-                  </p>
-                </div>
-              ) : !latestAgents ? (
-                // Loading state
-                Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="border rounded-lg p-6">
-                    <Skeleton className="h-6 w-3/4 mb-4" />
-                    <Skeleton className="h-4 w-full mb-2" />
-                    <Skeleton className="h-4 w-2/3" />
-                  </div>
-                ))
-              ) : latestAgents.length > 0 ? (
-                latestAgents.map((agent) => (
-                  <div
-                    key={agent.id}
-                    className="border rounded-lg p-6 hover:border-primary transition-colors"
-                  >
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <h3 className="text-lg font-semibold mb-1">
-                          {agent.name}
-                        </h3>
-                        <p className="text-sm text-muted-foreground line-clamp-2">
-                          {agent.description || "No description provided"}
-                        </p>
-                      </div>
-                      <div className="flex space-x-2">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Link href={`/agents/${agent.id}`}>
-                                <Button variant="ghost" size="icon">
-                                  <Settings2 className="h-4 w-4" />
-                                </Button>
-                              </Link>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Edit Agent</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
-                    </div>
-                    <div className="flex items-center text-sm text-muted-foreground">
-                      <span className="flex items-center">
-                        Model: {agent.model_type}
-                      </span>
-                      <span className="mx-2">•</span>
-                      <span>{agent.tools?.length || 0} tools</span>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="col-span-full border rounded-lg p-8 text-center">
-                  <h3 className="text-lg font-semibold mb-2">No agents yet</h3>
-                  <p className="text-muted-foreground mb-4">
-                    Create your first AI agent to get started
-                  </p>
-                  <Link href="/agents/new">
-                    <Button>
-                      <PlusCircle className="mr-2" />
-                      Create Agent
-                    </Button>
-                  </Link>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Latest Workflows */}
-          <div>
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-semibold">Latest Workflows</h3>
-              <Link href="/workflows">
-                <Button variant="ghost">View All</Button>
-              </Link>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {workflowsError ? (
-                <div className="col-span-full border border-destructive rounded-lg p-4">
-                  <p className="text-destructive text-center">
-                    Error loading workflows: {workflowsError.message}
-                  </p>
-                </div>
-              ) : !latestWorkflows ? (
-                // Loading state
-                Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="border rounded-lg p-6">
-                    <Skeleton className="h-6 w-3/4 mb-4" />
-                    <Skeleton className="h-4 w-full mb-2" />
-                    <Skeleton className="h-4 w-2/3" />
-                  </div>
-                ))
-              ) : latestWorkflows.length > 0 ? (
-                latestWorkflows.map((workflow) => (
-                  <Link href={`/workflows/${workflow.id}`} key={workflow.id}>
-                    <div className="border rounded-lg p-6 hover:border-primary transition-colors">
-                      <h2 className="text-xl font-semibold mb-2">
-                        {workflow.name}
-                      </h2>
-                      <div className="space-y-1">
-                        <p className="text-sm text-muted-foreground">
-                          Created on:{" "}
-                          {new Date(workflow.created_at).toLocaleDateString()}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          Last updated:{" "}
-                          {new Date(workflow.updated_at).toLocaleDateString()}
-                        </p>
-                      </div>
-                    </div>
-                  </Link>
-                ))
-              ) : (
-                <div className="col-span-full border rounded-lg p-8 text-center">
-                  <h3 className="text-lg font-semibold mb-2">
-                    No workflows yet
-                  </h3>
-                  <p className="text-muted-foreground mb-4">
-                    Create your first workflow to get started
-                  </p>
-                  <Link href="/workflows/new">
-                    <Button>
-                      <PlusCircle className="mr-2" />
-                      Create Workflow
-                    </Button>
-                  </Link>
-                </div>
-              )}
-            </div>
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-2xl font-bold">Dashboard Overview</h1>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm">
+              <Clock className="mr-2 h-4 w-4" />
+              Last 7 days
+            </Button>
+            <Button variant="outline" size="sm">
+              <BarChart3 className="mr-2 h-4 w-4" />
+              View Reports
+            </Button>
           </div>
         </div>
+
+        {/* Stats Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <Card>
+            <CardContent className="pt-4">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Active Workflows
+                  </p>
+                  <h3 className="text-2xl font-bold mt-2">
+                    {stats.activeWorkflows}
+                  </h3>
+                </div>
+                <div className="p-2 bg-primary/10 rounded-full">
+                  <Zap className="h-4 w-4 text-primary" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Total Agents
+                  </p>
+                  <h3 className="text-2xl font-bold mt-2">
+                    {stats.totalAgents}
+                  </h3>
+                </div>
+                <div className="p-2 bg-primary/10 rounded-full">
+                  <User className="h-4 w-4 text-primary" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Success Rate
+                  </p>
+                  <h3 className="text-2xl font-bold mt-2">
+                    {stats.successRate}
+                  </h3>
+                </div>
+                <div className="p-2 bg-green-500/10 rounded-full">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Avg Response Time
+                  </p>
+                  <h3 className="text-2xl font-bold mt-2">
+                    {stats.averageResponseTime}
+                  </h3>
+                </div>
+                <div className="p-2 bg-blue-500/10 rounded-full">
+                  <Activity className="h-4 w-4 text-blue-500" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          <Link href="/agents/new" className="group">
+            <div className="relative p-6 rounded-lg overflow-hidden border group-hover:border-primary transition-colors">
+              <div className="flex items-center space-x-4">
+                <PlusCircle className="h-8 w-8 text-primary" />
+                <div>
+                  <h3 className="text-lg font-semibold mb-1">
+                    Create New Agent
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Design a custom AI agent with specific capabilities
+                  </p>
+                </div>
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/workflows/new" className="group">
+            <div className="relative p-6 rounded-lg overflow-hidden border group-hover:border-primary transition-colors">
+              <div className="flex items-center space-x-4">
+                <PlusCircle className="h-8 w-8 text-primary" />
+                <div>
+                  <h3 className="text-lg font-semibold mb-1">New Workflow</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Build a multi-agent workflow from scratch
+                  </p>
+                </div>
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/settings" className="group">
+            <div className="relative p-6 rounded-lg overflow-hidden border group-hover:border-primary transition-colors">
+              <div className="flex items-center space-x-4">
+                <Settings2 className="h-8 w-8 text-primary" />
+                <div>
+                  <h3 className="text-lg font-semibold mb-1">Settings</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Configure your workspace and preferences
+                  </p>
+                </div>
+              </div>
+            </div>
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Recent Activity */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Activity</CardTitle>
+              <CardDescription>
+                Latest updates from your workspace
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {recentActivity.map((activity, i) => (
+                  <div key={i} className="flex items-start space-x-4">
+                    <div
+                      className={`p-2 rounded-full ${
+                        activity.type === "workflow_completed"
+                          ? "bg-green-500/10"
+                          : activity.type === "workflow_error"
+                          ? "bg-red-500/10"
+                          : "bg-blue-500/10"
+                      }`}
+                    >
+                      {activity.type === "workflow_completed" ? (
+                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      ) : activity.type === "workflow_error" ? (
+                        <AlertCircle className="h-4 w-4 text-red-500" />
+                      ) : (
+                        <Activity className="h-4 w-4 text-blue-500" />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm">{activity.message}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {activity.time}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Active Workflows */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Active Workflows</CardTitle>
+              <CardDescription>
+                Currently running workflows and their status
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {latestWorkflows && latestWorkflows.length > 0 ? (
+                <div className="space-y-4">
+                  {latestWorkflows.map((workflow) => (
+                    <div
+                      key={workflow.id}
+                      className="flex items-center justify-between p-4 border rounded-lg"
+                    >
+                      <div className="flex items-center space-x-4">
+                        <div className="p-2 bg-primary/10 rounded-full">
+                          <Zap className="h-4 w-4 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-medium">{workflow.name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            Updated{" "}
+                            {new Date(workflow.updated_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                      <Badge
+                        variant={
+                          workflow.status === "active" ? "default" : "secondary"
+                        }
+                      >
+                        {workflow.status || "Inactive"}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">No active workflows</p>
+                  <Button variant="outline" className="mt-4" asChild>
+                    <Link href="/workflows/new">Create Workflow</Link>
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
-    </>
+    </div>
   );
 }

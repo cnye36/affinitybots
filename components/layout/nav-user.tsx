@@ -1,20 +1,18 @@
 "use client"
 
+import { useEffect, useState } from "react";
 import {
   ChevronsUpDown,
   CreditCard,
   LogOut,
   User,
   Settings2,
-} from "lucide-react"
+} from "lucide-react";
 import { signOut } from "@/app/(auth)/actions";
-import { ThemeToggle } from '@/components/theme-toggle'
+import { ThemeToggle } from "@/components/theme-toggle";
+import { createClient } from "@/utils/supabase/client";
 
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,25 +21,70 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
-} from "@/components/ui/sidebar"
+} from "@/components/ui/sidebar";
 
-export function NavUser({
-  user,
-}: {
-  user?: {
-    name?: string
-    email?: string
-    avatar_url?: string
-  }
-}) {
-  const { isMobile } = useSidebar()
-  const userInitials = user?.name ? user.name.substring(0, 2).toUpperCase() : 'U'
+interface UserData {
+  name?: string;
+  email?: string;
+  avatar_url?: string;
+}
+
+export function NavUser({ user: initialUser }: { user?: UserData }) {
+  const { isMobile } = useSidebar();
+  const [user, setUser] = useState<UserData | undefined>(initialUser);
+
+  useEffect(() => {
+    async function loadUserProfile() {
+      try {
+        const supabase = createClient();
+        const {
+          data: { user: authUser },
+        } = await supabase.auth.getUser();
+
+        if (authUser) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("name, email, avatar_url")
+            .eq("id", authUser.id)
+            .single();
+
+          // Extract metadata from auth
+          const authMetadata = authUser.user_metadata || {};
+
+          // Merge profile data with auth metadata
+          const userData = {
+            name:
+              profile?.name ||
+              authMetadata.full_name ||
+              authMetadata.name ||
+              authUser.email?.split("@")[0] ||
+              "User",
+            email: profile?.email || authUser.email,
+            avatar_url:
+              profile?.avatar_url ||
+              authMetadata.avatar_url ||
+              authMetadata.picture,
+          };
+
+          setUser(userData);
+        }
+      } catch (err) {
+        console.error("Error loading user profile:", err);
+      }
+    }
+
+    loadUserProfile();
+  }, []);
+
+  const userInitials = user?.name
+    ? user.name.substring(0, 2).toUpperCase()
+    : "U";
 
   return (
     <SidebarMenu>
@@ -54,11 +97,17 @@ export function NavUser({
             >
               <Avatar className="h-8 w-8 rounded-lg">
                 <AvatarImage src={user?.avatar_url} alt={user?.name} />
-                <AvatarFallback className="rounded-lg">{userInitials}</AvatarFallback>
+                <AvatarFallback className="rounded-lg">
+                  {userInitials}
+                </AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">{user?.name || 'User'}</span>
-                <span className="truncate text-xs">{user?.email || 'user@example.com'}</span>
+                <span className="truncate font-semibold">
+                  {user?.name || "User"}
+                </span>
+                <span className="truncate text-xs">
+                  {user?.email || "user@example.com"}
+                </span>
               </div>
               <ChevronsUpDown className="ml-auto size-4" />
             </SidebarMenuButton>
@@ -73,30 +122,36 @@ export function NavUser({
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
                   <AvatarImage src={user?.avatar_url} alt={user?.name} />
-                  <AvatarFallback className="rounded-lg">{userInitials}</AvatarFallback>
+                  <AvatarFallback className="rounded-lg">
+                    {userInitials}
+                  </AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">{user?.name || 'User'}</span>
-                  <span className="truncate text-xs">{user?.email || 'user@example.com'}</span>
+                  <span className="truncate font-semibold">
+                    {user?.name || "User"}
+                  </span>
+                  <span className="truncate text-xs">
+                    {user?.email || "user@example.com"}
+                  </span>
                 </div>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem asChild>
-                <a href="/settings/profile">
+                <a href="/settings">
                   <User className="mr-2 h-4 w-4" />
                   Profile
                 </a>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <a href="/settings/billing">
+                <a href="/settings?tab=billing">
                   <CreditCard className="mr-2 h-4 w-4" />
                   Billing
                 </a>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <a href="/settings">
+                <a href="/settings?tab=preferences">
                   <Settings2 className="mr-2 h-4 w-4" />
                   Settings
                 </a>
@@ -110,7 +165,7 @@ export function NavUser({
               </div>
             </div>
             <DropdownMenuSeparator />
-            <DropdownMenuItem 
+            <DropdownMenuItem
               className="text-red-500 focus:bg-red-500/10 focus:text-red-500"
               onClick={() => signOut()}
             >
@@ -121,5 +176,5 @@ export function NavUser({
         </DropdownMenu>
       </SidebarMenuItem>
     </SidebarMenu>
-  )
+  );
 }
