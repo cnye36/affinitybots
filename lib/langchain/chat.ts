@@ -7,24 +7,15 @@ import {
   StateGraph,
   MemorySaver,
 } from "@langchain/langgraph";
+import { ToolNode } from "@langchain/langgraph/prebuilt";
 import { AgentConfig } from "@/types/agent";
 import { ChatState } from "./types";
 import {
-  HumanMessage,
-  BaseMessage,
-  AIMessage,
   SystemMessage,
+  BaseMessage,
+  HumanMessage,
 } from "@langchain/core/messages";
 import { initializeTools } from "../tools";
-import { AgentExecutor, createOpenAIFunctionsAgent } from "langchain/agents";
-import {
-  ChatPromptTemplate,
-  MessagesPlaceholder,
-} from "@langchain/core/prompts";
-import { AVAILABLE_TOOLS } from "../tools/config";
-
-// Tools that require user approval before execution
-const TOOLS_REQUIRING_APPROVAL = ["code_interpreter", "web_search"];
 
 export async function createChatGraph(agent: AgentConfig, threadId: string) {
   console.log("[createChatGraph] Creating chat graph for thread:", threadId);
@@ -55,44 +46,9 @@ export async function createChatGraph(agent: AgentConfig, threadId: string) {
   // Initialize tools
   const tools = await initializeTools(agent.tools || []);
 
-  // Create the agent prompt with explicit tool usage instructions
-  const prompt = ChatPromptTemplate.fromMessages([
-    ["system", agent.prompt_template || "You are a helpful AI assistant."],
-    [
-      "system",
-      `You have access to the following tools:
-${tools
-  .map(
-    (tool) =>
-      `- ${tool.name}: ${
-        AVAILABLE_TOOLS.find((t) => t.id === tool.name.toLowerCase())
-          ?.description || tool.description
-      }`
-  )
-  .join("\n")}
-
-When using tools:
-1. Always try to use tools when relevant instead of using your own knowledge
-2. Some tools require user approval before execution
-3. You can only use one tool at a time
-4. Wait for tool execution to complete before proceeding`,
-    ],
-    new MessagesPlaceholder("chat_history"),
-    ["human", "{input}"],
-    new MessagesPlaceholder("agent_scratchpad"),
-  ]);
-
-  // Create the agent
-  const agentInstance = await createOpenAIFunctionsAgent({
-    llm: model,
-    tools,
-    prompt,
-  });
-
-  // Create the agent executor
-  const agentExecutor = new AgentExecutor({
-    agent: agentInstance,
-    tools,
+  // Bind tools to the model
+  const modelWithTools = model.bind({
+    tools: tools,
   });
 
   // Define the function that calls the model
@@ -102,92 +58,56 @@ When using tools:
     console.log("[callModel] Processing messages:", messages);
 
     try {
-      // Get the last message
-      const lastMessage = messages[messages.length - 1];
-      if (!lastMessage) {
-        throw new Error("No messages in state");
-      }
+      const response = await modelWithTools.invoke([
+        new SystemMessage(
+          agent.prompt_template || "You are a helpful AI assistant."
+        ),
+        new SystemMessage(`You have access to the following tools:
+${tools.map((tool) => `- ${tool.name}: ${tool.description}`).join("\n")}
 
-      // Check if we have any pending tool usage that needs approval
-      const pendingTool = state.toolUsage?.find(
-        (tool) => tool.status === "pending"
-      );
-      if (pendingTool) {
-        console.log("[callModel] Found pending tool:", pendingTool);
-        // Add a system message asking for approval
-        const approvalMessage = new SystemMessage(
-          `The agent wants to use the ${pendingTool.toolId} tool with input: ${pendingTool.input}\n\nDo you approve? Reply with 'approve' or 'reject'.`
-        );
-        return {
-          messages: [...messages, approvalMessage],
-          metadata: { ...state.metadata },
-          toolUsage: state.toolUsage,
-        };
-      }
+When using tools:
+1. Always try to use tools when relevant instead of using your own knowledge
+2. Some tools require user approval before execution
+3. You can only use one tool at a time
+4. Wait for tool execution to complete before proceeding`),
+        ...messages,
+      ]);
 
-      // Execute the agent
-      const result = await agentExecutor.invoke({
-        input: lastMessage.content,
-        chat_history: messages.slice(0, -1),
-      });
-
-      console.log("[callModel] Agent result:", result);
-
-      // Check if a tool was used
-      if (result.intermediateSteps?.length > 0) {
-        const toolStep = result.intermediateSteps[0];
-        const toolId = toolStep.action.tool.toLowerCase();
-        const toolInput = toolStep.action.toolInput;
-        const toolOutput = toolStep.observation;
-
-        // Create tool usage record
-        const toolUsage = {
-          toolId,
-          input: toolInput,
-          output: toolOutput,
-          status: TOOLS_REQUIRING_APPROVAL.includes(toolId)
-            ? "pending"
-            : "completed",
-          requiresApproval: TOOLS_REQUIRING_APPROVAL.includes(toolId),
-        };
-
-        // If tool requires approval, add it to state
-        if (toolUsage.requiresApproval) {
-          return {
-            messages: [
-              ...messages,
-              new SystemMessage(
-                `The agent wants to use the ${toolId} tool with input: ${toolInput}\n\nDo you approve? Reply with 'approve' or 'reject'.`
-              ),
-            ],
-            metadata: { ...state.metadata },
-            toolUsage: [...(state.toolUsage || []), toolUsage],
-          };
-        }
-      }
-
-      // Create AI message from result
-      const response = new AIMessage(result.output);
-      console.log("[callModel] Model response:", response);
-
-      const newState = {
+      return {
         messages: [...messages, response],
         metadata: { ...state.metadata },
         toolUsage: state.toolUsage,
       };
-      console.log("[callModel] New state:", newState);
-      return newState;
     } catch (error) {
       console.error("[callModel] Error:", error);
       throw error;
     }
   };
 
-  // Define a new graph
+  // Define the router function
+  const routeModelOutput = (state: typeof MessagesAnnotation.State) => {
+    const messages = state.messages;
+    const lastMessage = messages[messages.length - 1];
+
+    // If the LLM is invoking tools, route there
+    if ((lastMessage?.additional_kwargs?.tool_calls?.length ?? 0) > 0) {
+      return "tools";
+    }
+
+    // Otherwise end the graph
+    return END;
+  };
+
+  // Create the tool node
+  const toolNode = new ToolNode(tools);
+
+  // Define the graph
   const workflow = new StateGraph(MessagesAnnotation)
     .addNode("model", callModel)
+    .addNode("tools", toolNode)
     .addEdge(START, "model")
-    .addEdge("model", END);
+    .addConditionalEdges("model", routeModelOutput, ["tools", END])
+    .addEdge("tools", "model");
 
   console.log("[createChatGraph] Created workflow");
 
