@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useState, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -12,8 +12,10 @@ import { Label } from "@/components/ui/label";
 import { AgentConfig } from "@/types/agent";
 import { createClient } from "@/utils/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Upload } from "lucide-react";
-import Image from "next/image";
+import { Upload, Loader2 } from "lucide-react";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { mutate } from "swr";
+
 interface GeneralConfigProps {
   config: AgentConfig;
   onChange: (field: keyof AgentConfig, value: unknown) => void;
@@ -24,6 +26,8 @@ export const GeneralConfig: React.FC<GeneralConfigProps> = ({
   onChange,
 }) => {
   const supabase = createClient();
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleConfigChange = (field: string, value: string) => {
     onChange("config", { ...config.config, [field]: value });
@@ -34,14 +38,38 @@ export const GeneralConfig: React.FC<GeneralConfigProps> = ({
       const file = e.target.files?.[0];
       if (!file) return;
 
+      setIsUploading(true);
       try {
+        // Check file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          throw new Error("File size must be less than 5MB");
+        }
+
+        // Check file type
+        if (!file.type.startsWith("image/")) {
+          throw new Error("File must be an image");
+        }
+
         const fileExt = file.name.split(".").pop();
         const fileName = `${config.id}-${Date.now()}.${fileExt}`;
         const filePath = `${config.owner_id}/${fileName}`;
 
+        // Delete old avatar if it exists
+        if (config.avatar) {
+          const oldFilePath = config.avatar.split("/").pop();
+          if (oldFilePath) {
+            await supabase.storage
+              .from("agent-avatars")
+              .remove([`${config.owner_id}/${oldFilePath}`]);
+          }
+        }
+
         const { error: uploadError } = await supabase.storage
           .from("agent-avatars")
-          .upload(filePath, file);
+          .upload(filePath, file, {
+            cacheControl: "3600",
+            upsert: false,
+          });
 
         if (uploadError) {
           throw uploadError;
@@ -51,54 +79,95 @@ export const GeneralConfig: React.FC<GeneralConfigProps> = ({
           data: { publicUrl },
         } = supabase.storage.from("agent-avatars").getPublicUrl(filePath);
 
+        // Update the avatar in the parent component
         onChange("avatar", publicUrl);
+
+        // Save the changes immediately to persist the avatar
+        const response = await fetch(`/api/agents/${config.id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            ...config,
+            avatar: publicUrl,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to update agent with new avatar");
+        }
+
+        // Update SWR cache
+        await mutate(`/api/agents/${config.id}`);
+        await mutate("/api/agents");
       } catch (error) {
         console.error("Error uploading avatar:", error);
+        if (error instanceof Error) {
+          alert(error.message);
+        } else {
+          alert("Failed to upload avatar");
+        }
+      } finally {
+        setIsUploading(false);
+        // Reset the file input
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
       }
     },
-    [config.id, config.owner_id, onChange, supabase.storage]
+    [config.id, config.owner_id, config.avatar, onChange, supabase.storage]
   );
+
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col items-center">
         <div className="mb-4">
-          {config.avatar ? (
-            <Image
-              src={config.avatar}
-              alt={config.name}
-              width={96}
-              height={96}
-              className="rounded-full object-cover ring-2 ring-background"
-            />
-          ) : (
-            <div
-              className="h-24 w-24 rounded-full ring-2 ring-background flex items-center justify-center text-xl font-medium text-white"
+          <Avatar className="h-24 w-24">
+            <AvatarImage src={config.avatar} alt={config.name} />
+            <AvatarFallback
               style={{
                 backgroundColor: `hsl(${
                   (config.name.length * 30) % 360
                 }, 70%, 50%)`,
               }}
+              className="text-xl font-medium text-white"
             >
               {config.name.slice(0, 2).toUpperCase()}
-            </div>
-          )}
+            </AvatarFallback>
+          </Avatar>
         </div>
         <div className="flex items-center gap-2">
-          <Input
+          <input
+            ref={fileInputRef}
             type="file"
             accept="image/*"
             className="hidden"
-            id="avatar-upload"
             onChange={handleAvatarUpload}
           />
-          <Label htmlFor="avatar-upload" className="cursor-pointer">
-            <Button type="button" variant="outline" size="sm">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={triggerFileInput}
+            disabled={isUploading}
+          >
+            {isUploading ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
               <Upload className="h-4 w-4 mr-2" />
-              {config.avatar ? "Change Avatar" : "Upload Avatar"}
-            </Button>
-          </Label>
-          {config.avatar && (
+            )}
+            {isUploading
+              ? "Uploading..."
+              : config.avatar
+              ? "Change Avatar"
+              : "Upload Avatar"}
+          </Button>
+          {config.avatar && !isUploading && (
             <Button
               type="button"
               variant="outline"

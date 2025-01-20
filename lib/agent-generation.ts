@@ -83,9 +83,7 @@ export async function generateAgentConfiguration(
   };
 
   // Get core tools
-  const coreTools = AVAILABLE_TOOLS.filter((tool) => tool.isCore).map(
-    (tool) => tool.id
-  );
+  const coreTools = AVAILABLE_TOOLS.map((tool) => tool.id);
 
   lines.forEach((line) => {
     const [key, ...valueParts] = line.split(":");

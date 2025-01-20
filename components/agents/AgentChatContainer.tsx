@@ -8,8 +8,7 @@ import { Settings, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useAgent } from "@/hooks/useAgent";
 import { AgentConfigModal } from "@/components/configuration/AgentConfigModal";
-import { Avatar } from "@/components/ui/avatar";
-import { AvatarImage, AvatarFallback } from "@radix-ui/react-avatar";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 interface AgentChatContainerProps {
   agentId: string;
@@ -35,9 +34,25 @@ export function AgentChatContainer({ agentId }: AgentChatContainerProps) {
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </Link>
-          <Avatar className="h-8 w-8">
-            <AvatarImage src={agent?.image_url} alt={agent?.name} />
-            <AvatarFallback>{agent?.name?.[0]?.toUpperCase()}</AvatarFallback>
+          <Avatar className="h-10 w-10 border-2 border-background">
+            {agent?.avatar ? (
+              <AvatarImage
+                src={agent.avatar}
+                alt={agent?.name}
+                className="object-cover"
+              />
+            ) : (
+              <AvatarFallback
+                style={{
+                  backgroundColor: `hsl(${
+                    ((agent?.name?.length || 0) * 30) % 360
+                  }, 70%, 50%)`,
+                }}
+                className="text-white font-medium"
+              >
+                {agent?.name?.[0]?.toUpperCase()}
+              </AvatarFallback>
+            )}
           </Avatar>
           <h1 className="text-xl font-semibold">{agent?.name}</h1>
         </div>
@@ -52,7 +67,7 @@ export function AgentChatContainer({ agentId }: AgentChatContainerProps) {
         </Button>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 min-h-0">
         <div className="w-80 border-r border-border bg-muted/10">
           <ChatThreads
             agentId={agentId}
@@ -61,7 +76,7 @@ export function AgentChatContainer({ agentId }: AgentChatContainerProps) {
             onNewThread={handleNewThread}
           />
         </div>
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <AgentChat
             agentId={agentId}
             currentThreadId={currentThreadId}

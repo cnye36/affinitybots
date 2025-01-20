@@ -23,6 +23,7 @@ import { SettingsConfig } from "./SettingsConfig";
 import { KnowledgeConfig } from "@/components/configuration/KnowledgeConfig";
 import { AgentConfig } from "@/types/agent";
 import { useRouter } from "next/navigation";
+import { mutate } from "swr";
 
 interface AgentConfigModalProps {
   isOpen: boolean;
@@ -91,7 +92,11 @@ export const AgentConfigModal: React.FC<AgentConfigModalProps> = ({
     setLoading(true);
     setError(null);
     try {
-      await axios.put(`/api/agents/${agentId}`, config);
+      const response = await axios.put(`/api/agents/${agentId}`, config);
+      // Mutate the agent data in the SWR cache
+      await mutate(`/api/agents/${agentId}`, response.data, false);
+      // Also mutate the agents list
+      await mutate("/api/agents");
       onClose();
       router.refresh();
     } catch (err) {

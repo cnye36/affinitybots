@@ -7,7 +7,6 @@ export interface ToolConfig {
   description: string;
   icon: IconType;
   category: "data" | "content" | "automation" | "analysis";
-  isCore?: boolean;
   requiresAuth?: boolean;
   authType?: "oauth" | "api_key" | "custom";
   requiredEnvVars?: string[];
@@ -29,7 +28,6 @@ export const AVAILABLE_TOOLS: ToolConfig[] = [
       "Search and retrieve information from the internet using Tavily API",
     icon: Search,
     category: "data",
-    isCore: true,
     requiresAuth: true,
     authType: "api_key",
     requiredEnvVars: ["TAVILY_API_KEY"],
@@ -49,7 +47,6 @@ export const AVAILABLE_TOOLS: ToolConfig[] = [
     description: "Perform mathematical calculations and conversions",
     icon: Calculator,
     category: "analysis",
-    isCore: true,
     requiresAuth: false,
   },
   {
@@ -58,7 +55,6 @@ export const AVAILABLE_TOOLS: ToolConfig[] = [
     description: "Search and retrieve information from Wikipedia",
     icon: BookOpen,
     category: "data",
-    isCore: true,
     requiresAuth: false,
     configOptions: [
       {
@@ -76,7 +72,6 @@ export const AVAILABLE_TOOLS: ToolConfig[] = [
     description: "Execute Python code for data analysis and computation",
     icon: Code,
     category: "analysis",
-    isCore: true,
     requiresAuth: false,
   },
 ];

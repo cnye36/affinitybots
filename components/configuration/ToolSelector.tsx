@@ -102,11 +102,6 @@ export function ToolSelector({
                       <div className="space-y-1">
                         <div className="flex items-center space-x-2">
                           <Label htmlFor={tool.id}>{tool.name}</Label>
-                          {tool.isCore && (
-                            <Badge variant="secondary" className="text-xs">
-                              Core
-                            </Badge>
-                          )}
                           {tool.requiresAuth && (
                             <Badge variant="outline" className="text-xs">
                               Requires Auth
@@ -155,7 +150,6 @@ export function ToolSelector({
                       onCheckedChange={(checked) =>
                         handleToolToggle(tool, checked)
                       }
-                      disabled={tool.isCore} // Core tools cannot be disabled
                     />
                   </div>
                 ))}

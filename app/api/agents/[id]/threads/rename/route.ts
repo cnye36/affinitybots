@@ -43,7 +43,7 @@ export async function POST(
 
     // Create chat model for title generation
     const model = new ChatOpenAI({
-      modelName: "gpt-3.5-turbo",
+      modelName: "gpt-4o-mini",
       temperature: 0.7,
     });
 

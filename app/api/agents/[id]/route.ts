@@ -51,11 +51,12 @@ export async function PUT(request: Request, props: { params: Promise<{ id: strin
       prompt_template,
       tools,
       agent_type,
-      config
-    } = json
+      config,
+      avatar,
+    } = json;
 
     const { data, error } = await supabase
-      .from('agents')
+      .from("agents")
       .update({
         name,
         description,
@@ -64,12 +65,13 @@ export async function PUT(request: Request, props: { params: Promise<{ id: strin
         tools,
         agent_type,
         config,
-        updated_at: new Date().toISOString()
+        avatar,
+        updated_at: new Date().toISOString(),
       })
-      .eq('id', params.id)
-      .eq('owner_id', user.id)
+      .eq("id", params.id)
+      .eq("owner_id", user.id)
       .select()
-      .single()
+      .single();
 
     if (error) throw error
     if (!data) {

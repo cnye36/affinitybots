@@ -6,12 +6,43 @@ import { Button } from "@/components/ui/button";
 import { Message } from "@/types/chat";
 import ReactMarkdown from "react-markdown";
 import { ToolUsage } from "./ToolUsage";
+import { Copy, Check } from "lucide-react";
 
 interface AgentChatProps {
   agentId: string;
   currentThreadId?: string;
   onThreadCreated?: (threadId: string) => void;
   onThreadUpdated?: () => void;
+}
+
+function CodeBlock({ children }: { children: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(children);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="relative group">
+      <pre className="relative">
+        <button
+          onClick={handleCopy}
+          className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity"
+        >
+          <div className="rounded-md bg-background/80 p-2 hover:bg-background">
+            {copied ? (
+              <Check className="h-4 w-4 text-green-500" />
+            ) : (
+              <Copy className="h-4 w-4 text-muted-foreground" />
+            )}
+          </div>
+        </button>
+        <code>{children}</code>
+      </pre>
+    </div>
+  );
 }
 
 export function AgentChat({
@@ -262,7 +293,7 @@ export function AgentChat({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      <div className="flex-1 overflow-y-auto p-6 space-y-6 min-h-0">
         {messages.map((message, i) => (
           <div key={i} className="space-y-4">
             <div
@@ -278,11 +309,16 @@ export function AgentChat({
                 }`}
               >
                 <ReactMarkdown
+                  components={{
+                    pre: ({ children }) => (
+                      <CodeBlock>{(children as any).props.children}</CodeBlock>
+                    ),
+                  }}
                   className={`prose ${
                     message.role === "assistant"
                       ? "prose-neutral dark:prose-invert"
                       : "prose-invert"
-                  } max-w-none prose-p:leading-relaxed prose-pre:p-0`}
+                  } max-w-none prose-p:leading-relaxed prose-pre:p-0 prose-pre:overflow-x-auto prose-pre:max-w-full [&_pre]:max-w-full [&_pre]:overflow-x-auto [&_code]:whitespace-pre-wrap [&_pre]:p-4 [&_pre]:bg-muted/50 [&_pre]:rounded-md`}
                 >
                   {message.content}
                 </ReactMarkdown>
