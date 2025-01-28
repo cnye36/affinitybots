@@ -1,6 +1,6 @@
 import { ChatOpenAI } from "@langchain/openai";
 import { PromptTemplate } from "@langchain/core/prompts";
-import { AgentConfig } from "@/types/agent";
+import { AgentConfigurableOptions, AgentMetadata } from "./config";
 import { AVAILABLE_TOOLS } from "@/lib/langchain/tools/config";
 
 const nameGeneratorPrompt = PromptTemplate.fromTemplate(`
@@ -62,10 +62,16 @@ export async function generateAgentName(
   return response.content.toString().trim();
 }
 
+interface GeneratedConfig {
+  name: string;
+  configurable: AgentConfigurableOptions;
+  metadata: AgentMetadata;
+}
+
 export async function generateAgentConfiguration(
   description: string,
   agentType: string
-): Promise<AgentConfig> {
+): Promise<GeneratedConfig> {
   const model = new ChatOpenAI({
     modelName: "gpt-4o",
     temperature: 0.7,
@@ -81,14 +87,22 @@ export async function generateAgentConfiguration(
 
   // Parse the response into structured data
   const lines = responseText.split("\n").filter((line) => line.trim());
-  const parsedConfig: Partial<AgentConfig> = {
-    config: {
+  const config: Partial<GeneratedConfig> = {
+    configurable: {
+      model: "gpt-4o",
       temperature: 0.7,
+      tools: [],
       memory: {
         enabled: true,
         max_entries: 10,
         relevance_threshold: 0.7,
       },
+      prompt_template: "",
+    },
+    metadata: {
+      description: "",
+      owner_id: "", // Will be set by the server
+      agent_type: agentType,
     },
   };
 
@@ -101,86 +115,63 @@ export async function generateAgentConfiguration(
 
     switch (key.trim().toUpperCase()) {
       case "NAME":
-        parsedConfig.name = value;
+        config.name = value;
         break;
       case "DESCRIPTION":
-        parsedConfig.description = value;
+        if (config.metadata) {
+          config.metadata.description = value;
+        }
         break;
       case "INSTRUCTIONS":
-        parsedConfig.prompt_template = value;
+        if (config.configurable) {
+          config.configurable.prompt_template = value;
+        }
         break;
       case "TOOLS":
-        // Only include valid tools from the available tools list
-        const requestedTools = value.split(",").map((t) => t.trim());
-        parsedConfig.tools = requestedTools.filter((tool) =>
-          availableTools.includes(tool)
-        );
+        if (config.configurable) {
+          // Only include valid tools from the available tools list
+          const requestedTools = value.split(",").map((t) => t.trim());
+          config.configurable.tools = requestedTools.filter((tool) =>
+            availableTools.includes(tool)
+          );
+        }
         break;
       case "MODEL":
-        parsedConfig.model = value;
+        if (config.configurable) {
+          config.configurable.model = value as "gpt-4o";
+        }
         break;
       case "TEMPERATURE":
-        parsedConfig.config = {
-          ...parsedConfig.config,
-          temperature: parseFloat(value),
-        };
+        if (config.configurable) {
+          config.configurable.temperature = parseFloat(value);
+        }
         break;
       case "MEMORY_WINDOW":
-        parsedConfig.config = {
-          ...parsedConfig.config,
-          memory: {
-            enabled: true,
-            max_entries: parseInt(value, 10),
-            relevance_threshold:
-              parsedConfig.config?.memory?.relevance_threshold ?? 0.7,
-          },
-        };
+        if (config.configurable?.memory) {
+          config.configurable.memory.max_entries = parseInt(value, 10);
+        }
         break;
       case "MEMORY_RELEVANCE":
-        parsedConfig.config = {
-          ...parsedConfig.config,
-          memory: {
-            enabled: true,
-            max_entries: parsedConfig.config?.memory?.max_entries ?? 10,
-            relevance_threshold: parseFloat(value),
-          },
-        };
+        if (config.configurable?.memory) {
+          config.configurable.memory.relevance_threshold = parseFloat(value);
+        }
         break;
     }
   });
 
   // Ensure all required fields are present
   if (
-    !parsedConfig.name ||
-    !parsedConfig.description ||
-    !parsedConfig.model ||
-    !parsedConfig.prompt_template
+    !config.name ||
+    !config.configurable?.prompt_template ||
+    !config.metadata?.description
   ) {
     throw new Error("Missing required fields in agent configuration");
   }
 
   // Ensure at least one tool is included
-  if (!parsedConfig.tools || parsedConfig.tools.length === 0) {
-    parsedConfig.tools = ["web_search"]; // Default to web search if no tools specified
+  if (!config.configurable?.tools?.length) {
+    config.configurable.tools = ["web_search"]; // Default to web search if no tools specified
   }
 
-  return {
-    id: "", // Will be set by the database
-    owner_id: "", // Will be set by the server
-    name: parsedConfig.name,
-    description: parsedConfig.description,
-    model: parsedConfig.model,
-    prompt_template: parsedConfig.prompt_template,
-    tools: parsedConfig.tools,
-    config: parsedConfig.config || {
-      temperature: 0.7,
-      memory: {
-        enabled: true,
-        max_entries: 10,
-        relevance_threshold: 0.7,
-      },
-    },
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  };
+  return config as GeneratedConfig;
 }
