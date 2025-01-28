@@ -1,11 +1,11 @@
 "use client";
 
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { PlusCircle, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import Image from "next/image";
+import { AgentHeader } from "@/components/agents/AgentHeader";
+import { AgentCard } from "@/components/agents/AgentCard";
+import { EmptyAgents } from "@/components/agents/EmptyAgents";
+import { AgentCardSkeletonGrid } from "@/components/agents/AgentCardSkeleton";
+
 interface Agent {
   id: string;
   name: string;
@@ -16,23 +16,23 @@ interface Agent {
 }
 
 export default function AgentsPage() {
-  const [agents, setAgents] = useState<Agent[]>([]);
+  const [agents, setAgents] = useState<Agent[] | null>(null);
   const [error, setError] = useState<string>();
   const [isLoading, setIsLoading] = useState(true);
-  const router = useRouter();
 
   useEffect(() => {
     async function loadAgents() {
       try {
-        const response = await fetch("/api/agents");
+        const response = await fetch("/api/assistants");
         if (!response.ok) throw new Error("Failed to load agents");
         const data = await response.json();
-        setAgents(data.agents);
+        setAgents(data.agents || []);
       } catch (error) {
         console.error("Error loading agents:", error);
         setError(
           error instanceof Error ? error.message : "Failed to load agents"
         );
+        setAgents([]);
       } finally {
         setIsLoading(false);
       }
@@ -44,91 +44,31 @@ export default function AgentsPage() {
   if (error) {
     return (
       <div className="container mx-auto py-6">
-        <h1 className="text-2xl font-bold mb-4">My Agents</h1>
+        <AgentHeader />
         <div className="text-red-500">Error: {error}</div>
       </div>
     );
   }
 
-  if (isLoading) {
+  if (isLoading || !agents) {
     return (
-      <div className="h-[calc(100vh-4rem)] flex flex-col items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin mb-4" />
-        <p className="text-lg text-muted-foreground">Loading your agents...</p>
+      <div className="container mx-auto px-4 py-8">
+        <AgentHeader />
+        <AgentCardSkeletonGrid />
       </div>
     );
   }
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-2xl font-bold">My Agents</h1>
-        <Link href="/agents/new">
-          <Button>
-            <PlusCircle className="mr-2" />
-            Create Agent
-          </Button>
-        </Link>
-      </div>
+      <AgentHeader />
 
       {agents.length === 0 ? (
-        <div className="text-center py-16 px-4">
-          <h2 className="text-3xl font-bold mb-4">Welcome to AgentHub</h2>
-          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Create your first AI agent to get started. AI agents can help you
-            with tasks, answer questions, and assist with your work.
-          </p>
-          <Link href="/agents/new">
-            <Button size="lg">
-              <PlusCircle className="mr-2" />
-              Create Your First Agent
-            </Button>
-          </Link>
-        </div>
+        <EmptyAgents />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {agents.map((agent) => (
-            <div
-              key={agent.id}
-              className="border rounded-lg p-6 hover:border-primary transition-colors cursor-pointer"
-              onClick={() => router.push(`/agents/${agent.id}`)}
-            >
-              <div className="flex items-start space-x-4">
-                {agent.avatar ? (
-                  <Image
-                    src={agent.avatar}
-                    alt={agent.name}
-                    width={48}
-                    height={48}
-                    className="h-12 w-12 rounded-full object-cover ring-2 ring-background"
-                  />
-                ) : (
-                  <div
-                    className="h-12 w-12 rounded-full ring-2 ring-background flex items-center justify-center text-sm font-medium text-white"
-                    style={{
-                      backgroundColor: `hsl(${
-                        (agent.name.length * 30) % 360
-                      }, 70%, 50%)`,
-                    }}
-                  >
-                    {agent.name.slice(0, 2).toUpperCase()}
-                  </div>
-                )}
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold mb-1">{agent.name}</h3>
-                  <p className="text-sm text-muted-foreground line-clamp-2">
-                    {agent.description || "No description provided"}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center text-sm text-muted-foreground mt-4">
-                <span className="flex items-center">
-                  Model: {agent.model_type}
-                </span>
-                <span className="mx-2">•</span>
-                <span>{agent.tools?.length || 0} tools</span>
-              </div>
-            </div>
+            <AgentCard key={agent.id} agent={agent} />
           ))}
         </div>
       )}

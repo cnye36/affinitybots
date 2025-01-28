@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { createClient } from "@/utils/supabase/client";
+import { createClient } from "@/supabase/client";
 
 interface PreferencesData {
   notifications: boolean;

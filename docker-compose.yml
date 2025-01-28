@@ -1,0 +1,24 @@
+volumes:
+    langgraph-data:
+        driver: local
+services:
+    langgraph-redis:
+        image: redis:6
+        healthcheck:
+            test: redis-cli ping
+            interval: 5s
+            timeout: 1s
+            retries: 5
+
+    langgraph-api:
+        image: langgraph-agenthub
+        ports:
+            - "8123:8000"
+        environment:
+            REDIS_URI: redis://langgraph-redis:6379
+            OPENAI_API_KEY: "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"
+            LANGSMITH_API_KEY: "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"
+            POSTGRES_URI: postgresql://postgres.lcnkzptzirdcvemvbjan:evnvDkimT5erLrU4@aws-0-us-west-1.pooler.supabase.com:6543/postgres
+        extra_hosts:
+            - "host.docker.internal:host-gateway"
+            - "db.lcnkzptzirdcvemvbjan.supabase.co:host-gateway"

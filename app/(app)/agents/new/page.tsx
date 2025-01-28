@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { createAgent } from './action'
+import { createAgent } from "./actions";
 import { AGENT_TEMPLATES } from './templates'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'

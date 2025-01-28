@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { AgentConfig } from "@/types/agent";
-import { createClient } from "@/utils/supabase/client";
+import { createClient } from "@/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Upload, Loader2 } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -116,7 +116,7 @@ export const GeneralConfig: React.FC<GeneralConfigProps> = ({
         }
       }
     },
-    [config.id, config.owner_id, config.avatar, onChange, supabase.storage]
+    [config, onChange, supabase.storage]
   );
 
   const triggerFileInput = () => {
@@ -202,8 +202,8 @@ export const GeneralConfig: React.FC<GeneralConfigProps> = ({
         <div>
           <Label>Model</Label>
           <Select
-            value={config.model_type}
-            onValueChange={(value) => onChange("model_type", value)}
+            value={config.model}
+            onValueChange={(value) => onChange("model", value)}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select a model" />
@@ -230,22 +230,6 @@ export const GeneralConfig: React.FC<GeneralConfigProps> = ({
               <SelectItem value="professional">Professional</SelectItem>
               <SelectItem value="friendly">Friendly</SelectItem>
               <SelectItem value="technical">Technical</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div>
-          <Label>Language</Label>
-          <Select
-            value={config.config?.language || "en"}
-            onValueChange={(value) => handleConfigChange("language", value)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select language" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="auto">Auto</SelectItem>
-              {/* Add more languages as needed */}
             </SelectContent>
           </Select>
         </div>

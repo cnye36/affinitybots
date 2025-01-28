@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Upload } from "lucide-react";
-import { createClient } from "@/utils/supabase/client";
+import { createClient } from "@/supabase/client";
 
 interface ProfileData {
   id: string;

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CreditCard, Settings2, User } from "lucide-react";
-import { createClient } from "@/utils/supabase/client";
+import { createClient } from "@/supabase/client";
 import { ProfileSettings } from "@/components/settings/ProfileSettings";
 import { BillingSettings } from "@/components/settings/BillingSettings";
 import { PreferencesSettings } from "@/components/settings/PreferencesSettings";

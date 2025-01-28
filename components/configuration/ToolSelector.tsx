@@ -1,173 +1,127 @@
 "use client"
 
 import { useState } from "react";
-import { Switch } from "@/components/ui/switch";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { AVAILABLE_TOOLS, ToolConfig } from "@/lib/tools/config";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { cn } from "@/lib/utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Plus, X } from "lucide-react";
 
-interface ToolSelectorProps {
-  selectedTools: string[];
-  onToolToggle: (
-    toolId: string,
-    enabled: boolean,
-    config?: Record<string, unknown>
-  ) => void;
+interface Tool {
+  name: string;
+  description: string;
+  type: string;
+  config: Record<string, string | number | boolean>;
 }
 
-type ToolConfigMap = Record<string, Record<string, string>>;
+interface ToolSelectorProps {
+  selectedTools: Tool[];
+  onToolsChange: (tools: Tool[]) => void;
+}
+
+// Define available tools with proper typing
+const AVAILABLE_TOOLS: Tool[] = [
+  {
+    name: "Web Search",
+    description: "Search the web for information",
+    type: "web_search",
+    config: {
+      maxResults: 3,
+    },
+  },
+  {
+    name: "Calculator",
+    description: "Perform calculations",
+    type: "calculator",
+    config: {},
+  },
+  {
+    name: "Wikipedia",
+    description: "Search Wikipedia articles",
+    type: "wikipedia",
+    config: {
+      maxResults: 2,
+    },
+  },
+];
 
 export function ToolSelector({
   selectedTools,
-  onToolToggle,
+  onToolsChange,
 }: ToolSelectorProps) {
-  const [toolConfigs, setToolConfigs] = useState<ToolConfigMap>({});
-  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedTool, setSelectedTool] = useState<string>("");
 
-  const handleToolToggle = (tool: ToolConfig, enabled: boolean) => {
-    if (enabled && tool.configOptions) {
-      const config = tool.configOptions.reduce<Record<string, string>>(
-        (acc, option) => ({
-          ...acc,
-          [option.name]: String(option.default || ""),
-        }),
-        {} as Record<string, string>
-      );
-      setToolConfigs((prev) => ({ ...prev, [tool.id]: config }));
+  const handleAddTool = () => {
+    if (!selectedTool) return;
+    const tool = AVAILABLE_TOOLS.find((t) => t.type === selectedTool);
+    if (!tool) return;
+
+    // Only add if not already selected
+    if (!selectedTools.some((t) => t.type === tool.type)) {
+      onToolsChange([...selectedTools, tool]);
     }
-    onToolToggle(tool.id, enabled, toolConfigs[tool.id]);
+    setSelectedTool("");
   };
 
-  const handleConfigChange = (
-    toolId: string,
-    optionName: string,
-    value: string
-  ) => {
-    const newConfig = {
-      ...toolConfigs[toolId],
-      [optionName]: value,
-    };
-    setToolConfigs((prev) => ({
-      ...prev,
-      [toolId]: newConfig,
-    }));
-    if (selectedTools.includes(toolId)) {
-      onToolToggle(toolId, true, newConfig);
-    }
+  const handleRemoveTool = (toolType: string) => {
+    onToolsChange(selectedTools.filter((t) => t.type !== toolType));
   };
-
-  const filteredTools = AVAILABLE_TOOLS.filter(
-    (tool) =>
-      tool.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      tool.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const groupedTools = groupByCategory(filteredTools);
 
   return (
     <div className="space-y-4">
-      <div className="sticky top-0 bg-background z-10 pb-4">
-        <Input
-          placeholder="Search tools..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="max-w-sm"
-        />
+      <div className="flex gap-2">
+        <Select value={selectedTool} onValueChange={setSelectedTool}>
+          <SelectTrigger className="flex-1">
+            <SelectValue placeholder="Select a tool" />
+          </SelectTrigger>
+          <SelectContent>
+            {AVAILABLE_TOOLS.filter(
+              (tool) => !selectedTools.some((t) => t.type === tool.type)
+            ).map((tool) => (
+              <SelectItem key={tool.type} value={tool.type}>
+                {tool.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          onClick={handleAddTool}
+          disabled={!selectedTool}
+        >
+          <Plus className="h-4 w-4" />
+        </Button>
       </div>
 
-      <ScrollArea className="h-[60vh] pr-4">
-        <div className="space-y-6">
-          {Object.entries(groupedTools).map(([category, tools]) => (
-            <div key={category} className="space-y-4">
-              <h3 className="text-lg font-semibold capitalize sticky top-0 bg-background/95 backdrop-blur py-2">
-                {category}
-              </h3>
-              <div className="space-y-4">
-                {tools.map((tool) => (
-                  <div
-                    key={tool.id}
-                    className={cn(
-                      "flex items-start justify-between p-4 rounded-lg border transition-colors",
-                      selectedTools.includes(tool.id) &&
-                        "border-primary/50 bg-primary/5"
-                    )}
-                  >
-                    <div className="flex items-start space-x-4">
-                      <div className="mt-1">
-                        <tool.icon className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                      <div className="space-y-1">
-                        <div className="flex items-center space-x-2">
-                          <Label htmlFor={tool.id}>{tool.name}</Label>
-                          {tool.requiresAuth && (
-                            <Badge variant="outline" className="text-xs">
-                              Requires Auth
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          {tool.description}
-                        </p>
-                        {selectedTools.includes(tool.id) &&
-                          tool.configOptions && (
-                            <div className="mt-4 space-y-3 border-t pt-3">
-                              {tool.configOptions.map((option) => (
-                                <div key={option.name} className="space-y-2">
-                                  <Label
-                                    htmlFor={`${tool.id}-${option.name}`}
-                                    className="text-xs"
-                                  >
-                                    {option.description}
-                                  </Label>
-                                  <Input
-                                    id={`${tool.id}-${option.name}`}
-                                    type={option.isSecret ? "password" : "text"}
-                                    placeholder={option.name}
-                                    value={
-                                      toolConfigs[tool.id]?.[option.name] || ""
-                                    }
-                                    onChange={(e) =>
-                                      handleConfigChange(
-                                        tool.id,
-                                        option.name,
-                                        e.target.value
-                                      )
-                                    }
-                                    className="h-8"
-                                  />
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                      </div>
-                    </div>
-                    <Switch
-                      id={tool.id}
-                      checked={selectedTools.includes(tool.id)}
-                      onCheckedChange={(checked) =>
-                        handleToolToggle(tool, checked)
-                      }
-                    />
-                  </div>
-                ))}
+      <div className="space-y-2">
+        {selectedTools.map((tool) => (
+          <div
+            key={tool.type}
+            className="flex items-center justify-between p-2 bg-muted rounded-md"
+          >
+            <div>
+              <div className="font-medium">{tool.name}</div>
+              <div className="text-sm text-muted-foreground">
+                {tool.description}
               </div>
             </div>
-          ))}
-        </div>
-      </ScrollArea>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => handleRemoveTool(tool.type)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
-
-function groupByCategory(tools: ToolConfig[]) {
-  return tools.reduce((acc, tool) => {
-    if (!acc[tool.category]) {
-      acc[tool.category] = []
-    }
-    acc[tool.category].push(tool)
-    return acc
-  }, {} as Record<string, ToolConfig[]>)
-} 
