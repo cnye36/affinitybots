@@ -6,27 +6,62 @@ import { AgentCard } from "@/components/agents/AgentCard";
 import { EmptyAgents } from "@/components/agents/EmptyAgents";
 import { AgentCardSkeletonGrid } from "@/components/agents/AgentCardSkeleton";
 
-interface Agent {
+interface Assistant {
   id: string;
   name: string;
-  description?: string;
-  model_type?: string;
-  tools?: { name: string }[];
-  avatar?: string;
+  graph_id: string;
+  config: {
+    configurable: {
+      model?: string;
+      temperature?: number;
+      instructions?: string;
+      tools?: { name: string }[];
+    };
+    metadata: {
+      description?: string;
+      owner_id: string;
+    };
+  };
 }
 
 export default function AgentsPage() {
-  const [agents, setAgents] = useState<Agent[] | null>(null);
+  const [agents, setAgents] = useState<Assistant[] | null>(null);
   const [error, setError] = useState<string>();
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     async function loadAgents() {
       try {
+        console.log("Starting to load agents...");
         const response = await fetch("/api/assistants");
-        if (!response.ok) throw new Error("Failed to load agents");
-        const data = await response.json();
-        setAgents(data.agents || []);
+        console.log("Response status:", response.status);
+
+        if (!response.ok) {
+          console.error(
+            "Response not OK:",
+            response.status,
+            response.statusText
+          );
+          throw new Error("Failed to load agents");
+        }
+
+        const responseText = await response.text();
+        console.log("Raw response:", responseText);
+
+        let assistants;
+        try {
+          assistants = JSON.parse(responseText);
+          console.log("Parsed assistants:", assistants);
+        } catch (parseError) {
+          console.error("Failed to parse response:", parseError);
+          throw new Error("Invalid response format");
+        }
+
+        setAgents(Array.isArray(assistants) ? assistants : []);
+        console.log(
+          "Agents set to state:",
+          Array.isArray(assistants) ? assistants : []
+        );
       } catch (error) {
         console.error("Error loading agents:", error);
         setError(
@@ -68,7 +103,16 @@ export default function AgentsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {agents.map((agent) => (
-            <AgentCard key={agent.id} agent={agent} />
+            <AgentCard
+              key={agent.id}
+              agent={{
+                id: agent.id,
+                name: agent.name,
+                description: agent.config.metadata.description,
+                model_type: agent.config.configurable.model,
+                tools: agent.config.configurable.tools,
+              }}
+            />
           ))}
         </div>
       )}

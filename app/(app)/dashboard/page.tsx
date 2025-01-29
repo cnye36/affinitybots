@@ -25,7 +25,7 @@ export default async function Dashboard() {
 
   // Fetch latest agents
   const { data: agents, error: agentsError } = await supabase
-    .from("agents")
+    .from("assistant")
     .select("*")
     .eq("owner_id", user.id)
     .order("created_at", { ascending: false });

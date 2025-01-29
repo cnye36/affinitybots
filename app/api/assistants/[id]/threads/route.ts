@@ -4,8 +4,8 @@ import { createClient } from "@/supabase/server";
 
 // Initialize LangGraph client
 const client = new Client({
-  apiUrl: process.env.LANGGRAPH_API_URL!,
-  apiKey: process.env.LANGGRAPH_API_KEY!,
+  apiUrl: process.env.LANGGRAPH_URL!,
+  apiKey: process.env.LANGSMITH_API_KEY!,
 });
 
 export async function GET(
