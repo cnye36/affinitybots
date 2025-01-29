@@ -1,43 +1,42 @@
 import { z } from "zod";
 import { type LangGraphRunnableConfig } from "@langchain/langgraph";
+import { ToolsConfig } from "../tools";
 
-// Define the configurable options for our agent
-export const AgentConfigSchema = z.object({
-  model: z
-    .enum(["gpt-4o", "gpt-4o-mini", "gpt-o1", "gpt-o1-mini"])
-    .default("gpt-4o"),
-  temperature: z.number().min(0).max(1).default(0.7),
-  prompt_template: z.string(),
-  tools: z.array(z.string()).default([]),
-  memory: z
-    .object({
-      enabled: z.boolean().default(true),
-      max_entries: z.number().default(10),
-      relevance_threshold: z.number().min(0).max(1).default(0.7),
-    })
-    .default({
-      enabled: true,
-      max_entries: 10,
-      relevance_threshold: 0.7,
-    }),
+// Memory options schema
+export const AgentMemoryOptionsSchema = z.object({
+  enabled: z.boolean(),
+  max_entries: z.number(),
+  relevance_threshold: z.number(),
 });
 
-export type AgentConfigurableOptions = z.infer<typeof AgentConfigSchema>;
-
-// Define the metadata structure
+// Metadata schema
 export const AgentMetadataSchema = z.object({
-  description: z.string().optional(),
+  description: z.string(),
   owner_id: z.string(),
   agent_type: z.string(),
-  userId: z.string().optional(),
-  threadId: z.string().optional(),
 });
 
-export type AgentMetadata = z.infer<typeof AgentMetadataSchema>;
+// Configurable options schema
+export const AgentConfigurableOptionsSchema = z.object({
+  model: z.enum(["gpt-4o", "gpt-4o-mini", "gpt-o1", "gpt-o1-mini"]),
+  temperature: z.number(),
+  tools: z.custom<ToolsConfig>(),
+  memory: AgentMemoryOptionsSchema,
+  prompt_template: z.string(),
+  metadata: AgentMetadataSchema,
+});
 
-// Define the complete configuration type
-export interface AgentConfig {
-  configurable: AgentConfigurableOptions;
-  metadata?: AgentMetadata;
-  config?: LangGraphRunnableConfig;
-}
+// Complete config schema
+export const AgentConfigSchema = z.object({
+  name: z.string(),
+  configurable: AgentConfigurableOptionsSchema,
+  config: z.custom<LangGraphRunnableConfig>().optional(),
+});
+
+// Export types derived from schemas
+export type AgentMemoryOptions = z.infer<typeof AgentMemoryOptionsSchema>;
+export type AgentConfigurableOptions = z.infer<
+  typeof AgentConfigurableOptionsSchema
+>;
+export type AgentMetadata = z.infer<typeof AgentMetadataSchema>;
+export type AgentConfig = z.infer<typeof AgentConfigSchema>;

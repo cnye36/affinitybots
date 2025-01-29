@@ -14,11 +14,26 @@ services:
         image: langgraph-agenthub
         ports:
             - "8123:8000"
+        env_file:
+            - .env
         environment:
+            # Service-specific configurations
             REDIS_URI: redis://langgraph-redis:6379
-            OPENAI_API_KEY: "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"
-            LANGSMITH_API_KEY: "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"
-            POSTGRES_URI: postgresql://postgres.lcnkzptzirdcvemvbjan:evnvDkimT5erLrU4@aws-0-us-west-1.pooler.supabase.com:6543/postgres
+            # AI Provider Keys (from .env)
+            OPENAI_API_KEY: ${OPENAI_API_KEY}
+            ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+            # Tool Keys (from .env)
+            TAVILY_API_KEY: ${TAVILY_API_KEY}
+            NOTION_API_KEY: ${NOTION_API_KEY}
+            SERPER_API_KEY: ${SERPER_API_KEY}
+            WOLFRAM_ALPHA_APP_ID: ${WOLFRAM_ALPHA_APP_ID}
+            # Database Connections
+            POSTGRES_URI: ${POSTGRES_URI}
+            # Langsmith Configuration
+            LANGSMITH_API_KEY: ${LANGSMITH_API_KEY}
+            LANGSMITH_ENDPOINT: ${LANGSMITH_ENDPOINT}
+            LANGSMITH_PROJECT: ${LANGSMITH_PROJECT}
+            LANGSMITH_TRACING: ${LANGSMITH_TRACING}
         extra_hosts:
             - "host.docker.internal:host-gateway"
             - "db.lcnkzptzirdcvemvbjan.supabase.co:host-gateway"

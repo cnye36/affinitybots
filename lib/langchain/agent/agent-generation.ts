@@ -1,7 +1,11 @@
 import { ChatOpenAI } from "@langchain/openai";
 import { PromptTemplate } from "@langchain/core/prompts";
 import { AgentConfigurableOptions, AgentMetadata } from "./config";
-import { AVAILABLE_TOOLS } from "@/lib/langchain/tools/config";
+import {
+  AVAILABLE_TOOLS,
+  ToolID,
+  getDefaultToolConfig,
+} from "@/lib/langchain/tools/config";
 
 const nameGeneratorPrompt = PromptTemplate.fromTemplate(`
 Given the following agent description and type, generate a creative and memorable name for the AI agent.
@@ -26,6 +30,11 @@ Focus on making the assistant highly effective at its specific task while mainta
 
 User's Description: {description}
 Assistant Type: {agentType}
+
+Available Tools:
+${AVAILABLE_TOOLS.map((t) => `- ${t.name}: ${t.description}`).join("\n")}
+
+Note: Web Search (Tavily) is always included by default.
 
 Provide the following information in a clear format:
 
@@ -91,23 +100,20 @@ export async function generateAgentConfiguration(
     configurable: {
       model: "gpt-4o",
       temperature: 0.7,
-      tools: [],
+      tools: {},
       memory: {
         enabled: true,
         max_entries: 10,
         relevance_threshold: 0.7,
       },
       prompt_template: "",
-    },
-    metadata: {
-      description: "",
-      owner_id: "", // Will be set by the server
-      agent_type: agentType,
+      metadata: {
+        description: "",
+        owner_id: "", // Will be set by the server
+        agent_type: agentType,
+      },
     },
   };
-
-  // Get available tools
-  const availableTools = AVAILABLE_TOOLS.map((tool) => tool.id);
 
   lines.forEach((line) => {
     const [key, ...valueParts] = line.split(":");
@@ -118,8 +124,8 @@ export async function generateAgentConfiguration(
         config.name = value;
         break;
       case "DESCRIPTION":
-        if (config.metadata) {
-          config.metadata.description = value;
+        if (config.configurable?.metadata) {
+          config.configurable.metadata.description = value;
         }
         break;
       case "INSTRUCTIONS":
@@ -129,11 +135,31 @@ export async function generateAgentConfiguration(
         break;
       case "TOOLS":
         if (config.configurable) {
-          // Only include valid tools from the available tools list
-          const requestedTools = value.split(",").map((t) => t.trim());
-          config.configurable.tools = requestedTools.filter((tool) =>
-            availableTools.includes(tool)
-          );
+          // Initialize tools configuration
+          const toolsConfig: Record<
+            ToolID,
+            { isEnabled: boolean; config: Record<string, unknown> }
+          > = {
+            web_search: { isEnabled: true, config: {} },
+            wikipedia: { isEnabled: false, config: {} },
+            wolfram_alpha: { isEnabled: false, config: {} },
+          };
+
+          // Add other requested tools
+          const requestedTools = value
+            .split(",")
+            .map((t) => t.trim() as ToolID);
+          requestedTools.forEach((toolId) => {
+            if (
+              toolId !== "web_search" &&
+              AVAILABLE_TOOLS.find((t) => t.id === toolId)
+            ) {
+              toolsConfig[toolId] = getDefaultToolConfig(toolId);
+              toolsConfig[toolId].isEnabled = true;
+            }
+          });
+
+          config.configurable.tools = toolsConfig;
         }
         break;
       case "MODEL":
@@ -163,14 +189,9 @@ export async function generateAgentConfiguration(
   if (
     !config.name ||
     !config.configurable?.prompt_template ||
-    !config.metadata?.description
+    !config.configurable?.metadata?.description
   ) {
     throw new Error("Missing required fields in agent configuration");
-  }
-
-  // Ensure at least one tool is included
-  if (!config.configurable?.tools?.length) {
-    config.configurable.tools = ["web_search"]; // Default to web search if no tools specified
   }
 
   return config as GeneratedConfig;

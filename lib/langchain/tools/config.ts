@@ -1,77 +1,80 @@
-import { Search, Calculator, BookOpen, Code } from "lucide-react";
-import { IconType } from "react-icons";
+import { z } from "zod";
 
-export interface ToolConfig {
-  id: string;
-  name: string;
-  description: string;
-  icon: IconType;
-  category: "data" | "content" | "automation" | "analysis";
-  requiresAuth?: boolean;
-  authType?: "oauth" | "api_key" | "custom";
-  requiredEnvVars?: string[];
-  configOptions?: {
-    name: string;
-    type: "text" | "number" | "boolean";
-    required?: boolean;
-    default?: string | number | boolean;
-    description?: string;
-    isSecret?: boolean;
-  }[];
-}
+// Tool requirement schemas
+const tavilyConfigSchema = z.object({
+  apiKey: z.string().optional(),
+  maxResults: z.number().optional().default(3),
+});
 
-export const AVAILABLE_TOOLS: ToolConfig[] = [
+const wolframAlphaConfigSchema = z.object({
+  appid: z.string(),
+});
+
+// No config needed for Wikipedia
+const wikipediaConfigSchema = z.object({});
+
+// Define available tools and their metadata
+export const AVAILABLE_TOOLS = [
   {
     id: "web_search",
-    name: "Search Web",
-    description:
-      "Search and retrieve information from the internet using Tavily API",
-    icon: Search,
-    category: "data",
-    requiresAuth: true,
-    authType: "api_key",
-    requiredEnvVars: ["TAVILY_API_KEY"],
-    configOptions: [
-      {
-        name: "maxResults",
-        type: "number",
-        required: false,
-        default: 3,
-        description: "Maximum number of search results to return",
-      },
-    ],
-  },
-  {
-    id: "calculator",
-    name: "Calculator",
-    description: "Perform mathematical calculations and conversions",
-    icon: Calculator,
-    category: "analysis",
-    requiresAuth: false,
+    name: "Web Search",
+    description: "Search the web for current information using Tavily's API",
+    configSchema: tavilyConfigSchema,
+    isRequired: true, // This tool is required for all agents
+    defaultConfig: {
+      maxResults: 3,
+    },
   },
   {
     id: "wikipedia",
     name: "Wikipedia",
-    description: "Search and retrieve information from Wikipedia",
-    icon: BookOpen,
-    category: "data",
-    requiresAuth: false,
-    configOptions: [
-      {
-        name: "maxResults",
-        type: "number",
-        required: false,
-        default: 2,
-        description: "Maximum number of Wikipedia results to return",
-      },
-    ],
+    description: "Query Wikipedia for factual information and definitions",
+    configSchema: wikipediaConfigSchema,
+    isRequired: false,
+    defaultConfig: {},
   },
   {
-    id: "code_interpreter",
-    name: "Code Interpreter",
-    description: "Execute Python code for data analysis and computation",
-    icon: Code,
-    category: "analysis",
-    requiresAuth: false,
+    id: "wolfram_alpha",
+    name: "Wolfram Alpha",
+    description: "Perform complex calculations and queries using Wolfram Alpha",
+    configSchema: wolframAlphaConfigSchema,
+    isRequired: false,
+    defaultConfig: {},
   },
-];
+] as const;
+
+// Type for tool IDs
+export type ToolID = (typeof AVAILABLE_TOOLS)[number]["id"];
+
+// Interface for tool configurations
+export interface ToolConfiguration {
+  isEnabled: boolean;
+  config: Record<string, any>;
+}
+
+// Type for the complete tools configuration
+export type ToolsConfig = Partial<Record<ToolID, ToolConfiguration>>;
+
+// Helper to validate tool configuration
+export function validateToolConfig(toolId: ToolID, config: any): boolean {
+  const tool = AVAILABLE_TOOLS.find((t) => t.id === toolId);
+  if (!tool) return false;
+
+  try {
+    tool.configSchema.parse(config);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Helper to get default configuration for a tool
+export function getDefaultToolConfig(toolId: ToolID): ToolConfiguration {
+  const tool = AVAILABLE_TOOLS.find((t) => t.id === toolId);
+  if (!tool) throw new Error(`Unknown tool: ${toolId}`);
+
+  return {
+    isEnabled: tool.isRequired,
+    config: tool.defaultConfig,
+  };
+}

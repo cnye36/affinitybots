@@ -9,12 +9,15 @@ declare module "@langchain/langgraph-sdk" {
       max_entries?: number;
       relevance_threshold?: number;
     };
+    metadata?: {
+      description?: string;
+      owner_id?: string;
+      agent_type?: string;
+      [key: string]: string | undefined;
+    };
   }
 
   export interface AssistantMetadata {
-    description?: string;
-    owner_id?: string;
-    agent_type?: string;
     [key: string]: string | number | boolean | undefined;
   }
 
@@ -45,6 +48,7 @@ declare module "@langchain/langgraph-sdk" {
         assistantId: string,
         options: Partial<AssistantCreateOptions>
       ): Promise<Assistant>;
+      delete(assistantId: string): Promise<void>;
     };
   }
 }

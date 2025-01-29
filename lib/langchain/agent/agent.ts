@@ -1,5 +1,4 @@
 import { ChatOpenAI } from "@langchain/openai";
-import { TavilySearchResults } from "@langchain/community/tools/tavily_search";
 import { MessagesAnnotation, StateGraph } from "@langchain/langgraph";
 import { ToolNode } from "@langchain/langgraph/prebuilt";
 import {
@@ -10,6 +9,9 @@ import {
 } from "@langchain/core/messages";
 import { retrieveRelevantDocuments } from "@/lib/retrieval";
 import { createClient } from "@/supabase/server";
+import { getTools } from "../tools";
+import { RunnableConfig } from "@langchain/core/runnables";
+import { AgentConfigurableOptions } from "./config";
 
 type AgentState = {
   messages: BaseMessage[];
@@ -19,10 +21,7 @@ type AgentState = {
 };
 
 // Define your tools
-const tools = [
-  new TavilySearchResults({ maxResults: 3 }),
-  // Add more tools as needed
-];
+const tools = getTools();
 
 // Define the knowledge retrieval node
 async function retrieveKnowledge(state: AgentState) {
@@ -64,17 +63,36 @@ async function retrieveKnowledge(state: AgentState) {
 }
 
 // Define the function to call the model
-async function callModel(state: AgentState) {
+async function callModel(state: AgentState, config: RunnableConfig) {
+  const configurable = config.configurable as AgentConfigurableOptions;
+
   // Initialize the model with tool calling capabilities
   const model = new ChatOpenAI({
-    model: "gpt-4o",
+    model: configurable?.model || "gpt-4o",
+    temperature: configurable?.temperature || 0.7,
   }).bindTools(tools);
+
+  // Get the custom prompt template from configuration or fall back to default
+  const systemPrompt =
+    configurable?.prompt_template ||
+    `You are a sophisticated AI assistant designed to solve complex tasks efficiently. When given a query, carefully analyze whether existing tools can help you provide a more accurate, comprehensive, or up-to-date response. Tools should be used strategically to: 
+
+    1. Retrieve current or specialized information not in your base knowledge
+    2. Verify facts from authoritative sources
+    3. Perform complex calculations or specialized queries
+    4. Access real-time or domain-specific data
+
+    Always prioritize tool usage when:
+    - The query requires recent information
+    - Precise numerical or scientific calculations are needed
+    - Specific domain expertise is required
+    - Direct source verification would enhance response quality
+
+    When relevant context is provided, integrate it thoughtfully with tool-retrieved information to create a nuanced, well-informed response. Your goal is to provide the most accurate and helpful information possible.`;
 
   // Invoke the model with the current conversation state
   const response = await model.invoke([
-    new SystemMessage(
-      "You are a helpful assistant that can use tools to answer questions. When provided with relevant context, use it to inform your responses."
-    ),
+    new SystemMessage(systemPrompt),
     ...state.messages,
   ]);
 

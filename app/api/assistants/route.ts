@@ -21,9 +21,9 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { name, description, model, temperature, instructions, tools } = body;
+    const { name, model, temperature, instructions, tools } = body;
 
-    // Create a new assistant using the base agent graph with owner_id in metadata
+    // Create a new assistant in LangGraph with owner_id in metadata
     const assistant = await client.assistants.create({
       graphId: "agent",
       name,
@@ -32,11 +32,11 @@ export async function POST(request: Request) {
         temperature,
         instructions,
         tools: tools || [],
-      },
-      metadata: {
-        owner_id: user.id,
-        agent_type: "custom",
-        description,
+        metadata: {
+          owner_id: user.id,
+          agent_type: "custom",
+          description: "A custom assistant created by the user",
+        },
       },
     });
 
@@ -53,32 +53,22 @@ export async function POST(request: Request) {
 export async function GET() {
   try {
     const supabase = await createClient();
-    console.log("Fetching assistants from Supabase - starting request");
 
     const {
       data: { user },
     } = await supabase.auth.getUser();
 
     if (!user) {
-      console.log("No user found - returning unauthorized");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    console.log("User found:", user.id);
+    // Get all assistants for this user using metadata filter
+    const assistants = await client.assistants.search({
+      metadata: {
+        "configurable.metadata.owner_id": user.id,
+      },
+    });
 
-    // Query assistants by owner_id in metadata
-    const { data: assistants, error } = await supabase
-      .from("assistant")
-      .select("*")
-      .eq("graph_id", "agent")
-      .filter("metadata->owner_id", "eq", user.id);
-
-    if (error) {
-      console.error("Supabase query error:", error);
-      throw error;
-    }
-
-    console.log("Successfully fetched assistants:", assistants);
     return NextResponse.json(assistants || []);
   } catch (error) {
     console.error("Error fetching assistants:", error);
