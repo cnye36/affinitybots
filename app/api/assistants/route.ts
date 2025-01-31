@@ -1,14 +1,13 @@
-import { Client } from "@langchain/langgraph-sdk";
 import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
-
-// Initialize LangGraph client
-const client = new Client({
-  apiUrl: process.env.LANGGRAPH_URL!,
-  apiKey: process.env.LANGSMITH_API_KEY!,
-});
+import { generateAgentConfiguration } from "@/lib/langchain/agent/agent-generation";
+import {
+  getLangGraphClient,
+  cleanupLangGraphClient,
+} from "@/lib/langchain/client";
 
 export async function POST(request: Request) {
+  const client = getLangGraphClient();
   try {
     const supabase = await createClient();
 
@@ -21,22 +20,22 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { name, model, temperature, instructions, tools } = body;
+    const { description, agentType } = body;
 
-    // Create a new assistant in LangGraph with owner_id in metadata
+    // Generate the agent configuration
+    const config = await generateAgentConfiguration(
+      description,
+      agentType,
+      user.id
+    );
+
+    // Create a new assistant in LangGraph with proper structure
     const assistant = await client.assistants.create({
       graphId: "agent",
-      name,
-      configurable: {
-        model,
-        temperature,
-        instructions,
-        tools: tools || [],
-        metadata: {
-          owner_id: user.id,
-          agent_type: "custom",
-          description: "A custom assistant created by the user",
-        },
+      name: config.name,
+      metadata: config.metadata,
+      config: {
+        configurable: config.configurable,
       },
     });
 
@@ -47,10 +46,13 @@ export async function POST(request: Request) {
       { error: "Failed to create assistant" },
       { status: 500 }
     );
+  } finally {
+    await cleanupLangGraphClient();
   }
 }
 
 export async function GET() {
+  const client = getLangGraphClient();
   try {
     const supabase = await createClient();
 
@@ -62,19 +64,38 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get all assistants for this user using metadata filter
-    const assistants = await client.assistants.search({
-      metadata: {
-        "configurable.metadata.owner_id": user.id,
-      },
-    });
+    try {
+      // Get all assistants for this user using metadata filter
+      const assistants = await client.assistants.search({
+        metadata: {
+          owner_id: user.id,
+        },
+      });
 
-    return NextResponse.json(assistants || []);
+      if (!assistants) {
+        return NextResponse.json([]);
+      }
+
+      // Ensure we're returning an array
+      const assistantsArray = Array.isArray(assistants)
+        ? assistants
+        : [assistants];
+
+      return NextResponse.json(assistantsArray);
+    } catch (langGraphError) {
+      console.error("LangGraph API error:", langGraphError);
+      return NextResponse.json(
+        { error: "Failed to fetch assistants from LangGraph" },
+        { status: 500 }
+      );
+    }
   } catch (error) {
-    console.error("Error fetching assistants:", error);
+    console.error("Error in GET handler:", error);
     return NextResponse.json(
       { error: "Failed to fetch assistants" },
       { status: 500 }
     );
+  } finally {
+    await cleanupLangGraphClient();
   }
 }

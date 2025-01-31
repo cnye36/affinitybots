@@ -9,116 +9,73 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { Plus, X } from "lucide-react";
+import { ToolID, ToolConfig, ToolsConfig } from "@/types/index";
 
-interface Tool {
-  name: string;
-  description: string;
-  type: string;
-  config: Record<string, string | number | boolean>;
-}
-
-interface ToolSelectorProps {
-  selectedTools: Tool[];
-  onToolsChange: (tools: Tool[]) => void;
-}
-
-// Define available tools with proper typing
-const AVAILABLE_TOOLS: Tool[] = [
+// Define available tools
+const AVAILABLE_TOOLS = [
   {
+    id: "web_search" as ToolID,
     name: "Web Search",
     description: "Search the web for information",
-    type: "web_search",
-    config: {
+    defaultConfig: {
       maxResults: 3,
     },
   },
   {
-    name: "Calculator",
-    description: "Perform calculations",
-    type: "calculator",
-    config: {},
-  },
-  {
+    id: "wikipedia" as ToolID,
     name: "Wikipedia",
     description: "Search Wikipedia articles",
-    type: "wikipedia",
-    config: {
+    defaultConfig: {
       maxResults: 2,
+    },
+  },
+  {
+    id: "wolfram_alpha" as ToolID,
+    name: "Wolfram Alpha",
+    description: "Perform calculations and answer queries",
+    defaultConfig: {
+      maxResults: 1,
     },
   },
 ];
 
-export function ToolSelector({
-  selectedTools,
-  onToolsChange,
-}: ToolSelectorProps) {
-  const [selectedTool, setSelectedTool] = useState<string>("");
+interface ToolSelectorProps {
+  tools: ToolsConfig;
+  onToolsChange: (toolId: string, config: ToolConfig) => void;
+}
 
-  const handleAddTool = () => {
-    if (!selectedTool) return;
-    const tool = AVAILABLE_TOOLS.find((t) => t.type === selectedTool);
+export function ToolSelector({ tools, onToolsChange }: ToolSelectorProps) {
+  const handleToggleTool = (toolId: ToolID) => {
+    const tool = AVAILABLE_TOOLS.find((t) => t.id === toolId);
     if (!tool) return;
 
-    // Only add if not already selected
-    if (!selectedTools.some((t) => t.type === tool.type)) {
-      onToolsChange([...selectedTools, tool]);
-    }
-    setSelectedTool("");
-  };
-
-  const handleRemoveTool = (toolType: string) => {
-    onToolsChange(selectedTools.filter((t) => t.type !== toolType));
+    const isEnabled = tools[toolId]?.isEnabled ?? false;
+    onToolsChange(toolId, {
+      isEnabled: !isEnabled,
+      config: tools[toolId]?.config ?? tool.defaultConfig,
+    });
   };
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-2">
-        <Select value={selectedTool} onValueChange={setSelectedTool}>
-          <SelectTrigger className="flex-1">
-            <SelectValue placeholder="Select a tool" />
-          </SelectTrigger>
-          <SelectContent>
-            {AVAILABLE_TOOLS.filter(
-              (tool) => !selectedTools.some((t) => t.type === tool.type)
-            ).map((tool) => (
-              <SelectItem key={tool.type} value={tool.type}>
-                {tool.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          onClick={handleAddTool}
-          disabled={!selectedTool}
-        >
-          <Plus className="h-4 w-4" />
-        </Button>
-      </div>
-
       <div className="space-y-2">
-        {selectedTools.map((tool) => (
+        {AVAILABLE_TOOLS.map((tool) => (
           <div
-            key={tool.type}
-            className="flex items-center justify-between p-2 bg-muted rounded-md"
+            key={tool.id}
+            className="flex items-center justify-between p-4 bg-muted rounded-lg"
           >
-            <div>
+            <div className="space-y-1">
               <div className="font-medium">{tool.name}</div>
               <div className="text-sm text-muted-foreground">
                 {tool.description}
               </div>
             </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={() => handleRemoveTool(tool.type)}
-            >
-              <X className="h-4 w-4" />
-            </Button>
+            <Switch
+              checked={tools[tool.id]?.isEnabled ?? false}
+              onCheckedChange={() => handleToggleTool(tool.id)}
+            />
           </div>
         ))}
       </div>

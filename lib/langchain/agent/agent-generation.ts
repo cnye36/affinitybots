@@ -1,6 +1,6 @@
 import { ChatOpenAI } from "@langchain/openai";
 import { PromptTemplate } from "@langchain/core/prompts";
-import { AgentConfigurableOptions, AgentMetadata } from "./config";
+import { AgentConfigurableOptions } from "./config";
 import {
   AVAILABLE_TOOLS,
   ToolID,
@@ -74,12 +74,17 @@ export async function generateAgentName(
 interface GeneratedConfig {
   name: string;
   configurable: AgentConfigurableOptions;
-  metadata: AgentMetadata;
+  metadata: {
+    description: string;
+    agent_type: string;
+    owner_id: string;
+  };
 }
 
 export async function generateAgentConfiguration(
   description: string,
-  agentType: string
+  agentType: string,
+  ownerId: string
 ): Promise<GeneratedConfig> {
   const model = new ChatOpenAI({
     modelName: "gpt-4o",
@@ -107,11 +112,11 @@ export async function generateAgentConfiguration(
         relevance_threshold: 0.7,
       },
       prompt_template: "",
-      metadata: {
-        description: "",
-        owner_id: "", // Will be set by the server
-        agent_type: agentType,
-      },
+    },
+    metadata: {
+      description: "",
+      agent_type: agentType,
+      owner_id: ownerId,
     },
   };
 
@@ -124,8 +129,8 @@ export async function generateAgentConfiguration(
         config.name = value;
         break;
       case "DESCRIPTION":
-        if (config.configurable?.metadata) {
-          config.configurable.metadata.description = value;
+        if (config.metadata) {
+          config.metadata.description = value;
         }
         break;
       case "INSTRUCTIONS":
@@ -189,7 +194,7 @@ export async function generateAgentConfiguration(
   if (
     !config.name ||
     !config.configurable?.prompt_template ||
-    !config.configurable?.metadata?.description
+    !config.metadata?.description
   ) {
     throw new Error("Missing required fields in agent configuration");
   }

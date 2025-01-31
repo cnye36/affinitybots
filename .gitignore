@@ -42,3 +42,6 @@ next-env.d.ts
 
 # LangGraph API
 .langgraph_api
+
+# Docker
+docker-compose.yml

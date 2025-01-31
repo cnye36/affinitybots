@@ -28,7 +28,7 @@ services:
             SERPER_API_KEY: ${SERPER_API_KEY}
             WOLFRAM_ALPHA_APP_ID: ${WOLFRAM_ALPHA_APP_ID}
             # Database Connections
-            POSTGRES_URI: ${POSTGRES_URI}
+            POSTGRES_URI: postgresql://postgres:evnvDkimT5erLrU4@db.lcnkzptzirdcvemvbjan.supabase.co:5432/postgres
             # Langsmith Configuration
             LANGSMITH_API_KEY: ${LANGSMITH_API_KEY}
             LANGSMITH_ENDPOINT: ${LANGSMITH_ENDPOINT}

@@ -7,19 +7,25 @@ import { EmptyAgents } from "@/components/agents/EmptyAgents";
 import { AgentCardSkeletonGrid } from "@/components/agents/AgentCardSkeleton";
 
 interface Assistant {
-  id: string;
+  assistant_id: string;
   name: string;
   graph_id: string;
+  metadata: {
+    owner_id: string;
+    description: string;
+    agent_type: string;
+  };
   config: {
     configurable: {
       model?: string;
       temperature?: number;
       instructions?: string;
       tools?: { name: string }[];
-    };
-    metadata: {
-      description?: string;
-      owner_id: string;
+      memory?: {
+        enabled: boolean;
+        max_entries: number;
+        relevance_threshold: number;
+      };
     };
   };
 }
@@ -32,7 +38,7 @@ export default function AgentsPage() {
   useEffect(() => {
     async function loadAgents() {
       try {
-        console.log("Starting to load agents...");
+        console.log("Starting to load assistants...");
         const response = await fetch("/api/assistants");
         console.log("Response status:", response.status);
 
@@ -42,7 +48,7 @@ export default function AgentsPage() {
             response.status,
             response.statusText
           );
-          throw new Error("Failed to load agents");
+          throw new Error("Failed to load assistants");
         }
 
         const responseText = await response.text();
@@ -63,9 +69,9 @@ export default function AgentsPage() {
           Array.isArray(assistants) ? assistants : []
         );
       } catch (error) {
-        console.error("Error loading agents:", error);
+        console.error("Error loading assistants:", error);
         setError(
-          error instanceof Error ? error.message : "Failed to load agents"
+          error instanceof Error ? error.message : "Failed to load assistants"
         );
         setAgents([]);
       } finally {
@@ -102,15 +108,15 @@ export default function AgentsPage() {
         <EmptyAgents />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {agents.map((agent) => (
+          {agents.map((assistant) => (
             <AgentCard
-              key={agent.id}
-              agent={{
-                id: agent.id,
-                name: agent.name,
-                description: agent.config.metadata.description,
-                model_type: agent.config.configurable.model,
-                tools: agent.config.configurable.tools,
+              key={assistant.assistant_id}
+              assistant={{
+                assistant_id: assistant.assistant_id,
+                name: assistant.name,
+                description: assistant.metadata.description,
+                model_type: assistant.config?.configurable?.model,
+                tools: assistant.config?.configurable?.tools,
               }}
             />
           ))}

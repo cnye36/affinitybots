@@ -17,7 +17,11 @@ export async function createAgent(formData: FormData) {
     const agentType = formData.get("agentType") as string;
 
     // Generate AI-powered configuration
-    const agentConfig = await generateAgentConfiguration(prompt, agentType);
+    const agentConfig = await generateAgentConfiguration(
+      prompt,
+      agentType,
+      user.id
+    );
 
     try {
       // Create the assistant in LangGraph with proper configuration
@@ -30,9 +34,9 @@ export async function createAgent(formData: FormData) {
         body: JSON.stringify({
           graph_id: "agent",
           name: agentConfig.name,
+          metadata: agentConfig.metadata,
           config: {
             configurable: agentConfig.configurable,
-            metadata: agentConfig.metadata,
           },
         }),
       });
@@ -48,7 +52,7 @@ export async function createAgent(formData: FormData) {
       const langGraphAssistant = JSON.parse(rawText);
       console.log("LangGraph assistant created:", langGraphAssistant);
 
-      revalidatePath("/agents");
+      revalidatePath("/assistants");
       revalidatePath("/");
 
       return { success: true, assistant: langGraphAssistant };

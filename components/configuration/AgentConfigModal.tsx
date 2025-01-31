@@ -20,33 +20,79 @@ import { GeneralConfig } from "./GeneralConfig";
 import { PromptsConfig } from "./PromptsConfig";
 import { ToolSelector } from "@/components/configuration/ToolSelector";
 import { SettingsConfig } from "./SettingsConfig";
-import { KnowledgeConfig } from "@/components/configuration/KnowledgeConfig";
-import { AgentConfig } from "@/types/agent";
+import { KnowledgeConfig } from "./KnowledgeConfig";
+import { AgentConfig } from "@/types/index";
+import { Assistant } from "@langchain/langgraph-sdk";
 import { useRouter } from "next/navigation";
 import { mutate } from "swr";
 
 interface AgentConfigModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  agentId: string;
-  initialConfig: AgentConfig;
-  onSave?: (config: AgentConfig) => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  assistant: Assistant;
 }
 
-export const AgentConfigModal: React.FC<AgentConfigModalProps> = ({
-  isOpen,
-  onClose,
-  agentId,
-  initialConfig,
-}) => {
-  const [config, setConfig] = useState<AgentConfig>(initialConfig);
+export function AgentConfigModal({
+  open,
+  onOpenChange,
+  assistant,
+}: AgentConfigModalProps) {
+  const [config, setConfig] = useState<AgentConfig>({
+    name: assistant.name,
+    configurable: {
+      model: assistant.config.configurable.model || "gpt-4o",
+      temperature: assistant.config.configurable.temperature || 0.7,
+      tools: Object.entries(assistant.config.configurable.tools || {}).reduce(
+        (acc, [key, value]) => ({
+          ...acc,
+          [key]: {
+            isEnabled: value?.enabled || false,
+            config: value?.config || {},
+          },
+        }),
+        {}
+      ),
+      memory: assistant.config.configurable.memory || {
+        enabled: true,
+        max_entries: 10,
+        relevance_threshold: 0.7,
+      },
+      prompt_template: assistant.config.configurable.prompt_template || "",
+    },
+    metadata: assistant.metadata,
+    tools: [], // We'll need to map the assistant's tools to this format
+  });
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
-    setConfig(initialConfig);
-  }, [initialConfig]);
+    setConfig({
+      name: assistant.name,
+      configurable: {
+        model: assistant.config.configurable.model || "gpt-4o",
+        temperature: assistant.config.configurable.temperature || 0.7,
+        tools: Object.entries(assistant.config.configurable.tools || {}).reduce(
+          (acc, [key, value]) => ({
+            ...acc,
+            [key]: {
+              isEnabled: value?.enabled || false,
+              config: value?.config || {},
+            },
+          }),
+          {}
+        ),
+        memory: assistant.config.configurable.memory || {
+          enabled: true,
+          max_entries: 10,
+          relevance_threshold: 0.7,
+        },
+        prompt_template: assistant.config.configurable.prompt_template || "",
+      },
+      metadata: assistant.metadata,
+      tools: [], // We'll need to map the assistant's tools to this format
+    });
+  }, [assistant]);
 
   const handleChange = (field: keyof AgentConfig, value: unknown) => {
     setConfig((prev) => ({
@@ -55,33 +101,29 @@ export const AgentConfigModal: React.FC<AgentConfigModalProps> = ({
     }));
   };
 
-  const handleNestedChange = (
-    section: keyof AgentConfig["config"],
+  const handleConfigurableChange = (
+    field: keyof typeof config.configurable,
     value: unknown
   ) => {
     setConfig((prev) => ({
       ...prev,
-      config: {
-        ...prev.config,
-        [section]: value,
+      configurable: {
+        ...prev.configurable,
+        [field]: value,
       },
     }));
   };
 
-  const handleToggleTool = (
+  const handleToolsChange = (
     toolId: string,
-    enabled: boolean,
-    toolConfig?: Record<string, unknown>
+    toolConfig: { isEnabled: boolean; config: Record<string, unknown> }
   ) => {
     setConfig((prev) => ({
       ...prev,
-      tools: enabled
-        ? [...prev.tools, toolId]
-        : prev.tools.filter((id) => id !== toolId),
-      config: {
-        ...prev.config,
-        toolsConfig: {
-          ...prev.config.toolsConfig,
+      configurable: {
+        ...prev.configurable,
+        tools: {
+          ...prev.configurable.tools,
           [toolId]: toolConfig,
         },
       },
@@ -92,23 +134,34 @@ export const AgentConfigModal: React.FC<AgentConfigModalProps> = ({
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.put(`/api/agents/${agentId}`, config);
-      // Mutate the agent data in the SWR cache
-      await mutate(`/api/agents/${agentId}`, response.data, false);
-      // Also mutate the agents list
-      await mutate("/api/agents");
-      onClose();
+      const response = await axios.put(
+        `/api/assistants/${assistant.assistant_id}`,
+        {
+          name: config.name,
+          metadata: config.metadata,
+          config: {
+            configurable: config.configurable,
+          },
+        }
+      );
+      await mutate(
+        `/api/assistants/${assistant.assistant_id}`,
+        response.data,
+        false
+      );
+      await mutate("/api/assistants");
+      onOpenChange(false);
       router.refresh();
     } catch (err) {
-      console.error("Error updating agent:", err);
-      setError("Failed to update agent configuration.");
+      console.error("Error updating assistant:", err);
+      setError("Failed to update assistant configuration.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl">
         <DialogHeader>
           <DialogTitle>Configure Agent</DialogTitle>
@@ -127,26 +180,39 @@ export const AgentConfigModal: React.FC<AgentConfigModalProps> = ({
           </TabsList>
 
           <TabsContent value="general">
-            <GeneralConfig config={config} onChange={handleChange} />
+            <GeneralConfig
+              config={config}
+              onChange={handleChange}
+              onConfigurableChange={handleConfigurableChange}
+            />
           </TabsContent>
 
           <TabsContent value="prompts">
-            <PromptsConfig config={config} onChange={handleChange} />
+            <PromptsConfig
+              config={config.configurable}
+              onChange={handleConfigurableChange}
+            />
           </TabsContent>
 
           <TabsContent value="tools">
             <ToolSelector
-              selectedTools={config.tools}
-              onToolToggle={handleToggleTool}
+              tools={config.configurable.tools}
+              onToolsChange={handleToolsChange}
             />
           </TabsContent>
 
           <TabsContent value="knowledge">
-            <KnowledgeConfig config={config} onChange={handleNestedChange} />
+            <KnowledgeConfig
+              config={config.configurable}
+              onChange={handleConfigurableChange}
+            />
           </TabsContent>
 
           <TabsContent value="settings">
-            <SettingsConfig config={config} onChange={handleNestedChange} />
+            <SettingsConfig
+              config={config.configurable}
+              onChange={handleConfigurableChange}
+            />
           </TabsContent>
         </Tabs>
 
@@ -157,7 +223,11 @@ export const AgentConfigModal: React.FC<AgentConfigModalProps> = ({
         )}
 
         <DialogFooter className="flex justify-end space-x-2">
-          <Button variant="ghost" onClick={onClose} disabled={loading}>
+          <Button
+            variant="ghost"
+            onClick={() => onOpenChange(false)}
+            disabled={loading}
+          >
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={loading}>
@@ -167,4 +237,4 @@ export const AgentConfigModal: React.FC<AgentConfigModalProps> = ({
       </DialogContent>
     </Dialog>
   );
-};
+}

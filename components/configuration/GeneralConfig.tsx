@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useCallback, useState, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,22 +11,32 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { AgentConfig } from "@/types/agent";
+import {
+  AgentConfig,
+  AgentConfigurableOptions,
+  ModelType,
+} from "@/types/index";
 import { createClient } from "@/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Upload, Loader2 } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { mutate } from "swr";
+import { Slider } from "@/components/ui/slider";
 
 interface GeneralConfigProps {
   config: AgentConfig;
   onChange: (field: keyof AgentConfig, value: unknown) => void;
+  onConfigurableChange: (
+    field: keyof AgentConfigurableOptions,
+    value: unknown
+  ) => void;
 }
 
-export const GeneralConfig: React.FC<GeneralConfigProps> = ({
+export function GeneralConfig({
   config,
   onChange,
-}) => {
+  onConfigurableChange,
+}: GeneralConfigProps) {
   const supabase = createClient();
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -180,60 +192,61 @@ export const GeneralConfig: React.FC<GeneralConfigProps> = ({
         </div>
       </div>
 
-      <div>
-        <Label>Name</Label>
+      <div className="space-y-2">
+        <Label htmlFor="name">Name</Label>
         <Input
+          id="name"
           value={config.name}
           onChange={(e) => onChange("name", e.target.value)}
-          placeholder="Enter agent name"
         />
       </div>
 
-      <div>
-        <Label>Description</Label>
-        <Textarea
-          value={config.description || ""}
-          onChange={(e) => onChange("description", e.target.value)}
-          placeholder="Enter agent description"
+      <div className="space-y-2">
+        <Label htmlFor="description">Description</Label>
+        <Input
+          id="description"
+          value={config.metadata.description}
+          onChange={(e) =>
+            onChange("metadata", {
+              ...config.metadata,
+              description: e.target.value,
+            })
+          }
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <Label>Model</Label>
-          <Select
-            value={config.model}
-            onValueChange={(value) => onChange("model", value)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select a model" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="gpt-4o-mini">GPT-4o Mini (Free)</SelectItem>
-              <SelectItem value="gpt-4o">GPT-4o (Pro)</SelectItem>
-              {/* Add more models as needed */}
-            </SelectContent>
-          </Select>
-        </div>
+      <div className="space-y-2">
+        <Label htmlFor="model">Model</Label>
+        <Select
+          value={config.configurable.model}
+          onValueChange={(value: ModelType) =>
+            onConfigurableChange("model", value)
+          }
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select a model" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="gpt-4o">GPT-4 Optimized</SelectItem>
+            <SelectItem value="gpt-4o-mini">GPT-4 Optimized Mini</SelectItem>
+            <SelectItem value="gpt-o1">GPT-O1</SelectItem>
+            <SelectItem value="gpt-o1-mini">GPT-O1 Mini</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
-        <div>
-          <Label>Tone</Label>
-          <Select
-            value={config.config?.tone || "default"}
-            onValueChange={(value) => handleConfigChange("tone", value)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select tone" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="default">Default</SelectItem>
-              <SelectItem value="professional">Professional</SelectItem>
-              <SelectItem value="friendly">Friendly</SelectItem>
-              <SelectItem value="technical">Technical</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+      <div className="space-y-2">
+        <Label>Temperature: {config.configurable.temperature}</Label>
+        <Slider
+          value={[config.configurable.temperature]}
+          min={0}
+          max={1}
+          step={0.1}
+          onValueChange={([value]) =>
+            onConfigurableChange("temperature", value)
+          }
+        />
       </div>
     </div>
   );
-};
+}

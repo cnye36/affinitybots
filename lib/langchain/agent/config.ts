@@ -23,7 +23,6 @@ export const AgentConfigurableOptionsSchema = z.object({
   tools: z.custom<ToolsConfig>(),
   memory: AgentMemoryOptionsSchema,
   prompt_template: z.string(),
-  metadata: AgentMetadataSchema,
 });
 
 // Complete config schema

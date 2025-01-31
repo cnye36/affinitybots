@@ -1,19 +1,17 @@
-import { Client } from "@langchain/langgraph-sdk";
 import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
+import { getLangGraphClient } from "@/lib/langchain/client";
 
-// Initialize LangGraph client
-const client = new Client({
-  apiUrl: process.env.LANGGRAPH_URL!,
-  apiKey: process.env.LANGSMITH_API_KEY!,
-});
-
-export async function GET(
-  req: Request,
-  { params }: { params: { id: string } }
+// POST - Create a new thread
+export async function POST(
+  request: Request,
+  props: { params: Promise<{ id: string }> }
 ) {
+  const params = await props.params;
   try {
     const supabase = await createClient();
+    const client = getLangGraphClient();
+
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -22,15 +20,51 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get Threads
-    const thread = await client.threads.get(params.id);
-
-    // Verify ownership
-    if (thread.metadata?.owner_id !== user.id) {
-      return NextResponse.json({ error: "Not found" }, { status: 404 });
-    }
+    // Create a new thread for the assistant
+    const thread = await client.threads.create({
+      metadata: {
+        owner_id: user.id,
+        assistant_id: params.id,
+      },
+    });
 
     return NextResponse.json(thread);
+  } catch (error) {
+    console.error("Error creating thread:", error);
+    return NextResponse.json(
+      { error: "Failed to create thread" },
+      { status: 500 }
+    );
+  }
+}
+
+// GET - List all threads for an assistant
+export async function GET(
+  request: Request,
+  props: { params: Promise<{ id: string }> }
+) {
+  const params = await props.params;
+  try {
+    const supabase = await createClient();
+    const client = getLangGraphClient();
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Get all threads for this assistant
+    const threads = await client.threads.search({
+      metadata: {
+        owner_id: user.id,
+        assistant_id: params.id,
+      },
+    });
+
+    return NextResponse.json(threads || []);
   } catch (error) {
     console.error("Error fetching threads:", error);
     return NextResponse.json(
@@ -38,72 +72,4 @@ export async function GET(
       { status: 500 }
     );
   }
-}
-
-export async function PATCH(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Get current thread to verify ownership
-    const currentThread = await client.threads.get(params.id);
-    if (currentThread.metadata?.owner_id !== user.id) {
-      return NextResponse.json({ error: "Not found" }, { status: 404 });
-    }
-
-    const thread = await client.threads.update(params.id, {
-      name,
-      ...config,
-    });
-
-    return NextResponse.json(assistant);
-  } catch (error) {
-    console.error("Error updating assistant:", error);
-    return NextResponse.json(
-      { error: "Failed to update assistant" },
-      { status: 500 }
-    );
-  }
-}
-
-export async function DELETE(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Get current assistant to verify ownership
-    const currentAssistant = await client.assistants.get(params.id);
-    if (currentAssistant.metadata?.owner_id !== user.id) {
-      return NextResponse.json({ error: "Not found" }, { status: 404 });
-    }
-
-    // Delete the assistant
-    await client.assistants.delete(params.id);
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("Error deleting assistant:", error);
-    return NextResponse.json(
-      { error: "Failed to delete assistant" },
-      { status: 500 }
-    );
-  }
-}
+} 

@@ -1,28 +1,31 @@
-import React from 'react'
-import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
-import { AgentConfig } from '@/types/agent'
+"use client";
+
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { AgentConfigurableOptions } from "@/types/index";
 
 interface PromptsConfigProps {
-  config: AgentConfig
-  onChange: (field: keyof AgentConfig, value: unknown) => void
+  config: AgentConfigurableOptions;
+  onChange: (field: keyof AgentConfigurableOptions, value: unknown) => void;
 }
 
-export const PromptsConfig: React.FC<PromptsConfigProps> = ({ config, onChange }) => {
+export function PromptsConfig({ config, onChange }: PromptsConfigProps) {
   return (
-    <div className="space-y-4">
-      <div>
-        <Label>Instructions</Label>
+    <div className="space-y-6">
+      <div className="space-y-2">
+        <Label htmlFor="prompt_template">System Prompt</Label>
         <Textarea
+          id="prompt_template"
           value={config.prompt_template}
-          onChange={(e) => onChange('prompt_template', e.target.value)}
-          placeholder="Enter agent instructions"
+          onChange={(e) => onChange("prompt_template", e.target.value)}
+          placeholder="Enter the system prompt template for your agent..."
           className="min-h-[200px]"
         />
-        <p className="text-sm text-muted-foreground mt-1">
-          These instructions define your agent&apos;s behavior and capabilities
+        <p className="text-sm text-muted-foreground">
+          Define the core behavior and capabilities of your agent. This prompt
+          will guide how the agent responds and operates.
         </p>
       </div>
     </div>
-  )
+  );
 }
