@@ -1,9 +1,17 @@
 volumes:
     langgraph-data:
         driver: local
+
+networks:
+    langgraph-net:
+        driver: bridge
+        enable_ipv6: false
+
 services:
     langgraph-redis:
         image: redis:6
+        networks:
+            - langgraph-net
         healthcheck:
             test: redis-cli ping
             interval: 5s
@@ -12,6 +20,8 @@ services:
 
     langgraph-api:
         image: langgraph-agenthub
+        networks:
+            - langgraph-net
         ports:
             - "8123:8000"
         env_file:
@@ -28,7 +38,7 @@ services:
             SERPER_API_KEY: ${SERPER_API_KEY}
             WOLFRAM_ALPHA_APP_ID: ${WOLFRAM_ALPHA_APP_ID}
             # Database Connections
-            POSTGRES_URI: postgresql://postgres:evnvDkimT5erLrU4@db.lcnkzptzirdcvemvbjan.supabase.co:5432/postgres
+            POSTGRES_URI: postgresql://postgres:1zmFyZOWylOfM0ic@db.lcnkzptzirdcvemvbjan.supabase.co:5432/postgres?sslmode=require
             # Langsmith Configuration
             LANGSMITH_API_KEY: ${LANGSMITH_API_KEY}
             LANGSMITH_ENDPOINT: ${LANGSMITH_ENDPOINT}
@@ -36,4 +46,4 @@ services:
             LANGSMITH_TRACING: ${LANGSMITH_TRACING}
         extra_hosts:
             - "host.docker.internal:host-gateway"
-            - "db.lcnkzptzirdcvemvbjan.supabase.co:host-gateway"
+            

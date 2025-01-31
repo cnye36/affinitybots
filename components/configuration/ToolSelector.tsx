@@ -1,16 +1,6 @@
 "use client"
 
-import { useState } from "react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Plus, X } from "lucide-react";
 import { ToolID, ToolConfig, ToolsConfig } from "@/types/index";
 
 // Define available tools

@@ -6,14 +6,17 @@ interface ChatInputProps {
   disabled?: boolean;
 }
 
-export function ChatInput({ onSubmit, disabled }: ChatInputProps) {
+export function ChatInput({ onSubmit, disabled = false }: ChatInputProps) {
   const [message, setMessage] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleSubmit = () => {
     if (message.trim() && !disabled) {
-      onSubmit(message);
+      onSubmit(message.trim());
       setMessage("");
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+      }
     }
   };
 
@@ -24,19 +27,22 @@ export function ChatInput({ onSubmit, disabled }: ChatInputProps) {
     }
   };
 
+  const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
+    setMessage(e.target.value);
+  };
+
   return (
     <div className="border-t p-4">
       <div className="flex space-x-4">
         <Textarea
           ref={textareaRef}
           value={message}
-          onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
-            setMessage(e.target.value)
-          }
+          onChange={handleChange}
           onKeyDown={handleKeyDown}
           placeholder="Type your message..."
           disabled={disabled}
           className="flex-1 min-h-[44px] max-h-[200px] resize-none"
+          autoFocus
         />
         <button
           onClick={handleSubmit}

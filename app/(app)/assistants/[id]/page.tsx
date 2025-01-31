@@ -3,11 +3,11 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { Assistant, Thread } from "@langchain/langgraph-sdk";
-import { ChatMessage } from "@/components/chat/ChatMessage";
-import { ChatInput } from "@/components/chat/ChatInput";
 import { useThreadStore } from "@/lib/stores/thread-store";
-import { Button } from "@/components/ui/button";
 import { AgentConfigModal } from "@/components/configuration/AgentConfigModal";
+import { ChatHeader } from "@/components/chat/ChatHeader";
+import { ChatSidebar } from "@/components/chat/ChatSidebar";
+import { ChatContainer } from "@/components/chat/ChatContainer";
 
 export default function AssistantPage() {
   const params = useParams();
@@ -18,12 +18,10 @@ export default function AssistantPage() {
     activeThreadId,
     messages,
     isLoading,
-    error,
     setThreads,
     setActiveThread,
     setMessages,
     setLoading,
-    setError,
   } = useThreadStore();
 
   // Load assistant and threads
@@ -42,8 +40,15 @@ export default function AssistantPage() {
         if (!threadsRes.ok) throw new Error("Failed to load threads");
         const threadsData = await threadsRes.json();
         setThreads(threadsData);
+
+        // Create initial thread if none exists
+        if (threadsData.length === 0) {
+          handleNewThread();
+        } else {
+          setActiveThread(threadsData[0].id);
+        }
       } catch (error) {
-        setError(error instanceof Error ? error.message : "An error occurred");
+        console.error(error);
       } finally {
         setLoading(false);
       }
@@ -52,7 +57,7 @@ export default function AssistantPage() {
     if (params.id) {
       loadData();
     }
-  }, [params.id]);
+  }, [params.id, setLoading, setThreads, setActiveThread]);
 
   // Load messages when active thread changes
   useEffect(() => {
@@ -61,20 +66,20 @@ export default function AssistantPage() {
       try {
         setLoading(true);
         const res = await fetch(
-          `/api/assistants/${params.id}/threads/${activeThreadId}/runs`
+          `/api/assistants/${params.id}/threads/${activeThreadId}/messages`
         );
         if (!res.ok) throw new Error("Failed to load messages");
         const data = await res.json();
         setMessages(activeThreadId, data.messages || []);
       } catch (error) {
-        setError(error instanceof Error ? error.message : "An error occurred");
+        console.error(error);
       } finally {
         setLoading(false);
       }
     }
 
     loadMessages();
-  }, [activeThreadId]);
+  }, [activeThreadId, params.id, setLoading, setMessages]);
 
   const handleNewThread = async () => {
     try {
@@ -87,7 +92,7 @@ export default function AssistantPage() {
       setThreads([...threads, thread]);
       setActiveThread(thread.id);
     } catch (error) {
-      setError(error instanceof Error ? error.message : "An error occurred");
+      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -98,13 +103,22 @@ export default function AssistantPage() {
 
     try {
       setLoading(true);
+      const currentMessages = messages[activeThreadId] || [];
+      // Add user message immediately
+      setMessages(activeThreadId, [
+        ...currentMessages,
+        { role: "user", content },
+      ]);
+
       const response = await fetch(
         `/api/assistants/${params.id}/threads/${activeThreadId}/runs/stream`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            input: { messages: [{ role: "user", content }] },
+            input: {
+              messages: [...currentMessages, { role: "user", content }],
+            },
           }),
         }
       );
@@ -114,12 +128,7 @@ export default function AssistantPage() {
       const reader = response.body?.getReader();
       if (!reader) throw new Error("No response stream");
 
-      // Add user message immediately
-      const currentMessages = messages[activeThreadId] || [];
-      setMessages(activeThreadId, [
-        ...currentMessages,
-        { role: "user", content },
-      ]);
+      let assistantMessage = "";
 
       // Read the stream
       while (true) {
@@ -132,19 +141,28 @@ export default function AssistantPage() {
 
         for (const line of lines) {
           if (line.startsWith("data: ")) {
-            const data = JSON.parse(line.slice(6));
-            if (data.type === "message") {
-              setMessages(activeThreadId, [
-                ...currentMessages,
-                { role: "user", content },
-                { role: "assistant", content: data.content },
-              ]);
+            try {
+              const data = JSON.parse(line.slice(6));
+              if (data.type === "message") {
+                assistantMessage = data.content;
+                // Update messages with the latest content
+                setMessages(activeThreadId, [
+                  ...currentMessages,
+                  { role: "user", content },
+                  { role: "assistant", content: assistantMessage },
+                ]);
+              }
+            } catch (e) {
+              console.error("Error parsing stream data:", e);
             }
           }
         }
       }
     } catch (error) {
-      setError(error instanceof Error ? error.message : "An error occurred");
+      console.error(error);
+      setError(
+        error instanceof Error ? error.message : "Failed to send message"
+      );
     } finally {
       setLoading(false);
     }
@@ -156,78 +174,27 @@ export default function AssistantPage() {
 
   return (
     <div className="flex h-screen flex-col">
-      {/* Header */}
-      <header className="border-b p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div
-              className="h-10 w-10 rounded-full ring-2 ring-background flex items-center justify-center text-sm font-medium text-white"
-              style={{
-                backgroundColor: `hsl(${
-                  (assistant.name.length * 30) % 360
-                }, 70%, 50%)`,
-              }}
-            >
-              {assistant.name.slice(0, 2).toUpperCase()}
-            </div>
-            <h1 className="text-xl font-semibold">{assistant.name}</h1>
-          </div>
-          <Button variant="outline" onClick={() => setShowConfig(true)}>
-            Configure
-          </Button>
-        </div>
-      </header>
+      <ChatHeader
+        assistant={assistant}
+        onConfigureClick={() => setShowConfig(true)}
+      />
 
-      {/* Main chat area */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
-        <div className="w-64 border-r bg-background p-4">
-          <div className="space-y-2">
-            <Button
-              className="w-full"
-              onClick={handleNewThread}
-              disabled={isLoading}
-            >
-              New Chat
-            </Button>
-            <div className="space-y-1">
-              {threads.map((thread) => (
-                <Button
-                  key={thread.id}
-                  variant={thread.id === activeThreadId ? "secondary" : "ghost"}
-                  className="w-full justify-start"
-                  onClick={() => setActiveThread(thread.id)}
-                >
-                  Chat {new Date(thread.created_at).toLocaleDateString()}
-                </Button>
-              ))}
-            </div>
-          </div>
-        </div>
+        <ChatSidebar
+          threads={threads}
+          activeThreadId={activeThreadId}
+          isLoading={isLoading}
+          onNewChat={handleNewThread}
+          onThreadSelect={setActiveThread}
+        />
 
-        {/* Chat container */}
-        <div className="flex-1 flex flex-col">
-          {/* Messages area */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {activeThreadId &&
-              messages[activeThreadId]?.map((message, index) => (
-                <ChatMessage
-                  key={index}
-                  role={message.role}
-                  content={message.content}
-                />
-              ))}
-          </div>
-
-          {/* Input area */}
-          <ChatInput
-            onSubmit={handleSendMessage}
-            disabled={isLoading || !activeThreadId}
-          />
-        </div>
+        <ChatContainer
+          messages={activeThreadId ? messages[activeThreadId] || [] : []}
+          isLoading={isLoading}
+          onSendMessage={handleSendMessage}
+        />
       </div>
 
-      {/* Config Modal */}
       <AgentConfigModal
         open={showConfig}
         onOpenChange={setShowConfig}

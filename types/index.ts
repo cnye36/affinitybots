@@ -29,6 +29,7 @@ export interface AgentConfigurableOptions {
   tools: ToolsConfig;
   memory: MemoryConfig;
   prompt_template: string;
+  avatar: string;
 }
 
 // Metadata for the agent

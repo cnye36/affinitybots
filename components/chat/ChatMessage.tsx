@@ -1,6 +1,7 @@
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { ComponentPropsWithoutRef } from "react";
 
 interface ChatMessageProps {
   role: "user" | "assistant";
@@ -24,11 +25,15 @@ export function ChatMessage({ role, content }: ChatMessageProps) {
       <div className="flex-1 prose prose-sm dark:prose-invert max-w-none">
         <ReactMarkdown
           components={{
-            code({ inline, className, children, ...props }) {
+            code({
+              inline,
+              className,
+              children,
+              ...props
+            }: ComponentPropsWithoutRef<"code"> & { inline?: boolean }) {
               const match = /language-(\w+)/.exec(className || "");
               return !inline && match ? (
                 <SyntaxHighlighter
-                  {...props}
                   style={vscDarkPlus}
                   language={match[1]}
                   PreTag="div"

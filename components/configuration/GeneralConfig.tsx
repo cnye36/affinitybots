@@ -2,7 +2,6 @@
 
 import React, { useCallback, useState, useRef } from "react";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -12,9 +11,9 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import {
-  AgentConfig,
   AgentConfigurableOptions,
   ModelType,
+  AgentMetadata,
 } from "@/types/index";
 import { createClient } from "@/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -24,8 +23,16 @@ import { mutate } from "swr";
 import { Slider } from "@/components/ui/slider";
 
 interface GeneralConfigProps {
-  config: AgentConfig;
-  onChange: (field: keyof AgentConfig, value: unknown) => void;
+  config: {
+    assistant_id: string;
+    name: string;
+    metadata: AgentMetadata;
+    config: {
+      configurable: AgentConfigurableOptions;
+    };
+    avatar?: string | null;
+  };
+  onChange: (field: string, value: unknown) => void;
   onConfigurableChange: (
     field: keyof AgentConfigurableOptions,
     value: unknown
@@ -40,10 +47,6 @@ export function GeneralConfig({
   const supabase = createClient();
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleConfigChange = (field: string, value: string) => {
-    onChange("config", { ...config.config, [field]: value });
-  };
 
   const handleAvatarUpload = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -63,8 +66,8 @@ export function GeneralConfig({
         }
 
         const fileExt = file.name.split(".").pop();
-        const fileName = `${config.id}-${Date.now()}.${fileExt}`;
-        const filePath = `${config.owner_id}/${fileName}`;
+        const fileName = `${config.assistant_id}-${Date.now()}.${fileExt}`;
+        const filePath = `${config.metadata.owner_id}/${fileName}`;
 
         // Delete old avatar if it exists
         if (config.avatar) {
@@ -72,7 +75,7 @@ export function GeneralConfig({
           if (oldFilePath) {
             await supabase.storage
               .from("agent-avatars")
-              .remove([`${config.owner_id}/${oldFilePath}`]);
+              .remove([`${config.metadata.owner_id}/${oldFilePath}`]);
           }
         }
 
@@ -95,7 +98,7 @@ export function GeneralConfig({
         onChange("avatar", publicUrl);
 
         // Save the changes immediately to persist the avatar
-        const response = await fetch(`/api/agents/${config.id}`, {
+        const response = await fetch(`/api/assistants/${config.assistant_id}`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
@@ -111,8 +114,8 @@ export function GeneralConfig({
         }
 
         // Update SWR cache
-        await mutate(`/api/agents/${config.id}`);
-        await mutate("/api/agents");
+        await mutate(`/api/assistants/${config.assistant_id}`);
+        await mutate("/api/assistants");
       } catch (error) {
         console.error("Error uploading avatar:", error);
         if (error instanceof Error) {
@@ -140,7 +143,7 @@ export function GeneralConfig({
       <div className="flex flex-col items-center">
         <div className="mb-4">
           <Avatar className="h-24 w-24">
-            <AvatarImage src={config.avatar} alt={config.name} />
+            <AvatarImage src={config.avatar || ""} alt={config.name} />
             <AvatarFallback
               style={{
                 backgroundColor: `hsl(${
@@ -218,7 +221,7 @@ export function GeneralConfig({
       <div className="space-y-2">
         <Label htmlFor="model">Model</Label>
         <Select
-          value={config.configurable.model}
+          value={config.config.configurable.model}
           onValueChange={(value: ModelType) =>
             onConfigurableChange("model", value)
           }
@@ -236,9 +239,9 @@ export function GeneralConfig({
       </div>
 
       <div className="space-y-2">
-        <Label>Temperature: {config.configurable.temperature}</Label>
+        <Label>Temperature: {config.config.configurable.temperature}</Label>
         <Slider
-          value={[config.configurable.temperature]}
+          value={[config.config.configurable.temperature]}
           min={0}
           max={1}
           step={0.1}

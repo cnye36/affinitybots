@@ -37,6 +37,7 @@ export async function POST(
       command,
     });
 
+    // Return the stream with appropriate headers
     return new Response(stream, {
       headers: {
         "Content-Type": "text/event-stream",

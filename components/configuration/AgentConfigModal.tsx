@@ -21,7 +21,7 @@ import { PromptsConfig } from "./PromptsConfig";
 import { ToolSelector } from "@/components/configuration/ToolSelector";
 import { SettingsConfig } from "./SettingsConfig";
 import { KnowledgeConfig } from "./KnowledgeConfig";
-import { AgentConfig } from "@/types/index";
+import { AgentConfigurableOptions } from "@/types/index";
 import { Assistant } from "@langchain/langgraph-sdk";
 import { useRouter } from "next/navigation";
 import { mutate } from "swr";
@@ -37,41 +37,15 @@ export function AgentConfigModal({
   onOpenChange,
   assistant,
 }: AgentConfigModalProps) {
-  const [config, setConfig] = useState<AgentConfig>({
+  const [config, setConfig] = useState({
+    assistant_id: assistant.assistant_id,
     name: assistant.name,
-    configurable: {
-      model: assistant.config.configurable.model || "gpt-4o",
-      temperature: assistant.config.configurable.temperature || 0.7,
-      tools: Object.entries(assistant.config.configurable.tools || {}).reduce(
-        (acc, [key, value]) => ({
-          ...acc,
-          [key]: {
-            isEnabled: value?.enabled || false,
-            config: value?.config || {},
-          },
-        }),
-        {}
-      ),
-      memory: assistant.config.configurable.memory || {
-        enabled: true,
-        max_entries: 10,
-        relevance_threshold: 0.7,
-      },
-      prompt_template: assistant.config.configurable.prompt_template || "",
-    },
     metadata: assistant.metadata,
-    tools: [], // We'll need to map the assistant's tools to this format
-  });
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
-
-  useEffect(() => {
-    setConfig({
-      name: assistant.name,
+    config: {
       configurable: {
         model: assistant.config.configurable.model || "gpt-4o",
         temperature: assistant.config.configurable.temperature || 0.7,
+        avatar: "",
         tools: Object.entries(assistant.config.configurable.tools || {}).reduce(
           (acc, [key, value]) => ({
             ...acc,
@@ -89,12 +63,46 @@ export function AgentConfigModal({
         },
         prompt_template: assistant.config.configurable.prompt_template || "",
       },
+    },
+  });
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    setConfig({
+      assistant_id: assistant.assistant_id,
+      name: assistant.name,
       metadata: assistant.metadata,
-      tools: [], // We'll need to map the assistant's tools to this format
+      config: {
+        configurable: {
+          model: assistant.config.configurable.model || "gpt-4o",
+          temperature: assistant.config.configurable.temperature || 0.7,
+          avatar: "",
+          tools: Object.entries(
+            assistant.config.configurable.tools || {}
+          ).reduce(
+            (acc, [key, value]) => ({
+              ...acc,
+              [key]: {
+                isEnabled: value?.enabled || false,
+                config: value?.config || {},
+              },
+            }),
+            {}
+          ),
+          memory: assistant.config.configurable.memory || {
+            enabled: true,
+            max_entries: 10,
+            relevance_threshold: 0.7,
+          },
+          prompt_template: assistant.config.configurable.prompt_template || "",
+        },
+      },
     });
   }, [assistant]);
 
-  const handleChange = (field: keyof AgentConfig, value: unknown) => {
+  const handleChange = (field: string, value: unknown) => {
     setConfig((prev) => ({
       ...prev,
       [field]: value,
@@ -102,14 +110,17 @@ export function AgentConfigModal({
   };
 
   const handleConfigurableChange = (
-    field: keyof typeof config.configurable,
+    field: keyof AgentConfigurableOptions,
     value: unknown
   ) => {
     setConfig((prev) => ({
       ...prev,
-      configurable: {
-        ...prev.configurable,
-        [field]: value,
+      config: {
+        ...prev.config,
+        configurable: {
+          ...prev.config.configurable,
+          [field]: value,
+        },
       },
     }));
   };
@@ -120,11 +131,14 @@ export function AgentConfigModal({
   ) => {
     setConfig((prev) => ({
       ...prev,
-      configurable: {
-        ...prev.configurable,
-        tools: {
-          ...prev.configurable.tools,
-          [toolId]: toolConfig,
+      config: {
+        ...prev.config,
+        configurable: {
+          ...prev.config.configurable,
+          tools: {
+            ...prev.config.configurable.tools,
+            [toolId]: toolConfig,
+          },
         },
       },
     }));
@@ -140,7 +154,7 @@ export function AgentConfigModal({
           name: config.name,
           metadata: config.metadata,
           config: {
-            configurable: config.configurable,
+            configurable: config.config.configurable,
           },
         }
       );
@@ -189,28 +203,28 @@ export function AgentConfigModal({
 
           <TabsContent value="prompts">
             <PromptsConfig
-              config={config.configurable}
+              config={config.config.configurable}
               onChange={handleConfigurableChange}
             />
           </TabsContent>
 
           <TabsContent value="tools">
             <ToolSelector
-              tools={config.configurable.tools}
+              tools={config.config.configurable.tools}
               onToolsChange={handleToolsChange}
             />
           </TabsContent>
 
           <TabsContent value="knowledge">
             <KnowledgeConfig
-              config={config.configurable}
+              config={config.config.configurable}
               onChange={handleConfigurableChange}
             />
           </TabsContent>
 
           <TabsContent value="settings">
             <SettingsConfig
-              config={config.configurable}
+              config={config.config.configurable}
               onChange={handleConfigurableChange}
             />
           </TabsContent>
