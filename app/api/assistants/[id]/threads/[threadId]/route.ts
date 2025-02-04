@@ -44,13 +44,14 @@ export async function GET(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { threadId: string } }
+  props: { params: Promise<{ id: string; threadId: string }> }
 ) {
+  const { threadId } = await props.params;
   try {
     const client = new Client();
 
     // Delete the thread
-    await client.threads.delete(params.threadId);
+    await client.threads.delete(threadId);
 
     return NextResponse.json({ success: true });
   } catch (error) {
