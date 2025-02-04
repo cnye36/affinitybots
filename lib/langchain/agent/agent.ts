@@ -1,24 +1,17 @@
 import { ChatOpenAI } from "@langchain/openai";
-import { MessagesAnnotation, StateGraph } from "@langchain/langgraph";
-import { ToolNode } from "@langchain/langgraph/prebuilt";
 import {
-  AIMessage,
-  BaseMessage,
-  HumanMessage,
-  SystemMessage,
-} from "@langchain/core/messages";
+  MemorySaver,
+  MessagesAnnotation,
+  StateGraph,
+} from "@langchain/langgraph";
+import { ToolNode } from "@langchain/langgraph/prebuilt";
+import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { retrieveRelevantDocuments } from "@/lib/retrieval";
 import { createClient } from "@/supabase/server";
 import { getTools } from "../tools";
 import { RunnableConfig } from "@langchain/core/runnables";
 import { AgentConfigurableOptions } from "./config";
-
-type AgentState = {
-  messages: BaseMessage[];
-  config?: {
-    assistant_id: string;
-  };
-};
+import { AgentState } from "@/types";
 
 // Define your tools
 const tools = getTools();
@@ -28,17 +21,11 @@ async function retrieveKnowledge(state: AgentState) {
   const messages = state.messages;
   const lastMessage = messages[messages.length - 1];
 
-  // Skip if no assistant_id in state or if it's not a user message
-  if (!state.config?.assistant_id || !(lastMessage instanceof HumanMessage)) {
-    return { messages: state.messages };
-  }
-
   try {
     const supabase = await createClient();
     const relevantDocs = await retrieveRelevantDocuments(
       lastMessage.content.toString(),
-      supabase,
-      state.config.assistant_id
+      supabase
     );
 
     // If no relevant documents found, continue with original messages
@@ -93,7 +80,9 @@ async function callModel(state: AgentState, config: RunnableConfig) {
   // Invoke the model with the current conversation state
   const response = await model.invoke([
     new SystemMessage(systemPrompt),
-    ...state.messages,
+    ...state.messages.map(
+      (message) => new HumanMessage(message.content.toString())
+    ),
   ]);
 
   // Return the model's response
@@ -103,7 +92,7 @@ async function callModel(state: AgentState, config: RunnableConfig) {
 // Determine the next step based on the model's output
 function routeModelOutput(state: AgentState) {
   const messages = state.messages;
-  const lastMessage = messages[messages.length - 1] as AIMessage;
+  const lastMessage = messages[messages.length - 1];
 
   // If the model wants to call tools, route to the tools node
   if ((lastMessage?.tool_calls?.length ?? 0) > 0) {
@@ -134,4 +123,6 @@ const workflow = new StateGraph(MessagesAnnotation)
   .addEdge("tools", "callModel");
 
 // Compile the graph
-export const graph = workflow.compile();
+export const graph = workflow.compile({
+  checkpointer: new MemorySaver(),
+});

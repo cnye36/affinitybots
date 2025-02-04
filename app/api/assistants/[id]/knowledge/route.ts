@@ -31,7 +31,7 @@ export async function POST(
       .eq("id", params.id)
       .single();
 
-    if (!assistant || assistant.metadata?.owner_id !== user.id) {
+    if (!assistant || assistant.config?.configurable?.owner_id !== user.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -166,11 +166,11 @@ export async function DELETE(
 
     const { data: assistant } = await supabase
       .from("assistants")
-      .select("metadata")
+      .select("config")
       .eq("id", document.assistant_id)
       .single();
 
-    if (!assistant || assistant.metadata?.owner_id !== user.id) {
+    if (!assistant || assistant.config?.configurable?.owner_id !== user.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

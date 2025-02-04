@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react'
+"use client";
+
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -9,19 +11,18 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import axios from "axios";
 import { GeneralConfig } from "./GeneralConfig";
 import { PromptsConfig } from "./PromptsConfig";
 import { ToolSelector } from "@/components/configuration/ToolSelector";
 import { SettingsConfig } from "./SettingsConfig";
 import { KnowledgeConfig } from "./KnowledgeConfig";
-import { AgentConfigurableOptions } from "@/types/index";
+import {
+  AgentConfigurableOptions,
+  AgentMetadata,
+  ModelType,
+} from "@/types/index";
 import { Assistant } from "@langchain/langgraph-sdk";
 import { useRouter } from "next/navigation";
 import { mutate } from "swr";
@@ -40,29 +41,48 @@ export function AgentConfigModal({
   const [config, setConfig] = useState({
     assistant_id: assistant.assistant_id,
     name: assistant.name,
-    metadata: assistant.metadata,
+    metadata: {
+      description: String(assistant.metadata?.description || ""),
+      agent_type: String(assistant.metadata?.agent_type || ""),
+      owner_id: String(assistant.metadata?.owner_id || ""),
+    } as AgentMetadata,
     config: {
       configurable: {
-        model: assistant.config.configurable.model || "gpt-4o",
-        temperature: assistant.config.configurable.temperature || 0.7,
-        avatar: "",
+        model: (assistant.config.configurable.model || "gpt-4o") as ModelType,
+        temperature: Number(assistant.config.configurable.temperature || 0.7),
+        avatar: String(assistant.config.configurable.avatar || ""),
         tools: Object.entries(assistant.config.configurable.tools || {}).reduce(
           (acc, [key, value]) => ({
             ...acc,
             [key]: {
-              isEnabled: value?.enabled || false,
+              isEnabled: Boolean(value?.enabled || false),
               config: value?.config || {},
             },
           }),
           {}
         ),
-        memory: assistant.config.configurable.memory || {
-          enabled: true,
-          max_entries: 10,
-          relevance_threshold: 0.7,
+        memory: {
+          enabled: Boolean(
+            (assistant.config.configurable.memory as { enabled?: boolean })
+              ?.enabled ?? true
+          ),
+          max_entries: Number(
+            (assistant.config.configurable.memory as { max_entries?: number })
+              ?.max_entries || 10
+          ),
+          relevance_threshold: Number(
+            (
+              assistant.config.configurable.memory as {
+                relevance_threshold?: number;
+              }
+            )?.relevance_threshold || 0.7
+          ),
         },
-        prompt_template: assistant.config.configurable.prompt_template || "",
-      },
+        prompt_template: String(
+          assistant.config.configurable.prompt_template || ""
+        ),
+        owner_id: String(assistant.config.configurable.owner_id || ""),
+      } as AgentConfigurableOptions,
     },
   });
   const [loading, setLoading] = useState<boolean>(false);
@@ -73,31 +93,50 @@ export function AgentConfigModal({
     setConfig({
       assistant_id: assistant.assistant_id,
       name: assistant.name,
-      metadata: assistant.metadata,
+      metadata: {
+        description: String(assistant.metadata?.description || ""),
+        agent_type: String(assistant.metadata?.agent_type || ""),
+        owner_id: String(assistant.metadata?.owner_id || ""),
+      } as AgentMetadata,
       config: {
         configurable: {
-          model: assistant.config.configurable.model || "gpt-4o",
-          temperature: assistant.config.configurable.temperature || 0.7,
-          avatar: "",
+          model: (assistant.config.configurable.model || "gpt-4o") as ModelType,
+          temperature: Number(assistant.config.configurable.temperature || 0.7),
+          avatar: String(assistant.config.configurable.avatar || ""),
           tools: Object.entries(
             assistant.config.configurable.tools || {}
           ).reduce(
             (acc, [key, value]) => ({
               ...acc,
               [key]: {
-                isEnabled: value?.enabled || false,
+                isEnabled: Boolean(value?.enabled || false),
                 config: value?.config || {},
               },
             }),
             {}
           ),
-          memory: assistant.config.configurable.memory || {
-            enabled: true,
-            max_entries: 10,
-            relevance_threshold: 0.7,
+          memory: {
+            enabled: Boolean(
+              (assistant.config.configurable.memory as { enabled?: boolean })
+                ?.enabled ?? true
+            ),
+            max_entries: Number(
+              (assistant.config.configurable.memory as { max_entries?: number })
+                ?.max_entries || 10
+            ),
+            relevance_threshold: Number(
+              (
+                assistant.config.configurable.memory as {
+                  relevance_threshold?: number;
+                }
+              )?.relevance_threshold || 0.7
+            ),
           },
-          prompt_template: assistant.config.configurable.prompt_template || "",
-        },
+          prompt_template: String(
+            assistant.config.configurable.prompt_template || ""
+          ),
+          owner_id: String(assistant.config.configurable.owner_id || ""),
+        } as AgentConfigurableOptions,
       },
     });
   }, [assistant]);
@@ -195,7 +234,13 @@ export function AgentConfigModal({
 
           <TabsContent value="general">
             <GeneralConfig
-              config={config}
+              config={{
+                assistant_id: config.assistant_id,
+                name: config.name,
+                metadata: config.metadata,
+                config: config.config,
+                avatar: config.config.configurable.avatar,
+              }}
               onChange={handleChange}
               onConfigurableChange={handleConfigurableChange}
             />

@@ -12,7 +12,7 @@ export function EmptyAgents() {
         Create your first AI agent to get started. AI agents can help you with
         tasks, answer questions, and assist with your work.
       </p>
-      <Link href="/agents/new">
+      <Link href="/assistants/new">
         <Button size="lg">
           <PlusCircle className="mr-2" />
           Create Your First Agent

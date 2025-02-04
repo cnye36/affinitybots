@@ -16,7 +16,6 @@ import { Document } from "@langchain/core/documents";
 export async function retrieveRelevantDocuments(
   query: string,
   supabase: SupabaseClient,
-  assistantId: string,
   topK: number = 5
 ): Promise<Document[]> {
   const embeddings = new OpenAIEmbeddings();
@@ -25,9 +24,7 @@ export async function retrieveRelevantDocuments(
     client: supabase,
     tableName: "document_vectors",
     queryName: "match_documents",
-    filter: {
-      assistant_id: assistantId,
-    },
+    filter: {},
   });
 
   const similarDocs = await vectorStore.similaritySearch(query, topK);

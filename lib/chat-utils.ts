@@ -17,6 +17,7 @@ export async function generateChatName(conversation: string): Promise<string> {
       modelName: "gpt-4o-mini",
       temperature: 0.7,
       maxTokens: 20,
+      openAIApiKey: process.env.OPENAI_API_KEY,
     });
 
     const formattedPrompt = await titleGeneratorPrompt.format({

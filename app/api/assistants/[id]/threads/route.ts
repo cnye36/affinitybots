@@ -1,34 +1,30 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
-import { getLangGraphClient } from "@/lib/langchain/client";
+import { Client } from "@langchain/langgraph-sdk";
 
-// POST - Create a new thread
+
 export async function POST(
   request: Request,
-  props: { params: Promise<{ id: string }> }
+  props: { params: Promise<{ assistant_id: string }> }
 ) {
   const params = await props.params;
+  const client = new Client();
   try {
     const supabase = await createClient();
-    const client = getLangGraphClient();
-
     const {
       data: { user },
     } = await supabase.auth.getUser();
-
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Create a new thread for the assistant
     const thread = await client.threads.create({
       metadata: {
-        owner_id: user.id,
-        assistant_id: params.id,
+        user_id: user.id,
+        assistant_id: params.assistant_id,
       },
     });
-
-    return NextResponse.json(thread);
+    return NextResponse.json({ thread_id: thread.thread_id });
   } catch (error) {
     console.error("Error creating thread:", error);
     return NextResponse.json(
@@ -41,30 +37,26 @@ export async function POST(
 // GET - List all threads for an assistant
 export async function GET(
   request: Request,
-  props: { params: Promise<{ id: string }> }
+  props: { params: Promise<{ assistant_id: string }> }
 ) {
   const params = await props.params;
+  const client = new Client();
   try {
     const supabase = await createClient();
-    const client = getLangGraphClient();
-
     const {
       data: { user },
     } = await supabase.auth.getUser();
-
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get all threads for this assistant
     const threads = await client.threads.search({
       metadata: {
-        owner_id: user.id,
-        assistant_id: params.id,
+        user_id: user.id,
+        assistant_id: params.assistant_id,
       },
     });
-
-    return NextResponse.json(threads || []);
+    return NextResponse.json({ threads });
   } catch (error) {
     console.error("Error fetching threads:", error);
     return NextResponse.json(

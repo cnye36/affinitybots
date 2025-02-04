@@ -12,7 +12,6 @@ export const AgentMemoryOptionsSchema = z.object({
 // Metadata schema
 export const AgentMetadataSchema = z.object({
   description: z.string(),
-  owner_id: z.string(),
   agent_type: z.string(),
 });
 
@@ -23,6 +22,7 @@ export const AgentConfigurableOptionsSchema = z.object({
   tools: z.custom<ToolsConfig>(),
   memory: AgentMemoryOptionsSchema,
   prompt_template: z.string(),
+  owner_id: z.string(),
 });
 
 // Complete config schema

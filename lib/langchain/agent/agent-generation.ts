@@ -75,9 +75,9 @@ interface GeneratedConfig {
   name: string;
   configurable: AgentConfigurableOptions;
   metadata: {
+    owner_id: string;
     description: string;
     agent_type: string;
-    owner_id: string;
   };
 }
 
@@ -94,6 +94,7 @@ export async function generateAgentConfiguration(
   const formattedPrompt = await configurationPrompt.format({
     description,
     agentType,
+    ownerId,
   });
 
   const response = await model.invoke(formattedPrompt);
@@ -112,11 +113,12 @@ export async function generateAgentConfiguration(
         relevance_threshold: 0.7,
       },
       prompt_template: "",
+      owner_id: ownerId,
     },
     metadata: {
+      owner_id: ownerId,
       description: "",
       agent_type: agentType,
-      owner_id: ownerId,
     },
   };
 

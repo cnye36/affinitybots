@@ -1,17 +1,16 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
-import { getLangGraphClient } from "@/lib/langchain/client";
+import { Client } from "@langchain/langgraph-sdk";
 
-// GET - List all runs for a thread
+// GET - List recent runs for a thread
 export async function GET(
   request: Request,
   props: { params: Promise<{ id: string; threadId: string }> }
 ) {
-  const params = await props.params;
+  const { threadId } = await props.params;
+  const client = new Client();
   try {
     const supabase = await createClient();
-    const client = getLangGraphClient();
-
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -20,16 +19,8 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Verify thread ownership
-    const thread = await client.threads.get(params.threadId);
-    if (thread.metadata?.owner_id !== user.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Get all runs for this thread
-    const runs = await client.threads.listRuns(params.threadId);
-
-    return NextResponse.json({ runs });
+    const runs = await client.threads.get(threadId);
+    return NextResponse.json(runs || []);
   } catch (error) {
     console.error("Error fetching runs:", error);
     return NextResponse.json(
@@ -39,16 +30,15 @@ export async function GET(
   }
 }
 
-// POST - Create a new run
+// POST - Create a new run/message in a thread
 export async function POST(
   request: Request,
   props: { params: Promise<{ id: string; threadId: string }> }
 ) {
-  const params = await props.params;
+  const { id, threadId } = await props.params;
+  const client = new Client();
   try {
     const supabase = await createClient();
-    const client = getLangGraphClient();
-
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -57,75 +47,53 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Verify thread ownership
-    const thread = await client.threads.get(params.threadId);
-    if (thread.metadata?.owner_id !== user.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const body = await request.json();
-    const { checkpoint, input, command } = body;
-
-    // Create a new run
-    const run = await client.threads.createRun(params.threadId, {
-      assistant_id: params.id,
-      checkpoint,
-      input,
-      command,
-    });
-
-    return NextResponse.json(run);
-  } catch (error) {
-    console.error("Error creating run:", error);
-    return NextResponse.json(
-      { error: "Failed to create run" },
-      { status: 500 }
-    );
-  }
-}
-
-// DELETE - Cancel a run
-export async function DELETE(
-  request: Request,
-  props: { params: Promise<{ id: string; threadId: string }> }
-) {
-  const params = await props.params;
-  try {
-    const supabase = await createClient();
-    const client = getLangGraphClient();
-    const { searchParams } = new URL(request.url);
-    const runId = searchParams.get("runId");
-
-    if (!runId) {
+    // Validate assistant ownership
+    const assistant = await client.assistants.get(id);
+    if (!assistant || assistant.assistant_id !== id) {
       return NextResponse.json(
-        { error: "Run ID is required" },
-        { status: 400 }
+        { error: "Assistant not found or access denied" },
+        { status: 404 }
       );
     }
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const { content } = await request.json();
 
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    // Initiate a streaming run
+    const stream = client.runs.stream(threadId, id, {
+      input: { messages: [{ role: "user", content }] },
+      config: {
+        tags: ["chat"],
+        configurable: assistant.config?.configurable,
+        recursion_limit: 100,
+      },
+      streamMode: ["messages"],
+    });
 
-    // Verify thread ownership
-    const thread = await client.threads.get(params.threadId);
-    if (thread.metadata?.owner_id !== user.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const encoder = new TextEncoder();
+    const readable = new ReadableStream({
+      async start(controller) {
+        try {
+          for await (const chunk of stream) {
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify(chunk.data)}\n\n`)
+            );
+          }
+          controller.close();
+        } catch (error) {
+          controller.error(error);
+        }
+      },
+    });
 
-    // Cancel the run
-    await client.threads.cancelRun(params.threadId, runId);
-
-    return NextResponse.json({ success: true });
+    return new Response(readable, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+      },
+    });
   } catch (error) {
-    console.error("Error canceling run:", error);
-    return NextResponse.json(
-      { error: "Failed to cancel run" },
-      { status: 500 }
-    );
+    console.error("Error in POST:", error);
+    return NextResponse.json({ error: "Failed to start run" }, { status: 500 });
   }
 }

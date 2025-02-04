@@ -3,5 +3,5 @@
   "graphs": {
     "agent": "./lib/langchain/agent/agent.ts:graph"
   },
-  "env": ".env.local"
+  "env": ".env"
 }

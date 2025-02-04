@@ -1,13 +1,10 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
 import { generateAgentConfiguration } from "@/lib/langchain/agent/agent-generation";
-import {
-  getLangGraphClient,
-  cleanupLangGraphClient,
-} from "@/lib/langchain/client";
+import { Client } from "@langchain/langgraph-sdk";
 
 export async function POST(request: Request) {
-  const client = getLangGraphClient();
+  const client = new Client();
   try {
     const supabase = await createClient();
 
@@ -33,9 +30,15 @@ export async function POST(request: Request) {
     const assistant = await client.assistants.create({
       graphId: "agent",
       name: config.name,
-      metadata: config.metadata,
+      metadata: {
+        ...config.metadata,
+        owner_id: user.id,
+      },
       config: {
-        configurable: config.configurable,
+        configurable: {
+          ...config.configurable,
+          owner_id: undefined,
+        },
       },
     });
 
@@ -46,13 +49,11 @@ export async function POST(request: Request) {
       { error: "Failed to create assistant" },
       { status: 500 }
     );
-  } finally {
-    await cleanupLangGraphClient();
   }
 }
 
 export async function GET() {
-  const client = getLangGraphClient();
+  const client = new Client();
   try {
     const supabase = await createClient();
 
@@ -76,7 +77,7 @@ export async function GET() {
         return NextResponse.json([]);
       }
 
-      // Ensure we're returning an array
+      // No need for additional filter since we're using metadata
       const assistantsArray = Array.isArray(assistants)
         ? assistants
         : [assistants];
@@ -95,7 +96,5 @@ export async function GET() {
       { error: "Failed to fetch assistants" },
       { status: 500 }
     );
-  } finally {
-    await cleanupLangGraphClient();
   }
 }

@@ -10,8 +10,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Activity, Settings, Plus } from "lucide-react";
 import { AgentConfigModal } from "../configuration/AgentConfigModal";
-import { AgentConfig } from "@/types/agent";
-import { Task } from "@/types/task";
+import { AgentConfig } from "@/types/index";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -39,8 +38,8 @@ export const AgentNode = memo(({ data }: AgentNodeProps) => {
     const fetchAgentAndTasks = async () => {
       try {
         const [agentResponse, tasksResponse] = await Promise.all([
-          axios.get(`/api/agents/${data.agentId}`),
-          axios.get(`/api/tasks?agentId=${data.agentId}`),
+          axios.get(`/api/assistants/${data.assistantId}`),
+          axios.get(`/api/tasks?assistantId=${data.assistantId}`),
         ]);
         setAgent(agentResponse.data);
         setTasks(tasksResponse.data.tasks || []);
@@ -100,7 +99,7 @@ export const AgentNode = memo(({ data }: AgentNodeProps) => {
   const handleConfigSave = async (updatedConfig: AgentConfig) => {
     try {
       const response = await axios.put(
-        `/api/agents/${data.agentId}`,
+        `/api/assistants/${data.assistantId}`,
         updatedConfig
       );
       setAgent(response.data);
