@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Task, TaskType } from "@/types/task";
+import { Task, TaskType } from "@/types";
 import { Label } from "@/components/ui/label";
 
 interface TaskModalProps {

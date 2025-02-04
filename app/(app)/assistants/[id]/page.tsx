@@ -1,6 +1,6 @@
 import { createClient } from "@/supabase/server";
 import ChatContainer from "@/components/chat/ChatContainer";
-import { AgentPageHeader } from "@/components/agent/AgentPageHeader";
+import { AgentPageHeader } from "@/components/agents/AgentPageHeader";
 import { notFound } from "next/navigation";
 
 interface AssistantPageProps {

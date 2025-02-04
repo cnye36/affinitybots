@@ -49,14 +49,14 @@ export type ToolID = (typeof AVAILABLE_TOOLS)[number]["id"];
 // Interface for tool configurations
 export interface ToolConfiguration {
   isEnabled: boolean;
-  config: Record<string, any>;
+  config: Record<string, unknown>;
 }
 
 // Type for the complete tools configuration
 export type ToolsConfig = Partial<Record<ToolID, ToolConfiguration>>;
 
 // Helper to validate tool configuration
-export function validateToolConfig(toolId: ToolID, config: any): boolean {
+export function validateToolConfig(toolId: ToolID, config: unknown): boolean {
   const tool = AVAILABLE_TOOLS.find((t) => t.id === toolId);
   if (!tool) return false;
 

@@ -122,6 +122,7 @@ export interface Thread {
 export interface Message {
   role: "user" | "assistant";
   content: string;
+  tool_calls?: ToolCall[];
   created_at?: string;
 }
 
@@ -183,4 +184,99 @@ export interface Config {
   tags: string[];
   recursion_limit: number;
   configurable: Record<string, unknown>;
+}
+
+export type WorkflowStatus =
+  | "draft"
+  | "active"
+  | "paused"
+  | "completed"
+  | "failed";
+export type TaskStatus = "pending" | "running" | "completed" | "failed";
+
+export interface WorkflowTask {
+  task_id: string;
+  workflow_id: string;
+  assistant_id: string;
+  name: string;
+  description?: string;
+  task_type: string;
+  config: Record<string, unknown>;
+  position: number;
+  status: TaskStatus;
+  created_at: string;
+  updated_at: string;
+  last_run_at?: string;
+  metadata: Record<string, unknown>;
+}
+
+export interface Workflow {
+  workflow_id: string;
+  name: string;
+  description?: string;
+  owner_id: string;
+  nodes: Array<{
+    data: {
+      assistant_id: string;
+      label: string;
+    };
+  }>;
+  edges: unknown[];
+  config: Record<string, unknown>;
+  status: WorkflowStatus;
+  created_at: string;
+  updated_at: string;
+  last_run_at?: string;
+  is_active: boolean;
+}
+
+export interface WorkflowRun {
+  run_id: string;
+  workflow_id: string;
+  thread_id?: string;
+  status: TaskStatus;
+  started_at: string;
+  completed_at?: string;
+  error?: string;
+  result?: unknown;
+  metadata: Record<string, unknown>;
+}
+
+export interface WorkflowTaskRun {
+  task_run_id: string;
+  workflow_run_id: string;
+  task_id: string;
+  run_id?: string;
+  status: TaskStatus;
+  started_at: string;
+  completed_at?: string;
+  error?: string;
+  result?: unknown;
+  metadata: Record<string, unknown>;
+}
+
+export type TaskType =
+  | "process_input"
+  | "generate_content"
+  | "analyze_data"
+  | "make_decision"
+  | "transform_data"
+  | "api_call"
+  | "custom";
+
+export interface Task {
+  task_id?: string;
+  name: string;
+  description: string;
+  type: TaskType;
+  agentId: string;
+  workflowId: string;
+  config?: {
+    input: {
+      source: string;
+    };
+    output: {
+      destination: string;
+    };
+  };
 }

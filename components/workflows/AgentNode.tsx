@@ -10,52 +10,67 @@ import {
 } from "@/components/ui/tooltip";
 import { Activity, Settings, Plus } from "lucide-react";
 import { AgentConfigModal } from "../configuration/AgentConfigModal";
-import { AgentConfig } from "@/types/index";
+import { Assistant, WorkflowTask, TaskType } from "@/types/index";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { TaskModal } from "./TaskModal";
 import { toast } from "react-toastify";
 
+interface TaskConfig {
+  input?: { source?: string };
+  output?: { destination?: string };
+}
+
 interface AgentNodeProps {
   data: {
     label: string;
-    agentId: string;
+    assistant_id: string;
     workflowId?: string;
   };
 }
 
 export const AgentNode = memo(({ data }: AgentNodeProps) => {
-  const [agent, setAgent] = useState<AgentConfig | null>(null);
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const [assistant, setAssistant] = useState<Assistant | null>(null);
+  const [tasks, setTasks] = useState<WorkflowTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
-  const [selectedTask, setSelectedTask] = useState<Task | undefined>(undefined);
+  const [selectedTask, setSelectedTask] = useState<WorkflowTask | undefined>(
+    undefined
+  );
 
   useEffect(() => {
-    const fetchAgentAndTasks = async () => {
+    const fetchAssistantAndTasks = async () => {
       try {
-        const [agentResponse, tasksResponse] = await Promise.all([
-          axios.get(`/api/assistants/${data.assistantId}`),
-          axios.get(`/api/tasks?assistantId=${data.assistantId}`),
+        const [assistantResponse, tasksResponse] = await Promise.all([
+          axios.get(`/api/assistants/${data.assistant_id}`),
+          data.workflowId
+            ? axios.get(
+                `/api/workflows/${data.workflowId}/tasks?assistant_id=${data.assistant_id}`
+              )
+            : Promise.resolve({ data: { tasks: [] } }),
         ]);
-        setAgent(agentResponse.data);
+        setAssistant(assistantResponse.data);
         setTasks(tasksResponse.data.tasks || []);
       } catch (err) {
-        console.error("Error fetching agent or tasks:", err);
-        setError("Failed to load agent data");
+        console.error("Error fetching assistant or tasks:", err);
+        setError("Failed to load assistant data");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchAgentAndTasks();
-  }, [data.agentId]);
+    fetchAssistantAndTasks();
+  }, [data.assistant_id, data.workflowId]);
 
   const handleSettingsClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!assistant) {
+      console.error("Assistant data not loaded");
+      return;
+    }
     setIsConfigModalOpen(true);
   };
 
@@ -65,27 +80,41 @@ export const AgentNode = memo(({ data }: AgentNodeProps) => {
     setIsTaskModalOpen(true);
   };
 
-  const handleEditTask = (e: React.MouseEvent, task: Task) => {
+  const handleEditTask = (e: React.MouseEvent, task: WorkflowTask) => {
     e.stopPropagation();
     setSelectedTask(task);
     setIsTaskModalOpen(true);
   };
 
-  const handleSaveTask = async (taskData: Partial<Task>) => {
+  const handleSaveTask = async (taskData: Partial<WorkflowTask>) => {
+    if (!data.workflowId) {
+      toast.error("Cannot create task without workflow");
+      return;
+    }
+
     try {
       if (selectedTask) {
         // Update existing task
         const response = await axios.put(
-          `/api/tasks/${selectedTask.id}`,
+          `/api/workflows/${data.workflowId}/tasks/${selectedTask.task_id}`,
           taskData
         );
         setTasks(
-          tasks.map((t) => (t.id === selectedTask.id ? response.data : t))
+          tasks.map((t) =>
+            t.task_id === selectedTask.task_id ? response.data : t
+          )
         );
         toast.success("Task updated successfully");
       } else {
         // Create new task
-        const response = await axios.post("/api/tasks", taskData);
+        const response = await axios.post(
+          `/api/workflows/${data.workflowId}/tasks`,
+          {
+            ...taskData,
+            assistant_id: data.assistant_id,
+            workflow_id: data.workflowId,
+          }
+        );
         setTasks([...tasks, response.data]);
         toast.success("Task created successfully");
       }
@@ -93,21 +122,6 @@ export const AgentNode = memo(({ data }: AgentNodeProps) => {
       console.error("Error saving task:", err);
       toast.error("Failed to save task");
       throw err;
-    }
-  };
-
-  const handleConfigSave = async (updatedConfig: AgentConfig) => {
-    try {
-      const response = await axios.put(
-        `/api/assistants/${data.assistantId}`,
-        updatedConfig
-      );
-      setAgent(response.data);
-      setIsConfigModalOpen(false);
-      toast.success("Agent configuration updated");
-    } catch (err) {
-      console.error("Error updating agent:", err);
-      toast.error("Failed to update agent configuration");
     }
   };
 
@@ -123,7 +137,7 @@ export const AgentNode = memo(({ data }: AgentNodeProps) => {
     );
   }
 
-  if (error || !agent) {
+  if (error || !assistant) {
     return (
       <Card className="w-64 bg-red-100">
         <CardHeader>
@@ -141,7 +155,7 @@ export const AgentNode = memo(({ data }: AgentNodeProps) => {
         <CardHeader className="p-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm truncate flex-1">
-              {agent.name}
+              {assistant.name}
             </CardTitle>
             <div className="flex items-center gap-1">
               <TooltipProvider>
@@ -150,7 +164,7 @@ export const AgentNode = memo(({ data }: AgentNodeProps) => {
                     <Activity className="text-gray-500" size={16} />
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Agent Status</p>
+                    <p>Assistant Status</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -164,7 +178,7 @@ export const AgentNode = memo(({ data }: AgentNodeProps) => {
                     />
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Open Agent Settings</p>
+                    <p>Open Assistant Settings</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -190,13 +204,13 @@ export const AgentNode = memo(({ data }: AgentNodeProps) => {
               <div className="space-y-1">
                 {tasks.map((task) => (
                   <div
-                    key={task.id}
+                    key={task.task_id}
                     className="flex items-center justify-between bg-muted/50 rounded-sm p-1 text-xs cursor-pointer hover:bg-muted"
                     onClick={(e) => handleEditTask(e, task)}
                   >
                     <span className="truncate flex-1">{task.name}</span>
                     <Badge variant="secondary" className="text-[10px]">
-                      {task.type}
+                      {task.task_type}
                     </Badge>
                   </div>
                 ))}
@@ -211,13 +225,11 @@ export const AgentNode = memo(({ data }: AgentNodeProps) => {
         <Handle type="target" position={Position.Top} className="w-2 h-2" />
         <Handle type="source" position={Position.Bottom} className="w-2 h-2" />
       </Card>
-      {agent && (
+      {assistant && (
         <AgentConfigModal
-          isOpen={isConfigModalOpen}
-          onClose={() => setIsConfigModalOpen(false)}
-          agentId={agent.id}
-          initialConfig={agent}
-          onSave={handleConfigSave}
+          open={isConfigModalOpen}
+          onOpenChange={setIsConfigModalOpen}
+          assistant={assistant}
         />
       )}
       {data.workflowId && (
@@ -228,9 +240,32 @@ export const AgentNode = memo(({ data }: AgentNodeProps) => {
             setSelectedTask(undefined);
           }}
           onSave={handleSaveTask}
-          agentId={data.agentId}
+          agentId={data.assistant_id}
           workflowId={data.workflowId}
-          initialTask={selectedTask}
+          initialTask={
+            selectedTask
+              ? {
+                  task_id: selectedTask.task_id,
+                  name: selectedTask.name,
+                  description: selectedTask.description || "",
+                  type: selectedTask.task_type as TaskType,
+                  agentId: selectedTask.assistant_id,
+                  workflowId: selectedTask.workflow_id,
+                  config: {
+                    input: {
+                      source:
+                        (selectedTask.config as TaskConfig)?.input?.source ||
+                        "previous_agent",
+                    },
+                    output: {
+                      destination:
+                        (selectedTask.config as TaskConfig)?.output
+                          ?.destination || "next_agent",
+                    },
+                  },
+                }
+              : undefined
+          }
         />
       )}
     </>

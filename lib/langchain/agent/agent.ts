@@ -5,7 +5,13 @@ import {
   StateGraph,
 } from "@langchain/langgraph";
 import { ToolNode } from "@langchain/langgraph/prebuilt";
-import { HumanMessage, SystemMessage } from "@langchain/core/messages";
+import {
+  HumanMessage,
+  SystemMessage,
+  BaseMessage,
+  AIMessage,
+} from "@langchain/core/messages";
+import { ToolCall } from "@langchain/core/messages/tool";
 import { retrieveRelevantDocuments } from "@/lib/retrieval";
 import { createClient } from "@/supabase/server";
 import { getTools } from "../tools";
@@ -15,6 +21,10 @@ import { AgentState } from "@/types";
 
 // Define your tools
 const tools = getTools();
+
+interface MessageWithToolCalls extends AIMessage {
+  tool_calls?: ToolCall[];
+}
 
 // Define the knowledge retrieval node
 async function retrieveKnowledge(state: AgentState) {
@@ -90,12 +100,13 @@ async function callModel(state: AgentState, config: RunnableConfig) {
 }
 
 // Determine the next step based on the model's output
-function routeModelOutput(state: AgentState) {
+function routeModelOutput(state: { messages: BaseMessage[] }) {
   const messages = state.messages;
   const lastMessage = messages[messages.length - 1];
+  const toolCalls = (lastMessage as MessageWithToolCalls).tool_calls;
 
   // If the model wants to call tools, route to the tools node
-  if ((lastMessage?.tool_calls?.length ?? 0) > 0) {
+  if (lastMessage && toolCalls && toolCalls.length > 0) {
     return "tools";
   }
 

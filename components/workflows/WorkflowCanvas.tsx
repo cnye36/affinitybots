@@ -21,6 +21,7 @@ import "reactflow/dist/style.css";
 import { AgentNode } from "./AgentNode";
 import { CustomEdge } from "./CustomEdge";
 import axios from "axios";
+import { Assistant } from "@/types/index";
 
 interface WorkflowCanvasProps {
   nodes: Node[];
@@ -61,18 +62,20 @@ export function WorkflowCanvas({
     async (event: React.DragEvent<HTMLDivElement>) => {
       event.preventDefault();
 
-      const agentId = event.dataTransfer.getData("application/reactflow");
+      const assistantId = event.dataTransfer.getData("application/reactflow");
 
-      if (!agentId) {
+      if (!assistantId) {
         return;
       }
 
       try {
-        const response = await axios.get(`/api/agents/${agentId}`);
-        const agent = response.data;
+        const response = await axios.get<Assistant>(
+          `/api/assistants/${assistantId}`
+        );
+        const assistant = response.data;
 
-        if (!agent) {
-          console.error("Agent not found");
+        if (!assistant) {
+          console.error("Assistant not found");
           return;
         }
 
@@ -83,21 +86,20 @@ export function WorkflowCanvas({
         });
 
         const newNode = {
-          id: `${agent.id}-${nodes.length + 1}`,
+          id: `${assistant.assistant_id}-${nodes.length + 1}`,
           type: "agent",
           position,
           data: {
-            agentId: agent.id,
-            label: agent.name,
+            assistant_id: assistant.assistant_id,
+            label: assistant.name,
             workflowId: initialWorkflowId,
-            avatar: agent.avatar,
           },
         };
 
         setNodes((nds) => nds.concat(newNode));
         reactFlowInstance.setViewport({ x: 0, y: 0, zoom });
       } catch (error) {
-        console.error("Error fetching agent:", error);
+        console.error("Error fetching assistant:", error);
       }
     },
     [nodes, setNodes, reactFlowInstance, initialWorkflowId]
@@ -134,8 +136,8 @@ export function WorkflowCanvas({
           className="bg-background/60 p-2 rounded-lg shadow-sm border"
         >
           <div className="text-sm text-muted-foreground">
-            Drag agents from the sidebar and connect them to create your
-            workflow. Add tasks to each agent to define their behavior.
+            Drag assistants from the sidebar and connect them to create your
+            workflow. Add tasks to each assistant to define their behavior.
           </div>
         </Panel>
       </ReactFlow>

@@ -22,7 +22,7 @@ export function getTools(toolsConfig: ToolsConfig = {}): Tool[] {
   ) {
     tools.push(
       new WolframAlphaTool({
-        appid: toolsConfig.wolfram_alpha.config.appid,
+        appid: toolsConfig.wolfram_alpha.config.appid as string,
       })
     );
   }

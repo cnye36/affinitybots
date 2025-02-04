@@ -7,24 +7,17 @@ import { Input } from "@/components/ui/input";
 import { AgentSidebar } from "./AgentSidebar";
 import { WorkflowCanvas } from "./WorkflowCanvas";
 import { SidebarTrigger } from "./SidebarTrigger";
-import axios, { isAxiosError } from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
+import { Assistant } from "@/types/index";
+import { createClient } from "@/supabase/client";
 
-interface Agent {
-  id: string;
-  name: string;
-  description?: string;
-  model_type: string;
-  prompt_template: string;
-  tools: string[];
-  config: {
-    temperature?: number;
-    enableKnowledge?: boolean;
-    tone?: string;
-    language?: string;
-    toolsConfig?: Record<string, unknown>;
+interface WorkflowNode extends Node {
+  data: {
+    assistant_id: string;
+    label: string;
+    workflowId?: string;
   };
 }
 
@@ -37,13 +30,14 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
   const [workflowName, setWorkflowName] = useState("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
-  const [agents, setAgents] = useState<Agent[]>([]);
-  const [loadingAgents, setLoadingAgents] = useState(true);
+  const [assistants, setAssistants] = useState<Assistant[]>([]);
+  const [loadingAssistants, setLoadingAssistants] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [nodes, setNodes] = useState<Node[]>([]);
+  const [nodes, setNodes] = useState<WorkflowNode[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
+  const supabase = createClient();
 
   // Load existing workflow if ID is provided
   useEffect(() => {
@@ -52,63 +46,74 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
 
       setLoading(true);
       try {
-        const response = await axios.get(
-          `/api/workflows?id=${initialWorkflowId}`
-        );
-        const workflow = response.data;
-        setWorkflowName(workflow.name);
-        // Update nodes to include workflowId
-        setNodes(
-          workflow.nodes.map((node: Node) => ({
-            ...node,
-            data: {
-              ...node.data,
-              workflowId: initialWorkflowId,
-            },
-          }))
-        );
-        setEdges(workflow.edges);
-      } catch (err: unknown) {
+        const { data: workflow, error: fetchError } = await supabase
+          .from("workflows")
+          .select("*")
+          .eq("workflow_id", initialWorkflowId)
+          .single();
+
+        if (fetchError) throw fetchError;
+
+        if (workflow) {
+          setWorkflowName(workflow.name);
+          // Update nodes to include workflowId
+          setNodes(
+            workflow.nodes.map((node: WorkflowNode) => ({
+              ...node,
+              data: {
+                ...node.data,
+                workflowId: initialWorkflowId,
+              },
+            }))
+          );
+          setEdges(workflow.edges);
+        }
+      } catch (err) {
         console.error("Error loading workflow:", err);
-        if (isAxiosError(err) && err.response?.status === 404) {
-          toast.error("Workflow not found");
-          router.push("/workflows");
-          return;
-        }
-        if (isAxiosError(err) && err.response?.status === 401) {
-          toast.error("Please sign in to continue");
-          router.push("/auth/login");
-          return;
-        }
         toast.error("Error loading workflow");
+        router.push("/workflows");
       } finally {
         setLoading(false);
       }
     };
 
     loadWorkflow();
-  }, [initialWorkflowId, router]);
+  }, [initialWorkflowId, router, supabase]);
 
   useEffect(() => {
-    const fetchAgents = async () => {
+    const fetchAssistants = async () => {
       try {
-        const response = await axios.get("/api/agents");
-        setAgents(response.data.agents);
-      } catch (err: unknown) {
-        console.error("Error fetching agents:", err);
-        if (isAxiosError(err) && err.response?.status === 401) {
-          toast.error("Please sign in to continue");
-          router.push("/auth/login");
-          return;
+        setLoadingAssistants(true);
+        const response = await fetch("/api/assistants");
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
-        setError("Failed to load agents.");
+
+        const data = await response.json();
+        setAssistants(data);
+      } catch (err) {
+        console.error("Error fetching assistants:", err);
+        setError("Failed to load assistants.");
       } finally {
-        setLoadingAgents(false);
+        setLoadingAssistants(false);
       }
     };
 
-    fetchAgents();
-  }, [router]);
+    fetchAssistants();
+  }, []);
+
+  const handleError = (err: unknown) => {
+    console.error("Error:", err);
+    if (err && typeof err === "object" && "code" in err && "message" in err) {
+      // This is likely a Postgrest error
+      toast.error(err.message as string);
+    } else if (err instanceof Error) {
+      toast.error(err.message);
+    } else {
+      toast.error("An unexpected error occurred");
+    }
+  };
 
   const handleSave = async () => {
     if (saving) return;
@@ -119,7 +124,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
     }
 
     if (nodes.length === 0) {
-      toast.error("Workflow must contain at least one agent.");
+      toast.error("Workflow must contain at least one assistant.");
       return;
     }
 
@@ -135,12 +140,15 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
 
       if (initialWorkflowId) {
         // Update existing workflow
-        const response = await axios.put("/api/workflows", {
-          ...workflowData,
-          id: initialWorkflowId,
-        });
+        const { data, error } = await supabase
+          .from("workflows")
+          .update(workflowData)
+          .eq("workflow_id", initialWorkflowId)
+          .select();
 
-        if (response.data && response.data.id) {
+        if (error) throw error;
+
+        if (data && data.length > 0) {
           toast.update(saveToast, {
             render: "Workflow updated successfully",
             type: "success",
@@ -148,16 +156,29 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
             autoClose: 3000,
           });
 
-          setNodes(response.data.nodes);
-          setEdges(response.data.edges);
+          setNodes(
+            data[0].nodes.map((node: WorkflowNode) => ({
+              ...node,
+              data: {
+                ...node.data,
+                workflowId: initialWorkflowId,
+              },
+            }))
+          );
+          setEdges(data[0].edges);
         } else {
-          throw new Error("Invalid response from server");
+          throw new Error("No data returned from update");
         }
       } else {
         // Create new workflow
-        const response = await axios.post("/api/workflows", workflowData);
+        const { data, error } = await supabase
+          .from("workflows")
+          .insert(workflowData)
+          .select();
 
-        if (response.data && response.data.id) {
+        if (error) throw error;
+
+        if (data && data.length > 0) {
           toast.update(saveToast, {
             render: "Workflow saved successfully",
             type: "success",
@@ -165,44 +186,27 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
             autoClose: 3000,
           });
 
+          const newWorkflowId = data[0].workflow_id;
+
           // Update nodes with the new workflowId
           setNodes(
-            nodes.map((node) => ({
+            data[0].nodes.map((node: WorkflowNode) => ({
               ...node,
               data: {
                 ...node.data,
-                workflowId: response.data.id,
+                workflowId: newWorkflowId,
               },
             }))
           );
-          setEdges(response.data.edges);
+          setEdges(data[0].edges);
 
-          router.push(`/workflows/${response.data.id}`);
+          router.push(`/workflows/${newWorkflowId}`);
         } else {
-          throw new Error("Invalid response from server");
+          throw new Error("No data returned from insert");
         }
       }
-    } catch (err: unknown) {
-      console.error("Error saving workflow:", err);
-      if (isAxiosError(err) && err.response?.status === 401) {
-        toast.update(saveToast, {
-          render: "Please sign in to save workflows",
-          type: "error",
-          isLoading: false,
-          autoClose: 5000,
-        });
-        router.push("/auth/login");
-        return;
-      }
-      toast.update(saveToast, {
-        render:
-          isAxiosError(err) && err.response?.data?.error
-            ? err.response.data.error
-            : "An error occurred while saving the workflow.",
-        type: "error",
-        isLoading: false,
-        autoClose: 5000,
-      });
+    } catch (err) {
+      handleError(err);
     } finally {
       setSaving(false);
     }
@@ -289,8 +293,8 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
           isOpen={isSidebarOpen}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
-          agents={agents}
-          loading={loadingAgents}
+          assistants={assistants}
+          loading={loadingAssistants}
           error={error}
         />
       </div>

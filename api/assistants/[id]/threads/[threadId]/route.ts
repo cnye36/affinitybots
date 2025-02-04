@@ -44,12 +44,10 @@ export async function GET(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string; threadId: string } }
+  { params }: { params: { threadId: string } }
 ) {
   try {
-    const client = new Client({
-      apiUrl: process.env.LANGGRAPH_URL,
-    });
+    const client = new Client();
 
     // Delete the thread
     await client.threads.delete(params.threadId);
