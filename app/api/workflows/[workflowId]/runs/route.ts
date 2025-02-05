@@ -80,17 +80,22 @@ export async function POST(
     const { input, config } = await request.json();
 
     // Create a new background run for the workflow
-    const run = await client.runs.create(workflow.assistant_id, {
-      input,
-      config: {
-        ...config,
-        tags: ["workflow"],
-        metadata: {
-          workflow_id: workflowId,
-          user_id: user.id,
+    const run = await client.runs.create(
+      workflow.assistant_id,
+      workflow.thread_id || "",
+      {
+        input,
+        config: {
+          ...config,
+          tags: ["workflow"],
+          metadata: {
+            workflow_id: workflowId,
+            user_id: user.id,
+          },
         },
-      },
-    });
+        streamMode: ["values", "messages"],
+      }
+    );
 
     return NextResponse.json(run);
   } catch (error) {
