@@ -18,6 +18,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Task, TaskType } from "@/types";
 import { Label } from "@/components/ui/label";
+import { toast } from "react-toastify";
 
 interface TaskModalProps {
   isOpen: boolean;
@@ -83,6 +84,35 @@ export function TaskModal({
     }
   };
 
+  const handleExecuteTask = async () => {
+    if (!initialTask?.task_id) {
+      toast.error("Task ID is missing");
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `/api/workflows/${workflowId}/tasks/${initialTask.task_id}/execute`,
+        {
+          method: "POST",
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success("Task executed successfully");
+        console.log("Execution Result:", data.executionResult);
+        // Optionally, display the result in the UI
+      } else {
+        throw new Error(data.error || "Failed to execute task");
+      }
+    } catch (error) {
+      console.error("Error executing task:", error);
+      toast.error("Failed to execute task");
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
@@ -137,6 +167,15 @@ export function TaskModal({
             <Button type="submit" disabled={saving}>
               {saving ? "Saving..." : "Save Task"}
             </Button>
+            {initialTask && (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={handleExecuteTask}
+              >
+                Execute Task
+              </Button>
+            )}
           </DialogFooter>
         </form>
       </DialogContent>

@@ -40,6 +40,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
   const [workflowId, setWorkflowId] = useState<string | undefined>(
     initialWorkflowId
   );
+  const [isExecuting, setIsExecuting] = useState(false);
   const supabase = createClient();
 
   // Create a new workflow immediately if we don't have an ID
@@ -276,6 +277,34 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
     }
   }, [isHovering, isSidebarOpen]);
 
+  const handleExecuteWorkflow = async () => {
+    if (!workflowId) {
+      toast.error("Workflow ID is missing");
+      return;
+    }
+
+    setIsExecuting(true);
+    try {
+      const response = await fetch(`/api/workflows/${workflowId}/execute`, {
+        method: "POST",
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success("Workflow executed successfully");
+        // Optionally, handle executionResult
+      } else {
+        throw new Error(data.error || "Failed to execute workflow");
+      }
+    } catch (error) {
+      console.error("Error executing workflow:", error);
+      toast.error("Failed to execute workflow");
+    } finally {
+      setIsExecuting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="h-screen flex items-center justify-center">
@@ -321,6 +350,9 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
             : workflowId
             ? "Update Workflow"
             : "Save Workflow"}
+        </Button>
+        <Button onClick={handleExecuteWorkflow} disabled={isExecuting}>
+          {isExecuting ? "Executing..." : "Execute Workflow"}
         </Button>
       </div>
       <div className="flex flex-1 relative">

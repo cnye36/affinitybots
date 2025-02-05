@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import ReactFlow, {
   Node,
   Edge,
@@ -23,6 +23,7 @@ import { CustomEdge } from "./CustomEdge";
 import axios from "axios";
 import { Assistant } from "@/types/index";
 import { toast } from "react-toastify";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface WorkflowCanvasProps {
   nodes: Node[];
@@ -48,6 +49,7 @@ export function WorkflowCanvas({
   initialWorkflowId,
 }: WorkflowCanvasProps) {
   const reactFlowInstance = useReactFlow();
+  const [executionLogs, setExecutionLogs] = useState<string[]>([]);
 
   const onConnect = useCallback(
     (params: Edge | Connection) => setEdges((eds) => addEdge(params, eds)),
@@ -110,42 +112,65 @@ export function WorkflowCanvas({
     [nodes, setNodes, reactFlowInstance, initialWorkflowId]
   );
 
+  const handleExecuteWorkflow = async () => {
+    // Similar to the execute workflow handler in WorkflowsBuilder
+    // Update executionLogs based on API response
+  };
+
   return (
-    <div className="w-full h-full" onDrop={onDrop} onDragOver={onDragOver}>
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={(changes) =>
-          setNodes((nds) => applyNodeChanges(changes, nds))
-        }
-        onEdgesChange={(changes) =>
-          setEdges((eds) => applyEdgeChanges(changes, eds))
-        }
-        onConnect={onConnect}
-        nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
-        defaultViewport={{ x: 0, y: 0, zoom: 1.5 }}
-        defaultEdgeOptions={{
-          type: "custom",
-          animated: true,
-        }}
-        minZoom={0.2}
-        maxZoom={4}
-        fitView={false}
-      >
-        <Controls />
-        <MiniMap />
-        <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
-        <Panel
-          position="top-center"
-          className="bg-background/60 p-2 rounded-lg shadow-sm border"
+    <div className="w-full h-full flex">
+      <div className="w-3/4">
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={(changes) =>
+            setNodes((nds) => applyNodeChanges(changes, nds))
+          }
+          onEdgesChange={(changes) =>
+            setEdges((eds) => applyEdgeChanges(changes, eds))
+          }
+          onConnect={onConnect}
+          nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
+          defaultViewport={{ x: 0, y: 0, zoom: 1.5 }}
+          defaultEdgeOptions={{
+            type: "custom",
+            animated: true,
+          }}
+          minZoom={0.2}
+          maxZoom={4}
+          fitView={false}
         >
-          <div className="text-sm text-muted-foreground">
-            Drag assistants from the sidebar and connect them to create your
-            workflow. Add tasks to each assistant to define their behavior.
-          </div>
-        </Panel>
-      </ReactFlow>
+          <Controls />
+          <MiniMap />
+          <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
+          <Panel
+            position="top-center"
+            className="bg-background/60 p-2 rounded-lg shadow-sm border"
+          >
+            <div className="text-sm text-muted-foreground">
+              Drag assistants from the sidebar and connect them to create your
+              workflow. Add tasks to each assistant to define their behavior.
+            </div>
+          </Panel>
+        </ReactFlow>
+      </div>
+      <div className="w-1/4 p-4 bg-gray-100 overflow-y-auto">
+        <h2 className="text-lg font-semibold mb-2">Execution Logs</h2>
+        <ScrollArea className="h-full">
+          {executionLogs.length > 0 ? (
+            <ul className="space-y-1">
+              {executionLogs.map((log, index) => (
+                <li key={index} className="text-xs text-gray-700">
+                  {log}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-xs text-gray-500">No logs available.</p>
+          )}
+        </ScrollArea>
+      </div>
     </div>
   );
 }
