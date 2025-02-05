@@ -27,7 +27,7 @@ interface WorkflowsBuilderProps {
 
 function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
   const router = useRouter();
-  const [workflowName, setWorkflowName] = useState("");
+  const [workflowName, setWorkflowName] = useState("Undefined Workflow");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
   const [assistants, setAssistants] = useState<Assistant[]>([]);
@@ -37,19 +37,63 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
   const [edges, setEdges] = useState<Edge[]>([]);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [workflowId, setWorkflowId] = useState<string | undefined>(
+    initialWorkflowId
+  );
   const supabase = createClient();
+
+  // Create a new workflow immediately if we don't have an ID
+  useEffect(() => {
+    const createWorkflow = async () => {
+      if (workflowId) return; // Skip if we already have a workflow ID
+
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!user) {
+          router.push("/auth/login");
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from("workflows")
+          .insert({
+            name: workflowName,
+            owner_id: user.id,
+            nodes: [],
+            edges: [],
+            status: "draft",
+            is_active: false,
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        setWorkflowId(data.workflow_id);
+        router.push(`/workflows/${data.workflow_id}`);
+      } catch (err) {
+        console.error("Error creating workflow:", err);
+        toast.error("Failed to create workflow");
+      }
+    };
+
+    createWorkflow();
+  }, [supabase, router, workflowId, workflowName]);
 
   // Load existing workflow if ID is provided
   useEffect(() => {
     const loadWorkflow = async () => {
-      if (!initialWorkflowId) return;
+      if (!workflowId) return;
 
       setLoading(true);
       try {
         const { data: workflow, error: fetchError } = await supabase
           .from("workflows")
           .select("*")
-          .eq("workflow_id", initialWorkflowId)
+          .eq("workflow_id", workflowId)
           .single();
 
         if (fetchError) throw fetchError;
@@ -62,7 +106,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
               ...node,
               data: {
                 ...node.data,
-                workflowId: initialWorkflowId,
+                workflowId,
               },
             }))
           );
@@ -78,7 +122,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
     };
 
     loadWorkflow();
-  }, [initialWorkflowId, router, supabase]);
+  }, [workflowId, router, supabase]);
 
   useEffect(() => {
     const fetchAssistants = async () => {
@@ -136,14 +180,15 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
         name: workflowName.trim(),
         nodes,
         edges,
+        owner_id: undefined,
       };
 
-      if (initialWorkflowId) {
+      if (workflowId) {
         // Update existing workflow
         const { data, error } = await supabase
           .from("workflows")
           .update(workflowData)
-          .eq("workflow_id", initialWorkflowId)
+          .eq("workflow_id", workflowId)
           .select();
 
         if (error) throw error;
@@ -161,7 +206,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
               ...node,
               data: {
                 ...node.data,
-                workflowId: initialWorkflowId,
+                workflowId,
               },
             }))
           );
@@ -273,7 +318,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
         <Button onClick={handleSave} disabled={saving}>
           {saving
             ? "Saving..."
-            : initialWorkflowId
+            : workflowId
             ? "Update Workflow"
             : "Save Workflow"}
         </Button>
@@ -285,7 +330,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
             setNodes={setNodes}
             edges={edges}
             setEdges={setEdges}
-            initialWorkflowId={initialWorkflowId}
+            initialWorkflowId={workflowId}
           />
         </ReactFlowProvider>
         <SidebarTrigger onHover={handleMouseEnter} />

@@ -1,0 +1,187 @@
+import { NextResponse } from "next/server";
+import { createClient } from "@/supabase/server";
+import { Task, TaskType } from "@/types";
+
+const VALID_TASK_TYPES: TaskType[] = [
+  "process_input",
+  "generate_content",
+  "analyze_data",
+  "make_decision",
+  "transform_data",
+  "api_call",
+  "custom",
+];
+
+// GET - Get a specific task
+export async function GET(
+  request: Request,
+  props: { params: Promise<{ workflowId: string; taskId: string }> }
+) {
+  const { taskId } = await props.params;
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Get task with workflow ownership check
+    const { data: task } = await supabase
+      .from("workflow_tasks")
+      .select("*, workflow:workflows(owner_id)")
+      .eq("task_id", taskId)
+      .single();
+
+    if (!task || task.workflow.owner_id !== user.id) {
+      return NextResponse.json(
+        { error: "Task not found or access denied" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(task);
+  } catch (error) {
+    console.error("Error fetching task:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch task" },
+      { status: 500 }
+    );
+  }
+}
+
+// PUT - Update a task
+export async function PUT(
+  request: Request,
+  props: { params: Promise<{ workflowId: string; taskId: string }> }
+) {
+  const { taskId } = await props.params;
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Verify task and workflow ownership
+    const { data: existingTask } = await supabase
+      .from("workflow_tasks")
+      .select("*, workflow:workflows(owner_id)")
+      .eq("task_id", taskId)
+      .single();
+
+    if (!existingTask || existingTask.workflow.owner_id !== user.id) {
+      return NextResponse.json(
+        { error: "Task not found or access denied" },
+        { status: 404 }
+      );
+    }
+
+    const taskData: Partial<Task> = await request.json();
+
+    // Validate task type if it's being updated
+    if (taskData.type && !VALID_TASK_TYPES.includes(taskData.type)) {
+      return NextResponse.json({ error: "Invalid task type" }, { status: 400 });
+    }
+
+    // Update the task
+    const { data: task, error } = await supabase
+      .from("workflow_tasks")
+      .update({
+        name: taskData.name,
+        description: taskData.description,
+        task_type: taskData.type,
+        config: taskData.config,
+        assistant_id: taskData.agentId,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("task_id", taskId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return NextResponse.json(task);
+  } catch (error) {
+    console.error("Error updating task:", error);
+    return NextResponse.json(
+      { error: "Failed to update task" },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE - Delete a task
+export async function DELETE(
+  request: Request,
+  props: { params: Promise<{ workflowId: string; taskId: string }> }
+) {
+  const { workflowId, taskId } = await props.params;
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Verify task and workflow ownership
+    const { data: task } = await supabase
+      .from("workflow_tasks")
+      .select("*, workflow:workflows(owner_id)")
+      .eq("task_id", taskId)
+      .single();
+
+    if (!task || task.workflow.owner_id !== user.id) {
+      return NextResponse.json(
+        { error: "Task not found or access denied" },
+        { status: 404 }
+      );
+    }
+
+    // Delete the task
+    const { error } = await supabase
+      .from("workflow_tasks")
+      .delete()
+      .eq("task_id", taskId);
+
+    if (error) throw error;
+
+    // Reorder remaining tasks
+    const { data: remainingTasks, error: reorderError } = await supabase
+      .from("workflow_tasks")
+      .select("task_id, position")
+      .eq("workflow_id", workflowId)
+      .order("position");
+
+    if (!reorderError && remainingTasks) {
+      // Update positions to be sequential
+      const updates = remainingTasks.map((t, index) => ({
+        task_id: t.task_id,
+        position: index,
+      }));
+
+      for (const update of updates) {
+        await supabase
+          .from("workflow_tasks")
+          .update({ position: update.position })
+          .eq("task_id", update.task_id);
+      }
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting task:", error);
+    return NextResponse.json(
+      { error: "Failed to delete task" },
+      { status: 500 }
+    );
+  }
+}

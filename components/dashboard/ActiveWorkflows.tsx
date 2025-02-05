@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/card";
 
 interface Workflow {
-  id: string;
+  workflow_id: string;
   name: string;
   status: string;
   updated_at: string;
@@ -35,7 +35,7 @@ export function ActiveWorkflows({ workflows }: ActiveWorkflowsProps) {
           <div className="space-y-4">
             {workflows.map((workflow) => (
               <div
-                key={workflow.id}
+                key={workflow.workflow_id}
                 className="flex items-center justify-between p-4 border rounded-lg"
               >
                 <div className="flex items-center space-x-4">

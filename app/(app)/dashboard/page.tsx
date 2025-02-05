@@ -8,6 +8,7 @@ import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { ActiveWorkflows } from "@/components/dashboard/ActiveWorkflows";
 import { formatRelativeTime } from "@/lib/utils";
 
+
 export default async function Dashboard() {
   const supabase = await createClient();
   const {
@@ -25,9 +26,15 @@ export default async function Dashboard() {
 
   // Fetch latest agents
   const { data: agents, error: agentsError } = await supabase
-    .from("assistant")
-    .select("*")
-    .eq("owner_id", user.id)
+    .from("user_assistants")
+    .select(
+      `
+      assistant:assistant_id (
+        *
+      )
+    `
+    )
+    .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
   if (agentsError) {
@@ -37,7 +44,7 @@ export default async function Dashboard() {
   // Fetch latest workflows
   const { data: workflows, error: workflowsError } = await supabase
     .from("workflows")
-    .select("id, name, created_at, updated_at, status")
+    .select("workflow_id, name, created_at, updated_at, status")
     .eq("owner_id", user.id)
     .order("created_at", { ascending: false })
     .limit(3);
