@@ -1,4 +1,4 @@
-import { ThreadState, Client } from "@langchain/langgraph-sdk";
+import { ThreadState } from "@langchain/langgraph-sdk";
 
 type StreamMode = "values" | "messages" | "updates";
 
@@ -11,17 +11,20 @@ interface ThreadStateValues {
   [key: string]: unknown;
 }
 
-const createClient = () => {
-  const apiUrl =
-    process.env.LANGGRAPH_URL ?? "https://8ca6-174-174-117-152.ngrok-free.app";
-  return new Client({
-    apiUrl,
-  });
-};
-
 export const createAssistant = async (graphId: string) => {
-  const client = createClient();
-  return client.assistants.create({ graphId });
+  const response = await fetch("/api/assistants", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ graphId }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to create assistant");
+  }
+
+  return response.json();
 };
 
 export const createThread = async (assistantId: string) => {
