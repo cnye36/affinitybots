@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
-import { Client } from "@langchain/langgraph-sdk";
+import { getLangGraphClient } from "@/lib/langchain/client";
 import { NextRequest } from "next/server";
 
 // GET - Get a thread and its messages
@@ -9,7 +9,7 @@ export async function GET(
   props: { params: Promise<{ id: string; threadId: string }> }
 ) {
   const { threadId } = await props.params;
-  const client = new Client();
+  const client = getLangGraphClient();
   try {
     const supabase = await createClient();
     const {
@@ -47,8 +47,28 @@ export async function DELETE(
   props: { params: Promise<{ id: string; threadId: string }> }
 ) {
   const { threadId } = await props.params;
+  const client = getLangGraphClient();
   try {
-    const client = new Client();
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Get the thread first to verify ownership
+    const thread = await client.threads.get(threadId);
+
+    if (!thread) {
+      return NextResponse.json({ error: "Thread not found" }, { status: 404 });
+    }
+
+    // Verify thread ownership
+    if (thread.metadata?.user_id !== user.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
     // Delete the thread
     await client.threads.delete(threadId);

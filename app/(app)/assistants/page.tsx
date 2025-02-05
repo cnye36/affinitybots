@@ -39,7 +39,9 @@ export default function AgentsPage() {
     async function loadAgents() {
       try {
         console.log("Starting to load assistants...");
-        const response = await fetch("/api/assistants");
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_APP_URL}/api/assistants`
+        );
         console.log("Response status:", response.status);
 
         if (!response.ok) {

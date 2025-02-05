@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
-import { Client } from "@langchain/langgraph-sdk";
+import { getLangGraphClient } from "@/lib/langchain/client";
 
 export async function GET(
   request: Request,
-  props: { params: Promise<{ id: string }> }
+  props: { params: Promise<{ assistant_id: string }> }
 ) {
-  const client = new Client();
-  const params = await props.params;
+  const client = getLangGraphClient();
+  const { assistant_id } = await props.params;
   try {
     const supabase = await createClient();
 
@@ -21,7 +21,7 @@ export async function GET(
 
     try {
       // Get the assistant by ID
-      const assistant = await client.assistants.get(params.id);
+      const assistant = await client.assistants.get(assistant_id);
 
       if (!assistant) {
         return NextResponse.json(
@@ -31,7 +31,7 @@ export async function GET(
       }
 
       // Verify the assistant belongs to the current user
-      if (assistant.config?.configurable?.owner_id !== user.id) {
+      if (assistant.metadata?.owner_id !== user.id) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
 

@@ -1,14 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
-import { Client } from "@langchain/langgraph-sdk";
-
+import { getLangGraphClient } from "@/lib/langchain/client";
 
 export async function POST(
   request: Request,
   props: { params: Promise<{ assistant_id: string }> }
 ) {
   const params = await props.params;
-  const client = new Client();
+  const client = getLangGraphClient();
   try {
     const supabase = await createClient();
     const {
@@ -40,7 +39,7 @@ export async function GET(
   props: { params: Promise<{ assistant_id: string }> }
 ) {
   const params = await props.params;
-  const client = new Client();
+  const client = getLangGraphClient();
   try {
     const supabase = await createClient();
     const {

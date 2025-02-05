@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
 import { generateAgentConfiguration } from "@/lib/langchain/agent/agent-generation";
-import { Client } from "@langchain/langgraph-sdk";
+import { getLangGraphClient } from "@/lib/langchain/client";
 
 export async function POST(request: Request) {
-  const client = new Client();
+  const client = getLangGraphClient();
   try {
     const supabase = await createClient();
 
@@ -53,7 +53,7 @@ export async function POST(request: Request) {
 }
 
 export async function GET() {
-  const client = new Client();
+  const client = getLangGraphClient();
   try {
     const supabase = await createClient();
 

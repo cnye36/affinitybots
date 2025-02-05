@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
-import { Client } from "@langchain/langgraph-sdk";
+import { getLangGraphClient } from "@/lib/langchain/client";
 
 // GET - List recent runs for a thread
 export async function GET(
@@ -8,7 +8,7 @@ export async function GET(
   props: { params: Promise<{ id: string; threadId: string }> }
 ) {
   const { threadId } = await props.params;
-  const client = new Client();
+  const client = getLangGraphClient();
   try {
     const supabase = await createClient();
     const {
@@ -36,7 +36,7 @@ export async function POST(
   props: { params: Promise<{ id: string; threadId: string }> }
 ) {
   const { id, threadId } = await props.params;
-  const client = new Client();
+  const client = getLangGraphClient();
   try {
     const supabase = await createClient();
     const {

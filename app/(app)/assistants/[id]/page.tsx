@@ -2,6 +2,7 @@ import { createClient } from "@/supabase/server";
 import ChatContainer from "@/components/chat/ChatContainer";
 import { AgentPageHeader } from "@/components/agents/AgentPageHeader";
 import { notFound } from "next/navigation";
+import { Assistant } from "@/types";
 
 interface AssistantPageProps {
   params: Promise<{
@@ -13,34 +14,28 @@ export default async function AssistantPage(props: AssistantPageProps) {
   const params = await props.params;
   const supabase = await createClient();
 
-  // Check authentication
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return notFound();
-  }
-
-  // Fetch assistant details
   try {
-    const response = await fetch(
-      `${process.env.LANGGRAPH_URL}/assistants/${params.id}`,
-      {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    // Check authentication
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      return notFound();
+    }
 
+    // Fetch assistant details
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_APP_URL}/api/assistants/${params.assistant_id}`
+    );
     if (!response.ok) {
       return notFound();
     }
 
-    const assistant = await response.json();
+    const assistantData: Assistant = await response.json();
 
     return (
       <div className="flex flex-col h-screen">
-        <AgentPageHeader assistant={assistant} />
+        <AgentPageHeader assistant={assistantData} />
         <main className="flex-1 overflow-hidden">
           <ChatContainer assistantId={params.id} />
         </main>
@@ -51,3 +46,4 @@ export default async function AssistantPage(props: AssistantPageProps) {
     return notFound();
   }
 }
+

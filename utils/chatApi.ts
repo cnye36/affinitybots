@@ -27,6 +27,18 @@ export const createAssistant = async (graphId: string) => {
   return response.json();
 };
 
+export const getAssistant = async (assistantId: string) => {
+  const response = await fetch(`/api/assistants/${assistantId}`, {
+    method: "GET",
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch assistant");
+  }
+
+  return response.json();
+};
+
 export const createThread = async (assistantId: string) => {
   const response = await fetch(`/api/assistants/${assistantId}/threads`, {
     method: "POST",

@@ -3,9 +3,11 @@
 import { createClient } from "@/supabase/server";
 import { revalidatePath } from "next/cache";
 import { generateAgentConfiguration } from "@/lib/langchain/agent/agent-generation";
+import { getLangGraphClient } from "@/lib/langchain/client";
 
 export async function createAgent(formData: FormData) {
   const supabase = await createClient();
+  const client = getLangGraphClient();
 
   try {
     const {
@@ -24,32 +26,16 @@ export async function createAgent(formData: FormData) {
     );
 
     try {
-      // Create the assistant in LangGraph with proper configuration
-      const response = await fetch(`${process.env.LANGGRAPH_URL}/assistants`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.LANGSMITH_API_KEY}`,
+      // Create the assistant using LangGraph client
+      const langGraphAssistant = await client.assistants.create({
+        graphId: "agent",
+        name: agentConfig.name,
+        metadata: agentConfig.metadata,
+        config: {
+          configurable: agentConfig.configurable,
         },
-        body: JSON.stringify({
-          graph_id: "agent",
-          name: agentConfig.name,
-          metadata: agentConfig.metadata,
-          config: {
-            configurable: agentConfig.configurable,
-          },
-        }),
       });
 
-      // Log the raw response
-      const rawText = await response.text();
-      console.log("Raw LangGraph API Response:", rawText);
-
-      if (!response.ok) {
-        throw new Error(`LangGraph API error: ${rawText}`);
-      }
-
-      const langGraphAssistant = JSON.parse(rawText);
       console.log("LangGraph assistant created:", langGraphAssistant);
 
       revalidatePath("/assistants");
@@ -68,6 +54,6 @@ export async function createAgent(formData: FormData) {
     }
   } catch (error) {
     console.error("Error creating agent:", error);
-    return { error: String(error) };
+    throw error;
   }
 }
