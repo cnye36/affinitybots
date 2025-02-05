@@ -13,7 +13,7 @@ interface ThreadStateValues {
 
 const createClient = () => {
   const apiUrl =
-    process.env.NEXT_PUBLIC_LANGGRAPH_URL ?? "http://localhost:8123";
+    process.env.LANGGRAPH_URL ?? "https://8ca6-174-174-117-152.ngrok-free.app";
   return new Client({
     apiUrl,
   });
