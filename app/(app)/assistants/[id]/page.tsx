@@ -4,13 +4,13 @@ import { AgentPageHeader } from "@/components/agents/AgentPageHeader";
 import { redirect } from "next/navigation";
 
 interface AssistantPageProps {
-  params: Promise<{
+  params: {
     id: string;
-  }>;
+  };
 }
 
 export default async function AssistantPage(props: AssistantPageProps) {
-  const params = await props.params;
+  const params = props.params;
   const supabase = await createClient();
   const {
     data: { user },
