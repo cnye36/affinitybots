@@ -11,38 +11,18 @@ interface ThreadStateValues {
   [key: string]: unknown;
 }
 
-export const createAssistant = async (graphId: string) => {
-  const response = await fetch("/api/assistants", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ graphId }),
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to create assistant");
-  }
-
-  return response.json();
+const getBaseUrl = () => {
+  return process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 };
 
-export const getAssistant = async (assistantId: string) => {
-  const response = await fetch(`/api/assistants/${assistantId}`, {
-    method: "GET",
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch assistant");
-  }
-
-  return response.json();
-};
 
 export const createThread = async (assistantId: string) => {
-  const response = await fetch(`/api/assistants/${assistantId}/threads`, {
-    method: "POST",
-  });
+  const response = await fetch(
+    `${getBaseUrl()}/api/assistants/${assistantId}/threads`,
+    {
+      method: "POST",
+    }
+  );
   if (!response.ok) {
     throw new Error("Failed to create thread");
   }
@@ -54,7 +34,7 @@ export const getThreadState = async (
   assistantId: string
 ): Promise<ThreadState<ThreadStateValues>> => {
   const response = await fetch(
-    `/api/assistants/${assistantId}/threads/${threadId}`
+    `${getBaseUrl()}/api/assistants/${assistantId}/threads/${threadId}`
   );
   if (!response.ok) {
     throw new Error("Failed to get thread state");
@@ -71,7 +51,7 @@ export const updateState = async (
   }
 ) => {
   const response = await fetch(
-    `/api/assistants/${assistantId}/threads/${threadId}`,
+    `${getBaseUrl()}/api/assistants/${assistantId}/threads/${threadId}`,
     {
       method: "PUT",
       headers: {
@@ -97,7 +77,9 @@ export const sendMessage = async (params: {
   streamMode: StreamMode;
 }) => {
   const response = await fetch(
-    `/api/assistants/${params.assistantId}/threads/${params.threadId}/runs`,
+    `${getBaseUrl()}/api/assistants/${params.assistantId}/threads/${
+      params.threadId
+    }/runs`,
     {
       method: "POST",
       headers: {

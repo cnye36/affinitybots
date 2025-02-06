@@ -27,8 +27,8 @@ export default function NewAgentPage() {
     formData.append('useTemplate', template === AGENT_TEMPLATES[0] ? 'false' : 'true')
 
     const result = await createAgent(formData)
-    
-    if (result.error) {
+
+    if (!result.success) {
       setError(result.error)
       setIsSubmitting(false)
     } else {

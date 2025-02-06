@@ -30,6 +30,8 @@ interface AgentNodeProps {
   };
 }
 
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
 export const AgentNode = memo(({ data }: AgentNodeProps) => {
   const [assistant, setAssistant] = useState<Assistant | null>(null);
   const [tasks, setTasks] = useState<WorkflowTask[]>([]);
@@ -45,10 +47,10 @@ export const AgentNode = memo(({ data }: AgentNodeProps) => {
     const fetchAssistantAndTasks = async () => {
       try {
         const [assistantResponse, tasksResponse] = await Promise.all([
-          axios.get(`/api/assistants/${data.assistant_id}`),
+          axios.get(`${baseUrl}/api/assistants/${data.assistant_id}`),
           data.workflowId
             ? axios.get(
-                `/api/workflows/${data.workflowId}/tasks?assistant_id=${data.assistant_id}`
+                `${baseUrl}/api/workflows/${data.workflowId}/tasks?assistant_id=${data.assistant_id}`
               )
             : Promise.resolve({ data: { tasks: [] } }),
         ]);
@@ -96,7 +98,7 @@ export const AgentNode = memo(({ data }: AgentNodeProps) => {
       if (selectedTask) {
         // Update existing task
         const response = await axios.put(
-          `/api/workflows/${data.workflowId}/tasks/${selectedTask.task_id}`,
+          `${baseUrl}/api/workflows/${data.workflowId}/tasks/${selectedTask.task_id}`,
           taskData
         );
         setTasks(
@@ -108,7 +110,7 @@ export const AgentNode = memo(({ data }: AgentNodeProps) => {
       } else {
         // Create new task
         const response = await axios.post(
-          `/api/workflows/${data.workflowId}/tasks`,
+          `${baseUrl}/api/workflows/${data.workflowId}/tasks`,
           {
             ...taskData,
             assistant_id: data.assistant_id,

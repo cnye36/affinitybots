@@ -14,7 +14,8 @@ export const getLangGraphClient = () => {
   }
 
   langGraphClient = new Client({
-    apiUrl: langGraphUrl,
+    apiUrl: process.env.LANGRAPH_URL,
+    apiKey: process.env.LANGSMITH_API_KEY,
   });
 
   return langGraphClient;
