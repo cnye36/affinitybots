@@ -2,16 +2,15 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
 import { getLangGraphClient } from "@/lib/langchain/client";
 
-export async function GET(
-  request: Request,
-  { params }: { params: { assistant_id: string } }
-) {
+export async function GET(request: Request, props: { params: Promise<{ assistant_id: string }> }) {
+  const params = await props.params;
   const client = getLangGraphClient();
   try {
     const supabase = await createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
+    console.log("I am working here as well", user);
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

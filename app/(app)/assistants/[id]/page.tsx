@@ -4,12 +4,13 @@ import { AgentPageHeader } from "@/components/agents/AgentPageHeader";
 import { redirect } from "next/navigation";
 
 interface AssistantPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
-export default async function AssistantPage({ params }: AssistantPageProps) {
+export default async function AssistantPage(props: AssistantPageProps) {
+  const params = await props.params;
   const supabase = await createClient();
   const {
     data: { user },
@@ -19,34 +20,21 @@ export default async function AssistantPage({ params }: AssistantPageProps) {
   if (userError) {
     console.error("Error fetching user:", userError);
   }
-
+  console.log("I am working here", user);
   if (!user) {
     redirect("/signin");
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-  const response = await fetch(`${baseUrl}/api/assistants/${params.id}`, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
+  // Fetch assistant data directly via Supabase
+  const { data: assistantData, error: assistantError } = await supabase
+    .from("assistant")
+    .select("*")
+    .eq("assistant_id", params.id)
+    .single();
 
-  if (!response.ok) {
-    console.error("Response not OK:", response.status, response.statusText);
-    const errorText = await response.text();
-    console.error("Error response body:", errorText);
-    throw new Error(
-      `Failed to load assistant: ${response.status} ${response.statusText}`
-    );
-  }
-
-  let assistantData;
-  try {
-    assistantData = await response.json();
-  } catch (error) {
-    console.error("Failed to parse response as JSON:", error);
-    throw new Error("Invalid response format from server");
+  if (assistantError) {
+    console.error("Error fetching assistant:", assistantError);
+    throw new Error("Failed to load assistant data");
   }
 
   if (!assistantData) {

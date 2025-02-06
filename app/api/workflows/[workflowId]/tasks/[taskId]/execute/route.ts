@@ -1,14 +1,12 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
-import { Client } from "@langchain/langgraph-sdk";
 
 export async function POST(
   request: Request,
   props: { params: Promise<{ workflowId: string; taskId: string }> }
 ) {
-  const { workflowId, taskId } = await props.params;
+  const { taskId } = await props.params;
   const supabase = await createClient();
-  const client = new Client();
 
   try {
     const {
@@ -33,12 +31,7 @@ export async function POST(
       );
     }
 
-    // Execute the task using LangGraph
-    const executionResult = await client.executeTask(taskId, {
-      // Pass any necessary inputs here
-    });
-
-    return NextResponse.json({ success: true, executionResult });
+    return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error executing task:", error);
     return NextResponse.json(

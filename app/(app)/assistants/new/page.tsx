@@ -26,13 +26,14 @@ export default function NewAgentPage() {
     formData.append('agentType', template.id)
     formData.append('useTemplate', template === AGENT_TEMPLATES[0] ? 'false' : 'true')
 
-    const result = await createAgent(formData)
-
-    if (!result.success) {
-      setError(result.error)
-      setIsSubmitting(false)
-    } else {
+    try {
+      await createAgent(formData);
       router.push("/assistants");
+    } catch (error) {
+      setError(
+        error instanceof Error ? error.message : "Failed to create agent"
+      );
+      setIsSubmitting(false);
     }
   }
 
