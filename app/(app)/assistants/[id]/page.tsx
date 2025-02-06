@@ -2,16 +2,19 @@ import { createClient } from "@/supabase/server";
 import ChatContainer from "@/components/chat/ChatContainer";
 import { AgentPageHeader } from "@/components/agents/AgentPageHeader";
 import { redirect } from "next/navigation";
+import { getLangGraphClient } from "@/lib/langchain/client";
 
 interface AssistantPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default async function AssistantPage(props: AssistantPageProps) {
-  const params = props.params;
+  const params = await props.params;
   const supabase = await createClient();
+  const client = getLangGraphClient();
+
   const {
     data: { user },
     error: userError,
@@ -20,30 +23,33 @@ export default async function AssistantPage(props: AssistantPageProps) {
   if (userError) {
     console.error("Error fetching user:", userError);
   }
-  console.log("I am working here", user);
+
   if (!user) {
     redirect("/signin");
   }
 
-  // Fetch assistant data directly via Supabase
-  const { data: assistantData, error: assistantError } = await supabase
-    .from("assistant")
-    .select("*")
-    .eq("assistant_id", params.id)
-    .single();
+  // Fetch assistant data directly using LangGraph client
+  const assistant = await client.assistants.get(params.id);
 
-  if (assistantError) {
-    console.error("Error fetching assistant:", assistantError);
-    throw new Error("Failed to load assistant data");
+  if (!assistant || assistant.metadata?.owner_id !== user.id) {
+    throw new Error("Assistant not found or access denied");
   }
 
-  if (!assistantData) {
-    throw new Error("No assistant data received");
-  }
+  // Ensure metadata and config match our Assistant type
+  const typedAssistant = {
+    ...assistant,
+    metadata: assistant.metadata || {},
+    config: {
+      configurable: {
+        ...assistant.config?.configurable,
+        owner_id: assistant.metadata?.owner_id as string,
+      },
+    },
+  };
 
   return (
     <div className="flex flex-col h-screen">
-      <AgentPageHeader assistant={assistantData} />
+      <AgentPageHeader assistant={typedAssistant} />
       <main className="flex-1 overflow-hidden">
         <ChatContainer assistantId={params.id} />
       </main>
