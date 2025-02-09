@@ -30,7 +30,7 @@ interface AgentNodeProps {
   };
 }
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+const baseUrl = process.env.NEXT_PUBLIC_URL;
 
 export const AgentNode = memo(({ data }: AgentNodeProps) => {
   const [assistant, setAssistant] = useState<Assistant | null>(null);

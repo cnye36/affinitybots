@@ -40,7 +40,7 @@ export default function AgentsPage() {
       try {
         console.log("Starting to load assistants...");
         const baseUrl =
-          process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+          process.env.NEXT_PUBLIC_URL;
         const response = await fetch(`${baseUrl}/api/assistants`);
         console.log("Response status:", response.status);
 

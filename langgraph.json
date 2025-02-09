@@ -1,4 +1,14 @@
 {
+  "dockerfile_lines": [
+    "RUN npm install -g corepack@latest",
+    "RUN corepack enable",
+    "RUN corepack prepare pnpm@latest-9 --activate",
+    "WORKDIR /app",
+    "COPY . .",
+    "RUN pnpm install",
+    "RUN pnpm run build"
+  ],
+
   "dependencies": ["."],
   "graphs": {
     "agent": "./lib/langchain/agent/agent.ts:graph"

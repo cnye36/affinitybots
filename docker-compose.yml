@@ -1,17 +1,6 @@
-volumes:
-    langgraph-data:
-        driver: local
-
-networks:
-    langgraph-net:
-        driver: bridge
-        enable_ipv6: false
-
 services:
     langgraph-redis:
-        image: redis:6
-        networks:
-            - langgraph-net
+        image: redis:alpine
         healthcheck:
             test: redis-cli ping
             interval: 5s
@@ -19,27 +8,20 @@ services:
             retries: 5
 
     langgraph-api:
-        image: langgraph-agenthub
-        networks:
-            - langgraph-net
+        image: "agenthub-2:latest"
         ports:
             - "8123:8000"
+        depends_on:
+            langgraph-redis:
+                condition: service_healthy
         env_file:
             - .env
         environment:
-            # Service-specific configurations
             REDIS_URI: redis://langgraph-redis:6379
-            # AI Provider Keys (from .env)
             OPENAI_API_KEY: ${OPENAI_API_KEY}
-            ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
-            # Tool Keys (from .env)
             TAVILY_API_KEY: ${TAVILY_API_KEY}
-            NOTION_API_KEY: ${NOTION_API_KEY}
-            SERPER_API_KEY: ${SERPER_API_KEY}
             WOLFRAM_ALPHA_APP_ID: ${WOLFRAM_ALPHA_APP_ID}
-            # Database Connections
             POSTGRES_URI: postgresql://postgres:1zmFyZOWylOfM0ic@db.lcnkzptzirdcvemvbjan.supabase.co:5432/postgres?sslmode=require
-            # Langsmith Configuration
             LANGSMITH_API_KEY: ${LANGSMITH_API_KEY}
             LANGSMITH_ENDPOINT: ${LANGSMITH_ENDPOINT}
             LANGSMITH_PROJECT: ${LANGSMITH_PROJECT}
