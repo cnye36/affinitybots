@@ -1,7 +1,6 @@
 import React, { memo, useEffect, useState } from "react";
 import { Handle, Position } from "reactflow";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import axios from "axios";
 import {
   Tooltip,
   TooltipContent,
@@ -30,7 +29,6 @@ interface AgentNodeProps {
   };
 }
 
-const baseUrl = process.env.NEXT_PUBLIC_URL;
 
 export const AgentNode = memo(({ data }: AgentNodeProps) => {
   const [assistant, setAssistant] = useState<Assistant | null>(null);
@@ -47,15 +45,19 @@ export const AgentNode = memo(({ data }: AgentNodeProps) => {
     const fetchAssistantAndTasks = async () => {
       try {
         const [assistantResponse, tasksResponse] = await Promise.all([
-          axios.get(`${baseUrl}/api/assistants/${data.assistant_id}`),
+          fetch(`/api/assistants/${data.assistant_id}`).then(res => {
+            if (!res.ok) throw new Error('Failed to fetch assistant');
+            return res.json();
+          }),
           data.workflowId
-            ? axios.get(
-                `${baseUrl}/api/workflows/${data.workflowId}/tasks?assistant_id=${data.assistant_id}`
-              )
-            : Promise.resolve({ data: { tasks: [] } }),
+            ? fetch(`/api/workflows/${data.workflowId}/tasks?assistant_id=${data.assistant_id}`).then(res => {
+                if (!res.ok) throw new Error('Failed to fetch tasks');
+                return res.json();
+              })
+            : Promise.resolve({ tasks: [] }),
         ]);
-        setAssistant(assistantResponse.data);
-        setTasks(tasksResponse.data.tasks || []);
+        setAssistant(assistantResponse);
+        setTasks(tasksResponse.tasks || []);
       } catch (err) {
         console.error("Error fetching assistant or tasks:", err);
         setError("Failed to load assistant data");
@@ -97,27 +99,47 @@ export const AgentNode = memo(({ data }: AgentNodeProps) => {
     try {
       if (selectedTask) {
         // Update existing task
-        const response = await axios.put(
-          `${baseUrl}/api/workflows/${data.workflowId}/tasks/${selectedTask.task_id}`,
-          taskData
+        const response = await fetch(
+          `/api/workflows/${data.workflowId}/tasks/${selectedTask.task_id}`,
+          {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(taskData),
+          }
         );
+        
+        if (!response.ok) throw new Error('Failed to update task');
+        const updatedTask = await response.json();
+        
         setTasks(
           tasks.map((t) =>
-            t.task_id === selectedTask.task_id ? response.data : t
+            t.task_id === selectedTask.task_id ? updatedTask : t
           )
         );
         toast.success("Task updated successfully");
       } else {
         // Create new task
-        const response = await axios.post(
-          `${baseUrl}/api/workflows/${data.workflowId}/tasks`,
+        const response = await fetch(
+          `/api/workflows/${data.workflowId}/tasks`,
           {
-            ...taskData,
-            assistant_id: data.assistant_id,
-            workflow_id: data.workflowId,
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              ...taskData,
+              assistant_id: data.assistant_id,
+              workflow_id: data.workflowId,
+            }),
           }
         );
-        setTasks([...tasks, response.data]);
+        
+        if (!response.ok) throw new Error('Failed to create task');
+        const newTask = await response.json();
+        
+        setTasks([...tasks, newTask]);
         toast.success("Task created successfully");
       }
     } catch (err) {

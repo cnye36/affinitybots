@@ -11,14 +11,9 @@ interface ThreadStateValues {
   [key: string]: unknown;
 }
 
-const getBaseUrl = () => {
-  return process.env.NEXT_PUBLIC_URL;
-};
-
-
 export const createThread = async (assistantId: string) => {
   const response = await fetch(
-    `${getBaseUrl()}/api/assistants/${assistantId}/threads`,
+    `/api/assistants/${assistantId}/threads`,
     {
       method: "POST",
     }
@@ -34,7 +29,7 @@ export const getThreadState = async (
   assistantId: string
 ): Promise<ThreadState<ThreadStateValues>> => {
   const response = await fetch(
-    `${getBaseUrl()}/api/assistants/${assistantId}/threads/${threadId}`
+    `/api/assistants/${assistantId}/threads/${threadId}`
   );
   if (!response.ok) {
     throw new Error("Failed to get thread state");
@@ -51,7 +46,7 @@ export const updateState = async (
   }
 ) => {
   const response = await fetch(
-    `${getBaseUrl()}/api/assistants/${assistantId}/threads/${threadId}`,
+    `/api/assistants/${assistantId}/threads/${threadId}`,
     {
       method: "PUT",
       headers: {
@@ -77,7 +72,7 @@ export const sendMessage = async (params: {
   streamMode: StreamMode;
 }) => {
   const response = await fetch(
-    `${getBaseUrl()}/api/assistants/${params.assistantId}/threads/${
+    `/api/assistants/${params.assistantId}/threads/${
       params.threadId
     }/runs`,
     {
