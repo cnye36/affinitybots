@@ -3,6 +3,8 @@ import { createClient } from "@/supabase/server";
 import { generateAgentConfiguration } from "@/lib/langchain/agent/agent-generation";
 import { getLangGraphClient } from "@/lib/langchain/client";
 
+export const runtime = "nodejs";
+
 export async function POST(request: Request) {
   const client = getLangGraphClient();
   try {
@@ -41,7 +43,7 @@ export async function POST(request: Request) {
         },
       },
     });
-
+    console.log("Assistant created:", assistant);
     return NextResponse.json(assistant);
   } catch (error) {
     console.error("Error creating assistant:", error);
@@ -53,8 +55,8 @@ export async function POST(request: Request) {
 }
 
 export async function GET() {
-  const client = getLangGraphClient();
   try {
+    console.log("API route Hit: /api/assistants");
     const supabase = await createClient();
 
     const {
@@ -65,6 +67,8 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const client = getLangGraphClient();
+    console.log("LangGraph URL:", process.env.LANGGRAPH_URL);
     try {
       // Get all assistants for this user using metadata filter
       const assistants = await client.assistants.search({

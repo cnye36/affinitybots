@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateChatName } from "@/lib/chat-utils";
 
+export const runtime = "nodejs";
+
 export async function POST(request: NextRequest) {
   try {
     const { conversation } = await request.json();

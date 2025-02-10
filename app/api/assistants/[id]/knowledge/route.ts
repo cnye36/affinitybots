@@ -6,6 +6,8 @@ import { Document } from "@langchain/core/documents";
 import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 import { SupabaseVectorStore } from "@langchain/community/vectorstores/supabase";
 
+export const runtime = "nodejs";
+
 export async function POST(
   request: Request,
   props: { params: Promise<{ id: string }> }

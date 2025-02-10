@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
 import { getLangGraphClient } from "@/lib/langchain/client";
 
-// GET - List recent runs for a thread
+export const runtime = "nodejs";
+
 export async function GET(
   request: Request,
   props: { params: Promise<{ id: string; threadId: string }> }

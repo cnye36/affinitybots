@@ -3,7 +3,8 @@ import { createClient } from "@/supabase/server";
 import { getLangGraphClient } from "@/lib/langchain/client";
 import { NextRequest } from "next/server";
 
-// GET - Get a thread and its messages
+export const runtime = "nodejs";
+
 export async function GET(
   request: Request,
   props: { params: Promise<{ id: string; threadId: string }> }

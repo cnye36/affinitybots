@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
 import { getLangGraphClient } from "@/lib/langchain/client";
 
+export const runtime = "nodejs";
+
 export async function POST(
   request: Request,
   props: { params: Promise<{ assistant_id: string }> }
