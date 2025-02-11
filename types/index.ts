@@ -9,6 +9,10 @@ export type ToolID = "web_search" | "wikipedia" | "wolfram_alpha";
 export interface ToolConfig {
   isEnabled: boolean;
   config: Record<string, unknown>;
+  knowledge_base?: {
+    isEnabled: boolean;
+    config: KnowledgeBaseConfig;
+  };
 }
 
 export interface ToolsConfig {
@@ -279,4 +283,9 @@ export interface Task {
       destination: string;
     };
   };
+}
+
+interface KnowledgeBaseConfig {
+  sources: string[];
+  files?: File[];
 }

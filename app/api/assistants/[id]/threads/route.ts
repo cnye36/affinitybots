@@ -10,6 +10,9 @@ export async function POST(
 ) {
   const params = await props.params;
   const client = getLangGraphClient();
+
+  console.log("LangGraph Url", process.env.LANGGRAPH_URL);
+  
   try {
     const supabase = await createClient();
     const {

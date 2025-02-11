@@ -25,20 +25,14 @@ export default async function Dashboard() {
   }
 
   // Fetch latest agents
-  const { data: agents, error: agentsError } = await supabase
-    .from("user_assistants")
-    .select(
-      `
-      assistant:assistant_id (
-        *
-      )
-    `
-    )
-    .eq("user_id", user.id)
+  const { data: assistants, error: assistantsError } = await supabase
+    .from("assistant")
+    .select("*")
+    .contains('metadata', { user_id: user.id })
     .order("created_at", { ascending: false });
 
-  if (agentsError) {
-    console.error("Error fetching agents:", agentsError);
+  if (assistantsError) {
+    console.error("Error fetching assistants:", assistantsError);
   }
 
   // Fetch latest workflows
@@ -80,7 +74,7 @@ export default async function Dashboard() {
   const stats = {
     activeWorkflows:
       workflows?.filter((w) => w.status === "active")?.length || 0,
-    totalAgents: agents?.length || 0,
+    totalAgents: assistants?.length || 0,
     successRate: "98%", // This should be calculated based on actual success/failure rates
     averageResponseTime: "1.2s", // This should be calculated based on actual response times
   };
