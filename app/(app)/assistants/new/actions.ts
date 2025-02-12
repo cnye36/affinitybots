@@ -3,11 +3,14 @@
 import { createClient } from "@/supabase/server";
 import { revalidatePath } from "next/cache";
 import { generateAgentConfiguration } from "@/lib/langchain/agent/agent-generation";
-import { getLangGraphClient } from "@/lib/langchain/client";
+import { Client } from "@langchain/langgraph-sdk";
 
 export async function createAgent(formData: FormData) {
   const supabase = await createClient();
-  const client = getLangGraphClient();
+  const client = new Client({
+    apiUrl: process.env.LANGGRAPH_URL,
+    apiKey: process.env.LANGSMITH_API_KEY,
+  });
 
   try {
     const {

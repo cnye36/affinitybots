@@ -2,7 +2,6 @@ import { createClient } from "@/supabase/server";
 import ChatContainer from "@/components/chat/ChatContainer";
 import { AgentPageHeader } from "@/components/agents/AgentPageHeader";
 import { redirect } from "next/navigation";
-import { getLangGraphClient } from "@/lib/langchain/client";
 
 interface AssistantPageProps {
   params: Promise<{
@@ -13,26 +12,36 @@ interface AssistantPageProps {
 export default async function AssistantPage(props: AssistantPageProps) {
   const params = await props.params;
   const supabase = await createClient();
-  const client = getLangGraphClient();
 
   const {
     data: { user },
     error: userError,
   } = await supabase.auth.getUser();
 
-  if (userError) {
-    console.error("Error fetching user:", userError);
-  }
-
-  if (!user) {
+  if (userError || !user) {
     redirect("/signin");
   }
 
-  // Fetch assistant data directly using LangGraph client
-  const assistant = await client.assistants.get(params.id);
+  
+  const { data: userAssistant, error: userAssistantError } = await supabase
+    .from('user_assistants')
+    .select('assistant_id')
+    .eq('user_id', user.id)
+    .eq('assistant_id', params.id)
+    .single();
 
-  if (!assistant || assistant.metadata?.owner_id !== user.id) {
+  if (userAssistantError || !userAssistant) {
     throw new Error("Assistant not found or access denied");
+  }
+
+  const { data: assistant, error: assistantError } = await supabase
+    .from('assistant')
+    .select('*')
+    .eq('assistant_id', params.id)
+    .single();
+
+  if (assistantError || !assistant) {
+    throw new Error("Failed to fetch assistant details");
   }
 
   // Ensure metadata and config match our Assistant type

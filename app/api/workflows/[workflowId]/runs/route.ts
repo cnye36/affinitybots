@@ -8,7 +8,10 @@ export async function GET(
   props: { params: Promise<{ workflowId: string }> }
 ) {
   const { workflowId } = await props.params;
-  const client = new Client();
+  const client = new Client({
+    apiUrl: process.env.LANGGRAPH_URL,
+    apiKey: process.env.LANGSMITH_API_KEY,
+  });
   try {
     const supabase = await createClient();
     const {
@@ -52,7 +55,10 @@ export async function POST(
   props: { params: Promise<{ workflowId: string }> }
 ) {
   const { workflowId } = await props.params;
-  const client = new Client();
+  const client = new Client({
+    apiUrl: process.env.LANGGRAPH_URL,
+    apiKey: process.env.LANGSMITH_API_KEY,
+  });
   try {
     const supabase = await createClient();
     const {

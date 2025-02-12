@@ -1,18 +1,19 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
 import { generateAgentConfiguration } from "@/lib/langchain/agent/agent-generation";
-import { getLangGraphClient } from "@/lib/langchain/client";
+import { Client } from "@langchain/langgraph-sdk";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
-  const client = getLangGraphClient();
+  const client = new Client({
+    apiUrl: process.env.LANGGRAPH_URL,
+    apiKey: process.env.LANGSMITH_API_KEY,
+  });
+  
   try {
     const supabase = await createClient();
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -22,13 +23,9 @@ export async function POST(request: Request) {
     const { description, agentType } = body;
 
     // Generate the agent configuration
-    const config = await generateAgentConfiguration(
-      description,
-      agentType,
-      user.id
-    );
+    const config = await generateAgentConfiguration(description, agentType, user.id);
 
-    // Create a new assistant in LangGraph with proper structure
+    // Create assistant in LangGraph
     const assistant = await client.assistants.create({
       graphId: "agent",
       name: config.name,
@@ -43,7 +40,17 @@ export async function POST(request: Request) {
         },
       },
     });
-    console.log("Assistant created:", assistant);
+
+    // Create user-assistant relationship
+    const { error: relationError } = await supabase
+      .from('user_assistants')
+      .insert({
+        user_id: user.id,
+        assistant_id: assistant.assistant_id
+      });
+
+    if (relationError) throw relationError;
+
     return NextResponse.json(assistant);
   } catch (error) {
     console.error("Error creating assistant:", error);
@@ -56,44 +63,27 @@ export async function POST(request: Request) {
 
 export async function GET() {
   try {
-    console.log("API route Hit: /api/assistants");
     const supabase = await createClient();
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const client = getLangGraphClient();
-    console.log("LangGraph URL:", process.env.LANGGRAPH_URL);
-    try {
-      // Get all assistants for this user using metadata filter
-      const assistants = await client.assistants.search({
-        metadata: {
-          owner_id: user.id,
-        },
-      });
+    // Query assistants through the user_assistants junction table
+    const { data: assistants, error } = await supabase
+      .from('user_assistants')
+      .select(`
+        assistant:assistant (*)
+      `)
+      .eq('user_id', user.id);
 
-      if (!assistants) {
-        return NextResponse.json([]);
-      }
+    if (error) throw error;
 
-      // No need for additional filter since we're using metadata
-      const assistantsArray = Array.isArray(assistants)
-        ? assistants
-        : [assistants];
-
-      return NextResponse.json(assistantsArray);
-    } catch (langGraphError) {
-      console.error("LangGraph API error:", langGraphError);
-      return NextResponse.json(
-        { error: "Failed to fetch assistants from LangGraph" },
-        { status: 500 }
-      );
-    }
+    // Extract just the assistant data from the joined results
+    const formattedAssistants = assistants?.map(ua => ua.assistant) || [];
+    
+    return NextResponse.json(formattedAssistants);
   } catch (error) {
     console.error("Error in GET handler:", error);
     return NextResponse.json(

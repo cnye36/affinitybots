@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
-import { getLangGraphClient } from "@/lib/langchain/client";
+import { Client } from "@langchain/langgraph-sdk";
 import { NextRequest } from "next/server";
 
 export const runtime = "nodejs";
@@ -10,7 +10,10 @@ export async function GET(
   props: { params: Promise<{ id: string; threadId: string }> }
 ) {
   const { threadId } = await props.params;
-  const client = getLangGraphClient();
+  const client = new Client({
+    apiUrl: process.env.LANGGRAPH_URL,
+    apiKey: process.env.LANGSMITH_API_KEY,
+  });
   try {
     const supabase = await createClient();
     const {
@@ -48,7 +51,10 @@ export async function DELETE(
   props: { params: Promise<{ id: string; threadId: string }> }
 ) {
   const { threadId } = await props.params;
-  const client = getLangGraphClient();
+  const client = new Client({
+    apiUrl: process.env.LANGGRAPH_URL,
+    apiKey: process.env.LANGSMITH_API_KEY,
+  });
   try {
     const supabase = await createClient();
     const {
