@@ -9,17 +9,21 @@ import ReactFlow, {
   MiniMap,
   NodeTypes,
   EdgeTypes,
-  Connection,
   addEdge,
   applyNodeChanges,
   applyEdgeChanges,
   useReactFlow,
   BackgroundVariant,
   Panel,
+  OnConnect,
+  OnEdgesChange,
+  OnNodesChange,
+  MarkerType,
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { AgentNode } from "./AgentNode";
 import { CustomEdge } from "./CustomEdge";
+import { TaskNode } from "./TaskNode";
 import axios from "axios";
 import { Assistant } from "@/types/index";
 import { toast } from "@/hooks/use-toast";
@@ -34,6 +38,7 @@ interface WorkflowCanvasProps {
 
 const nodeTypes: NodeTypes = {
   agent: AgentNode,
+  task: TaskNode,
 };
 
 const edgeTypes: EdgeTypes = {
@@ -49,9 +54,48 @@ export function WorkflowCanvas({
 }: WorkflowCanvasProps) {
   const reactFlowInstance = useReactFlow();
 
-  const onConnect = useCallback(
-    (params: Edge | Connection) => setEdges((eds) => addEdge(params, eds)),
-    [setEdges]
+  const onConnect: OnConnect = useCallback(
+    (connection) => {
+      // Get the source and target nodes
+      const sourceNode = nodes.find((node) => node.id === connection.source);
+      const targetNode = nodes.find((node) => node.id === connection.target);
+
+      if (!sourceNode || !targetNode) return;
+
+      // Check if it's a task-to-task connection
+      if (sourceNode.type === "task" && targetNode.type === "task") {
+        if (
+          connection.sourceHandle === "task-source" &&
+          connection.targetHandle === "task-target"
+        ) {
+          setEdges((eds) => addEdge(connection, eds));
+        }
+        return;
+      }
+
+      // Check if it's an agent-to-agent connection
+      if (sourceNode.type === "agent" && targetNode.type === "agent") {
+        if (
+          connection.sourceHandle === "agent-source" &&
+          connection.targetHandle === "agent-target"
+        ) {
+          setEdges((eds) => addEdge(connection, eds));
+        }
+        return;
+      }
+
+      // Check if it's an agent-to-task connection
+      if (sourceNode.type === "agent" && targetNode.type === "task") {
+        if (
+          connection.sourceHandle === "task-handle" &&
+          connection.targetHandle === "task-target"
+        ) {
+          setEdges((eds) => addEdge(connection, eds));
+        }
+        return;
+      }
+    },
+    [nodes, setEdges]
   );
 
   const onDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
@@ -114,18 +158,22 @@ export function WorkflowCanvas({
     [nodes, setNodes, reactFlowInstance, initialWorkflowId]
   );
 
+  const onNodesChange: OnNodesChange = (changes) => {
+    setNodes((nds) => applyNodeChanges(changes, nds));
+  };
+
+  const onEdgesChange: OnEdgesChange = (changes) => {
+    setEdges((eds) => applyEdgeChanges(changes, eds));
+  };
+
   return (
     <div className="w-full h-full flex">
       <div className="w-full">
         <ReactFlow
           nodes={nodes}
           edges={edges}
-          onNodesChange={(changes) =>
-            setNodes((nds) => applyNodeChanges(changes, nds))
-          }
-          onEdgesChange={(changes) =>
-            setEdges((eds) => applyEdgeChanges(changes, eds))
-          }
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
@@ -135,6 +183,12 @@ export function WorkflowCanvas({
           defaultEdgeOptions={{
             type: "custom",
             animated: true,
+            style: { strokeWidth: 2 },
+            markerEnd: {
+              type: MarkerType.ArrowClosed,
+              width: 20,
+              height: 20,
+            },
           }}
           minZoom={0.2}
           maxZoom={4}

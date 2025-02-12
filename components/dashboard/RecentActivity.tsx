@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/card";
 
 interface ActivityItem {
-  type: "workflow_completed" | "agent_created" | "workflow_error";
+  type: "workflow_completed" | "assistant_created" | "workflow_error";
   message: string;
   time: string;
 }
