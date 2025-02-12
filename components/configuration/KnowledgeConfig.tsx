@@ -72,7 +72,7 @@ export function KnowledgeConfig({ config, onChange }: KnowledgeConfigProps) {
         formData.append("assistantId", config.owner_id);
 
         // Upload and process file
-        const response = await fetch("/api/documents", {
+        const response = await fetch("/api/knowledge", {
           method: "POST",
           body: formData,
         });

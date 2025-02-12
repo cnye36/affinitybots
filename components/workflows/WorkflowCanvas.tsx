@@ -22,7 +22,7 @@ import { AgentNode } from "./AgentNode";
 import { CustomEdge } from "./CustomEdge";
 import axios from "axios";
 import { Assistant } from "@/types/index";
-import { toast } from "react-toastify";
+import { toast } from "@/hooks/use-toast";
 
 interface WorkflowCanvasProps {
   nodes: Node[];
@@ -67,7 +67,9 @@ export function WorkflowCanvas({
 
       if (!assistantId || !initialWorkflowId) {
         if (!initialWorkflowId) {
-          toast.error("Please save the workflow first");
+          toast({
+            title: "Please save the workflow first",
+          });
         }
         return;
       }
@@ -104,7 +106,9 @@ export function WorkflowCanvas({
         reactFlowInstance.setViewport({ x: 0, y: 0, zoom });
       } catch (error) {
         console.error("Error fetching assistant:", error);
-        toast.error("Failed to add assistant to workflow");
+        toast({
+          title: "Failed to add assistant to workflow",
+        });
       }
     },
     [nodes, setNodes, reactFlowInstance, initialWorkflowId]
@@ -112,7 +116,7 @@ export function WorkflowCanvas({
 
   return (
     <div className="w-full h-full flex">
-      <div className="w-3/4">
+      <div className="w-full">
         <ReactFlow
           nodes={nodes}
           edges={edges}

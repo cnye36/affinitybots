@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
 import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
 import { DocxLoader } from "@langchain/community/document_loaders/fs/docx";
-import { TextLoader } from "langchain/document_loaders/fs/text";
 import { OpenAIEmbeddings } from "@langchain/openai";
 import { SupabaseVectorStore } from "@langchain/community/vectorstores/supabase";
 import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
@@ -12,12 +11,9 @@ export async function POST(req: Request) {
     const formData = await req.formData();
     const file = formData.get("file") as File;
     const assistantId = formData.get("assistantId") as string;
-    
+
     if (!file) {
-      return NextResponse.json(
-        { error: "No file provided" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
     // Process the file based on its type
@@ -38,8 +34,17 @@ export async function POST(req: Request) {
         break;
       case "text/plain":
         const text = await file.text();
-        const textLoader = new TextLoader(text);
-        docs = await textLoader.load();
+        // Create documents directly from the text content
+        docs = [
+          {
+            pageContent: text,
+            metadata: {
+              source: file.name,
+            },
+          },
+        ];
+        // Split the text content
+        docs = await textSplitter.splitDocuments(docs);
         break;
       default:
         return NextResponse.json(
@@ -55,7 +60,7 @@ export async function POST(req: Request) {
     const embeddings = new OpenAIEmbeddings();
 
     await SupabaseVectorStore.fromDocuments(
-      splitDocs.map(doc => ({
+      splitDocs.map((doc) => ({
         ...doc,
         metadata: {
           ...doc.metadata,
@@ -80,4 +85,4 @@ export async function POST(req: Request) {
       { status: 500 }
     );
   }
-} 
+}

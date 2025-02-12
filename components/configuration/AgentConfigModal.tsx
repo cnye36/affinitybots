@@ -12,7 +12,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import axios from "axios";
 import { GeneralConfig } from "./GeneralConfig";
 import { PromptsConfig } from "./PromptsConfig";
 import { ToolSelector } from "@/components/configuration/ToolSelector";
@@ -187,19 +186,29 @@ export function AgentConfigModal({
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.put(
+      const response = await fetch(
         `/api/assistants/${assistant.assistant_id}`,
         {
-          name: config.name,
-          metadata: config.metadata,
-          config: {
-            configurable: config.config.configurable,
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
           },
+          body: JSON.stringify({
+            name: config.name,
+            metadata: config.metadata,
+            config: config.config,
+          }),
         }
       );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const updatedAssistant = await response.json();
       await mutate(
         `/api/assistants/${assistant.assistant_id}`,
-        response.data,
+        updatedAssistant,
         false
       );
       await mutate("/api/assistants");

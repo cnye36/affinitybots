@@ -3,36 +3,16 @@
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import React, { useState, useEffect } from "react";
-import { Trash2, Settings } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { createClient } from "@/supabase/client";
-import { toast } from "react-toastify";
+import { toast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { Workflow } from "@/types/index";
-
-interface WorkflowNode {
-  data: {
-    assistant_id?: string;
-    label: string;
-  };
-}
-
-interface WorkflowWithAssistants extends Workflow {
-  assistants?: Array<{
-    assistant_id: string;
-    name: string;
-    config: {
-      configurable: {
-        avatar?: string;
-      };
-    };
-  }>;
-}
 
 export default function WorkflowsPage() {
   const router = useRouter();
-  const [workflows, setWorkflows] = useState<WorkflowWithAssistants[]>([]);
+  const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const supabase = createClient();
@@ -67,7 +47,6 @@ export default function WorkflowsPage() {
           return;
         }
 
-        // First get all workflows
         const { data: workflowsData, error: fetchError } = await supabase
           .from("workflows")
           .select("*")
@@ -76,33 +55,8 @@ export default function WorkflowsPage() {
 
         if (fetchError) throw fetchError;
 
-        // For each workflow, get the assistant details from the nodes
-        const workflowsWithAssistants = await Promise.all(
-          (workflowsData || []).map(async (workflow: Workflow) => {
-            // Extract unique assistant IDs from nodes
-            const assistantIds = [
-              ...new Set(
-                workflow.nodes
-                  .map((node: WorkflowNode) => node.data?.assistant_id)
-                  .filter(Boolean)
-              ),
-            ];
-
-            // Fetch assistant details for each unique ID
-            const { data: assistantsData } = await supabase
-              .from("assistants")
-              .select("assistant_id, name, config")
-              .in("assistant_id", assistantIds);
-
-            return {
-              ...workflow,
-              assistants: assistantsData || [],
-            };
-          })
-        );
-
         if (mounted) {
-          setWorkflows(workflowsWithAssistants);
+          setWorkflows(workflowsData || []);
           setError(null);
         }
       } catch (err) {
@@ -127,9 +81,11 @@ export default function WorkflowsPage() {
   }, [supabase]);
 
   const handleDeleteWorkflow = async (
+    e: React.MouseEvent,
     workflowId: string,
     workflowName: string
   ) => {
+    e.stopPropagation(); // Prevent the click from bubbling up to the parent
     const confirmDelete = window.confirm(
       `Are you absolutely sure you want to delete the workflow "${workflowName}"? ` +
         "This will permanently delete the workflow and ALL associated tasks. " +
@@ -145,17 +101,19 @@ export default function WorkflowsPage() {
 
         if (deleteError) throw deleteError;
 
-        // Remove the workflow from the local state
         setWorkflows(workflows.filter((w) => w.workflow_id !== workflowId));
-
-        // Show success toast
-        toast.success(`Workflow "${workflowName}" deleted successfully`);
+        toast({
+          title: `Workflow "${workflowName}" deleted successfully`,
+        });
       } catch (error) {
         console.error("Error deleting workflow:", error);
-        // Show error toast
-        toast.error(
-          error instanceof Error ? error.message : "Failed to delete workflow"
-        );
+        toast({
+          title: "Failed to delete workflow",
+          description:
+            error instanceof Error
+              ? error.message
+              : "Failed to delete workflow",
+        });
       }
     }
   };
@@ -187,20 +145,14 @@ export default function WorkflowsPage() {
           {workflows.map((workflow) => (
             <div
               key={workflow.workflow_id}
-              className="bg-card border rounded-xl p-6 hover:shadow-lg transition-all duration-200 relative group"
+              onClick={() => router.push(`/workflows/${workflow.workflow_id}`)}
+              className="bg-card border rounded-xl p-6 hover:shadow-lg transition-all duration-200 relative group cursor-pointer"
             >
               <div className="absolute top-4 right-4 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Link
-                  href={`/workflows/${workflow.workflow_id}`}
-                  className={buttonVariants({ variant: "ghost", size: "icon" })}
-                  title="Configure Workflow"
-                >
-                  <Settings className="h-4 w-4 text-muted-foreground group-hover:text-foreground" />
-                </Link>
                 <button
                   type="button"
-                  onClick={() =>
-                    handleDeleteWorkflow(workflow.workflow_id, workflow.name)
+                  onClick={(e) =>
+                    handleDeleteWorkflow(e, workflow.workflow_id, workflow.name)
                   }
                   className={buttonVariants({
                     variant: "ghost",
@@ -228,36 +180,6 @@ export default function WorkflowsPage() {
                       {new Date(workflow.updated_at).toLocaleDateString()}
                     </span>
                   </div>
-                </div>
-
-                <div className="flex -space-x-2 overflow-hidden">
-                  {workflow.assistants?.map((assistant) => (
-                    <div
-                      key={`${workflow.workflow_id}-assistant-${assistant.assistant_id}`}
-                      className="inline-block h-8 w-8 rounded-full ring-2 ring-background"
-                    >
-                      {assistant.config.configurable.avatar ? (
-                        <Image
-                          src={assistant.config.configurable.avatar}
-                          alt={assistant.name}
-                          width={32}
-                          height={32}
-                          className="h-full w-full rounded-full object-cover"
-                        />
-                      ) : (
-                        <div
-                          className="h-full w-full rounded-full flex items-center justify-center text-xs font-medium text-white"
-                          style={{
-                            backgroundColor: `hsl(${
-                              (assistant.name.length * 30) % 360
-                            }, 70%, 50%)`,
-                          }}
-                        >
-                          {assistant.name.slice(0, 2).toUpperCase()}
-                        </div>
-                      )}
-                    </div>
-                  ))}
                 </div>
               </div>
             </div>
