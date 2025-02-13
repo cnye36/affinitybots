@@ -24,6 +24,8 @@ interface WorkflowNode extends Node {
     task_id?: string;
     onAddTask?: (agentId: string) => void;
     isFirstAgent?: boolean;
+    hasTask?: boolean;
+    onAddAgent?: (sourceAgentId: string) => void;
   };
 }
 
@@ -321,6 +323,65 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
     setIsTaskModalOpen(true);
   };
 
+  const handleAddNextAgent = (sourceAgentId: string) => {
+    setSelectedAgentId(sourceAgentId);
+    setIsAgentSelectOpen(true);
+  };
+
+  const handleAgentSelect = async (assistant: Assistant) => {
+    if (!workflowId) {
+      toast({
+        title: "Please save the workflow first",
+        description: "You need to save the workflow before adding an agent",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Find source node if we're adding from an existing agent
+    const sourceNode = selectedAgentId
+      ? nodes.find((node) => node.data.assistant_id === selectedAgentId)
+      : null;
+
+    // Calculate position based on source node or default to center
+    const position = sourceNode
+      ? { x: sourceNode.position.x, y: sourceNode.position.y + 300 }
+      : { x: 400, y: 200 };
+
+    // Create new agent node
+    const newNode: WorkflowNode = {
+      id: `agent-${assistant.assistant_id}`,
+      type: "agent",
+      position,
+      data: {
+        label: assistant.name,
+        assistant_id: assistant.assistant_id,
+        workflowId,
+        onAddTask: handleAddTask,
+        onAddAgent: handleAddNextAgent,
+        isFirstAgent: !selectedAgentId,
+        hasTask: false,
+      },
+    };
+
+    // Create edge if we have a source node
+    if (sourceNode) {
+      const newEdge: Edge = {
+        id: `edge-${sourceNode.id}-${newNode.id}`,
+        source: sourceNode.id,
+        target: newNode.id,
+        type: "default",
+        sourceHandle: "agent-source",
+        targetHandle: "agent-target",
+      };
+      setEdges((eds) => [...eds, newEdge]);
+    }
+
+    setNodes((nds) => [...nds, newNode]);
+    setIsAgentSelectOpen(false);
+    setSelectedAgentId(null);
+  };
+
   const handleSaveTask = async (taskData: {
     name: string;
     description?: string;
@@ -350,13 +411,17 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
       if (!response.ok) throw new Error("Failed to create task");
       const newTask = await response.json();
 
-      // Calculate position for the new task node
+      // Find source node and update its hasTask flag
       const sourceNode = nodes.find(
         (node) => node.data.assistant_id === selectedAgentId
       );
-      const position = sourceNode
-        ? { x: sourceNode.position.x + 300, y: sourceNode.position.y }
-        : { x: 0, y: 0 };
+
+      if (!sourceNode) return;
+
+      const position = {
+        x: sourceNode.position.x + 300,
+        y: sourceNode.position.y,
+      };
 
       // Create new task node
       const newTaskNode: WorkflowNode = {
@@ -372,17 +437,25 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
 
       // Create edge from agent to task
       const newEdge: Edge = {
-        id: `edge-${sourceNode?.id}-${newTaskNode.id}`,
-        source: sourceNode?.id || "",
+        id: `edge-${sourceNode.id}-${newTaskNode.id}`,
+        source: sourceNode.id,
         target: newTaskNode.id,
         type: "default",
         sourceHandle: "task-handle",
         targetHandle: "task-target",
       };
 
+      // Update source node to show it has tasks
+      setNodes((nds) =>
+        nds.map((node) =>
+          node.id === sourceNode.id
+            ? { ...node, data: { ...node.data, hasTask: true } }
+            : node
+        )
+      );
+
       setNodes((nds) => [...nds, newTaskNode]);
       setEdges((eds) => [...eds, newEdge]);
-
       setIsTaskModalOpen(false);
     } catch (err) {
       console.error("Error saving task:", err);
@@ -396,34 +469,6 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
 
   const handleAddFirstAgent = () => {
     setIsAgentSelectOpen(true);
-  };
-
-  const handleAgentSelect = async (assistant: Assistant) => {
-    if (!workflowId) {
-      toast({
-        title: "Please save the workflow first",
-        description: "You need to save the workflow before adding an agent",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Create new agent node in center of viewport
-    const newNode: WorkflowNode = {
-      id: `agent-${assistant.assistant_id}`,
-      type: "agent",
-      position: { x: 400, y: 200 }, // Center position
-      data: {
-        label: assistant.name,
-        assistant_id: assistant.assistant_id,
-        workflowId,
-        onAddTask: handleAddTask,
-        isFirstAgent: true,
-      },
-    };
-
-    setNodes((nds) => [...nds, newNode]);
-    setIsAgentSelectOpen(false);
   };
 
   const getWorkflowState = () => {
@@ -499,7 +544,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
           setSelectedAgentId(null);
         }}
         onSave={handleSaveTask}
-        agentId={selectedAgentId || ""}
+        assistantId={selectedAgentId || ""}
         workflowId={workflowId || ""}
       />
       <AgentSelectModal

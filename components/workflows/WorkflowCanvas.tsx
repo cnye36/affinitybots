@@ -28,9 +28,13 @@ import axios from "axios";
 import { Assistant } from "@/types/index";
 import { toast } from "@/hooks/use-toast";
 
+interface WorkflowNode extends Node {
+  type: "agent" | "task";
+}
+
 interface WorkflowCanvasProps {
-  nodes: Node[];
-  setNodes: React.Dispatch<React.SetStateAction<Node[]>>;
+  nodes: WorkflowNode[];
+  setNodes: React.Dispatch<React.SetStateAction<WorkflowNode[]>>;
   edges: Edge[];
   setEdges: React.Dispatch<React.SetStateAction<Edge[]>>;
   initialWorkflowId?: string;
@@ -135,9 +139,9 @@ export function WorkflowCanvas({
           y: event.clientY,
         });
 
-        const newNode = {
+        const newNode: WorkflowNode = {
           id: `${assistant.assistant_id}-${nodes.length + 1}`,
-          type: "agent",
+          type: "agent" as const,
           position,
           data: {
             assistant_id: assistant.assistant_id,
@@ -158,9 +162,12 @@ export function WorkflowCanvas({
     [nodes, setNodes, reactFlowInstance, initialWorkflowId]
   );
 
-  const onNodesChange: OnNodesChange = (changes) => {
-    setNodes((nds) => applyNodeChanges(changes, nds));
-  };
+  const onNodesChange: OnNodesChange = useCallback(
+    (changes) => {
+      setNodes((nds) => applyNodeChanges(changes, nds) as WorkflowNode[]);
+    },
+    [setNodes]
+  );
 
   const onEdgesChange: OnEdgesChange = (changes) => {
     setEdges((eds) => applyEdgeChanges(changes, eds));

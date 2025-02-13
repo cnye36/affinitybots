@@ -2,31 +2,44 @@ import { TavilySearchResults } from "@langchain/community/tools/tavily_search";
 import { WikipediaQueryRun } from "@langchain/community/tools/wikipedia_query_run";
 import { WolframAlphaTool } from "@langchain/community/tools/wolframalpha";
 import { Tool } from "@langchain/core/tools";
-import { ToolID, ToolsConfig, AVAILABLE_TOOLS } from "./config";
+import { ToolID, ToolsConfig } from "@/types";
+import { AVAILABLE_TOOLS } from "./config";
+import { NotionTool } from "./notion";
 
-export function getTools(toolsConfig: ToolsConfig = {}): Tool[] {
+export function getTools(toolsConfig: ToolsConfig): Tool[] {
   const tools: Tool[] = [];
 
-  // Always add Tavily Search - it's required
-  const tavilyConfig = toolsConfig.web_search?.config || { maxResults: 3 };
-  tools.push(new TavilySearchResults(tavilyConfig));
+  // Add tools based on configuration
+  if (toolsConfig.web_search?.isEnabled) {
+    const config = {
+      ...toolsConfig.web_search.config,
+      apiKey: toolsConfig.web_search.credentials.api_key,
+    };
+    tools.push(new TavilySearchResults(config));
+  }
 
-  // Add optional tools based on configuration
   if (toolsConfig.wikipedia?.isEnabled) {
     tools.push(new WikipediaQueryRun());
   }
 
-  if (
-    toolsConfig.wolfram_alpha?.isEnabled &&
-    toolsConfig.wolfram_alpha.config.appid
-  ) {
+  if (toolsConfig.wolfram_alpha?.isEnabled) {
+    const config = {
+      appid: toolsConfig.wolfram_alpha.credentials.api_key,
+    };
+    tools.push(new WolframAlphaTool(config));
+  }
+
+  if (toolsConfig.notion?.isEnabled) {
     tools.push(
-      new WolframAlphaTool({
-        appid: toolsConfig.wolfram_alpha.config.appid as string,
+      new NotionTool({
+        enabled: true,
+        credentials: toolsConfig.notion.credentials,
+        settings: toolsConfig.notion.config,
       })
     );
   }
 
+  // Note: Twitter and Google tools will be implemented later
   return tools;
 }
 
@@ -34,17 +47,5 @@ export function getTools(toolsConfig: ToolsConfig = {}): Tool[] {
 export type { ToolID, ToolsConfig };
 export { AVAILABLE_TOOLS };
 
-// Export individual tool getters for testing and direct usage
-export function getTavilyTool(
-  config: { apiKey?: string; maxResults?: number } = {}
-): Tool {
-  return new TavilySearchResults(config);
-}
-
-export function getWikipediaTool(): Tool {
-  return new WikipediaQueryRun();
-}
-
-export function getWolframAlphaTool(appId: string): Tool {
-  return new WolframAlphaTool({ appid: appId });
-}
+// Export individual tools for direct usage if needed
+export { NotionTool };

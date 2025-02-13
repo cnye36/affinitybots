@@ -7,7 +7,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Activity, Settings, Plus } from "lucide-react";
+import { Activity, Settings, Plus, UserPlus } from "lucide-react";
 import { AgentConfigModal } from "../configuration/AgentConfigModal";
 import { Assistant } from "@/types/index";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,9 @@ interface AgentNodeProps {
     assistant_id: string;
     workflowId?: string;
     onAddTask?: (agentId: string) => void;
+    onAddAgent?: (sourceAgentId: string) => void;
     isFirstAgent?: boolean;
+    hasTask?: boolean;
   };
 }
 
@@ -58,6 +60,11 @@ export const AgentNode = memo(({ data }: AgentNodeProps) => {
   const handleAddTask = (e: React.MouseEvent) => {
     e.stopPropagation();
     data.onAddTask?.(data.assistant_id);
+  };
+
+  const handleAddAgent = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    data.onAddAgent?.(data.assistant_id);
   };
 
   if (loading) {
@@ -181,6 +188,29 @@ export const AgentNode = memo(({ data }: AgentNodeProps) => {
               </Tooltip>
             </TooltipProvider>
           </div>
+
+          {/* Add Agent Button - Only show if agent has tasks */}
+          {data.hasTask && (
+            <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="rounded-full w-8 h-8 p-0"
+                      onClick={handleAddAgent}
+                    >
+                      <UserPlus className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Add Next Agent</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          )}
         </Card>
       </div>
 

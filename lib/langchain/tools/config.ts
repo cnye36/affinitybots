@@ -1,80 +1,85 @@
 import { z } from "zod";
+import { ToolID, ToolConfig } from "@/types";
 
 // Tool requirement schemas
 const tavilyConfigSchema = z.object({
-  apiKey: z.string().optional(),
   maxResults: z.number().optional().default(3),
 });
 
-const wolframAlphaConfigSchema = z.object({
-  appid: z.string(),
-});
+const wolframAlphaConfigSchema = z.object({});
 
 // No config needed for Wikipedia
 const wikipediaConfigSchema = z.object({});
 
 // Define available tools and their metadata
-export const AVAILABLE_TOOLS = [
-  {
-    id: "web_search",
+export const TOOLS_CONFIG = {
+  web_search: {
     name: "Web Search",
     description: "Search the web for current information using Tavily's API",
     configSchema: tavilyConfigSchema,
-    isRequired: true, // This tool is required for all agents
     defaultConfig: {
       maxResults: 3,
     },
+    requiredCredentials: ["api_key"],
+    optionalCredentials: [],
   },
-  {
-    id: "wikipedia",
+  wikipedia: {
     name: "Wikipedia",
     description: "Query Wikipedia for factual information and definitions",
     configSchema: wikipediaConfigSchema,
-    isRequired: false,
     defaultConfig: {},
+    requiredCredentials: [],
+    optionalCredentials: [],
   },
-  {
-    id: "wolfram_alpha",
+  wolfram_alpha: {
     name: "Wolfram Alpha",
     description: "Perform complex calculations and queries using Wolfram Alpha",
     configSchema: wolframAlphaConfigSchema,
-    isRequired: false,
     defaultConfig: {},
+    requiredCredentials: ["api_key"],
+    optionalCredentials: [],
   },
-] as const;
-
-// Type for tool IDs
-export type ToolID = (typeof AVAILABLE_TOOLS)[number]["id"];
-
-// Interface for tool configurations
-export interface ToolConfiguration {
-  isEnabled: boolean;
-  config: Record<string, unknown>;
-}
-
-// Type for the complete tools configuration
-export type ToolsConfig = Partial<Record<ToolID, ToolConfiguration>>;
-
-// Helper to validate tool configuration
-export function validateToolConfig(toolId: ToolID, config: unknown): boolean {
-  const tool = AVAILABLE_TOOLS.find((t) => t.id === toolId);
-  if (!tool) return false;
-
-  try {
-    tool.configSchema.parse(config);
-    return true;
-  } catch {
-    return false;
-  }
-}
+  notion: {
+    name: "Notion",
+    description: "Create, update, and search Notion pages and databases",
+    configSchema: z.object({}),
+    defaultConfig: {},
+    requiredCredentials: ["api_key"],
+    optionalCredentials: ["workspace_id", "database_id"],
+  },
+  twitter: {
+    name: "Twitter",
+    description: "Post tweets, create threads, and interact with Twitter",
+    configSchema: z.object({}),
+    defaultConfig: {},
+    requiredCredentials: [
+      "api_key",
+      "api_secret",
+      "access_token",
+      "access_token_secret",
+    ],
+    optionalCredentials: [],
+  },
+  google: {
+    name: "Google",
+    description: "Interact with Google Calendar, Docs, Sheets, and Drive",
+    configSchema: z.object({}),
+    defaultConfig: {},
+    requiredCredentials: ["client_id", "client_secret", "refresh_token"],
+    optionalCredentials: [],
+  },
+} as const;
 
 // Helper to get default configuration for a tool
-export function getDefaultToolConfig(toolId: ToolID): ToolConfiguration {
-  const tool = AVAILABLE_TOOLS.find((t) => t.id === toolId);
+export function getDefaultToolConfig(toolId: ToolID): ToolConfig {
+  const tool = TOOLS_CONFIG[toolId];
   if (!tool) throw new Error(`Unknown tool: ${toolId}`);
 
   return {
-    isEnabled: tool.isRequired,
+    isEnabled: false,
     config: tool.defaultConfig,
+    credentials: {},
   };
 }
+
+export { TOOLS_CONFIG as AVAILABLE_TOOLS };

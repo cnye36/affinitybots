@@ -1,73 +1,188 @@
 "use client"
 
+import { useState } from "react";
 import { Switch } from "@/components/ui/switch";
-import { ToolID, ToolConfig, ToolsConfig } from "@/types/index";
-
-// Define available tools
-const AVAILABLE_TOOLS = [
-  {
-    id: "web_search" as ToolID,
-    name: "Web Search",
-    description: "Search the web for information",
-    defaultConfig: {
-      maxResults: 3,
-    },
-  },
-  {
-    id: "wikipedia" as ToolID,
-    name: "Wikipedia",
-    description: "Search Wikipedia articles",
-    defaultConfig: {
-      maxResults: 2,
-    },
-  },
-  {
-    id: "wolfram_alpha" as ToolID,
-    name: "Wolfram Alpha",
-    description: "Perform calculations and answer queries",
-    defaultConfig: {
-      maxResults: 1,
-    },
-  },
-];
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Settings } from "lucide-react";
+import { ToolID, ToolsConfig } from "@/types";
+import {
+  AVAILABLE_TOOLS,
+  getDefaultToolConfig,
+} from "@/lib/langchain/tools/config";
 
 interface ToolSelectorProps {
   tools: ToolsConfig;
-  onToolsChange: (toolId: string, config: ToolConfig) => void;
+  onToolsChange: (tools: ToolsConfig) => void;
 }
 
 export function ToolSelector({ tools, onToolsChange }: ToolSelectorProps) {
-  const handleToggleTool = (toolId: ToolID) => {
-    const tool = AVAILABLE_TOOLS.find((t) => t.id === toolId);
-    if (!tool) return;
+  const [openConfigs, setOpenConfigs] = useState<Record<string, boolean>>({});
 
-    const isEnabled = tools[toolId]?.isEnabled ?? false;
-    onToolsChange(toolId, {
-      isEnabled: !isEnabled,
-      config: tools[toolId]?.config ?? tool.defaultConfig,
-    });
+  // Initialize tools with proper structure if they don't exist
+  const initializedTools: ToolsConfig = {
+    web_search: tools.web_search ?? getDefaultToolConfig("web_search"),
+    wikipedia: tools.wikipedia ?? getDefaultToolConfig("wikipedia"),
+    wolfram_alpha: tools.wolfram_alpha ?? getDefaultToolConfig("wolfram_alpha"),
+    notion: tools.notion ?? getDefaultToolConfig("notion"),
+    twitter: tools.twitter ?? getDefaultToolConfig("twitter"),
+    google: tools.google ?? getDefaultToolConfig("google"),
+  };
+
+  const toggleConfig = (toolId: string) => {
+    setOpenConfigs((prev) => ({
+      ...prev,
+      [toolId]: !prev[toolId],
+    }));
+  };
+
+  const handleToggleTool = (toolId: ToolID) => {
+    const currentConfig = initializedTools[toolId];
+    const toolConfig = AVAILABLE_TOOLS[toolId];
+
+    const updatedTools: ToolsConfig = {
+      ...initializedTools,
+      [toolId]: {
+        ...currentConfig,
+        isEnabled: !currentConfig.isEnabled,
+        config: !currentConfig.isEnabled ? toolConfig.defaultConfig : {},
+        credentials: !currentConfig.isEnabled ? {} : currentConfig.credentials,
+      },
+    };
+    onToolsChange(updatedTools);
+  };
+
+  const handleConfigChange = (
+    toolId: ToolID,
+    changes: Record<string, string>
+  ) => {
+    const currentConfig = initializedTools[toolId];
+    if (!currentConfig?.isEnabled) return;
+
+    const updatedTools: ToolsConfig = {
+      ...initializedTools,
+      [toolId]: {
+        ...currentConfig,
+        credentials: {
+          ...currentConfig.credentials,
+          ...changes,
+        },
+      },
+    };
+    onToolsChange(updatedTools);
   };
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        {AVAILABLE_TOOLS.map((tool) => (
-          <div
-            key={tool.id}
-            className="flex items-center justify-between p-4 bg-muted rounded-lg"
-          >
-            <div className="space-y-1">
-              <div className="font-medium">{tool.name}</div>
-              <div className="text-sm text-muted-foreground">
-                {tool.description}
+    <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-2">
+      {/* Tools Section */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold sticky top-0 bg-background py-2">
+          Available Tools
+        </h3>
+        <div className="space-y-2">
+          {Object.entries(AVAILABLE_TOOLS).map(([id, tool]) => (
+            <Collapsible
+              key={id}
+              open={openConfigs[id]}
+              onOpenChange={() => toggleConfig(id)}
+            >
+              <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                <div className="space-y-1">
+                  <div className="font-medium">{tool.name}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {tool.description}
+                  </div>
+                </div>
+                <div className="flex items-center space-x-4">
+                  {initializedTools[id as ToolID]?.isEnabled &&
+                    tool.requiredCredentials.length > 0 && (
+                      <CollapsibleTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <Settings className="h-4 w-4" />
+                        </Button>
+                      </CollapsibleTrigger>
+                    )}
+                  <Switch
+                    checked={initializedTools[id as ToolID]?.isEnabled ?? false}
+                    onCheckedChange={() => handleToggleTool(id as ToolID)}
+                  />
+                </div>
               </div>
-            </div>
-            <Switch
-              checked={tools[tool.id]?.isEnabled ?? false}
-              onCheckedChange={() => handleToggleTool(tool.id)}
-            />
-          </div>
-        ))}
+              {initializedTools[id as ToolID]?.isEnabled &&
+                tool.requiredCredentials.length > 0 && (
+                  <CollapsibleContent className="p-4 bg-muted/50 rounded-lg mt-2 space-y-4">
+                    {tool.requiredCredentials.map((cred) => (
+                      <div key={cred} className="space-y-2">
+                        <Label
+                          htmlFor={`${id}-${cred}`}
+                          className="flex items-center space-x-1"
+                        >
+                          <span>
+                            {cred
+                              .split("_")
+                              .map(
+                                (word) =>
+                                  word.charAt(0).toUpperCase() + word.slice(1)
+                              )
+                              .join(" ")}
+                          </span>
+                          <span className="text-destructive">*</span>
+                        </Label>
+                        <Input
+                          id={`${id}-${cred}`}
+                          type="password"
+                          value={
+                            initializedTools[id as ToolID]?.credentials?.[
+                              cred
+                            ] ?? ""
+                          }
+                          onChange={(e) =>
+                            handleConfigChange(id as ToolID, {
+                              [cred]: e.target.value,
+                            })
+                          }
+                          required
+                        />
+                      </div>
+                    ))}
+                    {tool.optionalCredentials.map((cred) => (
+                      <div key={cred} className="space-y-2">
+                        <Label htmlFor={`${id}-${cred}`}>
+                          {cred
+                            .split("_")
+                            .map(
+                              (word) =>
+                                word.charAt(0).toUpperCase() + word.slice(1)
+                            )
+                            .join(" ")}
+                        </Label>
+                        <Input
+                          id={`${id}-${cred}`}
+                          type="text"
+                          value={
+                            initializedTools[id as ToolID]?.credentials?.[
+                              cred
+                            ] ?? ""
+                          }
+                          onChange={(e) =>
+                            handleConfigChange(id as ToolID, {
+                              [cred]: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
+                    ))}
+                  </CollapsibleContent>
+                )}
+            </Collapsible>
+          ))}
+        </div>
       </div>
     </div>
   );

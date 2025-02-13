@@ -4,19 +4,44 @@ import { Tool } from "@langchain/core/tools";
 export type ModelType = "gpt-4o" | "gpt-4o-mini" | "gpt-o1" | "gpt-o1-mini";
 
 // Tool related types
-export type ToolID = "web_search" | "wikipedia" | "wolfram_alpha";
+export type ToolID =
+  | "web_search"
+  | "wikipedia"
+  | "wolfram_alpha"
+  | "notion"
+  | "twitter"
+  | "google";
 
 export interface ToolConfig {
   isEnabled: boolean;
   config: Record<string, unknown>;
-  knowledge_base?: {
-    isEnabled: boolean;
-    config: KnowledgeBaseConfig;
-  };
+  credentials: Record<string, string>;
 }
 
-export interface ToolsConfig {
-  [key: string]: ToolConfig;
+// Simplified ToolsConfig
+export type ToolsConfig = Record<ToolID, ToolConfig>;
+
+// Integration Tool Types
+export type IntegrationType = "notion" | "twitter" | "google";
+
+export interface IntegrationToolConfig {
+  enabled: boolean;
+  credentials: {
+    api_key?: string;
+    oauth_token?: string;
+    client_id?: string;
+    client_secret?: string;
+    refresh_token?: string;
+    workspace_id?: string; // For Notion
+    database_id?: string; // For Notion
+  };
+  settings: Record<string, unknown>;
+}
+
+export interface IntegrationTools {
+  notion?: IntegrationToolConfig;
+  twitter?: IntegrationToolConfig;
+  google?: IntegrationToolConfig;
 }
 
 export interface ToolCall {
@@ -260,13 +285,40 @@ export interface WorkflowTaskRun {
 }
 
 export type TaskType =
-  | "process_input"
-  | "generate_content"
-  | "analyze_data"
-  | "make_decision"
-  | "transform_data"
-  | "api_call"
-  | "custom";
+  // Notion tasks
+  | "notion_create_page"
+  | "notion_update_page"
+  | "notion_add_to_database"
+  | "notion_search"
+  // Twitter tasks
+  | "twitter_post_tweet"
+  | "twitter_thread"
+  | "twitter_dm"
+  | "twitter_like"
+  | "twitter_retweet"
+  // Google tasks
+  | "google_calendar_create"
+  | "google_calendar_update"
+  | "google_docs_create"
+  | "google_sheets_update"
+  | "google_drive_upload"
+  // AI tasks
+  | "ai_write_content"
+  | "ai_analyze_content"
+  | "ai_summarize"
+  | "ai_translate";
+
+export interface IntegrationConfig {
+  type: IntegrationType;
+  credentials: {
+    api_key?: string;
+    oauth_token?: string;
+    client_id?: string;
+    client_secret?: string;
+    refresh_token?: string;
+  };
+  settings: Record<string, unknown>;
+}
 
 export interface Task {
   task_id?: string;
@@ -275,12 +327,15 @@ export interface Task {
   type: TaskType;
   agentId: string;
   workflowId: string;
-  config?: {
+  integration?: IntegrationConfig;
+  config: {
     input: {
       source: string;
+      parameters: Record<string, unknown>;
     };
     output: {
       destination: string;
+      format?: string;
     };
   };
 }
@@ -288,4 +343,61 @@ export interface Task {
 interface KnowledgeBaseConfig {
   sources: string[];
   files?: File[];
+}
+
+// Available actions for each integration
+export interface NotionActions {
+  createPage: (params: {
+    title: string;
+    content: string;
+    parent?: { database_id?: string; page_id?: string };
+  }) => Promise<unknown>;
+  updatePage: (params: {
+    page_id: string;
+    properties: Record<string, unknown>;
+  }) => Promise<unknown>;
+  addToDatabase: (params: {
+    database_id: string;
+    properties: Record<string, unknown>;
+  }) => Promise<unknown>;
+  search: (params: {
+    query: string;
+    filter?: Record<string, unknown>;
+  }) => Promise<unknown>;
+}
+
+export interface TwitterActions {
+  postTweet: (params: { text: string; reply_to?: string }) => Promise<unknown>;
+  createThread: (params: { tweets: string[] }) => Promise<unknown>;
+  sendDirectMessage: (params: {
+    recipient_id: string;
+    text: string;
+  }) => Promise<unknown>;
+  likeTweet: (params: { tweet_id: string }) => Promise<unknown>;
+  retweet: (params: { tweet_id: string }) => Promise<unknown>;
+}
+
+export interface GoogleActions {
+  createCalendarEvent: (params: {
+    summary: string;
+    description?: string;
+    start: string;
+    end: string;
+  }) => Promise<unknown>;
+  updateCalendarEvent: (params: {
+    event_id: string;
+    updates: Record<string, unknown>;
+  }) => Promise<unknown>;
+  createDoc: (params: { title: string; content: string }) => Promise<unknown>;
+  updateSheet: (params: {
+    spreadsheet_id: string;
+    range: string;
+    values: unknown[][];
+  }) => Promise<unknown>;
+  uploadFile: (params: {
+    name: string;
+    content: string | Buffer;
+    mimeType: string;
+    parents?: string[];
+  }) => Promise<unknown>;
 }
