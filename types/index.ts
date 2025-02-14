@@ -73,6 +73,7 @@ export interface AgentConfigurableOptions {
   tools: ToolsConfig;
   memory: MemoryConfig;
   prompt_template: string;
+  knowledge_base: KnowledgeBaseConfig;
   avatar: string;
   owner_id: string;
 }
@@ -82,6 +83,7 @@ export interface AgentMetadata {
   description: string;
   agent_type: string;
   owner_id: string;
+  [key: string]: string | unknown;
 }
 
 // Main agent configuration interface
@@ -164,7 +166,12 @@ export interface Assistant {
   graph_id: string;
   created_at: string;
   updated_at: string;
-  metadata: Record<string, unknown>;
+  metadata: {
+    description: string;
+    agent_type: string;
+    owner_id: string;
+    [key: string]: string | unknown;
+  };
   version: number;
   config: {
     configurable: {
@@ -344,8 +351,11 @@ export interface Task {
 }
 
 export interface KnowledgeBaseConfig {
-  sources: string[];
-  files?: File[];
+  isEnabled: boolean;
+  config: {
+    sources: string[];
+    files?: File[];
+  };
 }
 
 // Available actions for each integration

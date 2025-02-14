@@ -10,7 +10,7 @@ export class GoogleTool extends Tool {
   name = "google";
   description =
     "A tool for interacting with Google services including Gmail and Calendar.";
-
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private auth: any; // We'll keep this as any since the google.auth.OAuth2 type is complex
   private config: IntegrationToolConfig;
   private calendarCreateTool?: GoogleToolInterface;

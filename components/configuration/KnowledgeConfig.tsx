@@ -89,7 +89,8 @@ export function KnowledgeConfig({ config, onChange }: KnowledgeConfigProps) {
       }
 
       // Update the UI
-      const currentSources = (config.tools.knowledge_base?.config.sources as string[]) || [];
+      const currentSources =
+        (config.knowledge_base?.config.sources as string[]) || [];
       const newSources = [...currentSources, ...files.map(file => file.name)];
 
       onChange("tools", {
@@ -114,9 +115,10 @@ export function KnowledgeConfig({ config, onChange }: KnowledgeConfigProps) {
   };
 
   const handleRemoveSource = (index: number) => {
-    const currentSources = (config.tools.knowledge_base?.config.sources as string[]) || [];
-    const currentFiles = (config.tools.knowledge_base?.config.files as File[]) || [];
-    
+    const currentSources =
+      (config.knowledge_base?.config.sources as string[]) || [];
+    const currentFiles = (config.knowledge_base?.config.files as File[]) || [];
+
     const newSources = currentSources.filter((_, i) => i !== index);
     const newFiles = currentFiles.filter((_, i) => i !== index);
 
@@ -132,7 +134,7 @@ export function KnowledgeConfig({ config, onChange }: KnowledgeConfigProps) {
     });
   };
 
-  const sources = (config.tools.knowledge_base?.config.sources as string[]) || [];
+  const sources = (config.knowledge_base?.config.sources as string[]) || [];
 
   return (
     <div className="space-y-6">
@@ -152,7 +154,11 @@ export function KnowledgeConfig({ config, onChange }: KnowledgeConfigProps) {
           className={`
             border-2 border-dashed rounded-lg p-6 text-center cursor-pointer
             transition-colors duration-200
-            ${isDragging ? 'border-primary bg-primary/5' : 'border-muted-foreground/25'}
+            ${
+              isDragging
+                ? "border-primary bg-primary/5"
+                : "border-muted-foreground/25"
+            }
             hover:border-primary hover:bg-primary/5
           `}
         >
@@ -166,7 +172,11 @@ export function KnowledgeConfig({ config, onChange }: KnowledgeConfigProps) {
           />
           <label htmlFor="file-upload" className="cursor-pointer">
             <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-            <p>{isDragging ? 'Drop files here...' : 'Drag and drop files here, or click to select'}</p>
+            <p>
+              {isDragging
+                ? "Drop files here..."
+                : "Drag and drop files here, or click to select"}
+            </p>
             <p className="text-sm text-muted-foreground mt-2">
               Supported formats: PDF, TXT, DOC, DOCX
             </p>

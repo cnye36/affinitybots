@@ -113,7 +113,7 @@ export async function PUT(
         task_type: taskData.type,
         config: taskData.config,
         integration: taskData.integration,
-        assistant_id: taskData.agentId,
+        assistant_id: taskData.assistant_id,
         updated_at: new Date().toISOString(),
       })
       .eq("task_id", taskId)
