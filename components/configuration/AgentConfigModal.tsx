@@ -23,6 +23,7 @@ import {
   ModelType,
 } from "@/types/index";
 import { Assistant } from "@langchain/langgraph-sdk";
+import { ToolsConfig } from "@/types/index";
 import { useRouter } from "next/navigation";
 import { mutate } from "swr";
 
@@ -163,20 +164,14 @@ export function AgentConfigModal({
     }));
   };
 
-  const handleToolsChange = (
-    toolId: string,
-    toolConfig: { isEnabled: boolean; config: Record<string, unknown> }
-  ) => {
+  const handleToolsChange = (updatedTools: ToolsConfig) => {
     setConfig((prev) => ({
       ...prev,
       config: {
         ...prev.config,
         configurable: {
           ...prev.config.configurable,
-          tools: {
-            ...prev.config.configurable.tools,
-            [toolId]: toolConfig,
-          },
+          tools: updatedTools,
         },
       },
     }));

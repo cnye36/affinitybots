@@ -1,11 +1,12 @@
 import { ChatOpenAI } from "@langchain/openai";
 import { PromptTemplate } from "@langchain/core/prompts";
 import { AgentConfigurableOptions } from "./config";
+import { ToolConfig } from "@/types";
 import {
   AVAILABLE_TOOLS,
-  ToolID,
   getDefaultToolConfig,
 } from "@/lib/langchain/tools/config";
+import type { ToolID } from "@/lib/langchain/tools/config";
 
 const nameGeneratorPrompt = PromptTemplate.fromTemplate(`
 Given the following agent description and type, generate a creative and memorable name for the AI agent.
@@ -32,7 +33,9 @@ User's Description: {description}
 Assistant Type: {agentType}
 
 Available Tools:
-${AVAILABLE_TOOLS.map((t) => `- ${t.name}: ${t.description}`).join("\n")}
+${Object.values(AVAILABLE_TOOLS)
+  .map((t) => `- ${t.name}: ${t.description}`)
+  .join("\n")}
 
 Note: Web Search (Tavily) is always included by default.
 
@@ -41,9 +44,7 @@ Provide the following information in a clear format:
 1. NAME: Create a creative name for the assistant (1-3 words, no AI/Bot/Assistant)
 2. DESCRIPTION: Write a concise summary of the assistant's capabilities
 3. INSTRUCTIONS: Write a comprehensive system prompt for the assistant that defines its role and behavior
-4. TOOLS: List required tools from: ${AVAILABLE_TOOLS.map((t) => t.id).join(
-  ", "
-)}
+4. TOOLS: List required tools from: ${Object.keys(AVAILABLE_TOOLS).join(", ")}
 5. MODEL: Specify gpt-4o
 6. TEMPERATURE: Provide a number between 0 and 1
 7. MEMORY_WINDOW: Suggest number of past messages to consider (default: 10)
@@ -106,7 +107,14 @@ export async function generateAgentConfiguration(
     configurable: {
       model: "gpt-4o",
       temperature: 0.7,
-      tools: {},
+      tools: {
+        web_search: getDefaultToolConfig("web_search"),
+        wikipedia: getDefaultToolConfig("wikipedia"),
+        wolfram_alpha: getDefaultToolConfig("wolfram_alpha"),
+        notion: getDefaultToolConfig("notion"),
+        twitter: getDefaultToolConfig("twitter"),
+        google: getDefaultToolConfig("google"),
+      },
       memory: {
         enabled: true,
         max_entries: 10,
@@ -143,24 +151,21 @@ export async function generateAgentConfiguration(
       case "TOOLS":
         if (config.configurable) {
           // Initialize tools configuration
-          const toolsConfig: Record<
-            ToolID,
-            { isEnabled: boolean; config: Record<string, unknown> }
-          > = {
-            web_search: { isEnabled: true, config: {} },
-            wikipedia: { isEnabled: false, config: {} },
-            wolfram_alpha: { isEnabled: false, config: {} },
+          const toolsConfig: Record<ToolID, ToolConfig> = {
+            web_search: getDefaultToolConfig("web_search"),
+            wikipedia: getDefaultToolConfig("wikipedia"),
+            wolfram_alpha: getDefaultToolConfig("wolfram_alpha"),
+            notion: getDefaultToolConfig("notion"),
+            twitter: getDefaultToolConfig("twitter"),
+            google: getDefaultToolConfig("google"),
           };
 
-          // Add other requested tools
+          // Update requested tools to enabled
           const requestedTools = value
             .split(",")
             .map((t) => t.trim() as ToolID);
           requestedTools.forEach((toolId) => {
-            if (
-              toolId !== "web_search" &&
-              AVAILABLE_TOOLS.find((t) => t.id === toolId)
-            ) {
+            if (AVAILABLE_TOOLS[toolId as ToolID]) {
               toolsConfig[toolId] = getDefaultToolConfig(toolId);
               toolsConfig[toolId].isEnabled = true;
             }

@@ -28,6 +28,9 @@ export interface IntegrationToolConfig {
   enabled: boolean;
   credentials: {
     api_key?: string;
+    api_secret?: string;
+    access_token?: string;
+    access_token_secret?: string;
     oauth_token?: string;
     client_id?: string;
     client_secret?: string;
@@ -340,7 +343,7 @@ export interface Task {
   };
 }
 
-interface KnowledgeBaseConfig {
+export interface KnowledgeBaseConfig {
   sources: string[];
   files?: File[];
 }

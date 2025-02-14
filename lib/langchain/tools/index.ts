@@ -5,6 +5,8 @@ import { Tool } from "@langchain/core/tools";
 import { ToolID, ToolsConfig } from "@/types";
 import { AVAILABLE_TOOLS } from "./config";
 import { NotionTool } from "./notion";
+import { GoogleTool } from "./google";
+import { TwitterTool } from "./twitter";
 
 export function getTools(toolsConfig: ToolsConfig): Tool[] {
   const tools: Tool[] = [];
@@ -39,6 +41,26 @@ export function getTools(toolsConfig: ToolsConfig): Tool[] {
     );
   }
 
+  if (toolsConfig.google?.isEnabled) {
+    tools.push(
+      new GoogleTool({
+        enabled: true,
+        credentials: toolsConfig.google.credentials,
+        settings: toolsConfig.google.config,
+      })
+    );
+  }
+
+  if (toolsConfig.twitter?.isEnabled) {
+    tools.push(
+      new TwitterTool({
+        enabled: true,
+        credentials: toolsConfig.twitter.credentials,
+        settings: toolsConfig.twitter.config,
+      })
+    );
+  }
+
   // Note: Twitter and Google tools will be implemented later
   return tools;
 }
@@ -48,4 +70,4 @@ export type { ToolID, ToolsConfig };
 export { AVAILABLE_TOOLS };
 
 // Export individual tools for direct usage if needed
-export { NotionTool };
+export { NotionTool, GoogleTool, TwitterTool };

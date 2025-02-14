@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Switch } from "@/components/ui/switch";
 import {
   Collapsible,
@@ -25,15 +25,18 @@ interface ToolSelectorProps {
 export function ToolSelector({ tools, onToolsChange }: ToolSelectorProps) {
   const [openConfigs, setOpenConfigs] = useState<Record<string, boolean>>({});
 
-  // Initialize tools with proper structure if they don't exist
-  const initializedTools: ToolsConfig = {
-    web_search: tools.web_search ?? getDefaultToolConfig("web_search"),
-    wikipedia: tools.wikipedia ?? getDefaultToolConfig("wikipedia"),
-    wolfram_alpha: tools.wolfram_alpha ?? getDefaultToolConfig("wolfram_alpha"),
-    notion: tools.notion ?? getDefaultToolConfig("notion"),
-    twitter: tools.twitter ?? getDefaultToolConfig("twitter"),
-    google: tools.google ?? getDefaultToolConfig("google"),
-  };
+  const initializedTools = useMemo(
+    () => ({
+      web_search: tools.web_search ?? getDefaultToolConfig("web_search"),
+      wikipedia: tools.wikipedia ?? getDefaultToolConfig("wikipedia"),
+      wolfram_alpha:
+        tools.wolfram_alpha ?? getDefaultToolConfig("wolfram_alpha"),
+      notion: tools.notion ?? getDefaultToolConfig("notion"),
+      twitter: tools.twitter ?? getDefaultToolConfig("twitter"),
+      google: tools.google ?? getDefaultToolConfig("google"),
+    }),
+    [tools]
+  );
 
   const toggleConfig = (toolId: string) => {
     setOpenConfigs((prev) => ({
@@ -93,10 +96,13 @@ export function ToolSelector({ tools, onToolsChange }: ToolSelectorProps) {
               onOpenChange={() => toggleConfig(id)}
             >
               <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-                <div className="space-y-1">
-                  <div className="font-medium">{tool.name}</div>
-                  <div className="text-sm text-muted-foreground">
-                    {tool.description}
+                <div className="flex items-center space-x-4">
+                  <tool.icon className="h-6 w-6" />
+                  <div className="space-y-1">
+                    <div className="font-medium">{tool.name}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {tool.description}
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center space-x-4">
