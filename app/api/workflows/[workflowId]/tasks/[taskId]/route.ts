@@ -3,13 +3,28 @@ import { createClient } from "@/supabase/server";
 import { Task, TaskType } from "@/types";
 
 const VALID_TASK_TYPES: TaskType[] = [
-  "process_input",
-  "generate_content",
-  "analyze_data",
-  "make_decision",
-  "transform_data",
-  "api_call",
-  "custom",
+  // Notion tasks
+  "notion_create_page",
+  "notion_update_page",
+  "notion_add_to_database",
+  "notion_search",
+  // Twitter tasks
+  "twitter_post_tweet",
+  "twitter_thread",
+  "twitter_dm",
+  "twitter_like",
+  "twitter_retweet",
+  // Google tasks
+  "google_calendar_create",
+  "google_calendar_update",
+  "google_docs_create",
+  "google_sheets_update",
+  "google_drive_upload",
+  // AI tasks
+  "ai_write_content",
+  "ai_analyze_content",
+  "ai_summarize",
+  "ai_translate",
 ];
 
 // GET - Get a specific task
@@ -97,6 +112,7 @@ export async function PUT(
         description: taskData.description,
         task_type: taskData.type,
         config: taskData.config,
+        integration: taskData.integration,
         assistant_id: taskData.agentId,
         updated_at: new Date().toISOString(),
       })

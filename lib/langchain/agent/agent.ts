@@ -1,8 +1,10 @@
+import { v4 as uuidv4 } from "uuid";
 import { ChatOpenAI } from "@langchain/openai";
 import {
   MemorySaver,
   MessagesAnnotation,
   StateGraph,
+  BaseStore,
 } from "@langchain/langgraph";
 import { ToolNode } from "@langchain/langgraph/prebuilt";
 import {
@@ -20,15 +22,26 @@ import { AgentConfigurableOptions } from "./config";
 import { AgentState } from "@/types";
 
 // Define your tools
-const tools = getTools();
+const tools = getTools({
+  web_search: { isEnabled: true, config: {}, credentials: {} },
+  wikipedia: { isEnabled: false, config: {}, credentials: {} },
+  wolfram_alpha: { isEnabled: false, config: {}, credentials: {} },
+  notion: { isEnabled: false, config: {}, credentials: {} },
+  twitter: { isEnabled: false, config: {}, credentials: {} },
+  google: { isEnabled: false, config: {}, credentials: {} },
+});
 
-interface MessageWithToolCalls extends AIMessage {
-  tool_calls?: ToolCall[];
-}
-
-// Define the knowledge retrieval node
-async function retrieveKnowledge(state: AgentState) {
-  const messages = state.messages;
+/**
+ * Retrieve external context (if needed) from a retrieval service.
+ */
+async function retrieveKnowledge(
+  state: AgentState & { config: RunnableConfig; store: BaseStore }
+): Promise<{ messages: BaseMessage[] }> {
+  const messages = state.messages.map((msg) =>
+    msg.role === "user"
+      ? new HumanMessage(msg.content)
+      : new AIMessage(msg.content)
+  );
   const lastMessage = messages[messages.length - 1];
 
   try {
@@ -40,7 +53,7 @@ async function retrieveKnowledge(state: AgentState) {
 
     // If no relevant documents found, continue with original messages
     if (relevantDocs.length === 0) {
-      return { messages: state.messages };
+      return { messages };
     }
 
     // Add retrieved context as a system message
@@ -55,13 +68,40 @@ async function retrieveKnowledge(state: AgentState) {
     };
   } catch (error) {
     console.error("Error retrieving knowledge:", error);
-    return { messages: state.messages };
+    return { messages };
   }
 }
 
-// Define the function to call the model
-async function callModel(state: AgentState, config: RunnableConfig) {
-  const configurable = config.configurable as AgentConfigurableOptions;
+/**
+ * Call the model and inject retrieved memories into the system prompt.
+ */
+async function callModel(
+  state: AgentState & { config: RunnableConfig; store: BaseStore }
+): Promise<{ messages: BaseMessage[] }> {
+  const configurable = state.config.configurable as AgentConfigurableOptions;
+  let memoryPrompt = "";
+
+  if (configurable.memory.enabled) {
+    // Assume the user is identified by the owner_id (or adjust as needed)
+    const userId = configurable.owner_id;
+    const memories = await state.store.search(["memories", userId]);
+    if (memories.length > 0) {
+      // Use a sliding window based on max_entries (and optionally incorporate relevance_threshold)
+      const selectedMemories = memories.slice(-configurable.memory.max_entries);
+      const memoryTexts = selectedMemories.map((mem) => mem.value.data);
+      memoryPrompt = "User Memories:\n" + memoryTexts.join("\n\n");
+    }
+  }
+
+  const systemPrompt =
+    configurable.prompt_template ||
+    `You are a sophisticated AI assistant designed to solve complex tasks efficiently.
+When responding, consider both the current conversation and any previously stored user memories.`;
+
+  // Prepend the memory context (if any) to the system prompt.
+  const finalSystemPrompt = memoryPrompt
+    ? `${systemPrompt}\n\n${memoryPrompt}`
+    : systemPrompt;
 
   // Initialize the model with tool calling capabilities
   const model = new ChatOpenAI({
@@ -69,71 +109,96 @@ async function callModel(state: AgentState, config: RunnableConfig) {
     temperature: configurable?.temperature || 0.7,
   }).bindTools(tools);
 
-  // Get the custom prompt template from configuration or fall back to default
-  const systemPrompt =
-    configurable?.prompt_template ||
-    `You are a sophisticated AI assistant designed to solve complex tasks efficiently. When given a query, carefully analyze whether existing tools can help you provide a more accurate, comprehensive, or up-to-date response. Tools should be used strategically to: 
+  const messages = state.messages.map((msg) =>
+    msg.role === "user"
+      ? new HumanMessage(msg.content)
+      : new AIMessage(msg.content)
+  );
 
-    1. Retrieve current or specialized information not in your base knowledge
-    2. Verify facts from authoritative sources
-    3. Perform complex calculations or specialized queries
-    4. Access real-time or domain-specific data
-
-    Always prioritize tool usage when:
-    - The query requires recent information
-    - Precise numerical or scientific calculations are needed
-    - Specific domain expertise is required
-    - Direct source verification would enhance response quality
-
-    When relevant context is provided, integrate it thoughtfully with tool-retrieved information to create a nuanced, well-informed response. Your goal is to provide the most accurate and helpful information possible.`;
-
-  // Invoke the model with the current conversation state
   const response = await model.invoke([
-    new SystemMessage(systemPrompt),
-    ...state.messages.map(
-      (message) => new HumanMessage(message.content.toString())
-    ),
+    new SystemMessage(finalSystemPrompt),
+    ...messages,
   ]);
 
-  // Return the model's response
-  return { messages: response };
+  return { messages: Array.isArray(response) ? response : [response] };
 }
 
-// Determine the next step based on the model's output
+/**
+ * Update the memory store with any information the user instructs the agent to remember.
+ * For example, if the user's message starts with "remember:", we extract and save that memory.
+ */
+async function updateMemory(
+  state: AgentState & { config: RunnableConfig; store: BaseStore }
+): Promise<{ messages: BaseMessage[] }> {
+  const configurable = state.config.configurable as AgentConfigurableOptions;
+
+  if (!configurable.memory.enabled) {
+    return {
+      messages: state.messages.map((msg) =>
+        msg.role === "user"
+          ? new HumanMessage(msg.content)
+          : new AIMessage(msg.content)
+      ),
+    };
+  }
+
+  const lastMessage = state.messages[state.messages.length - 1];
+  if (
+    typeof lastMessage.content === "string" &&
+    lastMessage.content.toLowerCase().startsWith("remember:")
+  ) {
+    // Remove the prefix ("remember:") and trim the content.
+    const memoryContent = lastMessage.content
+      .substring("remember:".length)
+      .trim();
+    const userId = configurable.owner_id;
+    const namespace = ["memories", userId];
+    const memoryId = uuidv4();
+    await state.store.put(namespace, memoryId, { data: memoryContent });
+    console.log(`Stored new memory for user ${userId}:`, memoryContent);
+  }
+
+  return {
+    messages: state.messages.map((msg) =>
+      msg.role === "user"
+        ? new HumanMessage(msg.content)
+        : new AIMessage(msg.content)
+    ),
+  };
+}
+
+/**
+ * Determine the next step based on the model output.
+ */
 function routeModelOutput(state: { messages: BaseMessage[] }) {
   const messages = state.messages;
   const lastMessage = messages[messages.length - 1];
-  const toolCalls = (lastMessage as MessageWithToolCalls).tool_calls;
+  const toolCalls = (lastMessage as AIMessage & { tool_calls?: ToolCall[] })
+    .tool_calls;
 
-  // If the model wants to call tools, route to the tools node
   if (lastMessage && toolCalls && toolCalls.length > 0) {
     return "tools";
   }
-
-  // Otherwise, end the graph
   return "__end__";
 }
 
-// Create the workflow
+/**
+ * Create the workflow graph.
+ * Note that we add an extra "updateMemory" node so that memory is updated after the model call.
+ */
 const workflow = new StateGraph(MessagesAnnotation)
   // Add nodes for knowledge retrieval, model calling, and tools
   .addNode("knowledge", retrieveKnowledge)
   .addNode("callModel", callModel)
   .addNode("tools", new ToolNode(tools))
-
-  // Set the entry point to knowledge retrieval
+  .addNode("updateMemory", updateMemory) // New node to write memory
   .addEdge("__start__", "knowledge")
-
-  // Always go to model after knowledge retrieval
   .addEdge("knowledge", "callModel")
-
-  // Add conditional edges to handle tool calls
-  .addConditionalEdges("callModel", routeModelOutput, ["tools", "__end__"])
-
-  // After using tools, go back to calling the model
+  .addEdge("callModel", "updateMemory") // Update memory right after model call
+  .addConditionalEdges("updateMemory", routeModelOutput, ["tools", "__end__"])
   .addEdge("tools", "callModel");
 
-// Compile the graph
+// Compile the graph with the MemorySaver (for per-thread state) and your shared store.
 export const graph = workflow.compile({
   checkpointer: new MemorySaver(),
 });

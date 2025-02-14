@@ -7,12 +7,12 @@ import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { AgentConfigurableOptions } from "@/types/index";
 
-interface SettingsConfigProps {
+interface MemoryConfigProps {
   config: AgentConfigurableOptions;
   onChange: (field: keyof AgentConfigurableOptions, value: unknown) => void;
 }
 
-export function SettingsConfig({ config, onChange }: SettingsConfigProps) {
+export function MemoryConfig({ config, onChange }: MemoryConfigProps) {
   const handleMemoryChange = (
     field: keyof typeof config.memory,
     value: unknown

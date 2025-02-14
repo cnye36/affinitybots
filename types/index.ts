@@ -1,5 +1,5 @@
 import { Tool } from "@langchain/core/tools";
-
+import { BaseStore } from "@langchain/langgraph";
 // Available model types
 export type ModelType = "gpt-4o" | "gpt-4o-mini" | "gpt-o1" | "gpt-o1-mini";
 
@@ -63,7 +63,7 @@ export interface MemoryConfig {
 export interface AgentState {
   messages: Message[];
   tools: Tool[];
-  memory: MemoryConfig;
+  store: BaseStore;
 }
 
 // Main configurable options
@@ -328,8 +328,8 @@ export interface Task {
   name: string;
   description: string;
   type: TaskType;
-  agentId: string;
-  workflowId: string;
+  assistant_id: string;
+  workflow_id: string;
   integration?: IntegrationConfig;
   config: {
     input: {

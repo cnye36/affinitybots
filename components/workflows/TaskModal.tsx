@@ -25,8 +25,8 @@ interface TaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (task: Partial<Task>) => Promise<void>;
-  agentId: string;
-  workflowId: string;
+  assistant_id: string;
+  workflow_id: string;
   initialTask?: Task;
 }
 
@@ -72,8 +72,8 @@ export function TaskModal({
   isOpen,
   onClose,
   onSave,
-  agentId,
-  workflowId,
+  assistant_id,
+  workflow_id,
   initialTask,
 }: TaskModalProps) {
   const [name, setName] = useState(initialTask?.name || "");
@@ -119,8 +119,8 @@ export function TaskModal({
         name,
         description,
         type,
-        agentId,
-        workflowId,
+        assistant_id,
+        workflow_id,
         integration: integration
           ? {
               type: integration,
@@ -155,7 +155,7 @@ export function TaskModal({
 
     try {
       const response = await fetch(
-        `/api/workflows/${workflowId}/tasks/${initialTask.task_id}/execute`,
+        `/api/workflows/${workflow_id}/tasks/${initialTask.task_id}/execute`,
         {
           method: "POST",
         }

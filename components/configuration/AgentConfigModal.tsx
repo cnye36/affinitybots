@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GeneralConfig } from "./GeneralConfig";
 import { PromptsConfig } from "./PromptsConfig";
 import { ToolSelector } from "@/components/configuration/ToolSelector";
-import { SettingsConfig } from "./SettingsConfig";
+import { MemoryConfig } from "./MemoryConfig";
 import { KnowledgeConfig } from "./KnowledgeConfig";
 import {
   AgentConfigurableOptions,
@@ -233,7 +233,7 @@ export function AgentConfigModal({
             <TabsTrigger value="prompts">Prompts</TabsTrigger>
             <TabsTrigger value="tools">Tools</TabsTrigger>
             <TabsTrigger value="knowledge">Knowledge</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
+            <TabsTrigger value="memory">Memory</TabsTrigger>
           </TabsList>
 
           <TabsContent value="general">
@@ -271,8 +271,8 @@ export function AgentConfigModal({
             />
           </TabsContent>
 
-          <TabsContent value="settings">
-            <SettingsConfig
+          <TabsContent value="memory">
+            <MemoryConfig
               config={config.config.configurable}
               onChange={handleConfigurableChange}
             />

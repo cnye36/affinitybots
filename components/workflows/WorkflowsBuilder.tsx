@@ -8,7 +8,7 @@ import { WorkflowCanvas } from "./WorkflowCanvas";
 import { toast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { Assistant } from "@/types/index";
+import { Assistant, Task } from "@/types/index";
 import { createClient } from "@/supabase/client";
 import { TaskModal } from "./TaskModal";
 import { EmptyWorkflowState } from "./EmptyWorkflowState";
@@ -382,11 +382,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
     setSelectedAgentId(null);
   };
 
-  const handleSaveTask = async (taskData: {
-    name: string;
-    description?: string;
-    type: string;
-  }) => {
+  const handleSaveTask = async (taskData: Partial<Task>) => {
     if (!workflowId || !selectedAgentId) {
       toast({
         title: "Cannot create task without workflow or agent",
@@ -396,19 +392,26 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
     }
 
     try {
+      const taskPayload = {
+        assistant_id: selectedAgentId,
+        workflow_id: workflowId,
+        ...taskData,
+      };
+      console.log("Task payload:", taskPayload);
+
       const response = await fetch(`/api/workflows/${workflowId}/tasks`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          ...taskData,
-          assistant_id: selectedAgentId,
-          workflow_id: workflowId,
-        }),
+        body: JSON.stringify(taskPayload),
       });
 
-      if (!response.ok) throw new Error("Failed to create task");
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Server error response:", errorData);
+        throw new Error(errorData.error || "Failed to create task");
+      }
       const newTask = await response.json();
 
       // Find source node and update its hasTask flag
@@ -544,8 +547,8 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
           setSelectedAgentId(null);
         }}
         onSave={handleSaveTask}
-        assistantId={selectedAgentId || ""}
-        workflowId={workflowId || ""}
+        assistant_id={selectedAgentId || ""}
+        workflow_id={workflowId || ""}
       />
       <AgentSelectModal
         isOpen={isAgentSelectOpen}
