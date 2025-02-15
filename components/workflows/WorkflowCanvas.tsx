@@ -2,7 +2,6 @@
 
 import { useCallback } from "react";
 import ReactFlow, {
-  Node,
   Edge,
   Controls,
   Background,
@@ -19,18 +18,25 @@ import ReactFlow, {
   OnEdgesChange,
   OnNodesChange,
   MarkerType,
+  Connection,
+  OnNodesDelete,
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { AgentNode } from "./AgentNode";
 import { CustomEdge } from "./CustomEdge";
-import { TaskNode } from "./TaskNode";
-import axios from "axios";
-import { Assistant } from "@/types/index";
 import { toast } from "@/hooks/use-toast";
+import { WorkflowNode } from "@/types/workflow";
+import { MemoizedTaskNode } from "./TaskNode";
 
-interface WorkflowNode extends Node {
-  type: "agent" | "task";
-}
+// Define node and edge types outside the component
+const nodeTypes: NodeTypes = {
+  agent: AgentNode,
+  task: MemoizedTaskNode,
+};
+
+const edgeTypes: EdgeTypes = {
+  custom: CustomEdge,
+};
 
 interface WorkflowCanvasProps {
   nodes: WorkflowNode[];
@@ -38,16 +44,9 @@ interface WorkflowCanvasProps {
   edges: Edge[];
   setEdges: React.Dispatch<React.SetStateAction<Edge[]>>;
   initialWorkflowId?: string;
+  selectedTaskId?: string | null;
+  onTaskConfigClose?: () => void;
 }
-
-const nodeTypes: NodeTypes = {
-  agent: AgentNode,
-  task: TaskNode,
-};
-
-const edgeTypes: EdgeTypes = {
-  custom: CustomEdge,
-};
 
 export function WorkflowCanvas({
   nodes,
@@ -58,48 +57,123 @@ export function WorkflowCanvas({
 }: WorkflowCanvasProps) {
   const reactFlowInstance = useReactFlow();
 
+  const onNodesDelete = useCallback(
+    async (nodesToDelete: Parameters<OnNodesDelete>[0]) => {
+      // Handle node deletion
+      const typedNodes = nodesToDelete as unknown as WorkflowNode[];
+      for (const node of typedNodes) {
+        if (node.type === "task" && node.data.task_id && initialWorkflowId) {
+          try {
+            await fetch(
+              `/api/workflows/${initialWorkflowId}/tasks/${node.data.task_id}`,
+              {
+                method: "DELETE",
+              }
+            );
+          } catch (error) {
+            console.error("Error deleting task:", error);
+            toast({
+              title: "Failed to delete task",
+              variant: "destructive",
+            });
+          }
+        }
+      }
+
+      // Remove connected edges
+      const edgesToRemove = edges.filter((edge) =>
+        typedNodes.some(
+          (node) => edge.source === node.id || edge.target === node.id
+        )
+      );
+      setEdges(
+        edges.filter((edge) => !edgesToRemove.some((e) => e.id === edge.id))
+      );
+
+      // Update nodes with hasTask status
+      setNodes((prevNodes) => {
+        const updatedNodes = prevNodes
+          .filter((node) => !typedNodes.some((n) => n.id === node.id))
+          .map((node) => {
+            if (node.type === "agent") {
+              const hasConnectedTask = edges.some(
+                (edge) =>
+                  edge.source === node.id &&
+                  !typedNodes.some((n) => n.id === edge.target)
+              );
+              return {
+                ...node,
+                data: { ...node.data, hasTask: hasConnectedTask },
+              };
+            }
+            return node;
+          });
+        return updatedNodes;
+      });
+    },
+    [edges, setEdges, setNodes, initialWorkflowId]
+  );
+
+  const onEdgesDelete = useCallback(
+    (edgesToDelete: Edge[]) => {
+      setNodes((prevNodes) =>
+        prevNodes.map((node) => {
+          if (node.type === "agent") {
+            const hasConnectedTask = edges.some(
+              (edge) =>
+                edge.source === node.id &&
+                !edgesToDelete.some((e) => e.id === edge.id)
+            );
+            return {
+              ...node,
+              data: { ...node.data, hasTask: hasConnectedTask },
+            };
+          }
+          return node;
+        })
+      );
+    },
+    [edges, setNodes]
+  );
+
   const onConnect: OnConnect = useCallback(
-    (connection) => {
-      // Get the source and target nodes
+    (connection: Connection) => {
       const sourceNode = nodes.find((node) => node.id === connection.source);
       const targetNode = nodes.find((node) => node.id === connection.target);
 
       if (!sourceNode || !targetNode) return;
 
-      // Check if it's a task-to-task connection
-      if (sourceNode.type === "task" && targetNode.type === "task") {
-        if (
+      const connectionExists = edges.some(
+        (edge) =>
+          edge.source === connection.source && edge.target === connection.target
+      );
+
+      if (connectionExists) {
+        toast({
+          title: "Connection already exists",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (
+        (sourceNode.type === "task" &&
+          targetNode.type === "task" &&
           connection.sourceHandle === "task-source" &&
-          connection.targetHandle === "task-target"
-        ) {
-          setEdges((eds) => addEdge(connection, eds));
-        }
-        return;
-      }
-
-      // Check if it's an agent-to-agent connection
-      if (sourceNode.type === "agent" && targetNode.type === "agent") {
-        if (
+          connection.targetHandle === "task-target") ||
+        (sourceNode.type === "agent" &&
+          targetNode.type === "agent" &&
           connection.sourceHandle === "agent-source" &&
-          connection.targetHandle === "agent-target"
-        ) {
-          setEdges((eds) => addEdge(connection, eds));
-        }
-        return;
-      }
-
-      // Check if it's an agent-to-task connection
-      if (sourceNode.type === "agent" && targetNode.type === "task") {
-        if (
+          connection.targetHandle === "agent-target") ||
+        (sourceNode.type === "agent" &&
+          targetNode.type === "task" &&
           connection.sourceHandle === "task-handle" &&
-          connection.targetHandle === "task-target"
-        ) {
-          setEdges((eds) => addEdge(connection, eds));
-        }
-        return;
+          connection.targetHandle === "task-target")
+      ) {
+        setEdges((eds) => addEdge(connection, eds));
       }
     },
-    [nodes, setEdges]
+    [nodes, edges, setEdges]
   );
 
   const onDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
@@ -113,50 +187,41 @@ export function WorkflowCanvas({
 
       const assistantId = event.dataTransfer.getData("application/reactflow");
 
-      if (!assistantId || !initialWorkflowId) {
-        if (!initialWorkflowId) {
+      if (assistantId && initialWorkflowId) {
+        try {
+          const response = await fetch(`/api/assistants/${assistantId}`);
+          if (!response.ok) {
+            throw new Error("Failed to fetch assistant");
+          }
+          const assistant = await response.json();
+
+          const { zoom } = reactFlowInstance.getViewport();
+          const position = reactFlowInstance.screenToFlowPosition({
+            x: event.clientX,
+            y: event.clientY,
+          });
+
+          const newNode: WorkflowNode = {
+            id: `${assistant.assistant_id}-${nodes.length + 1}`,
+            type: "agent" as const,
+            position,
+            data: {
+              assistant_id: assistant.assistant_id,
+              label: assistant.name,
+              workflowId: initialWorkflowId,
+              hasTask: false,
+              status: "idle" as const,
+            },
+          };
+
+          setNodes((nds) => nds.concat(newNode));
+          reactFlowInstance.setViewport({ x: 0, y: 0, zoom });
+        } catch (error) {
+          console.error("Error fetching assistant:", error);
           toast({
-            title: "Please save the workflow first",
+            title: "Failed to add assistant to workflow",
           });
         }
-        return;
-      }
-
-      try {
-        const response = await axios.get<Assistant>(
-          `/api/assistants/${assistantId}`
-        );
-        const assistant = response.data;
-
-        if (!assistant) {
-          console.error("Assistant not found");
-          return;
-        }
-
-        const { zoom } = reactFlowInstance.getViewport();
-        const position = reactFlowInstance.screenToFlowPosition({
-          x: event.clientX,
-          y: event.clientY,
-        });
-
-        const newNode: WorkflowNode = {
-          id: `${assistant.assistant_id}-${nodes.length + 1}`,
-          type: "agent" as const,
-          position,
-          data: {
-            assistant_id: assistant.assistant_id,
-            label: assistant.name,
-            workflowId: initialWorkflowId,
-          },
-        };
-
-        setNodes((nds) => nds.concat(newNode));
-        reactFlowInstance.setViewport({ x: 0, y: 0, zoom });
-      } catch (error) {
-        console.error("Error fetching assistant:", error);
-        toast({
-          title: "Failed to add assistant to workflow",
-        });
       }
     },
     [nodes, setNodes, reactFlowInstance, initialWorkflowId]
@@ -164,57 +229,68 @@ export function WorkflowCanvas({
 
   const onNodesChange: OnNodesChange = useCallback(
     (changes) => {
-      setNodes((nds) => applyNodeChanges(changes, nds) as WorkflowNode[]);
+      setNodes(
+        (nds) =>
+          applyNodeChanges(
+            changes,
+            nds as Parameters<typeof applyNodeChanges>[1]
+          ) as unknown as WorkflowNode[]
+      );
     },
     [setNodes]
   );
 
-  const onEdgesChange: OnEdgesChange = (changes) => {
-    setEdges((eds) => applyEdgeChanges(changes, eds));
-  };
+  const onEdgesChange: OnEdgesChange = useCallback(
+    (changes) => {
+      setEdges((eds) => applyEdgeChanges(changes, eds));
+    },
+    [setEdges]
+  );
 
   return (
-    <div className="w-full h-full flex">
-      <div className="w-full">
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          nodeTypes={nodeTypes}
-          edgeTypes={edgeTypes}
-          onDragOver={onDragOver}
-          onDrop={onDrop}
-          defaultViewport={{ x: 0, y: 0, zoom: 1.5 }}
-          defaultEdgeOptions={{
-            type: "custom",
-            animated: true,
-            style: { strokeWidth: 2 },
-            markerEnd: {
-              type: MarkerType.ArrowClosed,
-              width: 20,
-              height: 20,
-            },
-          }}
-          minZoom={0.2}
-          maxZoom={4}
-          fitView={false}
+    <div className="absolute inset-0">
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onNodesDelete={onNodesDelete}
+        onEdgesDelete={onEdgesDelete}
+        onConnect={onConnect}
+        nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
+        onDragOver={onDragOver}
+        onDrop={onDrop}
+        defaultViewport={{ x: 0, y: 0, zoom: 1.5 }}
+        defaultEdgeOptions={{
+          type: "custom",
+          animated: true,
+          style: { strokeWidth: 2 },
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+            width: 20,
+            height: 20,
+          },
+        }}
+        minZoom={0.2}
+        maxZoom={4}
+        fitView={false}
+        deleteKeyCode={["Backspace", "Delete"]}
+      >
+        <Controls />
+        <MiniMap />
+        <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
+        <Panel
+          position="top-center"
+          className="bg-background/60 p-2 rounded-lg shadow-sm border"
         >
-          <Controls />
-          <MiniMap />
-          <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
-          <Panel
-            position="top-center"
-            className="bg-background/60 p-2 rounded-lg shadow-sm border"
-          >
-            <div className="text-sm text-muted-foreground">
-              Drag assistants from the sidebar and connect them to create your
-              workflow. Add tasks to each assistant to define their behavior.
-            </div>
-          </Panel>
-        </ReactFlow>
-      </div>
+          <div className="text-sm text-muted-foreground">
+            To create a workflow, add an Agent and then add tasks to each agent
+            to define their behavior. Press Delete or Backspace to remove nodes
+            and edges.
+          </div>
+        </Panel>
+      </ReactFlow>
     </div>
   );
 }

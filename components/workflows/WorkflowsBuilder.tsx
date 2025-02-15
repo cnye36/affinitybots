@@ -1,33 +1,20 @@
 'use client'
 
-import { useState, useEffect } from "react";
-import { Edge, ReactFlowProvider, Node } from "reactflow";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { WorkflowCanvas } from "./WorkflowCanvas";
-import { toast } from "@/hooks/use-toast";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Edge, ReactFlowProvider } from "reactflow";
 import { useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
-import { Assistant, Task } from "@/types/index";
+import { TaskType } from "@/types/workflow";
+import { Assistant } from "@/types/langgraph";
+import { WorkflowNode } from "@/types/workflow";
 import { createClient } from "@/supabase/client";
-import { TaskModal } from "./TaskModal";
 import { EmptyWorkflowState } from "./EmptyWorkflowState";
 import { AgentSelectModal } from "./AgentSelectModal";
-
-interface WorkflowNode extends Node {
-  type: "agent" | "task";
-  data: {
-    assistant_id?: string;
-    label: string;
-    workflowId?: string;
-    type?: string;
-    task_id?: string;
-    onAddTask?: (agentId: string) => void;
-    isFirstAgent?: boolean;
-    hasTask?: boolean;
-    onAddAgent?: (sourceAgentId: string) => void;
-  };
-}
+import { WorkflowCanvas } from "./WorkflowCanvas";
+import { WorkflowHeader } from "./WorkflowHeader";
+import { executeWorkflow } from "./WorkflowExecutionManager";
+import { addAgent, addTask } from "./WorkflowNodeManager";
+import { toast } from "@/hooks/use-toast";
+import { TaskSidebar } from "./TaskSidebar";
 
 interface WorkflowsBuilderProps {
   initialWorkflowId?: string;
@@ -35,6 +22,8 @@ interface WorkflowsBuilderProps {
 
 function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
   const router = useRouter();
+  const supabase = createClient();
+
   const [workflowName, setWorkflowName] = useState("Undefined Workflow");
   const [assistants, setAssistants] = useState<Assistant[]>([]);
   const [loadingAssistants, setLoadingAssistants] = useState(true);
@@ -46,15 +35,45 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
     initialWorkflowId
   );
   const [isExecuting, setIsExecuting] = useState(false);
-  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [isTaskSidebarOpen, setIsTaskSidebarOpen] = useState(false);
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [isAgentSelectOpen, setIsAgentSelectOpen] = useState(false);
-  const supabase = createClient();
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+
+  const createdWorkflowRef = useRef(false);
+
+  const handleAddTask = useCallback((agentId: string) => {
+    setSelectedAgentId(agentId);
+    setIsTaskSidebarOpen(true);
+  }, []);
+
+  const handleAddNextAgent = useCallback((sourceAgentId: string) => {
+    setSelectedAgentId(sourceAgentId);
+    setIsAgentSelectOpen(true);
+  }, []);
+
+  const handleConfigureTask = useCallback((taskId: string) => {
+    setSelectedTaskId(taskId);
+  }, []);
+
+  const handleTaskConfigClose = useCallback(() => {
+    setSelectedTaskId(null);
+  }, []);
 
   // Create a new workflow immediately if we don't have an ID
   useEffect(() => {
+    if (workflowId || initialWorkflowId) return;
+
+    // Use a ref to ensure workflow creation only happens once
+    if (createdWorkflowRef.current) return;
+    createdWorkflowRef.current = true;
+
     const createWorkflow = async () => {
-      if (workflowId) return; // Skip if we already have a workflow ID
+      const currentWorkflowId = workflowId;
+      const currentWorkflowName = workflowName;
+
+      // Only create if we don't have an ID and we're not loading an existing workflow
+      if (currentWorkflowId || initialWorkflowId) return;
 
       try {
         const {
@@ -69,7 +88,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
         const { data, error } = await supabase
           .from("workflows")
           .insert({
-            name: workflowName,
+            name: currentWorkflowName,
             owner_id: user.id,
             nodes: [],
             edges: [],
@@ -93,33 +112,36 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
     };
 
     createWorkflow();
-  }, [supabase, router, workflowId, workflowName]);
+  }, [supabase, router, initialWorkflowId, workflowId, workflowName]);
 
   // Load existing workflow if ID is provided
   useEffect(() => {
     const loadWorkflow = async () => {
-      if (!workflowId) return;
+      // Only load if we have a workflowId (either initial or created)
+      if (!workflowId && !initialWorkflowId) return;
 
+      const idToLoad = workflowId || initialWorkflowId;
       setLoading(true);
       try {
         const { data: workflow, error: fetchError } = await supabase
           .from("workflows")
           .select("*")
-          .eq("workflow_id", workflowId)
+          .eq("workflow_id", idToLoad)
           .single();
 
         if (fetchError) throw fetchError;
 
         if (workflow) {
+          setWorkflowId(workflow.workflow_id); // Ensure workflowId is set
           setWorkflowName(workflow.name);
-          // Update nodes to include workflowId and onAddTask handler
           setNodes(
             workflow.nodes.map((node: WorkflowNode) => ({
               ...node,
               data: {
                 ...node.data,
-                workflowId,
+                workflowId: workflow.workflow_id,
                 onAddTask: handleAddTask,
+                onAddAgent: handleAddNextAgent,
               },
             }))
           );
@@ -138,7 +160,14 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
     };
 
     loadWorkflow();
-  }, [workflowId, router, supabase]);
+  }, [
+    workflowId,
+    initialWorkflowId,
+    handleAddTask,
+    handleAddNextAgent,
+    router,
+    supabase,
+  ]);
 
   useEffect(() => {
     const fetchAssistants = async () => {
@@ -165,22 +194,6 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
 
     fetchAssistants();
   }, []);
-
-  const handleError = (err: unknown) => {
-    console.error("Error:", err);
-    if (err && typeof err === "object" && "code" in err && "message" in err) {
-      // This is likely a Postgrest error
-      toast({
-        title: err.message as string,
-        variant: "destructive",
-      });
-    } else if (err instanceof Error) {
-      toast({
-        title: err.message,
-        variant: "destructive",
-      });
-    }
-  };
 
   const handleSave = async () => {
     if (saving) return;
@@ -212,7 +225,6 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
       };
 
       if (workflowId) {
-        // Update existing workflow
         const { data, error } = await supabase
           .from("workflows")
           .update(workflowData)
@@ -233,15 +245,14 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
               data: {
                 ...node.data,
                 workflowId,
+                onAddTask: handleAddTask,
+                onAddAgent: handleAddNextAgent,
               },
             }))
           );
           setEdges(data[0].edges);
-        } else {
-          throw new Error("No data returned from update");
         }
       } else {
-        // Create new workflow
         const { data, error } = await supabase
           .from("workflows")
           .insert(workflowData)
@@ -250,32 +261,22 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
         if (error) throw error;
 
         if (data && data.length > 0) {
+          const newWorkflowId = data[0].workflow_id;
+          setWorkflowId(newWorkflowId);
+          router.push(`/workflows/${newWorkflowId}`);
+
           toast({
             title: "Workflow saved successfully",
             variant: "default",
           });
-
-          const newWorkflowId = data[0].workflow_id;
-
-          // Update nodes with the new workflowId
-          setNodes(
-            data[0].nodes.map((node: WorkflowNode) => ({
-              ...node,
-              data: {
-                ...node.data,
-                workflowId: newWorkflowId,
-              },
-            }))
-          );
-          setEdges(data[0].edges);
-
-          router.push(`/workflows/${newWorkflowId}`);
-        } else {
-          throw new Error("No data returned from insert");
         }
       }
     } catch (err) {
-      handleError(err);
+      console.error("Error saving workflow:", err);
+      toast({
+        title: "Failed to save workflow",
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }
@@ -291,192 +292,87 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
     }
 
     setIsExecuting(true);
-    try {
-      const response = await fetch(`/api/workflows/${workflowId}/execute`, {
-        method: "POST",
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        toast({
-          title: "Workflow executed successfully",
-          variant: "default",
-        });
-        // Optionally, handle executionResult
-      } else {
-        throw new Error(data.error || "Failed to execute workflow");
-      }
-    } catch (error) {
-      console.error("Error executing workflow:", error);
-      toast({
-        title: "Failed to execute workflow",
-        variant: "destructive",
-      });
-    } finally {
-      setIsExecuting(false);
-    }
-  };
-
-  const handleAddTask = (agentId: string) => {
-    setSelectedAgentId(agentId);
-    setIsTaskModalOpen(true);
-  };
-
-  const handleAddNextAgent = (sourceAgentId: string) => {
-    setSelectedAgentId(sourceAgentId);
-    setIsAgentSelectOpen(true);
+    await executeWorkflow({
+      workflowId,
+      setNodes,
+      setIsExecuting,
+    });
   };
 
   const handleAgentSelect = async (assistant: Assistant) => {
     if (!workflowId) {
       toast({
-        title: "Please save the workflow first",
-        description: "You need to save the workflow before adding an agent",
+        title: "Cannot add agent",
+        description: "Workflow must be created first",
         variant: "destructive",
       });
       return;
     }
 
-    // Find source node if we're adding from an existing agent
-    const sourceNode = selectedAgentId
-      ? nodes.find((node) => node.data.assistant_id === selectedAgentId)
-      : null;
-
-    // Calculate position based on source node or default to center
-    const position = sourceNode
-      ? { x: sourceNode.position.x, y: sourceNode.position.y + 300 }
-      : { x: 400, y: 200 };
-
-    // Create new agent node
-    const newNode: WorkflowNode = {
-      id: `agent-${assistant.assistant_id}`,
-      type: "agent",
-      position,
-      data: {
-        label: assistant.name,
-        assistant_id: assistant.assistant_id,
-        workflowId,
+    await addAgent({
+      workflowId,
+      nodes,
+      setNodes,
+      setEdges,
+      assistant,
+      sourceAgentId: selectedAgentId || undefined,
+      handlers: {
         onAddTask: handleAddTask,
         onAddAgent: handleAddNextAgent,
-        isFirstAgent: !selectedAgentId,
-        hasTask: false,
+        onConfigureTask: handleConfigureTask,
       },
-    };
-
-    // Create edge if we have a source node
-    if (sourceNode) {
-      const newEdge: Edge = {
-        id: `edge-${sourceNode.id}-${newNode.id}`,
-        source: sourceNode.id,
-        target: newNode.id,
-        type: "default",
-        sourceHandle: "agent-source",
-        targetHandle: "agent-target",
-      };
-      setEdges((eds) => [...eds, newEdge]);
-    }
-
-    setNodes((nds) => [...nds, newNode]);
+    });
     setIsAgentSelectOpen(false);
     setSelectedAgentId(null);
   };
 
-  const handleSaveTask = async (taskData: Partial<Task>) => {
-    if (!workflowId || !selectedAgentId) {
+  const handleTaskSelect = async (taskData: {
+    type: TaskType;
+    label: string;
+    description: string;
+  }) => {
+    if (!selectedAgentId || !workflowId) {
       toast({
-        title: "Cannot create task without workflow or agent",
+        title: "Cannot add task",
+        description: "Both workflow and agent must be selected",
         variant: "destructive",
       });
       return;
     }
 
     try {
-      const taskPayload = {
-        assistant_id: selectedAgentId,
-        workflow_id: workflowId,
-        ...taskData,
-      };
-      console.log("Task payload:", taskPayload);
-
-      const response = await fetch(`/api/workflows/${workflowId}/tasks`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const newTask = await addTask({
+        workflowId,
+        nodes,
+        setNodes,
+        setEdges,
+        agentId: selectedAgentId,
+        taskData: {
+          type: taskData.type,
+          name: taskData.label,
+          description: taskData.description,
+          assistant_id: selectedAgentId,
+          workflow_id: workflowId,
         },
-        body: JSON.stringify(taskPayload),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error("Server error response:", errorData);
-        throw new Error(errorData.error || "Failed to create task");
+      if (newTask?.task_id) {
+        setSelectedTaskId(newTask.task_id);
       }
-      const newTask = await response.json();
-
-      // Find source node and update its hasTask flag
-      const sourceNode = nodes.find(
-        (node) => node.data.assistant_id === selectedAgentId
-      );
-
-      if (!sourceNode) return;
-
-      const position = {
-        x: sourceNode.position.x + 300,
-        y: sourceNode.position.y,
-      };
-
-      // Create new task node
-      const newTaskNode: WorkflowNode = {
-        id: `task-${newTask.task_id}`,
-        type: "task",
-        position,
-        data: {
-          ...newTask,
-          label: newTask.name,
-          workflowId,
-        },
-      };
-
-      // Create edge from agent to task
-      const newEdge: Edge = {
-        id: `edge-${sourceNode.id}-${newTaskNode.id}`,
-        source: sourceNode.id,
-        target: newTaskNode.id,
-        type: "default",
-        sourceHandle: "task-handle",
-        targetHandle: "task-target",
-      };
-
-      // Update source node to show it has tasks
-      setNodes((nds) =>
-        nds.map((node) =>
-          node.id === sourceNode.id
-            ? { ...node, data: { ...node.data, hasTask: true } }
-            : node
-        )
-      );
-
-      setNodes((nds) => [...nds, newTaskNode]);
-      setEdges((eds) => [...eds, newEdge]);
-      setIsTaskModalOpen(false);
-    } catch (err) {
-      console.error("Error saving task:", err);
+    } catch (error) {
+      console.error("Error creating task:", error);
       toast({
-        title: "Failed to save task",
-        description: "Please try again",
+        title: "Failed to create task",
         variant: "destructive",
       });
     }
+
+    setIsTaskSidebarOpen(false);
+    setSelectedAgentId(null);
   };
 
   const handleAddFirstAgent = () => {
     setIsAgentSelectOpen(true);
-  };
-
-  const getWorkflowState = () => {
-    if (nodes.length === 0) return "empty";
-    return "add-agent";
   };
 
   if (loading) {
@@ -489,67 +385,45 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
 
   return (
     <div className="h-screen flex flex-col relative">
-      <div className="flex items-center justify-between p-4 border-b">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            onClick={() => router.push("/workflows")}
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Workflows
-          </Button>
-          <Input
-            placeholder="Enter workflow name"
-            value={workflowName}
-            onChange={(e) => setWorkflowName(e.target.value)}
-            className="max-w-xs"
-          />
-        </div>
-        <div className="flex gap-2">
-          <Button onClick={handleSave} disabled={saving}>
-            {saving
-              ? "Saving..."
-              : workflowId
-              ? "Update Workflow"
-              : "Save Workflow"}
-          </Button>
-          <Button onClick={handleExecuteWorkflow} disabled={isExecuting}>
-            {isExecuting ? "Executing..." : "Execute Workflow"}
-          </Button>
-        </div>
-      </div>
-      <div className="flex flex-1 relative">
-        <ReactFlowProvider>
-          <WorkflowCanvas
-            nodes={nodes}
-            setNodes={setNodes}
-            edges={edges}
-            setEdges={setEdges}
-            initialWorkflowId={workflowId}
-          />
-          {nodes.length === 0 && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="pointer-events-auto">
-                <EmptyWorkflowState
-                  type={getWorkflowState()}
-                  onAddFirstAgent={handleAddFirstAgent}
-                />
-              </div>
-            </div>
-          )}
-        </ReactFlowProvider>
-      </div>
-      <TaskModal
-        isOpen={isTaskModalOpen}
-        onClose={() => {
-          setIsTaskModalOpen(false);
-          setSelectedAgentId(null);
-        }}
-        onSave={handleSaveTask}
-        assistant_id={selectedAgentId || ""}
-        workflow_id={workflowId || ""}
+      <WorkflowHeader
+        workflowName={workflowName}
+        setWorkflowName={setWorkflowName}
+        onSave={handleSave}
+        onExecute={handleExecuteWorkflow}
+        onBack={() => router.push("/workflows")}
+        saving={saving}
+        executing={isExecuting}
+        workflowId={workflowId}
       />
+      <div className="flex-1 relative">
+        <WorkflowCanvas
+          nodes={nodes}
+          setNodes={setNodes}
+          edges={edges}
+          setEdges={setEdges}
+          initialWorkflowId={workflowId}
+          selectedTaskId={selectedTaskId}
+          onTaskConfigClose={handleTaskConfigClose}
+        />
+        {nodes.length === 0 && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="pointer-events-auto">
+              <EmptyWorkflowState
+                type="empty"
+                onAddFirstAgent={handleAddFirstAgent}
+              />
+            </div>
+          </div>
+        )}
+        <TaskSidebar
+          isOpen={isTaskSidebarOpen}
+          onClose={() => {
+            setIsTaskSidebarOpen(false);
+            setSelectedAgentId(null);
+          }}
+          onTaskSelect={handleTaskSelect}
+        />
+      </div>
       <AgentSelectModal
         isOpen={isAgentSelectOpen}
         onClose={() => setIsAgentSelectOpen(false)}

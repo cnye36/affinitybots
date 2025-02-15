@@ -1,4 +1,4 @@
-import { Message } from "@/types";
+import { Message } from "@/types/langgraph";
 import { useEffect, useRef, useState, ComponentPropsWithoutRef } from "react";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Message } from "@/types";
+import { Message } from "@/types/langgraph";
 import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
 import ThreadSidebar from "./ThreadSidebar";

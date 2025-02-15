@@ -1,6 +1,6 @@
 "use client";
 
-import { Assistant } from "@/types";
+import { Assistant } from "@/types/langgraph";
 import { AgentConfigButton } from "@/components/configuration/AgentConfigButton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ArrowLeftIcon } from "lucide-react";

@@ -21,9 +21,9 @@ import {
   AgentConfigurableOptions,
   AgentMetadata,
   ModelType,
-} from "@/types/index";
+} from "@/types/agent";
 import { Assistant } from "@langchain/langgraph-sdk";
-import { ToolsConfig } from "@/types/index";
+import { ToolsConfig } from "@/types/tools";
 import { useRouter } from "next/navigation";
 import { mutate } from "swr";
 
@@ -149,7 +149,7 @@ export function AgentConfigModal({
   };
 
   const handleConfigurableChange = (
-    field: keyof AgentConfigurableOptions,
+    field: string | number | symbol,
     value: unknown
   ) => {
     setConfig((prev) => ({
@@ -268,6 +268,7 @@ export function AgentConfigModal({
             <KnowledgeConfig
               config={config.config.configurable}
               onChange={handleConfigurableChange}
+              assistant_id={config.assistant_id}
             />
           </TabsContent>
 

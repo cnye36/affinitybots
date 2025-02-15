@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
-import { Task, TaskType } from "@/types";
+import { Task, TaskType } from "@/types/workflow";
 
 const VALID_TASK_TYPES: TaskType[] = [
   // Notion tasks

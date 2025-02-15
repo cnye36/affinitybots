@@ -3,16 +3,21 @@
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { X, Upload } from "lucide-react";
-import { AgentConfigurableOptions } from "@/types/index";
+import { AgentConfigurableOptions } from "@/types/agent";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 interface KnowledgeConfigProps {
   config: AgentConfigurableOptions;
   onChange: (field: keyof AgentConfigurableOptions, value: unknown) => void;
+  assistant_id: string;
 }
 
-export function KnowledgeConfig({ config, onChange }: KnowledgeConfigProps) {
+export function KnowledgeConfig({
+  config,
+  onChange,
+  assistant_id,
+}: KnowledgeConfigProps) {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const { toast } = useToast();
@@ -46,9 +51,13 @@ export function KnowledgeConfig({ config, onChange }: KnowledgeConfigProps) {
 
   const handleFiles = async (files: File[]) => {
     const invalidFiles = files.filter(
-      file => !['application/pdf', 'text/plain', 'application/msword',
-               'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
-        .includes(file.type)
+      (file) =>
+        ![
+          "application/pdf",
+          "text/plain",
+          "application/msword",
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ].includes(file.type)
     );
 
     if (invalidFiles.length > 0) {
@@ -58,18 +67,18 @@ export function KnowledgeConfig({ config, onChange }: KnowledgeConfigProps) {
 
     try {
       setUploadError(null);
-      
+
       // Process each file
       for (const file of files) {
         toast({
           title: "Processing File",
           description: `Processing ${file.name}...`,
         });
-        
+
         // Create FormData for file upload
         const formData = new FormData();
         formData.append("file", file);
-        formData.append("assistantId", config.owner_id);
+        formData.append("assistantId", assistant_id);
 
         // Upload and process file
         const response = await fetch("/api/knowledge", {
@@ -90,21 +99,19 @@ export function KnowledgeConfig({ config, onChange }: KnowledgeConfigProps) {
 
       // Update the UI
       const currentSources =
-        (config.knowledge_base?.config.sources as string[]) || [];
-      const newSources = [...currentSources, ...files.map(file => file.name)];
+        (config.knowledge_base?.config?.sources as string[]) || [];
+      const newSources = [...currentSources, ...files.map((file) => file.name)];
 
-      onChange("tools", {
-        ...config.tools,
-        knowledge_base: {
-          isEnabled: true,
-          config: {
-            sources: newSources,
-          },
+      onChange("knowledge_base", {
+        isEnabled: true,
+        config: {
+          sources: newSources,
         },
       });
     } catch (error) {
-      console.error('Error processing files:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      console.error("Error processing files:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error occurred";
       setUploadError(`Error processing files: ${errorMessage}`);
       toast({
         title: "Error",
@@ -116,25 +123,22 @@ export function KnowledgeConfig({ config, onChange }: KnowledgeConfigProps) {
 
   const handleRemoveSource = (index: number) => {
     const currentSources =
-      (config.knowledge_base?.config.sources as string[]) || [];
-    const currentFiles = (config.knowledge_base?.config.files as File[]) || [];
+      (config.knowledge_base?.config?.sources as string[]) || [];
+    const currentFiles = (config.knowledge_base?.config?.files as File[]) || [];
 
     const newSources = currentSources.filter((_, i) => i !== index);
     const newFiles = currentFiles.filter((_, i) => i !== index);
 
-    onChange("tools", {
-      ...config.tools,
-      knowledge_base: {
-        isEnabled: newSources.length > 0,
-        config: {
-          sources: newSources,
-          files: newFiles,
-        },
+    onChange("knowledge_base", {
+      isEnabled: newSources.length > 0,
+      config: {
+        sources: newSources,
+        files: newFiles,
       },
     });
   };
 
-  const sources = (config.knowledge_base?.config.sources as string[]) || [];
+  const sources = (config.knowledge_base?.config?.sources as string[]) || [];
 
   return (
     <div className="space-y-6">

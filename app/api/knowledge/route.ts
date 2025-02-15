@@ -16,6 +16,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
+    if (!assistantId || assistantId.trim() === "") {
+      return NextResponse.json(
+        { error: "Valid assistant ID is required" },
+        { status: 400 }
+      );
+    }
+
     // Process the file based on its type
     let docs;
     const textSplitter = new RecursiveCharacterTextSplitter({
@@ -27,45 +34,42 @@ export async function POST(req: Request) {
       case "application/pdf":
         const pdfLoader = new PDFLoader(file);
         docs = await pdfLoader.load();
+        docs = await textSplitter.splitDocuments(docs);
         break;
       case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+      case "application/msword":
         const docxLoader = new DocxLoader(file);
         docs = await docxLoader.load();
+        docs = await textSplitter.splitDocuments(docs);
         break;
       case "text/plain":
         const text = await file.text();
-        // Create documents directly from the text content
-        docs = [
-          {
-            pageContent: text,
-            metadata: {
-              source: file.name,
-            },
+        const initialDoc = {
+          pageContent: text,
+          metadata: {
+            source: file.name,
           },
-        ];
-        // Split the text content
-        docs = await textSplitter.splitDocuments(docs);
+        };
+        docs = await textSplitter.splitDocuments([initialDoc]);
         break;
       default:
         return NextResponse.json(
-          { error: "Unsupported file type" },
+          { error: `Unsupported file type: ${file.type}` },
           { status: 400 }
         );
     }
-
-    const splitDocs = await textSplitter.splitDocuments(docs);
 
     // Create embeddings and store in Supabase
     const supabase = await createClient();
     const embeddings = new OpenAIEmbeddings();
 
     await SupabaseVectorStore.fromDocuments(
-      splitDocs.map((doc) => ({
+      docs.map((doc) => ({
         ...doc,
         metadata: {
           ...doc.metadata,
           filename: file.name,
-          assistant_id: assistantId,
+          assistant_id: assistantId.trim(),
           uploaded_at: new Date().toISOString(),
         },
       })),

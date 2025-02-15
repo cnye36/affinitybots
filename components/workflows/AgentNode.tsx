@@ -7,10 +7,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Activity, Settings, Plus, UserPlus } from "lucide-react";
+import { Settings, Plus, UserPlus } from "lucide-react";
 import { AgentConfigModal } from "../configuration/AgentConfigModal";
-import { Assistant } from "@/types/index";
+import { Assistant } from "@/types/langgraph";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 interface AgentNodeProps {
   data: {
@@ -21,8 +22,16 @@ interface AgentNodeProps {
     onAddAgent?: (sourceAgentId: string) => void;
     isFirstAgent?: boolean;
     hasTask?: boolean;
+    status?: "idle" | "running" | "completed" | "error";
   };
 }
+
+const statusColors = {
+  idle: "bg-gray-400",
+  running: "bg-blue-400 animate-pulse",
+  completed: "bg-green-400",
+  error: "bg-red-400",
+};
 
 export const AgentNode = memo(({ data }: AgentNodeProps) => {
   const [assistant, setAssistant] = useState<Assistant | null>(null);
@@ -59,12 +68,16 @@ export const AgentNode = memo(({ data }: AgentNodeProps) => {
 
   const handleAddTask = (e: React.MouseEvent) => {
     e.stopPropagation();
-    data.onAddTask?.(data.assistant_id);
+    if (data.onAddTask) {
+      data.onAddTask(data.assistant_id);
+    }
   };
 
   const handleAddAgent = (e: React.MouseEvent) => {
     e.stopPropagation();
-    data.onAddAgent?.(data.assistant_id);
+    if (data.onAddAgent) {
+      data.onAddAgent(data.assistant_id);
+    }
   };
 
   if (loading) {
@@ -112,14 +125,18 @@ export const AgentNode = memo(({ data }: AgentNodeProps) => {
               <CardTitle className="text-sm truncate flex-1">
                 {assistant.name}
               </CardTitle>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-2">
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Activity className="text-gray-500" size={16} />
+                      <div
+                        className={`w-3 h-3 rounded-full ${
+                          statusColors[data.status || "idle"]
+                        }`}
+                      />
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Assistant Status</p>
+                      <p>Status: {data.status || "idle"}</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -145,6 +162,14 @@ export const AgentNode = memo(({ data }: AgentNodeProps) => {
               {(assistant.metadata?.description as string) ||
                 "No description available"}
             </p>
+            {data.status && (
+              <Badge
+                variant={data.status === "error" ? "destructive" : "secondary"}
+                className="mt-2"
+              >
+                {data.status}
+              </Badge>
+            )}
           </CardContent>
 
           {/* Connection Points */}

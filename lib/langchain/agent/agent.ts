@@ -19,7 +19,7 @@ import { createClient } from "@/supabase/server";
 import { getTools } from "../tools";
 import { RunnableConfig } from "@langchain/core/runnables";
 import { AgentConfigurableOptions } from "./config";
-import { AgentState } from "@/types";
+import { AgentState } from "@/types/langgraph";
 
 // Define your tools
 const tools = getTools({
