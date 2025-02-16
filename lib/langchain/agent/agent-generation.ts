@@ -1,7 +1,8 @@
 import { ChatOpenAI } from "@langchain/openai";
 import { PromptTemplate } from "@langchain/core/prompts";
-import { AgentConfigurableOptions } from "./config";
-import { ToolConfig } from "@/types";
+import { AgentConfigurableOptions } from "@/types/agent";
+import { ToolConfig } from "@/types/tools";
+import { generateAgentAvatar } from "@/lib/image-generation";
 import {
   AVAILABLE_TOOLS,
   getDefaultToolConfig,
@@ -121,6 +122,8 @@ export async function generateAgentConfiguration(
         relevance_threshold: 0.7,
       },
       prompt_template: "",
+      knowledge_base: { isEnabled: false, config: { sources: [] } },
+      avatar: "/default-avatar.png",
       owner_id: ownerId,
     },
     metadata: {
@@ -196,6 +199,14 @@ export async function generateAgentConfiguration(
         break;
     }
   });
+
+  // After the name is set in the forEach loop, generate the avatar
+  if (config.name && config.configurable) {
+    config.configurable.avatar = await generateAgentAvatar(
+      config.name,
+      agentType
+    );
+  }
 
   // Ensure all required fields are present
   if (

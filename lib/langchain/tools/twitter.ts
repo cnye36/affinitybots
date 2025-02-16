@@ -1,6 +1,6 @@
 import { Tool } from "@langchain/core/tools";
 import { TwitterApi } from "twitter-api-v2";
-import { IntegrationToolConfig, TwitterActions } from "@/types";
+import { IntegrationToolConfig, TwitterActions } from "@/types/tools";
 
 interface TwitterToolInterface {
   call(input: string): Promise<string>;

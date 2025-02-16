@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ToolConfig } from "@/types";
+import { ToolConfig } from "@/types/tools";
 import { BiSearchAlt } from "react-icons/bi";
 import { FaWikipediaW, FaTwitter } from "react-icons/fa";
 import { SiNotion, SiGoogle, SiWolframlanguage } from "react-icons/si";

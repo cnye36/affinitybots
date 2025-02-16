@@ -8,7 +8,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { createClient } from "@/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { Workflow } from "@/types/index";
+import { Workflow } from "@/types/workflow";
 
 export default function WorkflowsPage() {
   const router = useRouter();

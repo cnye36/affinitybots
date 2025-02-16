@@ -2,7 +2,7 @@ import { TavilySearchResults } from "@langchain/community/tools/tavily_search";
 import { WikipediaQueryRun } from "@langchain/community/tools/wikipedia_query_run";
 import { WolframAlphaTool } from "@langchain/community/tools/wolframalpha";
 import { Tool } from "@langchain/core/tools";
-import { ToolID, ToolsConfig } from "@/types";
+import { ToolID, ToolsConfig } from "@/types/tools";
 import { AVAILABLE_TOOLS } from "./config";
 import { NotionTool } from "./notion";
 import { GoogleTool } from "./google";

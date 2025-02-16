@@ -2,7 +2,7 @@
 
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { AgentConfigurableOptions } from "@/types/index";
+import { AgentConfigurableOptions } from "@/types/agent";
 
 interface PromptsConfigProps {
   config: AgentConfigurableOptions;

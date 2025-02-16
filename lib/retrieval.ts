@@ -1,4 +1,3 @@
-// lib/retrieval.ts
 import { SupabaseVectorStore } from "@langchain/community/vectorstores/supabase";
 import { OpenAIEmbeddings } from "@langchain/openai";
 import { SupabaseClient } from "@supabase/supabase-js";

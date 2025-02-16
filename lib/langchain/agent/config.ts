@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { type LangGraphRunnableConfig } from "@langchain/langgraph";
-import { ToolsConfig } from "../tools";
+import { ToolsConfig } from "@/types/tools";
 
 // Memory options schema
 export const AgentMemoryOptionsSchema = z.object({

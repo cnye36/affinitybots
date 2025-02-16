@@ -1,5 +1,5 @@
 import { Tool } from "@langchain/core/tools";
-import { IntegrationToolConfig } from "@/types";
+import { IntegrationToolConfig } from "@/types/tools";
 import { google } from "googleapis";
 
 interface GoogleToolInterface {

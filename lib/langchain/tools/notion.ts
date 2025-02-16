@@ -1,6 +1,6 @@
 import { Client } from "@notionhq/client";
 import { Tool } from "@langchain/core/tools";
-import { NotionActions, IntegrationToolConfig } from "@/types";
+import { NotionActions, IntegrationToolConfig } from "@/types/tools";
 import {
   CreatePageParameters,
   UpdatePageParameters,

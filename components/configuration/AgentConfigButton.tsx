@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AgentConfigModal } from "./AgentConfigModal";
 import { Settings } from "lucide-react";
-import { Assistant } from "@/types";
+import { Assistant } from "@/types/langgraph";
 
 interface AgentConfigButtonProps {
   assistant: Assistant;

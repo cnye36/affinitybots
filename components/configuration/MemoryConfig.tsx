@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
-import { AgentConfigurableOptions } from "@/types/index";
+import { AgentConfigurableOptions } from "@/types/agent";
 
 interface MemoryConfigProps {
   config: AgentConfigurableOptions;

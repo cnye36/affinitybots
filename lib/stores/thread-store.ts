@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { Thread } from "@langchain/langgraph-sdk";
-import { Message } from "@/types";
+import { Message } from "@/types/langgraph";
 
 interface ThreadStore {
   threads: Thread[];

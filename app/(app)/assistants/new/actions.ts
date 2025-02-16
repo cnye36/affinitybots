@@ -35,7 +35,8 @@ export async function createAgent(formData: FormData) {
         name: agentConfig.name,
         metadata: agentConfig.metadata,
         config: {
-          configurable: agentConfig.configurable,
+          ...agentConfig.configurable,
+          configurable: { enabled: true },
         },
       });
 
