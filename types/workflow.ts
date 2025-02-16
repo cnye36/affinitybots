@@ -103,28 +103,23 @@ export interface WorkflowTaskRun {
 }
 
 export type TaskType =
-  // Notion tasks
+  // AI task (single type as the agent defines the behavior)
+  | "ai_task"
+  // Integration tasks
   | "notion_create_page"
   | "notion_update_page"
   | "notion_add_to_database"
   | "notion_search"
-  // Twitter tasks
   | "twitter_post_tweet"
   | "twitter_thread"
   | "twitter_dm"
   | "twitter_like"
   | "twitter_retweet"
-  // Google tasks
   | "google_calendar_create"
   | "google_calendar_update"
   | "google_docs_create"
   | "google_sheets_update"
-  | "google_drive_upload"
-  // AI tasks
-  | "ai_write_content"
-  | "ai_analyze_content"
-  | "ai_summarize"
-  | "ai_translate";
+  | "google_drive_upload";
 
 export interface IntegrationConfig {
   type: IntegrationType;
@@ -150,6 +145,7 @@ export interface Task {
     input: {
       source: string;
       parameters: Record<string, unknown>;
+      prompt?: string;
     };
     output: {
       destination: string;

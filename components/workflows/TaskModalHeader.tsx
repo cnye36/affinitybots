@@ -1,0 +1,175 @@
+import React, { useState } from "react";
+import {
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Play, Save, Settings2 } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Task } from "@/types/workflow";
+import { Assistant } from "@/types/langgraph";
+import { Badge } from "@/components/ui/badge";
+import { AgentConfigModal } from "../configuration/AgentConfigModal";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
+interface TaskModalHeaderProps {
+  task: Task;
+  assistant: Assistant | null;
+  isLoading: boolean;
+  onTest: () => Promise<void>;
+  onSave: () => Promise<void>;
+}
+
+export function TaskModalHeader({
+  task,
+  assistant,
+  isLoading,
+  onTest,
+  onSave,
+}: TaskModalHeaderProps) {
+  const [isAgentConfigOpen, setIsAgentConfigOpen] = useState(false);
+
+  return (
+    <>
+      <DialogHeader>
+        <DialogTitle className="sr-only">
+          Configure Task: {task.name}
+        </DialogTitle>
+        <DialogDescription className="sr-only">
+          Configure the settings and prompt for this task
+        </DialogDescription>
+
+        <div className="space-y-4">
+          {/* Agent Info and Task Name */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-6">
+              {assistant && (
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-muted-foreground">Agent:</span>
+                  <div className="flex items-center space-x-2">
+                    <Avatar className="h-6 w-6">
+                      <AvatarImage
+                        src={
+                          assistant.avatar ||
+                          assistant.config?.configurable?.avatar
+                        }
+                        alt={assistant.name}
+                      />
+                      <AvatarFallback
+                        style={{
+                          backgroundColor: `hsl(${
+                            (assistant.name.length * 30) % 360
+                          }, 70%, 50%)`,
+                        }}
+                      >
+                        {assistant.name.slice(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="font-medium">{assistant.name}</span>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => setIsAgentConfigOpen(true)}
+                          >
+                            <Settings2 className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Configure Agent</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                </div>
+              )}
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-muted-foreground">Task:</span>
+                <span className="font-medium">{task.name}</span>
+              </div>
+            </div>
+            <div className="flex space-x-2">
+              <Button
+                onClick={onTest}
+                disabled={isLoading}
+                variant="secondary"
+                className="gap-2"
+              >
+                <Play className="h-4 w-4" />
+                Test
+              </Button>
+              <Button onClick={onSave} disabled={isLoading} className="gap-2">
+                <Save className="h-4 w-4" />
+                Save
+              </Button>
+            </div>
+          </div>
+
+          {/* Agent Capabilities */}
+          {assistant && (
+            <div className="flex flex-wrap items-center gap-3 rounded-md border bg-muted/50 p-2">
+              {assistant.config?.configurable?.model && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Model:
+                  </span>
+                  <Badge variant="secondary" className="text-xs">
+                    {assistant.config.configurable.model}
+                  </Badge>
+                </div>
+              )}
+              {assistant.config?.configurable?.tools && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Tools:
+                  </span>
+                  <div className="flex flex-wrap gap-1">
+                    {Object.keys(assistant.config.configurable.tools).map(
+                      (tool) => (
+                        <Badge
+                          key={tool}
+                          variant="secondary"
+                          className="text-xs"
+                        >
+                          {tool}
+                        </Badge>
+                      )
+                    )}
+                  </div>
+                </div>
+              )}
+              {assistant.config?.configurable?.memory?.enabled && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Memory:
+                  </span>
+                  <Badge variant="secondary" className="text-xs">
+                    {assistant.config.configurable.memory.max_entries} entries
+                  </Badge>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </DialogHeader>
+
+      {/* Agent Configuration Modal */}
+      {assistant && (
+        <AgentConfigModal
+          open={isAgentConfigOpen}
+          onOpenChange={setIsAgentConfigOpen}
+          assistant={assistant}
+        />
+      )}
+    </>
+  );
+}

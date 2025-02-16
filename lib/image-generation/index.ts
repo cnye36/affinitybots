@@ -100,7 +100,7 @@ export async function generateAgentAvatar(
   const fileName = `${name.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`;
 
   return generateImage(
-    `A minimalist, professional avatar icon for a ${agentType} named ${name}. Simple, clean, modern design.`,
+    `A professional, stylized avatar icon for a ${agentType} named ${name}. Create a minimalist design with soft, adaptive gradients that transition beautifully between light and dark themes. Use clean geometric shapes and a color palette that reflects the agent's purpose, with subtle depth and a modern, elegant aesthetic. The icon should be simple yet distinctive, capturing the essence of ${name}'s role as a ${agentType}.`,
     fileName
   );
 }

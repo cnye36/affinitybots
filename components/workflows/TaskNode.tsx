@@ -93,20 +93,69 @@ export const TaskNode = memo(
     const handleTestTask = async () => {
       try {
         const response = await fetch(
-          `/api/workflows/${data.workflowId}/tasks/${data.task_id}/test`,
+          `/api/workflows/${data.workflowId}/tasks/${data.task_id}/execute`,
           {
             method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              input: {
+                // For testing, we'll use an empty input or task-specific test input
+                messages: [
+                  {
+                    role: "user",
+                    content: data.description || "Test execution",
+                  },
+                ],
+              },
+              // When testing, we want immediate feedback, so we'll use stateless mode
+              config: {
+                mode: "stateless",
+                stream: true,
+              },
+            }),
           }
         );
 
         if (!response.ok) {
-          throw new Error("Failed to test task");
+          throw new Error("Failed to execute task");
         }
 
+        // For streaming responses
+        if (
+          response.headers.get("content-type")?.includes("text/event-stream")
+        ) {
+          const reader = response.body?.getReader();
+          const decoder = new TextDecoder();
+          let result = "";
+
+          while (reader) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value);
+            const lines = chunk.split("\n");
+
+            for (const line of lines) {
+              if (line.startsWith("data: ")) {
+                const data = JSON.parse(line.slice(6));
+                // Accumulate the response
+                if (data.type === "message") {
+                  result += data.content;
+                }
+              }
+            }
+          }
+
+          return { result };
+        }
+
+        // For non-streaming responses
         const result = await response.json();
         return result;
       } catch (error) {
-        console.error("Error testing task:", error);
+        console.error("Error executing task:", error);
         throw error;
       }
     };

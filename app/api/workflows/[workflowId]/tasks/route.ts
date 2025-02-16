@@ -3,28 +3,22 @@ import { createClient } from "@/supabase/server";
 import { Task, TaskType } from "@/types/workflow";
 
 const VALID_TASK_TYPES: TaskType[] = [
-  // Notion tasks
+  "ai_task",
+  // Integration tasks
   "notion_create_page",
   "notion_update_page",
   "notion_add_to_database",
   "notion_search",
-  // Twitter tasks
   "twitter_post_tweet",
   "twitter_thread",
   "twitter_dm",
   "twitter_like",
   "twitter_retweet",
-  // Google tasks
   "google_calendar_create",
   "google_calendar_update",
   "google_docs_create",
   "google_sheets_update",
   "google_drive_upload",
-  // AI tasks
-  "ai_write_content",
-  "ai_analyze_content",
-  "ai_summarize",
-  "ai_translate",
 ];
 
 // GET - List tasks for a workflow
@@ -114,6 +108,14 @@ export async function POST(
       return NextResponse.json({ error: "Invalid task type" }, { status: 400 });
     }
 
+    // For AI tasks, ensure assistant_id is provided
+    if (taskData.type === "ai_task" && !taskData.assistant_id) {
+      return NextResponse.json(
+        { error: "AI tasks require an assistant_id" },
+        { status: 400 }
+      );
+    }
+
     // Get the next position number
     const { data: lastTask } = await supabase
       .from("workflow_tasks")
@@ -125,17 +127,26 @@ export async function POST(
 
     const position = lastTask ? lastTask.position + 1 : 0;
 
-    // Create the task
+    // Create the task with type-specific configuration
     const insertData = {
       workflow_id: workflowId,
       assistant_id: taskData.assistant_id,
       name: taskData.name,
       description: taskData.description,
       task_type: taskData.type,
-      config: taskData.config || {
-        input: { source: "previous_task" },
-        output: { destination: "next_task" },
-      },
+      config:
+        taskData.type === "ai_task"
+          ? {
+              input: {
+                source: "previous_task",
+                parameters: {},
+                prompt: taskData.config?.input?.prompt || "",
+              },
+              output: {
+                destination: "next_task",
+              },
+            }
+          : taskData.config || {},
       integration: taskData.integration,
       position,
       status: "pending",

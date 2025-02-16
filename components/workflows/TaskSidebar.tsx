@@ -20,24 +20,9 @@ interface TaskOption {
 
 const AI_TASKS: TaskOption[] = [
   {
-    type: "ai_write_content",
-    label: "Write Content",
-    description: "Generate new content using AI",
-  },
-  {
-    type: "ai_analyze_content",
-    label: "Analyze Content",
-    description: "Analyze and extract insights from content",
-  },
-  {
-    type: "ai_summarize",
-    label: "Summarize",
-    description: "Create concise summaries of content",
-  },
-  {
-    type: "ai_translate",
-    label: "Translate",
-    description: "Translate content between languages",
+    type: "ai_task",
+    label: "AI Task",
+    description: "Execute a task using the agent's capabilities",
   },
 ];
 
@@ -187,24 +172,16 @@ export function TaskSidebar({
         </div>
         <Accordion type="single" collapsible className="px-4">
           {/* AI Tasks */}
-          <AccordionItem value="ai">
-            {renderTaskGroup("AI Tasks", AI_TASKS, SiOpenai)}
-          </AccordionItem>
+          {renderTaskGroup("AI Tasks", AI_TASKS, SiOpenai)}
 
           {/* Notion Tasks */}
-          <AccordionItem value="notion">
-            {renderTaskGroup("Notion Tasks", NOTION_TASKS, SiNotion)}
-          </AccordionItem>
+          {renderTaskGroup("Notion Tasks", NOTION_TASKS, SiNotion)}
 
           {/* Twitter Tasks */}
-          <AccordionItem value="twitter">
-            {renderTaskGroup("Twitter Tasks", TWITTER_TASKS, FaXTwitter)}
-          </AccordionItem>
+          {renderTaskGroup("Twitter Tasks", TWITTER_TASKS, FaXTwitter)}
 
           {/* Google Tasks */}
-          <AccordionItem value="google">
-            {renderTaskGroup("Google Tasks", GOOGLE_TASKS, SiGoogle)}
-          </AccordionItem>
+          {renderTaskGroup("Google Tasks", GOOGLE_TASKS, SiGoogle)}
         </Accordion>
       </SidebarContent>
     </Sidebar>

@@ -1,18 +1,20 @@
 import React, { useState, useEffect } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Task } from "@/types/workflow";
-import { Button } from "@/components/ui/button";
-import { Play, Save } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Assistant } from "@/types/langgraph";
+import { TaskModalHeader } from "./TaskModalHeader";
 
 interface TaskOutput {
   result: unknown;
@@ -26,8 +28,16 @@ interface TaskConfigModalProps {
   task: Task;
   previousNodeOutput?: TaskOutput;
   onSave: (updatedTask: Task) => Promise<void>;
-  onTest: () => Promise<void>;
 }
+
+type OutputFormat = "json" | "markdown" | "text";
+
+type TestOutput = {
+  type?: string;
+  content?: string;
+  result?: unknown;
+  error?: string;
+};
 
 export function TaskConfigModal({
   isOpen,
@@ -35,17 +45,23 @@ export function TaskConfigModal({
   task,
   previousNodeOutput,
   onSave,
-  onTest,
 }: TaskConfigModalProps) {
   const [currentTask, setCurrentTask] = useState<Task>(task);
-  const [outputFormat, setOutputFormat] = useState<"json" | "yaml" | "text">(
-    "json"
-  );
+  const [outputFormat, setOutputFormat] = useState<OutputFormat>("json");
   const [isLoading, setIsLoading] = useState(false);
-  const [testOutput, setTestOutput] = useState<any>(null);
+  const [testOutput, setTestOutput] = useState<TestOutput | null>(null);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [assistant, setAssistant] = useState<Assistant | null>(null);
 
   useEffect(() => {
     setCurrentTask(task);
+    // Fetch assistant details when task changes
+    if (task.assistant_id) {
+      fetch(`/api/assistants/${task.assistant_id}`)
+        .then((res) => res.json())
+        .then((data) => setAssistant(data))
+        .catch((err) => console.error("Error fetching assistant:", err));
+    }
   }, [task]);
 
   const handleSave = async () => {
@@ -55,8 +71,8 @@ export function TaskConfigModal({
       toast({
         title: "Task configuration saved successfully",
       });
-    } catch (error) {
-      console.error("Error saving task:", error);
+    } catch (err) {
+      console.error("Error saving task:", err);
       toast({
         title: "Failed to save task configuration",
         variant: "destructive",
@@ -69,23 +85,119 @@ export function TaskConfigModal({
   const handleTest = async () => {
     try {
       setIsLoading(true);
-      await onTest();
-      // In a real implementation, we would get the test output from the onTest callback
-      setTestOutput({ result: "Test output would appear here" });
-    } catch (error) {
-      console.error("Error testing task:", error);
+      setIsStreaming(true);
+      setTestOutput(null);
+
+      if (!currentTask.config?.input?.prompt) {
+        throw new Error("Please provide a prompt before testing");
+      }
+
+      const response = await fetch(
+        `/api/workflows/${currentTask.workflow_id}/tasks/${currentTask.task_id}/execute`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            input: {
+              messages: [
+                {
+                  role: "user",
+                  content: currentTask.config.input.prompt,
+                },
+              ],
+            },
+            config: {
+              mode: "stateless",
+              stream: true,
+            },
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to execute task");
+      }
+
+      if (response.headers.get("content-type")?.includes("text/event-stream")) {
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
+
+        while (reader) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value);
+          const lines = chunk.split("\n");
+
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              const data = JSON.parse(line.slice(6));
+              if (data.type === "message") {
+                setTestOutput((prev) => ({
+                  type: "message",
+                  content: (prev?.content || "") + data.content,
+                }));
+              }
+            }
+          }
+        }
+      } else {
+        const result = await response.json();
+        setTestOutput(result);
+      }
+    } catch (err) {
+      console.error("Error testing task:", err);
       toast({
-        title: "Failed to test task",
+        title:
+          typeof err === "string"
+            ? err
+            : err instanceof Error
+            ? err.message
+            : "Failed to test task",
         variant: "destructive",
+      });
+      setTestOutput({
+        type: "error",
+        error: err instanceof Error ? err.message : "Unknown error occurred",
       });
     } finally {
       setIsLoading(false);
+      setIsStreaming(false);
+    }
+  };
+
+  const formatOutput = (data: TestOutput | TaskOutput | null): string => {
+    if (!data) return "No data available";
+
+    try {
+      switch (outputFormat) {
+        case "json":
+          return typeof data === "string"
+            ? data
+            : JSON.stringify(data, null, 2);
+        case "markdown":
+          return typeof data === "string"
+            ? data
+            : "```json\n" + JSON.stringify(data, null, 2) + "\n```";
+        case "text":
+          return typeof data === "string"
+            ? data
+            : JSON.stringify(data, undefined, 2);
+        default:
+          return String(data);
+      }
+    } catch {
+      return "Error formatting output";
     }
   };
 
   const renderConfigurationPanel = () => {
     return (
       <div className="space-y-4">
+        {/* Task Name */}
         <div className="space-y-2">
           <Label>Task Name</Label>
           <Input
@@ -95,30 +207,68 @@ export function TaskConfigModal({
             }
           />
         </div>
+
+        {/* Task Description (Optional) */}
         <div className="space-y-2">
-          <Label>Description</Label>
+          <Label className="flex items-center gap-2">
+            Description
+            <span className="text-xs text-muted-foreground">(Optional)</span>
+          </Label>
           <Textarea
-            value={currentTask.description}
+            value={currentTask.description || ""}
             onChange={(e) =>
               setCurrentTask((prev) => ({
                 ...prev,
                 description: e.target.value,
               }))
             }
+            placeholder="Add a description to help identify this task's purpose"
           />
         </div>
+
+        {/* Prompt Input */}
         <div className="space-y-2">
-          <Label>Input Configuration</Label>
+          <Label className="flex items-center gap-2">
+            Prompt
+            <span className="text-xs text-muted-foreground">(Required)</span>
+          </Label>
           <Textarea
-            value={JSON.stringify(currentTask.config.input, null, 2)}
+            value={currentTask.config?.input?.prompt || ""}
+            onChange={(e) => {
+              setCurrentTask((prev) => ({
+                ...prev,
+                config: {
+                  ...prev.config,
+                  input: {
+                    ...prev.config.input,
+                    prompt: e.target.value,
+                  },
+                },
+              }));
+            }}
+            placeholder={`Enter your prompt for ${
+              assistant?.name || "the agent"
+            }...`}
+            className="min-h-[200px]"
+          />
+        </div>
+
+        {/* Advanced Configuration */}
+        <div className="space-y-2">
+          <Label className="flex items-center gap-2">
+            Advanced Configuration
+            <span className="text-xs text-muted-foreground">(JSON)</span>
+          </Label>
+          <Textarea
+            value={JSON.stringify(currentTask.config, null, 2)}
             onChange={(e) => {
               try {
                 const parsed = JSON.parse(e.target.value);
                 setCurrentTask((prev) => ({
                   ...prev,
-                  config: { ...prev.config, input: parsed },
+                  config: parsed,
                 }));
-              } catch (error) {
+              } catch {
                 // Allow invalid JSON while typing
               }
             }}
@@ -130,61 +280,31 @@ export function TaskConfigModal({
     );
   };
 
-  const renderOutputPanel = (data: any) => {
-    if (!data)
-      return <div className="text-muted-foreground">No data available</div>;
-
-    let formattedOutput = "";
-    try {
-      switch (outputFormat) {
-        case "json":
-          formattedOutput = JSON.stringify(data, null, 2);
-          break;
-        case "yaml":
-          // In a real implementation, we would use a YAML library
-          formattedOutput = "YAML format not implemented";
-          break;
-        case "text":
-          formattedOutput =
-            typeof data === "string" ? data : JSON.stringify(data);
-          break;
-      }
-    } catch (error) {
-      formattedOutput = "Error formatting output";
-    }
-
+  const renderOutputPanel = (data: TestOutput | TaskOutput | null) => {
     return (
       <div className="space-y-2">
         <div className="flex justify-between items-center">
           <Label>Output</Label>
-          <div className="space-x-2">
-            <Button
-              variant={outputFormat === "json" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setOutputFormat("json")}
-            >
-              JSON
-            </Button>
-            <Button
-              variant={outputFormat === "yaml" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setOutputFormat("yaml")}
-            >
-              YAML
-            </Button>
-            <Button
-              variant={outputFormat === "text" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setOutputFormat("text")}
-            >
-              Text
-            </Button>
-          </div>
+          <Select
+            value={outputFormat}
+            onValueChange={(value) => setOutputFormat(value as OutputFormat)}
+          >
+            <SelectTrigger className="w-[100px]">
+              <SelectValue placeholder="Format" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="json">JSON</SelectItem>
+              <SelectItem value="markdown">Markdown</SelectItem>
+              <SelectItem value="text">Text</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <Textarea
-          value={formattedOutput}
+          value={formatOutput(data)}
           readOnly
-          className="font-mono h-[400px]"
+          className={`font-mono h-[400px] ${
+            isStreaming ? "animate-pulse" : ""
+          }`}
         />
       </div>
     );
@@ -193,37 +313,20 @@ export function TaskConfigModal({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-7xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center justify-between">
-            <span>Configure Task: {task.name}</span>
-            <div className="space-x-2">
-              <Button
-                onClick={handleTest}
-                disabled={isLoading}
-                variant="secondary"
-                className="gap-2"
-              >
-                <Play className="h-4 w-4" />
-                Test
-              </Button>
-              <Button
-                onClick={handleSave}
-                disabled={isLoading}
-                className="gap-2"
-              >
-                <Save className="h-4 w-4" />
-                Save
-              </Button>
-            </div>
-          </DialogTitle>
-        </DialogHeader>
+        <TaskModalHeader
+          task={currentTask}
+          assistant={assistant}
+          isLoading={isLoading}
+          onTest={handleTest}
+          onSave={handleSave}
+        />
 
         <div className="grid grid-cols-3 gap-4 mt-4">
           {/* Previous Node Output Panel */}
           <div className="border rounded-lg p-4">
             <h3 className="font-medium mb-4">Previous Node Output</h3>
             <ScrollArea className="h-[600px]">
-              {renderOutputPanel(previousNodeOutput)}
+              {renderOutputPanel(previousNodeOutput || null)}
             </ScrollArea>
           </div>
 
