@@ -65,6 +65,7 @@ export interface Assistant {
   graph_id: string;
   created_at: string;
   updated_at: string;
+  avatar?: string;
   metadata: {
     description: string;
     agent_type: string;

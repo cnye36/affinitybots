@@ -15,6 +15,8 @@ export function AgentPageHeader({ assistant }: AgentPageHeaderProps) {
   const router = useRouter();
   // Get first letter of assistant name for avatar fallback
   const avatarFallback = assistant.name.charAt(0).toUpperCase();
+  // Get avatar URL from either root level or configurable
+  const avatarUrl = assistant.avatar || assistant.config?.configurable?.avatar;
 
   return (
     <div className="flex-none border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -30,13 +32,17 @@ export function AgentPageHeader({ assistant }: AgentPageHeaderProps) {
           </Button>
           <div className="flex items-center gap-2">
             <Avatar className="h-12 w-12">
-              {assistant.config.configurable.avatar ? (
-                <AvatarImage
-                  src={assistant.config.configurable.avatar}
-                  alt={assistant.name}
-                />
+              {avatarUrl ? (
+                <AvatarImage src={avatarUrl} alt={assistant.name} />
               ) : (
-                <AvatarFallback className="bg-primary/10">
+                <AvatarFallback
+                  className="bg-primary/10"
+                  style={{
+                    backgroundColor: `hsl(${
+                      (assistant.name.length * 30) % 360
+                    }, 70%, 50%)`,
+                  }}
+                >
                   {avatarFallback}
                 </AvatarFallback>
               )}

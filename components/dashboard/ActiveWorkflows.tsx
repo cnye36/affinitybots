@@ -17,17 +17,17 @@ interface Workflow {
   updated_at: string;
 }
 
-interface ActiveWorkflowsProps {
+interface LatestWorkflowsProps {
   workflows: Workflow[];
 }
 
-export function ActiveWorkflows({ workflows }: ActiveWorkflowsProps) {
+export function LatestWorkflows({ workflows }: LatestWorkflowsProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Active Workflows</CardTitle>
+        <CardTitle>Latest Workflows</CardTitle>
         <CardDescription>
-          Currently running workflows and their status
+          Your most recently created or updated workflows
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -62,7 +62,7 @@ export function ActiveWorkflows({ workflows }: ActiveWorkflowsProps) {
           </div>
         ) : (
           <div className="text-center py-8">
-            <p className="text-muted-foreground">No active workflows</p>
+            <p className="text-muted-foreground">No workflows yet</p>
             <Button variant="outline" className="mt-4" asChild>
               <Link href="/workflows/new">Create Workflow</Link>
             </Button>

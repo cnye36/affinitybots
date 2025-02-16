@@ -5,9 +5,8 @@ import { Clock, BarChart3 } from "lucide-react";
 import { StatsOverview } from "@/components/dashboard/StatsOverview";
 import { QuickActions } from "@/components/dashboard/QuickActions";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
-import { ActiveWorkflows } from "@/components/dashboard/ActiveWorkflows";
+import { LatestWorkflows } from "@/components/dashboard/ActiveWorkflows";
 import { formatRelativeTime } from "@/lib/utils";
-
 
 export default async function Dashboard() {
   const supabase = await createClient();
@@ -23,25 +22,6 @@ export default async function Dashboard() {
   if (!user) {
     redirect("/signin");
   }
-
-  // Fetch latest agents
-  const { data: assistants, error: assistantsError } = await supabase
-    .from("user_assistants")
-    .select(
-      `
-      assistant:assistant (*)
-    `
-    )
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(3);
-
-  if (assistantsError) {
-    console.error("Error fetching assistants:", assistantsError);
-  }
-
-  // Transform the joined results to get just the assistant data
-  const userAssistants = assistants?.map((ua) => ua.assistant) || [];
 
   // Fetch latest workflows
   const { data: workflows, error: workflowsError } = await supabase
@@ -78,11 +58,30 @@ export default async function Dashboard() {
       time: formatRelativeTime(log.created_at),
     })) || [];
 
+  // Fetch total workflow count
+  const { count: totalWorkflows, error: workflowCountError } = await supabase
+    .from("workflows")
+    .select("*", { count: "exact", head: true })
+    .eq("owner_id", user.id);
+
+  if (workflowCountError) {
+    console.error("Error fetching total workflows:", workflowCountError);
+  }
+
+  // Fetch total agents count
+  const { count: totalAgents, error: agentCountError } = await supabase
+    .from("user_assistants")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", user.id);
+
+  if (agentCountError) {
+    console.error("Error fetching total agents:", agentCountError);
+  }
+
   // Calculate stats
   const stats = {
-    activeWorkflows:
-      workflows?.filter((w) => w.status === "active")?.length || 0,
-    totalAgents: userAssistants?.length || 0,
+    totalWorkflows: totalWorkflows || 0,
+    totalAgents: totalAgents || 0,
     successRate: "98%", // This should be calculated based on actual success/failure rates
     averageResponseTime: "1.2s", // This should be calculated based on actual response times
   };
@@ -109,7 +108,7 @@ export default async function Dashboard() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <RecentActivity activities={recentActivity} />
-          <ActiveWorkflows workflows={workflows || []} />
+          <LatestWorkflows workflows={workflows || []} />
         </div>
       </div>
     </div>

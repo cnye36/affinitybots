@@ -12,6 +12,7 @@ import { AgentConfigModal } from "../configuration/AgentConfigModal";
 import { Assistant } from "@/types/langgraph";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 interface AgentNodeProps {
   data: {
@@ -122,10 +123,34 @@ export const AgentNode = memo(({ data }: AgentNodeProps) => {
         <Card className="w-64">
           <CardHeader className="p-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm truncate flex-1">
-                {assistant.name}
-              </CardTitle>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <Avatar className="h-8 w-8 flex-shrink-0">
+                  {assistant.avatar ||
+                  assistant.config?.configurable?.avatar ? (
+                    <AvatarImage
+                      src={
+                        assistant.avatar ||
+                        assistant.config?.configurable?.avatar
+                      }
+                      alt={assistant.name}
+                    />
+                  ) : (
+                    <AvatarFallback
+                      style={{
+                        backgroundColor: `hsl(${
+                          (assistant.name.length * 30) % 360
+                        }, 70%, 50%)`,
+                      }}
+                    >
+                      {assistant.name.slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  )}
+                </Avatar>
+                <CardTitle className="text-sm truncate">
+                  {assistant.name}
+                </CardTitle>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>

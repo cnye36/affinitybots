@@ -13,7 +13,7 @@ importers:
         version: 6.0.0
       '@langchain/community':
         specifier: ^0.3.23
-        version: 0.3.23(@browserbasehq/sdk@2.0.0)(@browserbasehq/stagehand@1.6.0(@playwright/test@1.49.1)(deepmerge@4.3.1)(dotenv@16.4.7)(openai@4.78.1(zod@3.24.1))(zod@3.24.1))(@ibm-cloud/watsonx-ai@1.3.0)(@langchain/core@0.3.27(openai@4.78.1(zod@3.24.1)))(@notionhq/client@2.2.15)(@qdrant/js-client-rest@1.12.0(typescript@5.7.3))(@supabase/supabase-js@2.47.12)(axios@1.7.9)(cheerio@1.0.0)(google-auth-library@9.15.1)(googleapis@144.0.0)(ibm-cloud-sdk-core@5.1.0)(ignore@5.3.2)(jsonwebtoken@9.0.2)(mammoth@1.9.0)(openai@4.78.1(zod@3.24.1))(pdf-parse@1.1.1)(pg@8.13.1)(playwright@1.49.1)(replicate@1.0.1)(ws@8.18.0)
+        version: 0.3.23(@browserbasehq/sdk@2.0.0)(@browserbasehq/stagehand@1.6.0(@playwright/test@1.49.1)(deepmerge@4.3.1)(dotenv@16.4.7)(openai@4.78.1(zod@3.24.1))(zod@3.24.1))(@ibm-cloud/watsonx-ai@1.3.0)(@langchain/core@0.3.27(openai@4.78.1(zod@3.24.1)))(@notionhq/client@2.2.15)(@qdrant/js-client-rest@1.12.0(typescript@5.7.3))(@supabase/supabase-js@2.47.12)(axios@1.7.9)(cheerio@1.0.0)(google-auth-library@9.15.1)(googleapis@144.0.0)(ibm-cloud-sdk-core@5.1.0)(ignore@5.3.2)(jsonwebtoken@9.0.2)(mammoth@1.9.0)(openai@4.78.1(zod@3.24.1))(pdf-parse@1.1.1)(pg@8.13.1)(playwright@1.49.1)(ws@8.18.0)
       '@langchain/core':
         specifier: ^0.3.27
         version: 0.3.27(openai@4.78.1(zod@3.24.1))
@@ -209,9 +209,6 @@ importers:
       remark-gfm:
         specifier: ^4.0.0
         version: 4.0.0
-      replicate:
-        specifier: ^1.0.1
-        version: 1.0.1
       runnable:
         specifier: link:@langchain/core/runnable
         version: link:@langchain/core/runnable
@@ -2267,9 +2264,6 @@ packages:
   buffer-equal-constant-time@1.0.1:
     resolution: {integrity: sha512-zRpUiDwd/xk6ADqPMATG8vc9VPrkck7T07OIx0gnjmJAnHnTVXNQG3vfvWNuiZIkwu9KrKdA1iJKfsfTVxE6NA==}
 
-  buffer@6.0.3:
-    resolution: {integrity: sha512-FTiCpNxtwiZZHEZbcbTIcZjERVICn9yq/pDFkTl95/AxzD1naBctN7YO68riM/gLSDY7sdrMby8hofADYuuqOA==}
-
   bundle-name@4.1.0:
     resolution: {integrity: sha512-tjwM5exMg6BGRI+kNmTntNsvdZS1X8BFYS6tnJ2hdH0kVxM6/eVZ2xy+FqStSWvYmtfFMDLIxurorHwDKfDz5Q==}
     engines: {node: '>=18'}
@@ -2878,10 +2872,6 @@ packages:
 
   eventemitter3@4.0.7:
     resolution: {integrity: sha512-8guHBZCwKnFhYdHr2ysuRWErTwhoN2X8XELRlrRwpmfeY2jjuUN4taQMsULKUVo1K4DvZl+0pgfyoysHxvmvEw==}
-
-  events@3.3.0:
-    resolution: {integrity: sha512-mQw+2fkQbALzQ7V0MY0IqdnXNOeTtP4r0lN9z7AAawCXgqea7bDii20AYrIBrFd/Hx0M2Ocz6S111CaFkUcb0Q==}
-    engines: {node: '>=0.8.x'}
 
   execa@9.5.2:
     resolution: {integrity: sha512-EHlpxMCpHWSAh1dgS6bVeoLAXGnJNdR93aabr4QCGbzOM73o5XmRfM/e5FUqsw3aagP8S8XEWUWFAxnRBnAF0Q==}
@@ -4364,10 +4354,6 @@ packages:
   process-nextick-args@2.0.1:
     resolution: {integrity: sha512-3ouUOpQhtgrbOa17J7+uxOTpITYWaGP7/AhoR3+A+/1e9skrzelGi/dXzEYyvbxubEF6Wn2ypscTKiKJFFn1ag==}
 
-  process@0.11.10:
-    resolution: {integrity: sha512-cdGef/drWFoydD1JsMzuFf8100nZl+GT+yacc2bEced5f9Rjk4z+WtFUTBu9PhOi9j/jfmBPu0mMEY4wIdAF8A==}
-    engines: {node: '>= 0.6.0'}
-
   prop-types@15.8.1:
     resolution: {integrity: sha512-oj87CgZICdulUohogVAR7AjlC0327U4el4L6eAvOqCeudMDVU0NThNaV+b9Df4dXgSP1gXMTnPdhfe/2qDH5cg==}
 
@@ -4505,10 +4491,6 @@ packages:
     resolution: {integrity: sha512-9u/sniCrY3D5WdsERHzHE4G2YCXqoG5FTHUiCC4SIbr6XcLZBY05ya9EKjYek9O5xOAwjGq+1JdGBAS7Q9ScoA==}
     engines: {node: '>= 6'}
 
-  readable-stream@4.7.0:
-    resolution: {integrity: sha512-oIGGmcpTLwPga8Bn6/Z75SVaH1z5dUut2ibSyAMVhmUggWpmDn2dapB0n7f8nwaSiRtepAsfJyfXIO5DCVAODg==}
-    engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
-
   readable-web-to-node-stream@3.0.2:
     resolution: {integrity: sha512-ePeK6cc1EcKLEhJFt/AebMCLL+GgSKhuygrZ/GLaKZYEecIgIECf4UaUuaByiGtzckwR4ain9VzUh95T1exYGw==}
     engines: {node: '>=8'}
@@ -4555,10 +4537,6 @@ packages:
 
   remark-stringify@11.0.0:
     resolution: {integrity: sha512-1OSmLd3awB/t8qdoEOMazZkNsfVTeY4fTsgzcQFdXNq8ToTN4ZGwrMnlda4K6smTFKD+GRV6O48i6Z4iKgPPpw==}
-
-  replicate@1.0.1:
-    resolution: {integrity: sha512-EY+rK1YR5bKHcM9pd6WyaIbv6m2aRIvHfHDh51j/LahlHTLKemTYXF6ptif2sLa+YospupAsIoxw8Ndt5nI3vg==}
-    engines: {git: '>=2.11.0', node: '>=18.0.0', npm: '>=7.19.0', yarn: '>=1.7.0'}
 
   requires-port@1.0.0:
     resolution: {integrity: sha512-KigOCHcocU3XODJxsu8i/j8T9tzT4adHiecwORRQ0ZZFcp7ahwXuRU1m+yuO90C5ZUyGeGfocHDI14M3L3yDAQ==}
@@ -5613,7 +5591,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.0
 
-  '@langchain/community@0.3.23(@browserbasehq/sdk@2.0.0)(@browserbasehq/stagehand@1.6.0(@playwright/test@1.49.1)(deepmerge@4.3.1)(dotenv@16.4.7)(openai@4.78.1(zod@3.24.1))(zod@3.24.1))(@ibm-cloud/watsonx-ai@1.3.0)(@langchain/core@0.3.27(openai@4.78.1(zod@3.24.1)))(@notionhq/client@2.2.15)(@qdrant/js-client-rest@1.12.0(typescript@5.7.3))(@supabase/supabase-js@2.47.12)(axios@1.7.9)(cheerio@1.0.0)(google-auth-library@9.15.1)(googleapis@144.0.0)(ibm-cloud-sdk-core@5.1.0)(ignore@5.3.2)(jsonwebtoken@9.0.2)(mammoth@1.9.0)(openai@4.78.1(zod@3.24.1))(pdf-parse@1.1.1)(pg@8.13.1)(playwright@1.49.1)(replicate@1.0.1)(ws@8.18.0)':
+  '@langchain/community@0.3.23(@browserbasehq/sdk@2.0.0)(@browserbasehq/stagehand@1.6.0(@playwright/test@1.49.1)(deepmerge@4.3.1)(dotenv@16.4.7)(openai@4.78.1(zod@3.24.1))(zod@3.24.1))(@ibm-cloud/watsonx-ai@1.3.0)(@langchain/core@0.3.27(openai@4.78.1(zod@3.24.1)))(@notionhq/client@2.2.15)(@qdrant/js-client-rest@1.12.0(typescript@5.7.3))(@supabase/supabase-js@2.47.12)(axios@1.7.9)(cheerio@1.0.0)(google-auth-library@9.15.1)(googleapis@144.0.0)(ibm-cloud-sdk-core@5.1.0)(ignore@5.3.2)(jsonwebtoken@9.0.2)(mammoth@1.9.0)(openai@4.78.1(zod@3.24.1))(pdf-parse@1.1.1)(pg@8.13.1)(playwright@1.49.1)(ws@8.18.0)':
     dependencies:
       '@browserbasehq/stagehand': 1.6.0(@playwright/test@1.49.1)(deepmerge@4.3.1)(dotenv@16.4.7)(openai@4.78.1(zod@3.24.1))(zod@3.24.1)
       '@ibm-cloud/watsonx-ai': 1.3.0
@@ -5644,7 +5622,6 @@ snapshots:
       pdf-parse: 1.1.1
       pg: 8.13.1
       playwright: 1.49.1
-      replicate: 1.0.1
       ws: 8.18.0
     transitivePeerDependencies:
       - '@langchain/anthropic'
@@ -7066,12 +7043,6 @@ snapshots:
 
   buffer-equal-constant-time@1.0.1: {}
 
-  buffer@6.0.3:
-    dependencies:
-      base64-js: 1.5.1
-      ieee754: 1.2.1
-    optional: true
-
   bundle-name@4.1.0:
     dependencies:
       run-applescript: 7.0.0
@@ -7821,9 +7792,6 @@ snapshots:
   event-target-shim@5.0.1: {}
 
   eventemitter3@4.0.7: {}
-
-  events@3.3.0:
-    optional: true
 
   execa@9.5.2:
     dependencies:
@@ -9651,9 +9619,6 @@ snapshots:
 
   process-nextick-args@2.0.1: {}
 
-  process@0.11.10:
-    optional: true
-
   prop-types@15.8.1:
     dependencies:
       loose-envify: 1.4.0
@@ -9826,15 +9791,6 @@ snapshots:
       string_decoder: 1.3.0
       util-deprecate: 1.0.2
 
-  readable-stream@4.7.0:
-    dependencies:
-      abort-controller: 3.0.0
-      buffer: 6.0.3
-      events: 3.3.0
-      process: 0.11.10
-      string_decoder: 1.3.0
-    optional: true
-
   readable-web-to-node-stream@3.0.2:
     dependencies:
       readable-stream: 3.6.2
@@ -9925,10 +9881,6 @@ snapshots:
       '@types/mdast': 4.0.4
       mdast-util-to-markdown: 2.1.2
       unified: 11.0.5
-
-  replicate@1.0.1:
-    optionalDependencies:
-      readable-stream: 4.7.0
 
   requires-port@1.0.0: {}
 

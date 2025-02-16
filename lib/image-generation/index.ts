@@ -1,10 +1,9 @@
-import Replicate from "replicate";
 import { createClient } from "@/supabase/server";
+import { DallEAPIWrapper } from "@langchain/openai";
 
 export interface ImageGenerationConfig {
   width?: number;
   height?: number;
-  model?: `${string}/${string}:${string}`;
   defaultImage?: string;
   bucketName?: string;
 }
@@ -12,8 +11,6 @@ export interface ImageGenerationConfig {
 const DEFAULT_CONFIG: ImageGenerationConfig = {
   width: 256,
   height: 256,
-  model:
-    "stability-ai/sdxl:7762fd07cf82c948538e41f63f77d685e02b063e37e496e96eefd46c929f9bdc" as const,
   defaultImage: "/default-avatar.png",
   bucketName: "agent-avatars",
 };
@@ -26,25 +23,37 @@ async function uploadImageToSupabase(
   const supabase = await createClient();
 
   try {
-    // Fetch the image from the Replicate URL
+    // Get the current user
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) throw new Error("User must be authenticated to upload images");
+
+    // Fetch the image from the URL
     const response = await fetch(imageUrl);
-    if (!response.ok) throw new Error("Failed to fetch image from Replicate");
+    if (!response.ok) throw new Error("Failed to fetch image");
     const imageBlob = await response.blob();
 
-    // Upload to Supabase Storage
+    // Upload to Supabase Storage with metadata
     const { error } = await supabase.storage
       .from(bucketName)
-      .upload(`${fileName}.png`, imageBlob, {
+      .upload(`${user.id}/${fileName}.png`, imageBlob, {
         contentType: "image/png",
         upsert: true,
+        duplex: "half",
       });
 
-    if (error) throw error;
+    if (error) {
+      console.error("Supabase storage error:", error);
+      throw error;
+    }
 
     // Get public URL
     const {
       data: { publicUrl },
-    } = supabase.storage.from(bucketName).getPublicUrl(`${fileName}.png`);
+    } = supabase.storage
+      .from(bucketName)
+      .getPublicUrl(`${user.id}/${fileName}.png`);
 
     return publicUrl;
   } catch (error) {
@@ -59,20 +68,15 @@ export async function generateImage(
   config: Partial<ImageGenerationConfig> = {}
 ): Promise<string> {
   const finalConfig = { ...DEFAULT_CONFIG, ...config };
-  const replicate = new Replicate({
-    auth: process.env.REPLICATE_API_TOKEN,
-  });
 
   try {
-    const output = await replicate.run(finalConfig.model!, {
-      input: {
-        prompt,
-        width: finalConfig.width,
-        height: finalConfig.height,
-      },
+    const tool = new DallEAPIWrapper({
+      n: 1,
+      model: "dall-e-3",
+      apiKey: process.env.OPENAI_API_KEY,
     });
 
-    const imageUrl = Array.isArray(output) ? output[0] : output;
+    const imageUrl = await tool.invoke(prompt);
 
     // Upload to Supabase and get public URL
     const publicUrl = await uploadImageToSupabase(

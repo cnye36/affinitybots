@@ -26,6 +26,7 @@ interface Assistant {
         max_entries: number;
         relevance_threshold: number;
       };
+      avatar?: string;
     };
   };
 }
@@ -116,6 +117,11 @@ export default function AgentsPage() {
                 description: assistant.metadata.description,
                 model_type: assistant.config?.configurable?.model,
                 tools: assistant.config?.configurable?.tools,
+                config: {
+                  configurable: {
+                    avatar: assistant.config?.configurable?.avatar,
+                  },
+                },
               }}
             />
           ))}

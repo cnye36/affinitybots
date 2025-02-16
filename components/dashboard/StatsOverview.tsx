@@ -3,7 +3,7 @@ import { Activity, CheckCircle2, User, Zap } from "lucide-react";
 
 interface StatsOverviewProps {
   stats: {
-    activeWorkflows: number;
+    totalWorkflows: number;
     totalAgents: number;
     successRate: string;
     averageResponseTime: string;
@@ -18,10 +18,10 @@ export function StatsOverview({ stats }: StatsOverviewProps) {
           <div className="flex justify-between items-start">
             <div>
               <p className="text-sm font-medium text-muted-foreground">
-                Active Workflows
+                Total Workflows
               </p>
               <h3 className="text-2xl font-bold mt-2">
-                {stats.activeWorkflows}
+                {stats.totalWorkflows}
               </h3>
             </div>
             <div className="p-2 bg-primary/10 rounded-full">

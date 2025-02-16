@@ -7,8 +7,14 @@ interface AgentCardProps {
     assistant_id: string;
     name: string;
     description?: string;
+    avatar_url?: string;
     model_type?: string;
     tools?: { name: string }[];
+    config?: {
+      configurable: {
+        avatar?: string;
+      };
+    };
   };
 }
 
@@ -26,6 +32,10 @@ export function AgentCard({ assistant }: AgentCardProps) {
     router.push(`/assistants/${assistantId}`);
   };
 
+  // Get the avatar URL from either the root level or the config
+  const avatarUrl =
+    assistant.avatar_url || assistant.config?.configurable?.avatar || "";
+
   return (
     <div
       className="border rounded-lg p-6 hover:border-primary transition-colors cursor-pointer"
@@ -35,12 +45,15 @@ export function AgentCard({ assistant }: AgentCardProps) {
         <div
           className="h-12 w-12 rounded-full ring-2 ring-background flex items-center justify-center text-sm font-medium text-white"
           style={{
-            backgroundColor: `hsl(${
-              (assistant.name.length * 30) % 360
-            }, 70%, 50%)`,
+            backgroundImage: avatarUrl ? `url(${avatarUrl})` : undefined,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            backgroundColor: !avatarUrl
+              ? `hsl(${(assistant.name.length * 30) % 360}, 70%, 50%)`
+              : undefined,
           }}
         >
-          {assistant.name.slice(0, 2).toUpperCase()}
+          {!avatarUrl && assistant.name.slice(0, 2).toUpperCase()}
         </div>
         <div className="flex-1">
           <h3 className="text-lg font-semibold mb-1">{assistant.name}</h3>
