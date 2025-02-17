@@ -34,12 +34,14 @@ export async function POST(
         { status: 404 }
       );
     }
+    console.log("task", task);
 
     const { input } = await request.json();
+    console.log("input", input);
 
     if (task.task_type === "ai_task") {
       // Create a task run record
-      const { data: taskRun } = await supabase
+      const { data: taskRun, error: taskRunError } = await supabase
         .from("task_runs")
         .insert({
           workflow_task_id: task.workflow_task_id,
@@ -49,6 +51,12 @@ export async function POST(
         })
         .select()
         .single();
+
+      if (taskRunError || !taskRun) {
+        throw new Error("Failed to create task run");
+      }
+
+      console.log("taskRun", taskRun);
 
       try {
         // Create a stateless run with the assistant
@@ -76,7 +84,7 @@ export async function POST(
         });
 
         // Update task run with success
-        await supabase
+        const { error: updateError } = await supabase
           .from("task_runs")
           .update({
             status: "completed",
@@ -85,17 +93,23 @@ export async function POST(
           })
           .eq("run_id", taskRun.run_id);
 
+        if (updateError) {
+          throw new Error("Failed to update task run status");
+        }
+
         return NextResponse.json(run);
       } catch (error) {
         // Update task run with error
-        await supabase
-          .from("task_runs")
-          .update({
-            status: "error",
-            completed_at: new Date().toISOString(),
-            error: error instanceof Error ? error.message : "Unknown error",
-          })
-          .eq("run_id", taskRun.run_id);
+        if (taskRun?.run_id) {
+          await supabase
+            .from("task_runs")
+            .update({
+              status: "error",
+              completed_at: new Date().toISOString(),
+              error: error instanceof Error ? error.message : "Unknown error",
+            })
+            .eq("run_id", taskRun.run_id);
+        }
 
         throw error;
       }

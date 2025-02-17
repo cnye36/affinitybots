@@ -10,21 +10,30 @@ import { Textarea } from '@/components/ui/textarea'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { ArrowLeft, Sparkles } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { AgentCreationDialog } from "@/components/agents/AgentCreationDialog";
 
 export default function NewAgentPage() {
-  const router = useRouter()
-  const [customPrompt, setCustomPrompt] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const router = useRouter();
+  const [customPrompt, setCustomPrompt] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showCreationDialog, setShowCreationDialog] = useState(false);
 
-  const handleCreateAgent = async (prompt: string, template = AGENT_TEMPLATES[0]) => {
-    setIsSubmitting(true)
-    setError(null)
+  const handleCreateAgent = async (
+    prompt: string,
+    template = AGENT_TEMPLATES[0]
+  ) => {
+    setIsSubmitting(true);
+    setError(null);
+    setShowCreationDialog(true);
 
-    const formData = new FormData()
-    formData.append('prompt', prompt)
-    formData.append('agentType', template.id)
-    formData.append('useTemplate', template === AGENT_TEMPLATES[0] ? 'false' : 'true')
+    const formData = new FormData();
+    formData.append("prompt", prompt);
+    formData.append("agentType", template.id);
+    formData.append(
+      "useTemplate",
+      template === AGENT_TEMPLATES[0] ? "false" : "true"
+    );
 
     try {
       await createAgent(formData);
@@ -34,8 +43,9 @@ export default function NewAgentPage() {
         error instanceof Error ? error.message : "Failed to create agent"
       );
       setIsSubmitting(false);
+      setShowCreationDialog(false);
     }
-  }
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -112,6 +122,11 @@ export default function NewAgentPage() {
           </Alert>
         )}
       </div>
+
+      <AgentCreationDialog
+        isOpen={showCreationDialog}
+        onClose={() => setShowCreationDialog(false)}
+      />
     </div>
   );
 } 

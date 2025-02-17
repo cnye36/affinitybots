@@ -72,7 +72,7 @@ export async function POST(
           .from("workflow_task_runs")
           .insert({
             workflow_run_id: workflowRun.run_id,
-            task_id: task.task_id,
+            workflow_task_id: task.workflow_task_id,
             status: "pending",
             started_at: new Date().toISOString(),
             metadata: {},
