@@ -51,7 +51,8 @@ export async function executeWorkflow({
             if (
               (node.type === "agent" &&
                 node.data.assistant_id === update.assistant_id) ||
-              (node.type === "task" && node.data.task_id === update.task_id)
+              (node.type === "task" &&
+                node.data.workflow_task_id === update.workflow_task_id)
             ) {
               if (node.type === "agent") {
                 return {

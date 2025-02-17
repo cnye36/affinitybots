@@ -62,10 +62,14 @@ export function WorkflowCanvas({
       // Handle node deletion
       const typedNodes = nodesToDelete as unknown as WorkflowNode[];
       for (const node of typedNodes) {
-        if (node.type === "task" && node.data.task_id && initialWorkflowId) {
+        if (
+          node.type === "task" &&
+          node.data.workflow_task_id &&
+          initialWorkflowId
+        ) {
           try {
             await fetch(
-              `/api/workflows/${initialWorkflowId}/tasks/${node.data.task_id}`,
+              `/api/workflows/${initialWorkflowId}/tasks/${node.data.workflow_task_id}`,
               {
                 method: "DELETE",
               }
@@ -285,9 +289,8 @@ export function WorkflowCanvas({
           className="bg-background/60 p-2 rounded-lg shadow-sm border"
         >
           <div className="text-sm text-muted-foreground">
-            To create a workflow, add an Agent and then add tasks to each agent
-            to define their behavior. Press Delete or Backspace to remove nodes
-            and edges.
+            Add your first Agent and then add tasks to define their behavior.
+            Press Delete or Backspace to remove nodes and edges.
           </div>
         </Panel>
       </ReactFlow>
