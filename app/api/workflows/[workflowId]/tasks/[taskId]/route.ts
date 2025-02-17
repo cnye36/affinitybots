@@ -21,10 +21,7 @@ const VALID_TASK_TYPES: TaskType[] = [
   "google_sheets_update",
   "google_drive_upload",
   // AI tasks
-  "ai_write_content",
-  "ai_analyze_content",
-  "ai_summarize",
-  "ai_translate",
+  "ai_task",
 ];
 
 // GET - Get a specific task
@@ -47,7 +44,7 @@ export async function GET(
     const { data: task } = await supabase
       .from("workflow_tasks")
       .select("*, workflow:workflows(owner_id)")
-      .eq("task_id", taskId)
+      .eq("id", taskId)
       .single();
 
     if (!task || task.workflow.owner_id !== user.id) {
@@ -87,7 +84,7 @@ export async function PUT(
     const { data: existingTask } = await supabase
       .from("workflow_tasks")
       .select("*, workflow:workflows(owner_id)")
-      .eq("task_id", taskId)
+      .eq("id", taskId)
       .single();
 
     if (!existingTask || existingTask.workflow.owner_id !== user.id) {
@@ -116,7 +113,7 @@ export async function PUT(
         assistant_id: taskData.assistant_id,
         updated_at: new Date().toISOString(),
       })
-      .eq("task_id", taskId)
+      .eq("id", taskId)
       .select()
       .single();
 
@@ -152,7 +149,7 @@ export async function DELETE(
     const { data: task } = await supabase
       .from("workflow_tasks")
       .select("*, workflow:workflows(owner_id)")
-      .eq("task_id", taskId)
+      .eq("id", taskId)
       .single();
 
     if (!task || task.workflow.owner_id !== user.id) {
@@ -166,21 +163,21 @@ export async function DELETE(
     const { error } = await supabase
       .from("workflow_tasks")
       .delete()
-      .eq("task_id", taskId);
+      .eq("id", taskId);
 
     if (error) throw error;
 
     // Reorder remaining tasks
     const { data: remainingTasks, error: reorderError } = await supabase
       .from("workflow_tasks")
-      .select("task_id, position")
+      .select("id, position")
       .eq("workflow_id", workflowId)
       .order("position");
 
     if (!reorderError && remainingTasks) {
       // Update positions to be sequential
       const updates = remainingTasks.map((t, index) => ({
-        task_id: t.task_id,
+        id: t.id,
         position: index,
       }));
 
@@ -188,7 +185,7 @@ export async function DELETE(
         await supabase
           .from("workflow_tasks")
           .update({ position: update.position })
-          .eq("task_id", update.task_id);
+          .eq("id", update.id);
       }
     }
 

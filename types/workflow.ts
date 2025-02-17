@@ -2,14 +2,28 @@ import { Node } from "reactflow";
 import { IntegrationType } from "./tools";
 
 export interface TaskNodeData {
+  workflow_task_id: string;
+  id: string;
   name: string;
-  type: TaskType;
+  label: string;
   description?: string;
-  task_id: string;
-  assistant_id: string;
+  type: TaskType;
   workflowId: string;
   status?: "idle" | "running" | "completed" | "error";
-  onConfigureTask?: (task_id: string) => void;
+  assistant_id: string;
+  config?: {
+    input: {
+      source: string;
+      parameters: Record<string, unknown>;
+      prompt?: string;
+    };
+    output: {
+      destination: string;
+    };
+  };
+  onConfigureTask?: (id: string) => void;
+  isConfigOpen?: boolean;
+  onConfigClose?: () => void;
 }
 
 export interface AgentNodeData {
@@ -39,16 +53,30 @@ export type WorkflowStatus =
   | "paused"
   | "completed"
   | "failed";
-export type TaskStatus = "pending" | "running" | "completed" | "failed";
+export type TaskStatus =
+  | "pending"
+  | "running"
+  | "completed"
+  | "failed"
+  | "error";
 
 export interface WorkflowTask {
-  task_id: string;
+  workflow_task_id: string;
   workflow_id: string;
   assistant_id: string;
   name: string;
   description?: string;
-  task_type: string;
-  config: Record<string, unknown>;
+  task_type: TaskType;
+  config: {
+    input: {
+      source: string;
+      parameters: Record<string, unknown>;
+      prompt?: string;
+    };
+    output: {
+      destination: string;
+    };
+  };
   position: number;
   status: TaskStatus;
   created_at: string;
@@ -77,23 +105,10 @@ export interface Workflow {
   is_active: boolean;
 }
 
-export interface WorkflowRun {
+export interface TaskRun {
   run_id: string;
-  workflow_id: string;
-  thread_id?: string;
-  status: TaskStatus;
-  started_at: string;
-  completed_at?: string;
-  error?: string;
-  result?: unknown;
-  metadata: Record<string, unknown>;
-}
-
-export interface WorkflowTaskRun {
-  task_run_id: string;
-  workflow_run_id: string;
-  task_id: string;
-  run_id?: string;
+  workflow_task_id: string;
+  task_id?: string;
   status: TaskStatus;
   started_at: string;
   completed_at?: string;
@@ -134,7 +149,7 @@ export interface IntegrationConfig {
 }
 
 export interface Task {
-  task_id?: string;
+  workflow_task_id?: string;
   name: string;
   description: string;
   type: TaskType;

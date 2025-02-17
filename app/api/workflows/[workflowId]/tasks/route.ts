@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
-import { Task, TaskType } from "@/types/workflow";
+import { TaskType } from "@/types/workflow";
 
 const VALID_TASK_TYPES: TaskType[] = [
   "ai_task",
@@ -54,7 +54,7 @@ export async function GET(
     // Get all tasks for this workflow
     const { data: tasks, error } = await supabase
       .from("workflow_tasks")
-      .select("*")
+      .select("*, task_runs(*)")
       .eq("workflow_id", workflowId)
       .order("position");
 
@@ -100,11 +100,11 @@ export async function POST(
       );
     }
 
-    const taskData: Partial<Task> = await request.json();
+    const taskData = await request.json();
     console.log("Received task data:", taskData);
 
     // Validate task type
-    if (!VALID_TASK_TYPES.includes(taskData.type as TaskType)) {
+    if (!VALID_TASK_TYPES.includes(taskData.type)) {
       return NextResponse.json({ error: "Invalid task type" }, { status: 400 });
     }
 
@@ -127,36 +127,30 @@ export async function POST(
 
     const position = lastTask ? lastTask.position + 1 : 0;
 
-    // Create the task with type-specific configuration
-    const insertData = {
-      workflow_id: workflowId,
-      assistant_id: taskData.assistant_id,
-      name: taskData.name,
-      description: taskData.description,
-      task_type: taskData.type,
-      config:
-        taskData.type === "ai_task"
-          ? {
-              input: {
-                source: "previous_task",
-                parameters: {},
-                prompt: taskData.config?.input?.prompt || "",
-              },
-              output: {
-                destination: "next_task",
-              },
-            }
-          : taskData.config || {},
-      integration: taskData.integration,
-      position,
-      status: "pending",
-      metadata: {},
-    };
-    console.log("Inserting task data:", insertData);
-
+    // Create the workflow task
     const { data: task, error } = await supabase
       .from("workflow_tasks")
-      .insert(insertData)
+      .insert({
+        workflow_id: workflowId,
+        position,
+        name: taskData.name,
+        description: taskData.description,
+        task_type: taskData.type,
+        assistant_id: taskData.assistant_id,
+        config: {
+          input: {
+            source: taskData.config?.input?.source || "previous_task",
+            parameters: taskData.config?.input?.parameters || {},
+            prompt: taskData.config?.input?.prompt || "",
+          },
+          output: {
+            destination: taskData.config?.output?.destination || "next_task",
+          },
+          ...taskData.config,
+        },
+        status: "pending",
+        metadata: taskData.metadata || {},
+      })
       .select()
       .single();
 

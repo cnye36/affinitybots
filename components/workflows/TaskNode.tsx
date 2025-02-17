@@ -1,4 +1,4 @@
-import React, { memo, useState } from "react";
+import React, { memo } from "react";
 import { Handle, Position, NodeProps } from "reactflow";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import {
@@ -17,14 +17,15 @@ interface TaskNodeProps {
     name: string;
     type: TaskType;
     description?: string;
-    task_id: string;
+    id: string;
     assistant_id: string;
     workflowId: string;
     status?: "idle" | "running" | "completed" | "error";
-    onConfigureTask?: (task_id: string) => void;
+    onConfigureTask?: (id: string) => void;
+    isConfigOpen?: boolean;
+    onConfigClose?: () => void;
+    workflow_task_id: string;
   };
-  isConfigOpen?: boolean;
-  onConfigClose?: () => void;
 }
 
 const statusColors = {
@@ -34,44 +35,19 @@ const statusColors = {
   error: "bg-red-400",
 };
 
-export const MemoizedTaskNode = memo((props: NodeProps) => {
-  const [isConfigOpen, setIsConfigOpen] = useState(false);
-
-  const handleConfigOpen = () => {
-    setIsConfigOpen(true);
-  };
-
-  const handleConfigClose = () => {
-    setIsConfigOpen(false);
-  };
-
-  return (
-    <TaskNode
-      data={{
-        ...props.data,
-        onConfigureTask: () => handleConfigOpen(),
-      }}
-      isConfigOpen={isConfigOpen}
-      onConfigClose={handleConfigClose}
-    />
-  );
-});
-
-MemoizedTaskNode.displayName = "MemoizedTaskNode";
-
-export const TaskNode = memo(
-  ({ data, isConfigOpen, onConfigClose }: TaskNodeProps) => {
+export const MemoizedTaskNode = memo(
+  (props: NodeProps<TaskNodeProps["data"]>) => {
     const handleSettingsClick = (e: React.MouseEvent) => {
       e.stopPropagation();
-      if (data.onConfigureTask && data.task_id) {
-        data.onConfigureTask(data.task_id);
+      if (props.data.onConfigureTask && props.data.workflow_task_id) {
+        props.data.onConfigureTask(props.data.workflow_task_id);
       }
     };
 
     const handleSaveTask = async (updatedTask: Task) => {
       try {
         const response = await fetch(
-          `/api/workflows/${data.workflowId}/tasks/${data.task_id}`,
+          `/api/workflows/${props.data.workflowId}/tasks/${props.data.workflow_task_id}`,
           {
             method: "PUT",
             headers: {
@@ -93,7 +69,7 @@ export const TaskNode = memo(
     const handleTestTask = async () => {
       try {
         const response = await fetch(
-          `/api/workflows/${data.workflowId}/tasks/${data.task_id}/execute`,
+          `/api/workflows/${props.data.workflowId}/tasks/${props.data.workflow_task_id}/execute`,
           {
             method: "POST",
             headers: {
@@ -101,18 +77,12 @@ export const TaskNode = memo(
             },
             body: JSON.stringify({
               input: {
-                // For testing, we'll use an empty input or task-specific test input
                 messages: [
                   {
                     role: "user",
-                    content: data.description || "Test execution",
+                    content: props.data.description || "Test execution",
                   },
                 ],
-              },
-              // When testing, we want immediate feedback, so we'll use stateless mode
-              config: {
-                mode: "stateless",
-                stream: true,
               },
             }),
           }
@@ -122,60 +92,11 @@ export const TaskNode = memo(
           throw new Error("Failed to execute task");
         }
 
-        // For streaming responses
-        if (
-          response.headers.get("content-type")?.includes("text/event-stream")
-        ) {
-          const reader = response.body?.getReader();
-          const decoder = new TextDecoder();
-          let result = "";
-
-          while (reader) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            const chunk = decoder.decode(value);
-            const lines = chunk.split("\n");
-
-            for (const line of lines) {
-              if (line.startsWith("data: ")) {
-                const data = JSON.parse(line.slice(6));
-                // Accumulate the response
-                if (data.type === "message") {
-                  result += data.content;
-                }
-              }
-            }
-          }
-
-          return { result };
-        }
-
-        // For non-streaming responses
-        const result = await response.json();
-        return result;
+        return await response.json();
       } catch (error) {
-        console.error("Error executing task:", error);
+        console.error("Error testing task:", error);
         throw error;
       }
-    };
-
-    const taskConfig = {
-      task_id: data.task_id,
-      name: data.name,
-      description: data.description || "",
-      type: data.type,
-      assistant_id: data.assistant_id,
-      workflow_id: data.workflowId,
-      config: {
-        input: {
-          source: "previous_node",
-          parameters: {},
-        },
-        output: {
-          destination: "next_node",
-        },
-      },
     };
 
     return (
@@ -184,7 +105,7 @@ export const TaskNode = memo(
           <CardHeader className="p-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm truncate flex-1">
-                {data.name}
+                {props.data.name}
               </CardTitle>
               <div className="flex items-center gap-2">
                 <TooltipProvider>
@@ -192,12 +113,12 @@ export const TaskNode = memo(
                     <TooltipTrigger asChild>
                       <div
                         className={`w-3 h-3 rounded-full ${
-                          statusColors[data.status || "idle"]
+                          statusColors[props.data.status || "idle"]
                         }`}
                       />
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Status: {data.status || "idle"}</p>
+                      <p>Status: {props.data.status || "idle"}</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -221,22 +142,22 @@ export const TaskNode = memo(
           <CardContent className="p-3 pt-0">
             <div className="flex flex-wrap gap-1">
               <Badge variant="secondary" className="text-xs">
-                {data.type}
+                {props.data.type}
               </Badge>
-              {data.status && (
+              {props.data.status && (
                 <Badge
                   variant={
-                    data.status === "error" ? "destructive" : "secondary"
+                    props.data.status === "error" ? "destructive" : "secondary"
                   }
                   className="text-xs"
                 >
-                  {data.status}
+                  {props.data.status}
                 </Badge>
               )}
             </div>
-            {data.description && (
+            {props.data.description && (
               <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
-                {data.description}
+                {props.data.description}
               </p>
             )}
           </CardContent>
@@ -259,15 +180,37 @@ export const TaskNode = memo(
         </Card>
 
         <TaskConfigModal
-          isOpen={Boolean(isConfigOpen)}
-          onClose={onConfigClose || (() => {})}
-          task={taskConfig}
+          isOpen={Boolean(props.data.isConfigOpen)}
+          onClose={props.data.onConfigClose || (() => {})}
+          task={{
+            id: props.data.workflow_task_id,
+            name: props.data.name,
+            description: props.data.description || "",
+            type: props.data.type,
+            assistant_id: props.data.assistant_id,
+            workflow_id: props.data.workflowId,
+            config: {
+              input: {
+                source: "previous_node",
+                parameters: {},
+              },
+              output: {
+                destination: "next_node",
+              },
+            },
+          }}
           onSave={handleSaveTask}
           onTest={handleTestTask}
         />
       </>
     );
-  }
+  },
+  (prevProps, nextProps) =>
+    prevProps.data.name === nextProps.data.name &&
+    prevProps.data.type === nextProps.data.type &&
+    prevProps.data.description === nextProps.data.description &&
+    prevProps.data.status === nextProps.data.status &&
+    prevProps.data.isConfigOpen === nextProps.data.isConfigOpen
 );
 
-TaskNode.displayName = "TaskNode";
+MemoizedTaskNode.displayName = "MemoizedTaskNode";

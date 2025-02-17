@@ -1,10 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
 import { Client } from "@langchain/langgraph-sdk";
-import { TaskType, WorkflowTask } from "@/types/workflow";
-
-// Simplified task type check
-const isAITask = (taskType: TaskType) => taskType === "ai_task";
 
 export async function POST(
   request: Request,
@@ -17,13 +13,10 @@ export async function POST(
     apiKey: process.env.LANGSMITH_API_KEY,
   });
 
-  let currentTask: WorkflowTask | null = null;
-
   try {
     const {
       data: { user },
     } = await supabase.auth.getUser();
-
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -32,7 +25,7 @@ export async function POST(
     const { data: task } = await supabase
       .from("workflow_tasks")
       .select("*, workflow:workflows(owner_id)")
-      .eq("task_id", taskId)
+      .eq("workflow_task_id", taskId)
       .single();
 
     if (!task || task.workflow.owner_id !== user.id) {
@@ -42,114 +35,72 @@ export async function POST(
       );
     }
 
-    currentTask = task;
+    const { input } = await request.json();
 
-    // Update task status to running
-    await supabase
-      .from("workflow_tasks")
-      .update({ status: "running", last_run_at: new Date().toISOString() })
-      .eq("task_id", taskId);
-
-    const { input, config } = await request.json();
-    const isStateless = config?.mode === "stateless";
-    const shouldStream = config?.stream === true;
-
-    if (isAITask(task.task_type as TaskType)) {
-      // Fetch agent configuration
-      const { data: assistant } = await supabase
-        .from("assistants")
-        .select("*")
-        .eq("assistant_id", task.assistant_id)
+    if (task.task_type === "ai_task") {
+      // Create a task run record
+      const { data: taskRun } = await supabase
+        .from("task_runs")
+        .insert({
+          workflow_task_id: task.workflow_task_id,
+          status: "running",
+          started_at: new Date().toISOString(),
+          metadata: {},
+        })
+        .select()
         .single();
 
-      if (!assistant) {
-        return NextResponse.json({ error: "Agent not found" }, { status: 404 });
-      }
-
-      // Common run configuration for AI tasks
-      const runConfig = {
-        input,
-        metadata: {
-          workflow_id: workflowId,
-          task_id: taskId,
-          user_id: user.id,
-          task_type: task.task_type,
-          execution_mode: isStateless ? "stateless" : "background",
-        },
-        config: {
-          tags: ["workflow", isStateless ? "test" : "production"],
-          configurable: {
-            ...assistant.config?.configurable,
-            ...task.config,
-            task_input: input,
+      try {
+        // Create a stateless run with the assistant
+        const run = await client.runs.create(task.assistant_id, "", {
+          input: {
+            messages: [
+              {
+                role: "user",
+                content: task.config?.input?.prompt || input?.prompt || "",
+              },
+            ],
+            ...input,
           },
-        },
-      };
-
-      if (isStateless) {
-        if (shouldStream) {
-          const stream = await client.runs.stream("", task.assistant_id, {
-            ...runConfig,
-            streamMode: ["messages"],
-          });
-
-          const encoder = new TextEncoder();
-          const readable = new ReadableStream({
-            async start(controller) {
-              try {
-                for await (const chunk of stream) {
-                  controller.enqueue(
-                    encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`)
-                  );
-                }
-                controller.close();
-              } catch (error) {
-                controller.error(error);
-              }
+          metadata: {
+            workflow_id: workflowId,
+            workflow_task_id: taskId,
+            run_id: taskRun.run_id,
+            user_id: user.id,
+          },
+          config: {
+            configurable: {
+              ...task.config,
             },
-          });
+          },
+        });
 
-          return new Response(readable, {
-            headers: {
-              "Content-Type": "text/event-stream",
-              "Cache-Control": "no-cache",
-              Connection: "keep-alive",
-            },
-          });
-        } else {
-          const result = await client.runs.create(
-            task.assistant_id,
-            "",
-            runConfig
-          );
-          return NextResponse.json(result);
-        }
-      } else {
-        // For workflow execution, use background run
-        const run = await client.runs.create(
-          task.assistant_id,
-          task.thread_id || "",
-          {
-            ...runConfig,
-            streamMode: ["values", "messages"],
-          }
-        );
-
-        // Update task with run information
+        // Update task run with success
         await supabase
-          .from("workflow_tasks")
+          .from("task_runs")
           .update({
-            metadata: {
-              ...task.metadata,
-              run_id: run.run_id,
-            },
+            status: "completed",
+            completed_at: new Date().toISOString(),
+            result: run,
           })
-          .eq("task_id", taskId);
+          .eq("run_id", taskRun.run_id);
 
         return NextResponse.json(run);
+      } catch (error) {
+        // Update task run with error
+        await supabase
+          .from("task_runs")
+          .update({
+            status: "error",
+            completed_at: new Date().toISOString(),
+            error: error instanceof Error ? error.message : "Unknown error",
+          })
+          .eq("run_id", taskRun.run_id);
+
+        throw error;
       }
     } else {
-      // Handle integration tasks (to be implemented)
+      // Handle other task types (integrations) here
       return NextResponse.json(
         { error: "Integration tasks not yet implemented" },
         { status: 501 }
@@ -157,20 +108,6 @@ export async function POST(
     }
   } catch (error) {
     console.error("Error executing task:", error);
-    const taskError = error as Error;
-
-    // Update task status to failed
-    await supabase
-      .from("workflow_tasks")
-      .update({
-        status: "failed",
-        metadata: {
-          ...currentTask?.metadata,
-          error: taskError.message,
-        },
-      })
-      .eq("task_id", taskId);
-
     return NextResponse.json(
       { error: "Failed to execute task" },
       { status: 500 }

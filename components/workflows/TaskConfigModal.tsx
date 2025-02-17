@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Task } from "@/types/workflow";
+import { Task, TaskType } from "@/types/workflow";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -25,9 +25,27 @@ interface TaskOutput {
 interface TaskConfigModalProps {
   isOpen: boolean;
   onClose: () => void;
-  task: Task;
+  task: {
+    id: string;
+    name: string;
+    description: string;
+    type: TaskType;
+    assistant_id: string;
+    workflow_id: string;
+    config: {
+      input: {
+        source: string;
+        parameters: Record<string, unknown>;
+        prompt?: string;
+      };
+      output: {
+        destination: string;
+      };
+    };
+  };
   previousNodeOutput?: TaskOutput;
   onSave: (updatedTask: Task) => Promise<void>;
+  onTest: () => Promise<unknown>;
 }
 
 type OutputFormat = "json" | "markdown" | "text";
@@ -45,6 +63,7 @@ export function TaskConfigModal({
   task,
   previousNodeOutput,
   onSave,
+  onTest,
 }: TaskConfigModalProps) {
   const [currentTask, setCurrentTask] = useState<Task>(task);
   const [outputFormat, setOutputFormat] = useState<OutputFormat>("json");
@@ -55,14 +74,31 @@ export function TaskConfigModal({
 
   useEffect(() => {
     setCurrentTask(task);
-    // Fetch assistant details when task changes
-    if (task.assistant_id) {
+  }, [task]);
+
+  // Separate useEffect for assistant fetching to prevent unnecessary API calls
+  useEffect(() => {
+    let isMounted = true;
+
+    if (
+      isOpen &&
+      task.assistant_id &&
+      (!assistant || assistant.assistant_id !== task.assistant_id)
+    ) {
       fetch(`/api/assistants/${task.assistant_id}`)
         .then((res) => res.json())
-        .then((data) => setAssistant(data))
+        .then((data) => {
+          if (isMounted) {
+            setAssistant(data);
+          }
+        })
         .catch((err) => console.error("Error fetching assistant:", err));
     }
-  }, [task]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen, task.assistant_id, assistant]);
 
   const handleSave = async () => {
     try {
@@ -92,62 +128,8 @@ export function TaskConfigModal({
         throw new Error("Please provide a prompt before testing");
       }
 
-      const response = await fetch(
-        `/api/workflows/${currentTask.workflow_id}/tasks/${currentTask.task_id}/execute`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            input: {
-              messages: [
-                {
-                  role: "user",
-                  content: currentTask.config.input.prompt,
-                },
-              ],
-            },
-            config: {
-              mode: "stateless",
-              stream: true,
-            },
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to execute task");
-      }
-
-      if (response.headers.get("content-type")?.includes("text/event-stream")) {
-        const reader = response.body?.getReader();
-        const decoder = new TextDecoder();
-
-        while (reader) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          const chunk = decoder.decode(value);
-          const lines = chunk.split("\n");
-
-          for (const line of lines) {
-            if (line.startsWith("data: ")) {
-              const data = JSON.parse(line.slice(6));
-              if (data.type === "message") {
-                setTestOutput((prev) => ({
-                  type: "message",
-                  content: (prev?.content || "") + data.content,
-                }));
-              }
-            }
-          }
-        }
-      } else {
-        const result = await response.json();
-        setTestOutput(result);
-      }
+      const result = await onTest();
+      setTestOutput(result as TestOutput);
     } catch (err) {
       console.error("Error testing task:", err);
       toast({

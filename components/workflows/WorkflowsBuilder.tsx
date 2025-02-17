@@ -54,6 +54,32 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
 
   const handleConfigureTask = useCallback((taskId: string) => {
     setSelectedTaskId(taskId);
+    setNodes((nds) =>
+      nds.map((node) =>
+        node.type === "task" && node.data.workflow_task_id === taskId
+          ? {
+              ...node,
+              data: {
+                ...node.data,
+                isConfigOpen: true,
+                onConfigClose: () => {
+                  setNodes((prevNodes) =>
+                    prevNodes.map((n) =>
+                      n.type === "task" && n.data.workflow_task_id === taskId
+                        ? {
+                            ...n,
+                            data: { ...n.data, isConfigOpen: false },
+                          }
+                        : n
+                    )
+                  );
+                  setSelectedTaskId(null);
+                },
+              },
+            }
+          : node
+      )
+    );
   }, []);
 
   const handleTaskConfigClose = useCallback(() => {
@@ -142,6 +168,8 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
                 workflowId: workflow.workflow_id,
                 onAddTask: handleAddTask,
                 onAddAgent: handleAddNextAgent,
+                onConfigureTask: handleConfigureTask,
+                isConfigOpen: false,
               },
             }))
           );
@@ -165,6 +193,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
     initialWorkflowId,
     handleAddTask,
     handleAddNextAgent,
+    handleConfigureTask,
     router,
     supabase,
   ]);
@@ -356,8 +385,8 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
         },
       });
 
-      if (newTask?.task_id) {
-        setSelectedTaskId(newTask.task_id);
+      if (newTask?.workflow_task_id) {
+        setSelectedTaskId(newTask.workflow_task_id);
       }
     } catch (error) {
       console.error("Error creating task:", error);

@@ -86,7 +86,7 @@ export async function POST(
     // Start executing the first task
     const firstTask = tasks[0];
     const response = await fetch(
-      `/api/workflows/${workflowId}/tasks/${firstTask.task_id}/execute`,
+      `/api/workflows/${workflowId}/tasks/${firstTask.workflow_task_id}/execute`,
       {
         method: "POST",
         headers: {

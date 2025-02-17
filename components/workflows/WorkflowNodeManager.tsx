@@ -132,16 +132,18 @@ export async function addTask({
       const savedTask = await response.json();
 
       // Create new task node with the saved task data
-      const newTaskNode = {
-        id: `task-${savedTask.task_id}`,
-        type: "task" as const,
+      const taskNodeId = `task-${savedTask.workflow_task_id}`;
+      const newTaskNode: WorkflowNode = {
+        id: taskNodeId,
+        type: "task",
         position,
         data: {
-          task_id: savedTask.task_id,
+          workflow_task_id: savedTask.workflow_task_id,
+          id: savedTask.workflow_task_id, // For backward compatibility
           name: savedTask.name,
           label: savedTask.name,
           description: savedTask.description,
-          type: savedTask.type,
+          type: savedTask.task_type,
           workflowId,
           status: "idle" as const,
           assistant_id: agentId,
@@ -154,14 +156,42 @@ export async function addTask({
               destination: "next_node",
             },
           },
+          onConfigureTask: (id: string) => {
+            setNodes((nds) =>
+              nds.map((node) =>
+                node.type === "task" && node.data.workflow_task_id === id
+                  ? {
+                      ...node,
+                      data: {
+                        ...node.data,
+                        isConfigOpen: true,
+                        onConfigClose: () => {
+                          setNodes((prevNodes) =>
+                            prevNodes.map((n) =>
+                              n.type === "task" &&
+                              n.data.workflow_task_id === id
+                                ? {
+                                    ...n,
+                                    data: { ...n.data, isConfigOpen: false },
+                                  }
+                                : n
+                            )
+                          );
+                        },
+                      },
+                    }
+                  : node
+              )
+            );
+          },
         },
       };
 
       // Create edge from agent to task
       const newEdge: Edge = {
-        id: `edge-${sourceNode.id}-${newTaskNode.id}`,
+        id: `edge-${sourceNode.id}-${taskNodeId}`,
         source: sourceNode.id,
-        target: newTaskNode.id,
+        target: taskNodeId,
         type: "default",
         sourceHandle: "task-handle",
         targetHandle: "task-target",
