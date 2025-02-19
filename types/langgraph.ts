@@ -1,4 +1,3 @@
-import { ToolCall, ToolConfig } from "./tools";
 import { BaseStore } from "@langchain/langgraph";
 import { Tool } from "@langchain/core/tools";
 
@@ -55,17 +54,12 @@ export interface Thread {
 export interface Message {
   role: "user" | "assistant";
   content: string;
-  tool_calls?: ToolCall[];
   created_at?: string;
 }
 
 export interface Assistant {
   assistant_id: string;
   name: string;
-  graph_id: string;
-  created_at: string;
-  updated_at: string;
-  avatar?: string;
   metadata: {
     description: string;
     agent_type: string;
@@ -75,13 +69,11 @@ export interface Assistant {
   version: number;
   config: {
     configurable: {
-      model?: "gpt-4o-mini" | "gpt-4o" | "gpt-o1" | "gpt-o1-mini";
+      model?: string;
       temperature?: number;
       instructions?: string;
       prompt_template?: string;
-      tools?: Partial<
-        Record<"web_search" | "wikipedia" | "wolfram_alpha", ToolConfig>
-      >;
+      tools?: Record<string, unknown>;
       memory?: {
         enabled: boolean;
         max_entries: number;
@@ -129,4 +121,13 @@ export interface Config {
   tags: string[];
   recursion_limit: number;
   configurable: Record<string, unknown>;
+}
+
+export interface StreamEvent {
+  event: string;
+  data: {
+    content?: string;
+    type?: string;
+    [key: string]: unknown;
+  }[];
 }

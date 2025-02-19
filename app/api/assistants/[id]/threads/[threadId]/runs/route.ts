@@ -44,6 +44,7 @@ export async function POST(
     apiUrl: process.env.LANGGRAPH_URL,
     apiKey: process.env.LANGSMITH_API_KEY,
   });
+
   try {
     const supabase = await createClient();
     const {
@@ -64,35 +65,52 @@ export async function POST(
     }
 
     const { content } = await request.json();
+    if (typeof content !== "string") {
+      return NextResponse.json(
+        { error: "Invalid message content" },
+        { status: 400 }
+      );
+    }
 
-    // Initiate a streaming run
-    const stream = client.runs.stream(threadId, id, {
-      input: { messages: [{ role: "user", content }] },
-      config: {
-        tags: ["chat"],
-        configurable: assistant.config?.configurable,
-        recursion_limit: 100,
-      },
-      streamMode: ["messages"],
-    });
-
+    // Create a transform stream for SSE
+    const stream = new TransformStream();
+    const writer = stream.writable.getWriter();
     const encoder = new TextEncoder();
-    const readable = new ReadableStream({
-      async start(controller) {
-        try {
-          for await (const chunk of stream) {
-            controller.enqueue(
-              encoder.encode(`data: ${JSON.stringify(chunk.data)}\n\n`)
-            );
-          }
-          controller.close();
-        } catch (error) {
-          controller.error(error);
-        }
-      },
-    });
 
-    return new Response(readable, {
+    // Start streaming in the background
+    (async () => {
+      try {
+        const eventStream = client.runs.stream(threadId, id, {
+          input: { messages: [{ role: "user", content }] },
+          config: {
+            tags: ["chat"],
+            configurable: assistant.config?.configurable,
+            recursion_limit: 100,
+          },
+          streamMode: ["messages"],
+        });
+
+        for await (const event of eventStream) {
+          if (event.data?.[0]?.content !== undefined) {
+            const chunk = `data: ${JSON.stringify(event.data)}\n\n`;
+            await writer.write(encoder.encode(chunk));
+          }
+        }
+      } catch (error) {
+        console.error("Stream error:", error);
+        const errorEvent = {
+          event: "error",
+          data: { message: "An error occurred while streaming the response" },
+        };
+        await writer.write(
+          encoder.encode(`data: ${JSON.stringify([errorEvent])}\n\n`)
+        );
+      } finally {
+        await writer.close();
+      }
+    })();
+
+    return new Response(stream.readable, {
       headers: {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
@@ -101,6 +119,9 @@ export async function POST(
     });
   } catch (error) {
     console.error("Error in POST:", error);
-    return NextResponse.json({ error: "Failed to start run" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to process request" },
+      { status: 500 }
+    );
   }
 }
