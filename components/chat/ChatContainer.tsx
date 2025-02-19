@@ -26,10 +26,14 @@ export default function ChatContainer({
     const initializeChat = async () => {
       if (!currentThreadId) {
         try {
-          const thread = await fetch(`/api/assistants/${assistantId}/threads`, {
-            method: "POST",
-          });
-          const data = await thread.json();
+          const response = await fetch(
+            `/api/assistants/${assistantId}/threads`,
+            {
+              method: "POST",
+            }
+          );
+          if (!response.ok) throw new Error("Failed to create thread");
+          const data = await response.json();
           setCurrentThreadId(data.thread_id);
         } catch (error) {
           console.error("Error creating thread:", error);
@@ -40,36 +44,38 @@ export default function ChatContainer({
     initializeChat();
   }, [assistantId, currentThreadId]);
 
-  // Fetch messages when switching threads
+  // Fetch thread state when switching threads
   useEffect(() => {
-    const fetchThreadMessages = async () => {
-      if (currentThreadId) {
-        try {
-          const response = await fetch(
-            `/api/assistants/${assistantId}/threads/${currentThreadId}`
-          );
-          if (!response.ok) {
-            throw new Error("Failed to get thread state");
-          }
-          const data = await response.json();
-          if (data.values?.messages) {
-            setMessages(
-              data.values.messages.map((msg: Message) => ({
-                role: msg.role === "user" ? "user" : "assistant",
+    const fetchThreadState = async () => {
+      if (!currentThreadId) {
+        setMessages([]);
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          `/api/assistants/${assistantId}/threads/${currentThreadId}/state`
+        );
+        if (!response.ok) throw new Error("Failed to get thread state");
+
+        const data = await response.json();
+        if (data.values?.messages) {
+          setMessages(
+            data.values.messages.map(
+              (msg: { type: string; content: string }) => ({
+                role: msg.type === "human" ? "user" : "assistant",
                 content: msg.content,
-              }))
-            );
-          }
-        } catch (error) {
-          console.error("Error fetching thread messages:", error);
-          setMessages([]);
+              })
+            )
+          );
         }
-      } else {
+      } catch (error) {
+        console.error("Error fetching thread state:", error);
         setMessages([]);
       }
     };
 
-    fetchThreadMessages();
+    fetchThreadState();
   }, [currentThreadId, assistantId]);
 
   const handleThreadSelect = (threadId: string) => {
@@ -80,10 +86,11 @@ export default function ChatContainer({
 
   const handleNewThread = async () => {
     try {
-      const thread = await fetch(`/api/assistants/${assistantId}/threads`, {
+      const response = await fetch(`/api/assistants/${assistantId}/threads`, {
         method: "POST",
       });
-      const data = await thread.json();
+      if (!response.ok) throw new Error("Failed to create thread");
+      const data = await response.json();
       setCurrentThreadId(data.thread_id);
       setMessages([]);
     } catch (error) {
@@ -124,16 +131,13 @@ export default function ChatContainer({
 
       // If there's no current thread, create one
       if (!threadId) {
-        const thread = await fetch(`/api/assistants/${assistantId}/threads`, {
+        const response = await fetch(`/api/assistants/${assistantId}/threads`, {
           method: "POST",
         });
-        const data = await thread.json();
+        if (!response.ok) throw new Error("Failed to create thread");
+        const data = await response.json();
         threadId = data.thread_id;
         setCurrentThreadId(threadId);
-      }
-
-      if (!threadId) {
-        throw new Error("Failed to create or get thread ID");
       }
 
       // Optimistically add user message

@@ -1,5 +1,4 @@
 import { useEffect, useCallback, useState } from "react";
-import { useThreadStore } from "@/lib/stores/thread-store";
 import {
   PlusCircle,
   MessageSquare,
@@ -30,6 +29,7 @@ interface Thread {
   metadata: {
     user_id: string;
     assistant_id: string;
+    title?: string;
   };
 }
 
@@ -46,20 +46,21 @@ export default function ThreadSidebar({
   onThreadSelect,
   onNewThread,
 }: ThreadSidebarProps) {
-  const { threads, setThreads, isLoading, setLoading, titles, setTitle } =
-    useThreadStore();
+  const [threads, setThreads] = useState<Thread[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
   const [threadToRename, setThreadToRename] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState("");
 
   const fetchThreads = useCallback(async () => {
-    setLoading(true);
+    setIsLoading(true);
     try {
       const response = await fetch(`/api/assistants/${assistantId}/threads`);
+      if (!response.ok) throw new Error("Failed to fetch threads");
       const data = await response.json();
       const validThreads = Array.isArray(data.threads)
         ? data.threads.filter(
-            (thread: Partial<Thread>) =>
+            (thread: Thread) =>
               thread &&
               thread.thread_id &&
               thread.metadata?.assistant_id === assistantId
@@ -69,9 +70,9 @@ export default function ThreadSidebar({
     } catch (error) {
       console.error("Error fetching threads:", error);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
-  }, [assistantId, setThreads, setLoading]);
+  }, [assistantId]);
 
   // Initial fetch
   useEffect(() => {
@@ -104,8 +105,9 @@ export default function ThreadSidebar({
   };
 
   const handleRename = async (threadId: string) => {
+    const thread = threads.find((t) => t.thread_id === threadId);
     setThreadToRename(threadId);
-    setNewTitle(titles[threadId] || "");
+    setNewTitle(thread?.metadata?.title || "");
     setIsRenaming(true);
   };
 
@@ -126,7 +128,19 @@ export default function ThreadSidebar({
 
       if (!response.ok) throw new Error("Failed to rename thread");
 
-      setTitle(threadToRename, newTitle.trim());
+      setThreads((prevThreads) =>
+        prevThreads.map((thread) =>
+          thread.thread_id === threadToRename
+            ? {
+                ...thread,
+                metadata: {
+                  ...thread.metadata,
+                  title: newTitle.trim(),
+                },
+              }
+            : thread
+        )
+      );
     } catch (error) {
       console.error("Error renaming thread:", error);
     } finally {
@@ -149,7 +163,9 @@ export default function ThreadSidebar({
 
       if (!response.ok) throw new Error("Failed to delete thread");
 
-      setThreads(threads.filter((t) => t.thread_id !== threadId));
+      setThreads((prevThreads) =>
+        prevThreads.filter((t) => t.thread_id !== threadId)
+      );
       if (currentThreadId === threadId) {
         onNewThread();
       }
@@ -200,7 +216,7 @@ export default function ThreadSidebar({
                   <div className="flex items-center gap-2">
                     <MessageSquare className="h-4 w-4 flex-shrink-0" />
                     <span className="truncate">
-                      {titles[thread.thread_id] ||
+                      {thread.metadata?.title ||
                         `Chat ${formatDate(thread.created_at)}`}
                     </span>
                   </div>

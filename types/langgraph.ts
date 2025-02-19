@@ -37,24 +37,35 @@ export interface RunStreamParams {
 }
 
 // Update the Thread interface to match what the API returns
+export interface ThreadState {
+  values: {
+    messages: Message[];
+    title?: string;
+    [key: string]: unknown;
+  };
+  checkpoint?: Checkpoint;
+  checkpointId?: string;
+  asNode?: string;
+}
+
 export interface Thread {
   thread_id: string;
-  metadata?: Record<string, unknown>;
+  metadata: {
+    user_id: string;
+    assistant_id: string;
+    title?: string;
+    [key: string]: unknown;
+  };
   status: string;
   created_at: string;
   updated_at: string;
-  config?: {
-    tags?: string[];
-    recursion_limit?: number;
-    configurable?: Record<string, unknown>;
-  };
+  config?: ThreadConfig;
 }
 
 // Update Message type to match what the API expects
 export interface Message {
   role: "user" | "assistant";
   content: string;
-  created_at?: string;
 }
 
 export interface Assistant {

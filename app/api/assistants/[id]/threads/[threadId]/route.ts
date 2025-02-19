@@ -30,6 +30,8 @@ export async function GET(
     if (!thread) {
       return NextResponse.json({ error: "Thread not found" }, { status: 404 });
     }
+    const threadState = await client.threads.get(threadId);
+    console.log("Thread State", threadState);
 
     // Verify thread ownership
     if (thread.metadata?.user_id !== user.id) {

@@ -83,7 +83,7 @@ export default function MessageList({ messages }: MessageListProps) {
       ) : (
         messages.map((message, index) => (
           <div
-            key={message.created_at || index}
+            key={index}
             className={`flex ${
               message.role === "user" ? "justify-end" : "justify-start"
             }`}
