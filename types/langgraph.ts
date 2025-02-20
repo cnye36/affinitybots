@@ -69,8 +69,11 @@ export interface Message {
 }
 
 export interface Assistant {
+  graph_id: string;
   assistant_id: string;
   name: string;
+  created_at: string;
+  updated_at: string;
   metadata: {
     description: string;
     agent_type: string;

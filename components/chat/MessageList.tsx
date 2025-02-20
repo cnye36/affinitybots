@@ -90,7 +90,7 @@ export default function MessageList({ messages }: MessageListProps) {
           >
             <div
               className={`max-w-[85%] rounded-lg px-4 py-3 shadow-sm ${
-                message.role === "user"
+                message.role === "assistant"
                   ? "bg-blue-600 text-white"
                   : "bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600"
               }`}

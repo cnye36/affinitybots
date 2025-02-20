@@ -98,32 +98,6 @@ export default function ChatContainer({
     }
   };
 
-  // const generateTitle = async (threadId: string, conversation: string) => {
-  //   try {
-  //     const response = await fetch(
-  //       `/api/assistants/${assistantId}/threads/${threadId}/rename`,
-  //       {
-  //         method: "POST",
-  //         headers: {
-  //           "Content-Type": "application/json",
-  //         },
-  //         body: JSON.stringify({ conversation }),
-  //       }
-  //     );
-
-  //     if (!response.ok) {
-  //       throw new Error("Failed to generate title");
-  //     }
-
-  //     const data = await response.json();
-  //     if (data.title) {
-  //       setTitle(threadId, data.title);
-  //     }
-  //   } catch (error) {
-  //     console.error("Error generating title:", error);
-  //   }
-  // };
-
   const sendChatMessage = async (content: string) => {
     setIsLoading(true);
     try {
@@ -142,7 +116,7 @@ export default function ChatContainer({
 
       // Optimistically add user message
       const userMessage: Message = { role: "user", content };
-      const assistantMessage: Message = { role: "assistant", content: "" };
+      const assistantMessage: Message = { role: "assistant", content };
       setMessages((prev) => [...prev, userMessage, assistantMessage]);
 
       // Stream the response
@@ -161,6 +135,7 @@ export default function ChatContainer({
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
+      let fullResponse = "";
 
       while (true) {
         const { done, value } = await reader.read();
@@ -176,6 +151,7 @@ export default function ChatContainer({
               const messageData = jsonData[0];
 
               if (messageData?.content !== undefined) {
+                fullResponse = messageData.content;
                 setMessages((prev) => {
                   const newMessages = [...prev];
                   const lastMessage = newMessages[newMessages.length - 1];
@@ -193,6 +169,29 @@ export default function ChatContainer({
           } catch (e) {
             console.error("Error parsing chunk:", e, line);
           }
+        }
+      }
+
+      // Generate title after first message exchange if not already set
+      if (messages.length === 0) {
+        const conversation = `User: ${content}\nAssistant: ${fullResponse}`;
+        try {
+          const titleResponse = await fetch(
+            `/api/assistants/${assistantId}/threads/${threadId}/rename`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ conversation }),
+            }
+          );
+
+          if (!titleResponse.ok) {
+            console.error("Failed to generate title");
+          }
+        } catch (error) {
+          console.error("Error generating title:", error);
         }
       }
     } catch (error) {

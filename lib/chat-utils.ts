@@ -8,7 +8,7 @@ Based on this conversation, generate a short, descriptive title:
 
 {conversation}
 
-Return only the title, nothing else.
+Return only the title, nothing else. Do not include quotes or special characters.
 `);
 
 export async function generateChatName(conversation: string): Promise<string> {
@@ -25,10 +25,13 @@ export async function generateChatName(conversation: string): Promise<string> {
     });
 
     const response = await model.invoke(formattedPrompt);
-    const title = response.content.toString().trim();
+    const title = response.content
+      .toString()
+      .trim()
+      .replace(/["']/g, "")
+      .replace(/[^\w\s-]/g, ""); // Remove any special characters except spaces and hyphens
 
-    // Remove any quotes that might be in the response
-    return title.replace(/["']/g, "") || "New Chat";
+    return title || "New Chat";
   } catch (error) {
     console.error("Error generating chat name:", error);
     return "New Chat";

@@ -55,10 +55,7 @@ export function TaskModalHeader({
                   <div className="flex items-center space-x-2">
                     <Avatar className="h-6 w-6">
                       <AvatarImage
-                        src={
-                          assistant.avatar ||
-                          assistant.config?.configurable?.avatar
-                        }
+                        src={assistant.config?.configurable?.avatar}
                         alt={assistant.name}
                       />
                       <AvatarFallback
