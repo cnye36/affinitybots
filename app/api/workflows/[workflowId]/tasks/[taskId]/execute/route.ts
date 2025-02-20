@@ -44,7 +44,7 @@ export async function POST(
       const { data: taskRun, error: taskRunError } = await supabase
         .from("task_runs")
         .insert({
-          workflow_task_id: task.workflow_task_id,
+          task_id: task.workflow_task_id,
           status: "running",
           started_at: new Date().toISOString(),
           metadata: {},
@@ -60,7 +60,14 @@ export async function POST(
 
       try {
         // Create a stateless run with the assistant
-        const run = await client.runs.create(task.assistant_id, "", {
+        console.log(
+          "Creating streaming run with assistant_id:",
+          task.assistant_id
+        );
+        const events = [];
+        let finalResult = null;
+
+        const run = await client.runs.stream(task.assistant_id, "", {
           input: {
             messages: [
               {
@@ -81,15 +88,29 @@ export async function POST(
               ...task.config,
             },
           },
+          streamMode: "events",
         });
 
-        // Update task run with success
+        for await (const event of run) {
+          console.log("Received event:", event);
+          events.push(event);
+
+          // Keep track of the final result
+          if (event.event === "end" && event.data) {
+            finalResult = event.data;
+          }
+        }
+
+        // Update task run with success and all events
         const { error: updateError } = await supabase
           .from("task_runs")
           .update({
             status: "completed",
             completed_at: new Date().toISOString(),
-            result: run,
+            result: {
+              events,
+              finalResult,
+            },
           })
           .eq("run_id", taskRun.run_id);
 
@@ -97,7 +118,10 @@ export async function POST(
           throw new Error("Failed to update task run status");
         }
 
-        return NextResponse.json(run);
+        return NextResponse.json({
+          events,
+          finalResult,
+        });
       } catch (error) {
         // Update task run with error
         if (taskRun?.run_id) {

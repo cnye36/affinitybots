@@ -40,7 +40,11 @@ export function AgentConfigModal({
 }: AgentConfigModalProps) {
   const [config, setConfig] = useState({
     assistant_id: assistant.assistant_id,
+    graph_id: assistant.graph_id,
+    created_at: assistant.created_at,
+    updated_at: assistant.updated_at,
     name: assistant.name,
+
     metadata: {
       description: String(assistant.metadata?.description || ""),
       agent_type: String(assistant.metadata?.agent_type || ""),
@@ -92,6 +96,9 @@ export function AgentConfigModal({
   useEffect(() => {
     setConfig({
       assistant_id: assistant.assistant_id,
+      graph_id: assistant.graph_id,
+      created_at: assistant.created_at,
+      updated_at: assistant.updated_at,
       name: assistant.name,
       metadata: {
         description: String(assistant.metadata?.description || ""),

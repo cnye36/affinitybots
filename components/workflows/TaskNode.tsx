@@ -60,6 +60,23 @@ export const MemoizedTaskNode = memo(
         if (!response.ok) {
           throw new Error("Failed to update task");
         }
+
+        // Get the updated task data from the response
+        const savedTask = await response.json();
+
+        // Update the node data with the new task information
+        const event = new CustomEvent("updateTaskNode", {
+          detail: {
+            taskId: props.data.workflow_task_id,
+            updates: {
+              name: savedTask.name,
+              description: savedTask.description,
+              type: savedTask.task_type as TaskType,
+              config: savedTask.config,
+            },
+          },
+        });
+        window.dispatchEvent(event);
       } catch (error) {
         console.error("Error saving task:", error);
         throw error;

@@ -44,7 +44,7 @@ export async function GET(
     const { data: task } = await supabase
       .from("workflow_tasks")
       .select("*, workflow:workflows(owner_id)")
-      .eq("id", taskId)
+      .eq("workflow_task_id", taskId)
       .single();
 
     if (!task || task.workflow.owner_id !== user.id) {
@@ -84,7 +84,7 @@ export async function PUT(
     const { data: existingTask } = await supabase
       .from("workflow_tasks")
       .select("*, workflow:workflows(owner_id)")
-      .eq("id", taskId)
+      .eq("workflow_task_id", taskId)
       .single();
 
     if (!existingTask || existingTask.workflow.owner_id !== user.id) {
@@ -113,7 +113,7 @@ export async function PUT(
         assistant_id: taskData.assistant_id,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", taskId)
+      .eq("workflow_task_id", taskId)
       .select()
       .single();
 
@@ -149,7 +149,7 @@ export async function DELETE(
     const { data: task } = await supabase
       .from("workflow_tasks")
       .select("*, workflow:workflows(owner_id)")
-      .eq("id", taskId)
+      .eq("workflow_task_id", taskId)
       .single();
 
     if (!task || task.workflow.owner_id !== user.id) {
@@ -163,7 +163,7 @@ export async function DELETE(
     const { error } = await supabase
       .from("workflow_tasks")
       .delete()
-      .eq("id", taskId);
+      .eq("workflow_task_id", taskId);
 
     if (error) throw error;
 

@@ -86,6 +86,56 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
     setSelectedTaskId(null);
   }, []);
 
+  // Add event listener for task updates
+  useEffect(() => {
+    const handleTaskUpdate = (
+      event: CustomEvent<{
+        taskId: string;
+        updates: {
+          name: string;
+          description: string;
+          type: TaskType;
+          config: {
+            input: {
+              source: string;
+              parameters: Record<string, unknown>;
+              prompt?: string;
+            };
+            output: {
+              destination: string;
+            };
+          };
+        };
+      }>
+    ) => {
+      setNodes((nds) =>
+        nds.map((node) =>
+          node.type === "task" &&
+          node.data.workflow_task_id === event.detail.taskId
+            ? {
+                ...node,
+                data: {
+                  ...node.data,
+                  ...event.detail.updates,
+                },
+              }
+            : node
+        )
+      );
+    };
+
+    window.addEventListener(
+      "updateTaskNode",
+      handleTaskUpdate as EventListener
+    );
+    return () => {
+      window.removeEventListener(
+        "updateTaskNode",
+        handleTaskUpdate as EventListener
+      );
+    };
+  }, []);
+
   // Create a new workflow immediately if we don't have an ID
   useEffect(() => {
     if (workflowId || initialWorkflowId) return;
