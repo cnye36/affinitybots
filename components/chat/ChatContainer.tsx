@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Message } from "@/types/langgraph";
+import { AgentState } from "@/types/langgraph";
 import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
 import ThreadSidebar from "./ThreadSidebar";
+import { HumanMessage, AIMessage } from "@langchain/core/messages";
 
 interface ChatContainerProps {
   assistantId: string;
@@ -15,7 +16,7 @@ export default function ChatContainer({
   assistantId,
   threadId: initialThreadId,
 }: ChatContainerProps) {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<AgentState["messages"]>([]);
   const [currentThreadId, setCurrentThreadId] = useState<string | undefined>(
     initialThreadId
   );
@@ -115,8 +116,8 @@ export default function ChatContainer({
       }
 
       // Optimistically add user message
-      const userMessage: Message = { role: "user", content };
-      const assistantMessage: Message = { role: "assistant", content };
+      const userMessage = new HumanMessage(content);
+      const assistantMessage = new AIMessage(content);
       setMessages((prev) => [...prev, userMessage, assistantMessage]);
 
       // Stream the response
@@ -155,11 +156,10 @@ export default function ChatContainer({
                 setMessages((prev) => {
                   const newMessages = [...prev];
                   const lastMessage = newMessages[newMessages.length - 1];
-                  if (lastMessage?.role === "assistant") {
-                    newMessages[newMessages.length - 1] = {
-                      role: "assistant",
-                      content: messageData.content,
-                    };
+                  if (lastMessage instanceof AIMessage) {
+                    newMessages[newMessages.length - 1] = new AIMessage(
+                      messageData.content
+                    );
                     return newMessages;
                   }
                   return prev;
@@ -199,12 +199,10 @@ export default function ChatContainer({
       setMessages((prev) => {
         const newMessages = [...prev];
         const lastMessage = newMessages[newMessages.length - 1];
-        if (lastMessage?.role === "assistant") {
-          newMessages[newMessages.length - 1] = {
-            role: "assistant",
-            content:
-              "I apologize, but I encountered an error. Please try again.",
-          };
+        if (lastMessage instanceof AIMessage) {
+          newMessages[newMessages.length - 1] = new AIMessage(
+            "I apologize, but I encountered an error. Please try again."
+          );
         }
         return newMessages;
       });

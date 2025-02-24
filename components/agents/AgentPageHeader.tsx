@@ -15,8 +15,8 @@ export function AgentPageHeader({ assistant }: AgentPageHeaderProps) {
   const router = useRouter();
   // Get first letter of assistant name for avatar fallback
   const avatarFallback = assistant.name.charAt(0).toUpperCase();
-  
-  const avatarUrl = assistant.config?.configurable?.avatar;
+
+  const avatarUrl = assistant.config?.configurable.avatar;
 
   return (
     <div className="flex-none border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">

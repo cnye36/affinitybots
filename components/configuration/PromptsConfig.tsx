@@ -2,11 +2,14 @@
 
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { AgentConfigurableOptions } from "@/types/agent";
+import { Assistant } from "@/types/langgraph";
 
 interface PromptsConfigProps {
-  config: AgentConfigurableOptions;
-  onChange: (field: keyof AgentConfigurableOptions, value: unknown) => void;
+  config: Assistant["config"]["configurable"];
+  onChange: (
+    field: keyof Assistant["config"]["configurable"],
+    value: unknown
+  ) => void;
 }
 
 export function PromptsConfig({ config, onChange }: PromptsConfigProps) {

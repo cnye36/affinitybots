@@ -14,7 +14,7 @@ import {
   AgentConfigurableOptions,
   ModelType,
   AgentMetadata,
-} from "@/types/agent";
+} from "@/lib/langchain/agent/config";
 import { createClient } from "@/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Upload, Loader2 } from "lucide-react";

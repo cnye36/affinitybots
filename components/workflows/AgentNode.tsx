@@ -132,9 +132,9 @@ export const AgentNode = memo(({ data }: AgentNodeProps) => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 <Avatar className="h-8 w-8 flex-shrink-0">
-                  {assistant.config?.configurable?.avatar ? (
+                  {assistant.config?.configurable.avatar ? (
                     <AvatarImage
-                      src={assistant.config?.configurable?.avatar}
+                      src={assistant.config?.configurable.avatar}
                       alt={assistant.name}
                     />
                   ) : (

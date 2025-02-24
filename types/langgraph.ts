@@ -64,7 +64,9 @@ export interface Assistant {
   updated_at: string;
   metadata: AgentMetadata;
   version: number;
-  config: AgentConfigurableOptions;
+  config: {
+    configurable: AgentConfigurableOptions;
+  };
 }
 
 export interface Stream {
@@ -73,7 +75,7 @@ export interface Stream {
   input: Record<string, unknown>;
   command: Record<string, unknown>;
   metadata: Record<string, unknown>;
-  config: AgentConfigurableOptions;
+  configurable: AgentConfigurableOptions;
   webhook: string;
   interrupt_before: Record<string, unknown>;
   interrupt_after: Record<string, unknown>;

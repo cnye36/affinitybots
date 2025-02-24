@@ -21,11 +21,12 @@ import {
   AgentConfigurableOptions,
   AgentMetadata,
   ModelType,
-} from "@/types/agent";
-import { Assistant } from "@langchain/langgraph-sdk";
+} from "@/lib/langchain/agent/config";
+import { Assistant } from "@/types/langgraph";
 import { ToolsConfig } from "@/types/tools";
 import { useRouter } from "next/navigation";
 import { mutate } from "swr";
+import { getDefaultToolConfig } from "@/lib/langchain/tools/config";
 
 interface AgentConfigModalProps {
   open: boolean;
@@ -55,16 +56,24 @@ export function AgentConfigModal({
         model: (assistant.config.configurable.model || "gpt-4o") as ModelType,
         temperature: Number(assistant.config.configurable.temperature || 0.7),
         avatar: String(assistant.config.configurable.avatar || ""),
-        tools: Object.entries(assistant.config.configurable.tools || {}).reduce(
-          (acc, [key, value]) => ({
-            ...acc,
-            [key]: {
-              isEnabled: Boolean(value?.enabled || false),
-              config: value?.config || {},
-            },
-          }),
-          {}
-        ),
+        tools: {
+          web_search: getDefaultToolConfig("web_search"),
+          wikipedia: getDefaultToolConfig("wikipedia"),
+          wolfram_alpha: getDefaultToolConfig("wolfram_alpha"),
+          notion: getDefaultToolConfig("notion"),
+          twitter: getDefaultToolConfig("twitter"),
+          google: getDefaultToolConfig("google"),
+          ...Object.entries(assistant.config.configurable.tools || {}).reduce(
+            (acc, [key, value]) => ({
+              ...acc,
+              [key]: {
+                isEnabled: Boolean(value?.isEnabled || false),
+                config: value?.config || {},
+              },
+            }),
+            {}
+          ),
+        },
         memory: {
           enabled: Boolean(
             (assistant.config.configurable.memory as { enabled?: boolean })
@@ -82,10 +91,8 @@ export function AgentConfigModal({
             )?.relevance_threshold || 0.7
           ),
         },
-        prompt_template: String(
-          assistant.config.configurable.prompt_template || ""
-        ),
-        owner_id: String(assistant.config.configurable.owner_id || ""),
+        prompt_template: String(assistant.config.configurable.prompt_template || ""),
+        owner_id: String(assistant.metadata?.owner_id || ""),
       } as AgentConfigurableOptions,
     },
   });
@@ -110,18 +117,24 @@ export function AgentConfigModal({
           model: (assistant.config.configurable.model || "gpt-4o") as ModelType,
           temperature: Number(assistant.config.configurable.temperature || 0.7),
           avatar: String(assistant.config.configurable.avatar || ""),
-          tools: Object.entries(
-            assistant.config.configurable.tools || {}
-          ).reduce(
-            (acc, [key, value]) => ({
-              ...acc,
-              [key]: {
-                isEnabled: Boolean(value?.enabled || false),
-                config: value?.config || {},
-              },
-            }),
-            {}
-          ),
+          tools: {
+            web_search: getDefaultToolConfig("web_search"),
+            wikipedia: getDefaultToolConfig("wikipedia"),
+            wolfram_alpha: getDefaultToolConfig("wolfram_alpha"),
+            notion: getDefaultToolConfig("notion"),
+            twitter: getDefaultToolConfig("twitter"),
+            google: getDefaultToolConfig("google"),
+            ...Object.entries(assistant.config.configurable.tools || {}).reduce(
+              (acc, [key, value]) => ({
+                ...acc,
+                [key]: {
+                  isEnabled: Boolean(value?.isEnabled || false),
+                  config: value?.config || {},
+                },
+              }),
+              {}
+            ),
+          },
           memory: {
             enabled: Boolean(
               (assistant.config.configurable.memory as { enabled?: boolean })
@@ -142,7 +155,7 @@ export function AgentConfigModal({
           prompt_template: String(
             assistant.config.configurable.prompt_template || ""
           ),
-          owner_id: String(assistant.config.configurable.owner_id || ""),
+          owner_id: String(assistant.metadata?.owner_id || ""),
         } as AgentConfigurableOptions,
       },
     });

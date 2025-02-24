@@ -49,27 +49,31 @@ export async function POST(
               console.log("Creating initial run...");
 
               // Create the initial run without a thread ID
-              const runResponse = await client.runs.create(task.assistant_id, {
-                input: {
-                  messages: [
-                    {
-                      role: "user",
-                      content:
-                        task.config?.input?.prompt || input?.prompt || "",
-                    },
-                  ],
-                },
-                metadata: {
-                  workflow_id: workflowId,
-                  workflow_task_id: taskId,
-                  user_id: user.id,
-                },
-                config: {
-                  configurable: {
-                    ...task.config,
+              const runResponse = await client.runs.create(
+                task.assistant_id,
+                "", // Empty string for thread ID since we don't have one
+                {
+                  input: {
+                    messages: [
+                      {
+                        role: "user",
+                        content:
+                          task.config?.input?.prompt || input?.prompt || "",
+                      },
+                    ],
                   },
-                },
-              });
+                  metadata: {
+                    workflow_id: workflowId,
+                    workflow_task_id: taskId,
+                    user_id: user.id,
+                  },
+                  config: {
+                    configurable: {
+                      ...task.config,
+                    },
+                  },
+                }
+              );
 
               console.log("Run created with response:", runResponse);
 
@@ -93,30 +97,34 @@ export async function POST(
               console.log("Task run record created:", taskRun);
 
               // Stream the run
-              const run = await client.runs.stream(task.assistant_id, null, {
-                input: {
-                  messages: [
-                    {
-                      role: "user",
-                      content:
-                        task.config?.input?.prompt || input?.prompt || "",
-                    },
-                  ],
-                  ...input,
-                },
-                metadata: {
-                  workflow_id: workflowId,
-                  workflow_task_id: taskId,
-                  run_id: runResponse.run_id,
-                  user_id: user.id,
-                },
-                config: {
-                  configurable: {
-                    ...task.config,
+              const run = await client.runs.stream(
+                task.assistant_id,
+                "", // Empty string for thread ID
+                {
+                  input: {
+                    messages: [
+                      {
+                        role: "user",
+                        content:
+                          task.config?.input?.prompt || input?.prompt || "",
+                      },
+                    ],
+                    ...input,
                   },
-                },
-                streamMode: "events",
-              });
+                  metadata: {
+                    workflow_id: workflowId,
+                    workflow_task_id: taskId,
+                    run_id: runResponse.run_id,
+                    user_id: user.id,
+                  },
+                  config: {
+                    configurable: {
+                      ...task.config,
+                    },
+                  },
+                  streamMode: "events",
+                }
+              );
 
               console.log("Run stream created successfully");
 
@@ -139,7 +147,7 @@ export async function POST(
                 console.log("Attempting to wait for run completion...");
                 const runResult = await client.runs.wait(
                   task.assistant_id,
-                  null,
+                  "", // Empty string for thread ID
                   {
                     input: {
                       messages: [

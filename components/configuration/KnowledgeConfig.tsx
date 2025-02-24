@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { X, Upload } from "lucide-react";
-import { AgentConfigurableOptions } from "@/types/agent";
+import { AgentConfigurableOptions } from "@/lib/langchain/agent/config";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -124,16 +124,12 @@ export function KnowledgeConfig({
   const handleRemoveSource = (index: number) => {
     const currentSources =
       (config.knowledge_base?.config?.sources as string[]) || [];
-    const currentFiles = (config.knowledge_base?.config?.files as File[]) || [];
-
     const newSources = currentSources.filter((_, i) => i !== index);
-    const newFiles = currentFiles.filter((_, i) => i !== index);
 
     onChange("knowledge_base", {
       isEnabled: newSources.length > 0,
       config: {
         sources: newSources,
-        files: newFiles,
       },
     });
   };

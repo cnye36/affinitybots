@@ -2,6 +2,8 @@ import { z } from "zod";
 import { type LangGraphRunnableConfig } from "@langchain/langgraph";
 import { ToolsConfig } from "@/types/tools";
 
+export type ModelType = "gpt-4o" | "gpt-4o-mini" | "gpt-o1" | "gpt-o1-mini";
+
 // Memory options schema
 export const AgentMemoryOptionsSchema = z.object({
   enabled: z.boolean(),

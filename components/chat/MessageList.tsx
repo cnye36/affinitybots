@@ -1,13 +1,14 @@
-import { Message } from "@/types/langgraph";
+import { AgentState } from "@/types/langgraph";
 import { useEffect, useRef, useState, ComponentPropsWithoutRef } from "react";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import remarkGfm from "remark-gfm";
 import { Check, Copy } from "lucide-react";
+import { HumanMessage, AIMessage } from "@langchain/core/messages";
 
 interface MessageListProps {
-  messages: Message[];
+  messages: AgentState["messages"];
 }
 
 export default function MessageList({ messages }: MessageListProps) {
@@ -85,23 +86,25 @@ export default function MessageList({ messages }: MessageListProps) {
           <div
             key={index}
             className={`flex ${
-              message.role === "user" ? "justify-end" : "justify-start"
+              message instanceof HumanMessage ? "justify-end" : "justify-start"
             }`}
           >
             <div
               className={`max-w-[85%] rounded-lg px-4 py-3 shadow-sm ${
-                message.role === "assistant"
+                message instanceof AIMessage
                   ? "bg-blue-600 text-white"
                   : "bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600"
               }`}
               role="document"
               aria-label={
-                message.role === "user" ? "User message" : "Assistant message"
+                message instanceof HumanMessage
+                  ? "User message"
+                  : "Assistant message"
               }
             >
               <div
                 className={`prose dark:prose-invert ${
-                  message.role === "user"
+                  message instanceof HumanMessage
                     ? "prose-white"
                     : "prose-gray dark:prose-gray-light"
                 } max-w-none`}
@@ -110,7 +113,7 @@ export default function MessageList({ messages }: MessageListProps) {
                   remarkPlugins={[remarkGfm]}
                   components={components}
                 >
-                  {message.content}
+                  {message.content.toString()}
                 </ReactMarkdown>
               </div>
             </div>
