@@ -1,20 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Task } from "@/types/workflow";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Assistant } from "@/types/langgraph";
 import { TaskModalHeader } from "./TaskModalHeader";
+import { PreviousNodeOutputPanel } from "./PreviousNodeOutputPanel";
+import { TaskConfigurationPanel } from "./TaskConfigurationPanel";
+import { TestOutputPanel } from "./TestOutputPanel";
 
 interface TaskOutput {
   result: unknown;
@@ -59,7 +51,6 @@ export function TaskConfigModal({
     setCurrentTask(task);
   }, [task]);
 
-  // Separate useEffect for assistant fetching to prevent unnecessary API calls
   useEffect(() => {
     let isMounted = true;
 
@@ -134,148 +125,6 @@ export function TaskConfigModal({
     }
   };
 
-  const formatOutput = (data: TestOutput | TaskOutput | null): string => {
-    if (!data) return "No data available";
-
-    try {
-      switch (outputFormat) {
-        case "json":
-          return typeof data === "string"
-            ? data
-            : JSON.stringify(data, null, 2);
-        case "markdown":
-          return typeof data === "string"
-            ? data
-            : "```json\n" + JSON.stringify(data, null, 2) + "\n```";
-        case "text":
-          return typeof data === "string"
-            ? data
-            : JSON.stringify(data, undefined, 2);
-        default:
-          return String(data);
-      }
-    } catch {
-      return "Error formatting output";
-    }
-  };
-
-  const renderConfigurationPanel = () => {
-    return (
-      <div className="space-y-4">
-        {/* Task Name */}
-        <div className="space-y-2">
-          <Label>Task Name</Label>
-          <Input
-            value={currentTask.name}
-            onChange={(e) =>
-              setCurrentTask((prev) => ({ ...prev, name: e.target.value }))
-            }
-          />
-        </div>
-
-        {/* Task Description (Optional) */}
-        <div className="space-y-2">
-          <Label className="flex items-center gap-2">
-            Description
-            <span className="text-xs text-muted-foreground">(Optional)</span>
-          </Label>
-          <Textarea
-            value={currentTask.description || ""}
-            onChange={(e) =>
-              setCurrentTask((prev) => ({
-                ...prev,
-                description: e.target.value,
-              }))
-            }
-            placeholder="Add a description to help identify this task's purpose"
-          />
-        </div>
-
-        {/* Prompt Input */}
-        <div className="space-y-2">
-          <Label className="flex items-center gap-2">
-            Prompt
-            <span className="text-xs text-muted-foreground">(Required)</span>
-          </Label>
-          <Textarea
-            value={currentTask.config?.input?.prompt || ""}
-            onChange={(e) => {
-              setCurrentTask((prev) => ({
-                ...prev,
-                config: {
-                  ...prev.config,
-                  input: {
-                    ...prev.config.input,
-                    prompt: e.target.value,
-                  },
-                },
-              }));
-            }}
-            placeholder={`Enter your prompt for ${
-              assistant?.name || "the agent"
-            }...`}
-            className="min-h-[200px]"
-            required
-          />
-        </div>
-
-        {/* Advanced Configuration */}
-        <div className="space-y-2">
-          <Label className="flex items-center gap-2">
-            Advanced Configuration
-            <span className="text-xs text-muted-foreground">(JSON)</span>
-          </Label>
-          <Textarea
-            value={JSON.stringify(currentTask.config, null, 2)}
-            onChange={(e) => {
-              try {
-                const parsed = JSON.parse(e.target.value);
-                setCurrentTask((prev) => ({
-                  ...prev,
-                  config: parsed,
-                }));
-              } catch {
-                // Allow invalid JSON while typing
-              }
-            }}
-            className="font-mono"
-            rows={10}
-          />
-        </div>
-      </div>
-    );
-  };
-
-  const renderOutputPanel = (data: TestOutput | TaskOutput | null) => {
-    return (
-      <div className="space-y-2">
-        <div className="flex justify-between items-center">
-          <Label>Output</Label>
-          <Select
-            value={outputFormat}
-            onValueChange={(value) => setOutputFormat(value as OutputFormat)}
-          >
-            <SelectTrigger className="w-[100px]">
-              <SelectValue placeholder="Format" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="json">JSON</SelectItem>
-              <SelectItem value="markdown">Markdown</SelectItem>
-              <SelectItem value="text">Text</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <Textarea
-          value={formatOutput(data)}
-          readOnly
-          className={`font-mono h-[400px] ${
-            isStreaming ? "animate-pulse" : ""
-          }`}
-        />
-      </div>
-    );
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-7xl">
@@ -288,29 +137,24 @@ export function TaskConfigModal({
         />
 
         <div className="grid grid-cols-3 gap-4 mt-4">
-          {/* Previous Node Output Panel */}
-          <div className="border rounded-lg p-4">
-            <h3 className="font-medium mb-4">Previous Node Output</h3>
-            <ScrollArea className="h-[600px]">
-              {renderOutputPanel(previousNodeOutput || null)}
-            </ScrollArea>
-          </div>
+          <PreviousNodeOutputPanel
+            data={previousNodeOutput || null}
+            outputFormat={outputFormat}
+            setOutputFormat={setOutputFormat}
+          />
 
-          {/* Configuration Panel */}
-          <div className="border rounded-lg p-4">
-            <h3 className="font-medium mb-4">Configuration</h3>
-            <ScrollArea className="h-[600px]">
-              {renderConfigurationPanel()}
-            </ScrollArea>
-          </div>
+          <TaskConfigurationPanel
+            currentTask={currentTask}
+            setCurrentTask={setCurrentTask}
+            assistant={assistant}
+          />
 
-          {/* Test Output Panel */}
-          <div className="border rounded-lg p-4">
-            <h3 className="font-medium mb-4">Test Output</h3>
-            <ScrollArea className="h-[600px]">
-              {renderOutputPanel(testOutput)}
-            </ScrollArea>
-          </div>
+          <TestOutputPanel
+            testOutput={testOutput}
+            outputFormat={outputFormat}
+            setOutputFormat={setOutputFormat}
+            isStreaming={isStreaming}
+          />
         </div>
       </DialogContent>
     </Dialog>

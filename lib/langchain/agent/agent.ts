@@ -1,5 +1,10 @@
 import { ChatOpenAI } from "@langchain/openai";
-import { MessagesAnnotation, StateGraph } from "@langchain/langgraph";
+import {
+  MessagesAnnotation,
+  StateGraph,
+  START,
+  END,
+} from "@langchain/langgraph";
 import { ToolNode } from "@langchain/langgraph/prebuilt";
 import {
   HumanMessage,
@@ -113,7 +118,7 @@ function routeModelOutput(state: { messages: BaseMessage[] }) {
   if (lastMessage && toolCalls && toolCalls.length > 0) {
     return "tools";
   }
-  return "__end__";
+  return END;
 }
 
 /**
@@ -123,9 +128,9 @@ const workflow = new StateGraph(MessagesAnnotation)
   .addNode("knowledge", retrieveKnowledge)
   .addNode("callModel", callModel)
   .addNode("tools", new ToolNode(tools))
-  .addEdge("__start__", "knowledge")
+  .addEdge(START, "knowledge")
   .addEdge("knowledge", "callModel")
-  .addConditionalEdges("callModel", routeModelOutput, ["tools", "__end__"])
+  .addConditionalEdges("callModel", routeModelOutput, ["tools", END])
   .addEdge("tools", "callModel");
 
 // Compile the graph

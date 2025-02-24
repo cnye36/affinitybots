@@ -142,19 +142,12 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
 
   // Create a new workflow immediately if we don't have an ID
   useEffect(() => {
-    if (workflowId || initialWorkflowId) return;
+    const initializeWorkflow = async () => {
+      // Skip if we already have a workflow ID or if we've already created one
+      if (workflowId || initialWorkflowId || createdWorkflowRef.current) return;
+      createdWorkflowRef.current = true;
 
-    // Use a ref to ensure workflow creation only happens once
-    if (createdWorkflowRef.current) return;
-    createdWorkflowRef.current = true;
-
-    const createWorkflow = async () => {
-      const currentWorkflowId = workflowId;
-      const currentWorkflowName = workflowName;
-
-      // Only create if we don't have an ID and we're not loading an existing workflow
-      if (currentWorkflowId || initialWorkflowId) return;
-
+      setLoading(true);
       try {
         const {
           data: { user },
@@ -165,10 +158,11 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
           return;
         }
 
-        const { data, error } = await supabase
+        // Create new workflow
+        const { data: newWorkflow, error } = await supabase
           .from("workflows")
           .insert({
-            name: currentWorkflowName,
+            name: workflowName,
             owner_id: user.id,
             nodes: [],
             edges: [],
@@ -180,39 +174,54 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
 
         if (error) throw error;
 
-        setWorkflowId(data.workflow_id);
-        router.push(`/workflows/${data.workflow_id}`);
+        // Set state without triggering navigation
+        setWorkflowId(newWorkflow.workflow_id);
+        setWorkflowName(newWorkflow.name);
+
+        // Update URL without full navigation
+        window.history.pushState(
+          {},
+          "",
+          `/workflows/${newWorkflow.workflow_id}`
+        );
       } catch (err) {
         console.error("Error creating workflow:", err);
         toast({
           title: "Failed to create workflow",
           variant: "destructive",
         });
+      } finally {
+        setLoading(false);
       }
     };
 
-    createWorkflow();
-  }, [supabase, router, initialWorkflowId, workflowId, workflowName]);
+    initializeWorkflow();
+  }, []);
 
   // Load existing workflow if ID is provided
   useEffect(() => {
     const loadWorkflow = async () => {
-      // Only load if we have a workflowId (either initial or created)
-      if (!workflowId && !initialWorkflowId) return;
+      // Only load if we have a workflowId (either initial or created) and we're not already loading
+      if ((!workflowId && !initialWorkflowId) || loading) return;
 
       const idToLoad = workflowId || initialWorkflowId;
       setLoading(true);
       try {
-        const { data: workflow, error: fetchError } = await supabase
-          .from("workflows")
-          .select("*")
-          .eq("workflow_id", idToLoad)
-          .single();
+        // Load workflow and assistants in parallel
+        const [workflowResult, assistantsResponse] = await Promise.all([
+          supabase
+            .from("workflows")
+            .select("*")
+            .eq("workflow_id", idToLoad)
+            .single(),
+          fetch("/api/assistants"),
+        ]);
 
-        if (fetchError) throw fetchError;
+        if (workflowResult.error) throw workflowResult.error;
+        const workflow = workflowResult.data;
 
         if (workflow) {
-          setWorkflowId(workflow.workflow_id); // Ensure workflowId is set
+          setWorkflowId(workflow.workflow_id);
           setWorkflowName(workflow.name);
           setNodes(
             workflow.nodes.map((node: WorkflowNode) => ({
@@ -229,6 +238,12 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
           );
           setEdges(workflow.edges);
         }
+
+        if (!assistantsResponse.ok) {
+          throw new Error(`HTTP error! status: ${assistantsResponse.status}`);
+        }
+        const assistantsData = await assistantsResponse.json();
+        setAssistants(assistantsData);
       } catch (err) {
         console.error("Error loading workflow:", err);
         toast({
@@ -238,45 +253,12 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
         router.push("/workflows");
       } finally {
         setLoading(false);
-      }
-    };
-
-    loadWorkflow();
-  }, [
-    workflowId,
-    initialWorkflowId,
-    handleAddTask,
-    handleAddNextAgent,
-    handleConfigureTask,
-    router,
-    supabase,
-  ]);
-
-  useEffect(() => {
-    const fetchAssistants = async () => {
-      try {
-        setLoadingAssistants(true);
-        const response = await fetch("/api/assistants");
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        setAssistants(data);
-      } catch (err) {
-        console.error("Error fetching assistants:", err);
-        toast({
-          title: "Failed to load assistants.",
-          variant: "destructive",
-        });
-      } finally {
         setLoadingAssistants(false);
       }
     };
 
-    fetchAssistants();
-  }, []);
+    loadWorkflow();
+  }, [workflowId, initialWorkflowId]);
 
   const handleSave = async () => {
     if (saving) return;

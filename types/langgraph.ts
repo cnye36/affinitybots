@@ -20,40 +20,41 @@ export interface ThreadConfig {
   feedback_keys?: string[];
 }
 
-// For run creation/streaming, based on the API schema shown
-export interface RunStreamParams {
-  input: {
-    messages: { role: "user" | "assistant"; content: string }[];
+// For stateless run streaming and wait, based on the API schema shown
+export interface RunParams {
+  assistant_id: string;
+  input: BaseMessage[];
+  command: Command;
+  metadata: {
+    workflow_id: string;
+    workflow_task_id: string;
+    user_id: string;
+    [key: string]: unknown;
   };
   config?: {
     tags?: string[];
     recursion_limit?: number;
     configurable?: Record<string, unknown>;
   };
-  streamMode?: ["values" | "messages"];
-  onDisconnect?: "cancel" | "continue";
   webhook?: string;
   interrupt_before?: string;
   interrupt_after?: string;
-  stream_subgraphs?: boolean;
+  stream_mode?: ["values" | "messages" | "updates" | "events"];
+  on_disconnect?: "cancel" | "continue";
   feedback_keys?: string[];
+  stream_subgraphs?: boolean;
   multitask_strategy?: "reject" | "rollback" | "interrupt" | "enqueue";
   if_not_exists?: "create" | "reject";
   after_seconds?: number;
 }
 
-export interface Thread {
-  thread_id: string;
-  metadata: {
-    user_id: string;
-    assistant_id: string;
-    title?: string;
-    [key: string]: unknown;
+export interface Command {
+  update: Record<string, unknown>;
+  resume: Record<string, unknown>;
+  goto: {
+    node: string;
+    input: Record<string, unknown>;
   };
-  status: string;
-  created_at: string;
-  updated_at: string;
-  config?: ThreadConfig;
 }
 
 export interface Assistant {
@@ -123,4 +124,16 @@ export interface AgentConfigModalProps {
   agentId: string;
   initialConfig: AgentConfigWithTools;
   onSave?: (config: AgentConfigWithTools) => void;
+}
+
+export interface Store {
+  namespace: string;
+  key: string;
+  value: string;
+}
+
+export interface StoreResponse {
+  namespace: string;
+  key: string;
+  value: string;
 }

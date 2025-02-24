@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
@@ -78,14 +77,6 @@ export function MemoryConfig({ config, onChange }: MemoryConfigProps) {
             </div>
           </>
         )}
-      </div>
-
-      <div className="border-t pt-4">
-        <h3 className="text-lg font-medium mb-2">Danger Zone</h3>
-        <p className="text-sm text-muted-foreground mb-4">
-          These actions are destructive and cannot be undone.
-        </p>
-        <Button variant="destructive">Delete Agent</Button>
       </div>
     </div>
   );

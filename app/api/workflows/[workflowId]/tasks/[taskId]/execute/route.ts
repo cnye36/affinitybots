@@ -25,7 +25,7 @@ export async function POST(
     // Get task with workflow ownership check
     const { data: task } = await supabase
       .from("workflow_tasks")
-      .select("*, workflow:workflows(owner_id)")
+      .select("*, workflow:workflows(owner_id), assistant_id")
       .eq("workflow_task_id", taskId)
       .single();
 
@@ -36,12 +36,23 @@ export async function POST(
       );
     }
     console.log("Task retrieved:", task);
+    console.log("Task assistant_id:", task.assistant_id);
+    console.log("Task type:", task.task_type);
 
     const { input } = await request.json();
     console.log("Input received:", input);
 
     if (task.task_type === "ai_task") {
       try {
+        // Verify assistant_id exists
+        if (!task.assistant_id) {
+          console.error("Task has no assistant_id:", task);
+          return NextResponse.json(
+            { error: "Task has no associated assistant" },
+            { status: 400 }
+          );
+        }
+
         const encoder = new TextEncoder();
         const stream = new ReadableStream({
           async start(controller) {
@@ -51,7 +62,7 @@ export async function POST(
               // Create the initial run without a thread ID
               const runResponse = await client.runs.create(
                 task.assistant_id,
-                "", // Empty string for thread ID since we don't have one
+                "", // Empty string for stateless runs
                 {
                   input: {
                     messages: [
@@ -72,6 +83,7 @@ export async function POST(
                       ...task.config,
                     },
                   },
+                  streamMode: "events",
                 }
               );
 
@@ -98,8 +110,8 @@ export async function POST(
 
               // Stream the run
               const run = await client.runs.stream(
+                "", // Empty string for stateless runs
                 task.assistant_id,
-                "", // Empty string for thread ID
                 {
                   input: {
                     messages: [
@@ -146,8 +158,8 @@ export async function POST(
                 );
                 console.log("Attempting to wait for run completion...");
                 const runResult = await client.runs.wait(
+                  "", // Empty string for stateless runs
                   task.assistant_id,
-                  "", // Empty string for thread ID
                   {
                     input: {
                       messages: [

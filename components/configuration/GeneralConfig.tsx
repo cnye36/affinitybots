@@ -230,8 +230,8 @@ export function GeneralConfig({
             <SelectValue placeholder="Select a model" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="gpt-4o">GPT-4 Optimized</SelectItem>
-            <SelectItem value="gpt-4o-mini">GPT-4 Optimized Mini</SelectItem>
+            <SelectItem value="gpt-4o">GPT-4o</SelectItem>
+            <SelectItem value="gpt-4o-mini">GPT-4o Mini</SelectItem>
             <SelectItem value="gpt-o1">GPT-O1</SelectItem>
             <SelectItem value="gpt-o1-mini">GPT-O1 Mini</SelectItem>
           </SelectContent>
@@ -249,6 +249,13 @@ export function GeneralConfig({
             onConfigurableChange("temperature", value)
           }
         />
+      </div>
+      <div className="border-t pt-4">
+        <h3 className="text-lg font-medium mb-2">Danger Zone</h3>
+        <p className="text-sm text-muted-foreground mb-4">
+          These actions are destructive and cannot be undone.
+        </p>
+        <Button variant="destructive">Delete Agent</Button>
       </div>
     </div>
   );
