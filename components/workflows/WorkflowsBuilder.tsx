@@ -53,32 +53,29 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
   }, []);
 
   const handleConfigureTask = useCallback((taskId: string) => {
-    setSelectedTaskId(taskId);
     setNodes((nds) =>
-      nds.map((node) =>
-        node.type === "task" && node.data.workflow_task_id === taskId
-          ? {
-              ...node,
-              data: {
-                ...node.data,
-                isConfigOpen: true,
-                onConfigClose: () => {
-                  setNodes((prevNodes) =>
-                    prevNodes.map((n) =>
-                      n.type === "task" && n.data.workflow_task_id === taskId
-                        ? {
-                            ...n,
-                            data: { ...n.data, isConfigOpen: false },
-                          }
-                        : n
-                    )
-                  );
-                  setSelectedTaskId(null);
-                },
+      nds.map((node) => {
+        if (node.type === "task" && node.data.workflow_task_id === taskId) {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              isConfigOpen: true,
+              onConfigClose: () => {
+                setSelectedTaskId(null);
+                setNodes((prevNodes) =>
+                  prevNodes.map((n) =>
+                    n.type === "task" && n.data.workflow_task_id === taskId
+                      ? { ...n, data: { ...n.data, isConfigOpen: false } }
+                      : n
+                  )
+                );
               },
-            }
-          : node
-      )
+            },
+          };
+        }
+        return node;
+      })
     );
   }, []);
 
@@ -117,6 +114,13 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
                 data: {
                   ...node.data,
                   ...event.detail.updates,
+                  config: {
+                    ...event.detail.updates.config,
+                    input: {
+                      ...event.detail.updates.config.input,
+                      prompt: event.detail.updates.config.input.prompt || "",
+                    },
+                  },
                 },
               }
             : node

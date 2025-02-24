@@ -1,11 +1,5 @@
-import { v4 as uuidv4 } from "uuid";
 import { ChatOpenAI } from "@langchain/openai";
-import {
-  MemorySaver,
-  MessagesAnnotation,
-  StateGraph,
-  BaseStore,
-} from "@langchain/langgraph";
+import { MessagesAnnotation, StateGraph } from "@langchain/langgraph";
 import { ToolNode } from "@langchain/langgraph/prebuilt";
 import {
   HumanMessage,
@@ -14,35 +8,39 @@ import {
   AIMessage,
 } from "@langchain/core/messages";
 import { ToolCall } from "@langchain/core/messages/tool";
-import { retrieveRelevantDocuments } from "@/lib/retrieval";
-import { createClient } from "@/supabase/server";
-import { getTools } from "../tools";
+import { TavilySearchResults } from "@langchain/community/tools/tavily_search";
 import { RunnableConfig } from "@langchain/core/runnables";
 import { AgentConfigurableOptions } from "./config";
 import { AgentState } from "@/types/langgraph";
+import { retrieveRelevantDocuments } from "@/lib/retrieval";
+import { createClient } from "@/supabase/server";
 
-// Define your tools
-const tools = getTools({
-  web_search: { isEnabled: true, config: {}, credentials: {} },
-  wikipedia: { isEnabled: false, config: {}, credentials: {} },
-  wolfram_alpha: { isEnabled: false, config: {}, credentials: {} },
-  notion: { isEnabled: false, config: {}, credentials: {} },
-  twitter: { isEnabled: false, config: {}, credentials: {} },
-  google: { isEnabled: false, config: {}, credentials: {} },
-});
+// Define a single tool for simplicity
+const tools = [
+  new TavilySearchResults({
+    apiKey: process.env.TAVILY_API_KEY,
+  }),
+];
+
+const DEFAULT_SYSTEM_PROMPT = `You are a helpful AI assistant that can use tools to find information.
+When you need to find current or factual information, use the search tool.
+Always think step by step and explain your reasoning.`;
 
 /**
- * Retrieve external context (if needed) from a retrieval service.
+ * Retrieve relevant knowledge from the agent's knowledge base
  */
 async function retrieveKnowledge(
-  state: AgentState & { config: RunnableConfig; store: BaseStore }
+  state: AgentState,
+  config: RunnableConfig
 ): Promise<{ messages: BaseMessage[] }> {
-  const messages = state.messages.map((msg) =>
-    msg.role === "user"
-      ? new HumanMessage(msg.content)
-      : new AIMessage(msg.content)
-  );
+  const agentConfig = config.configurable as AgentConfigurableOptions;
+  const messages = state.messages;
   const lastMessage = messages[messages.length - 1];
+
+  // Only proceed with knowledge retrieval if it's enabled in config
+  if (!agentConfig.knowledge_base?.isEnabled) {
+    return { messages };
+  }
 
   try {
     const supabase = await createClient();
@@ -73,50 +71,30 @@ async function retrieveKnowledge(
 }
 
 /**
- * Call the model and inject retrieved memories into the system prompt.
+ * Basic model calling function that accepts configuration
  */
 async function callModel(
-  state: AgentState & { config: RunnableConfig; store: BaseStore }
+  state: AgentState,
+  config: RunnableConfig
 ): Promise<{ messages: BaseMessage[] }> {
-  const configurable = state.config.configurable as AgentConfigurableOptions;
-  let memoryPrompt = "";
+  const agentConfig = config.configurable as AgentConfigurableOptions;
 
-  if (configurable.memory.enabled) {
-    // Assume the user is identified by the owner_id (or adjust as needed)
-    const userId = configurable.owner_id;
-    const memories = await state.store.search(["memories", userId]);
-    if (memories.length > 0) {
-      // Use a sliding window based on max_entries (and optionally incorporate relevance_threshold)
-      const selectedMemories = memories.slice(-configurable.memory.max_entries);
-      const memoryTexts = selectedMemories.map((mem) => mem.value.data);
-      memoryPrompt = "User Memories:\n" + memoryTexts.join("\n\n");
-    }
-  }
-
-  const systemPrompt =
-    configurable.prompt_template ||
-    `You are a sophisticated AI assistant designed to solve complex tasks efficiently.
-When responding, consider both the current conversation and any previously stored user memories.`;
-
-  // Prepend the memory context (if any) to the system prompt.
-  const finalSystemPrompt = memoryPrompt
-    ? `${systemPrompt}\n\n${memoryPrompt}`
-    : systemPrompt;
+  const systemPrompt = agentConfig.prompt_template || DEFAULT_SYSTEM_PROMPT;
 
   // Initialize the model with tool calling capabilities
   const model = new ChatOpenAI({
-    model: configurable?.model || "gpt-4o",
-    temperature: configurable?.temperature || 0.7,
+    model: agentConfig.model,
+    temperature: agentConfig.temperature,
   }).bindTools(tools);
 
   const messages = state.messages.map((msg) =>
-    msg.role === "user"
-      ? new HumanMessage(msg.content)
-      : new AIMessage(msg.content)
+    msg instanceof HumanMessage
+      ? new HumanMessage(msg.content as string)
+      : new AIMessage(msg.content as string)
   );
 
   const response = await model.invoke([
-    new SystemMessage(finalSystemPrompt),
+    new SystemMessage(systemPrompt),
     ...messages,
   ]);
 
@@ -124,51 +102,7 @@ When responding, consider both the current conversation and any previously store
 }
 
 /**
- * Update the memory store with any information the user instructs the agent to remember.
- * For example, if the user's message starts with "remember:", we extract and save that memory.
- */
-async function updateMemory(
-  state: AgentState & { config: RunnableConfig; store: BaseStore }
-): Promise<{ messages: BaseMessage[] }> {
-  const configurable = state.config.configurable as AgentConfigurableOptions;
-
-  if (!configurable.memory.enabled) {
-    return {
-      messages: state.messages.map((msg) =>
-        msg.role === "user"
-          ? new HumanMessage(msg.content)
-          : new AIMessage(msg.content)
-      ),
-    };
-  }
-
-  const lastMessage = state.messages[state.messages.length - 1];
-  if (
-    typeof lastMessage.content === "string" &&
-    lastMessage.content.toLowerCase().startsWith("remember:")
-  ) {
-    // Remove the prefix ("remember:") and trim the content.
-    const memoryContent = lastMessage.content
-      .substring("remember:".length)
-      .trim();
-    const userId = configurable.owner_id;
-    const namespace = ["memories", userId];
-    const memoryId = uuidv4();
-    await state.store.put(namespace, memoryId, { data: memoryContent });
-    console.log(`Stored new memory for user ${userId}:`, memoryContent);
-  }
-
-  return {
-    messages: state.messages.map((msg) =>
-      msg.role === "user"
-        ? new HumanMessage(msg.content)
-        : new AIMessage(msg.content)
-    ),
-  };
-}
-
-/**
- * Determine the next step based on the model output.
+ * Simple routing function to determine if we need to use tools
  */
 function routeModelOutput(state: { messages: BaseMessage[] }) {
   const messages = state.messages;
@@ -183,22 +117,16 @@ function routeModelOutput(state: { messages: BaseMessage[] }) {
 }
 
 /**
- * Create the workflow graph.
- * Note that we add an extra "updateMemory" node so that memory is updated after the model call.
+ * Create a minimal ReAct style agent graph with configuration support
  */
 const workflow = new StateGraph(MessagesAnnotation)
-  // Add nodes for knowledge retrieval, model calling, and tools
   .addNode("knowledge", retrieveKnowledge)
   .addNode("callModel", callModel)
   .addNode("tools", new ToolNode(tools))
-  .addNode("updateMemory", updateMemory) // New node to write memory
   .addEdge("__start__", "knowledge")
   .addEdge("knowledge", "callModel")
-  .addEdge("callModel", "updateMemory") // Update memory right after model call
-  .addConditionalEdges("updateMemory", routeModelOutput, ["tools", "__end__"])
+  .addConditionalEdges("callModel", routeModelOutput, ["tools", "__end__"])
   .addEdge("tools", "callModel");
 
-// Compile the graph with the MemorySaver (for per-thread state) and your shared store.
-export const graph = workflow.compile({
-  checkpointer: new MemorySaver(),
-});
+// Compile the graph
+export const graph = workflow.compile();

@@ -11,16 +11,7 @@ export interface TaskNodeData {
   workflowId: string;
   status?: "idle" | "running" | "completed" | "error";
   assistant_id: string;
-  config?: {
-    input: {
-      source: string;
-      parameters: Record<string, unknown>;
-      prompt?: string;
-    };
-    output: {
-      destination: string;
-    };
-  };
+  config: TaskConfig;
   onConfigureTask?: (id: string) => void;
   isConfigOpen?: boolean;
   onConfigClose?: () => void;
@@ -60,29 +51,34 @@ export type TaskStatus =
   | "failed"
   | "error";
 
-export interface WorkflowTask {
+export interface TaskConfig {
+  input: {
+    source: string;
+    parameters: Record<string, unknown>;
+    prompt: string;
+  };
+  output: {
+    destination: string;
+    format?: string;
+  };
+}
+
+export interface Task {
   workflow_task_id: string;
   workflow_id: string;
-  assistant_id: string;
   name: string;
   description?: string;
-  task_type: TaskType;
-  config: {
-    input: {
-      source: string;
-      parameters: Record<string, unknown>;
-      prompt?: string;
-    };
-    output: {
-      destination: string;
-    };
-  };
-  position: number;
-  status: TaskStatus;
-  created_at: string;
-  updated_at: string;
+  type: TaskType;
+  task_type?: TaskType;
+  assistant_id: string;
+  integration?: IntegrationConfig;
+  config: TaskConfig;
+  position?: number;
+  status?: TaskStatus;
+  created_at?: string;
+  updated_at?: string;
   last_run_at?: string;
-  metadata: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface Workflow {
@@ -146,25 +142,4 @@ export interface IntegrationConfig {
     refresh_token?: string;
   };
   settings: Record<string, unknown>;
-}
-
-export interface Task {
-  workflow_task_id?: string;
-  name: string;
-  description: string;
-  type: TaskType;
-  assistant_id: string;
-  workflow_id: string;
-  integration?: IntegrationConfig;
-  config: {
-    input: {
-      source: string;
-      parameters: Record<string, unknown>;
-      prompt?: string;
-    };
-    output: {
-      destination: string;
-      format?: string;
-    };
-  };
 }

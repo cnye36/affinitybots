@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
-import { WorkflowTask } from "@/types/workflow";
+import { Task } from "@/types/workflow";
 
 export async function POST(
   request: Request,
@@ -33,8 +33,8 @@ export async function POST(
     }
 
     // Sort tasks by position
-    const tasks = (workflow.workflow_tasks as WorkflowTask[]).sort(
-      (a: WorkflowTask, b: WorkflowTask) => a.position - b.position
+    const tasks = (workflow.workflow_tasks as Task[]).sort(
+      (a: Task, b: Task) => (a.position ?? 0) - (b.position ?? 0)
     );
 
     if (tasks.length === 0) {
@@ -67,7 +67,7 @@ export async function POST(
 
     // Create task run records for each task
     const taskRuns = await Promise.all(
-      tasks.map(async (task: WorkflowTask) => {
+      tasks.map(async (task: Task) => {
         const { data: taskRun } = await supabase
           .from("workflow_task_runs")
           .insert({

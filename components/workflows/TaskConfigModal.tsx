@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Task, TaskType } from "@/types/workflow";
+import { Task } from "@/types/workflow";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -25,24 +25,7 @@ interface TaskOutput {
 interface TaskConfigModalProps {
   isOpen: boolean;
   onClose: () => void;
-  task: {
-    id: string;
-    name: string;
-    description: string;
-    type: TaskType;
-    assistant_id: string;
-    workflow_id: string;
-    config: {
-      input: {
-        source: string;
-        parameters: Record<string, unknown>;
-        prompt?: string;
-      };
-      output: {
-        destination: string;
-      };
-    };
-  };
+  task: Task;
   previousNodeOutput?: TaskOutput;
   onSave: (updatedTask: Task) => Promise<void>;
   onTest: () => Promise<unknown>;
@@ -232,6 +215,7 @@ export function TaskConfigModal({
               assistant?.name || "the agent"
             }...`}
             className="min-h-[200px]"
+            required
           />
         </div>
 

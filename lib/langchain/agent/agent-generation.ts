@@ -1,6 +1,6 @@
 import { ChatOpenAI } from "@langchain/openai";
 import { PromptTemplate } from "@langchain/core/prompts";
-import { AgentConfigurableOptions } from "@/types/agent";
+import { AgentConfigurableOptions } from "@/lib/langchain/agent/config";
 import { ToolConfig } from "@/types/tools";
 import { generateAgentAvatar } from "@/lib/image-generation";
 import {
@@ -124,7 +124,6 @@ export async function generateAgentConfiguration(
       prompt_template: "",
       knowledge_base: { isEnabled: false, config: { sources: [] } },
       avatar: "/default-avatar.png",
-      owner_id: ownerId,
     },
     metadata: {
       owner_id: ownerId,

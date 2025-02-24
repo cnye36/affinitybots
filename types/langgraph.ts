@@ -1,5 +1,11 @@
-import { BaseStore } from "@langchain/langgraph";
+// import { AgentConfigurableOptions } from "@/lib/langchain/agent/config";
 import { Tool } from "@langchain/core/tools";
+import { BaseMessage } from "@langchain/core/messages";
+import {
+  AgentConfigurableOptions,
+  AgentConfig,
+  AgentMetadata,
+} from "@/lib/langchain/agent/config";
 
 export interface ThreadConfig {
   tags?: string[];
@@ -36,18 +42,6 @@ export interface RunStreamParams {
   after_seconds?: number;
 }
 
-// Update the Thread interface to match what the API returns
-export interface ThreadState {
-  values: {
-    messages: Message[];
-    title?: string;
-    [key: string]: unknown;
-  };
-  checkpoint?: Checkpoint;
-  checkpointId?: string;
-  asNode?: string;
-}
-
 export interface Thread {
   thread_id: string;
   metadata: {
@@ -62,47 +56,15 @@ export interface Thread {
   config?: ThreadConfig;
 }
 
-// Update Message type to match what the API expects
-export interface Message {
-  role: "user" | "assistant";
-  content: string;
-}
-
 export interface Assistant {
   graph_id: string;
   assistant_id: string;
   name: string;
   created_at: string;
   updated_at: string;
-  metadata: {
-    description: string;
-    agent_type: string;
-    owner_id: string;
-    [key: string]: string | unknown;
-  };
+  metadata: AgentMetadata;
   version: number;
-  config: {
-    configurable: {
-      model?: string;
-      temperature?: number;
-      instructions?: string;
-      prompt_template?: string;
-      tools?: Record<string, unknown>;
-      memory?: {
-        enabled: boolean;
-        max_entries: number;
-        relevance_threshold: number;
-      };
-      avatar?: string;
-      owner_id: string;
-    };
-  };
-}
-
-export interface AgentState {
-  messages: Message[];
-  tools: Tool[];
-  store: BaseStore;
+  config: AgentConfigurableOptions;
 }
 
 export interface Stream {
@@ -111,7 +73,7 @@ export interface Stream {
   input: Record<string, unknown>;
   command: Record<string, unknown>;
   metadata: Record<string, unknown>;
-  config: Config;
+  config: AgentConfigurableOptions;
   webhook: string;
   interrupt_before: Record<string, unknown>;
   interrupt_after: Record<string, unknown>;
@@ -131,12 +93,6 @@ export interface Checkpoint {
   checkpoint_map: Record<string, unknown>;
 }
 
-export interface Config {
-  tags: string[];
-  recursion_limit: number;
-  configurable: Record<string, unknown>;
-}
-
 export interface StreamEvent {
   event: string;
   data: {
@@ -144,4 +100,25 @@ export interface StreamEvent {
     type?: string;
     [key: string]: unknown;
   }[];
+}
+
+// Main agent configuration interface (extending the Zod-based type)
+export interface AgentConfigWithTools extends AgentConfig {
+  tools: Tool[];
+}
+
+export interface AgentState {
+  messages: BaseMessage[];
+  metadata: AgentMetadata;
+  title?: string;
+  [key: string]: unknown;
+}
+
+// For the modal props
+export interface AgentConfigModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  agentId: string;
+  initialConfig: AgentConfigWithTools;
+  onSave?: (config: AgentConfigWithTools) => void;
 }

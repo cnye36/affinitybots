@@ -13,17 +13,25 @@ export async function POST(request: Request) {
   
   try {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await request.json();
-    const { description, agentType } = body;
+    const { prompt, agentType } = await request.json();
+
+    if (!prompt || !agentType) {
+      return NextResponse.json(
+        { error: "Missing required fields" },
+        { status: 400 }
+      );
+    }
 
     // Generate the agent configuration
-    const config = await generateAgentConfiguration(description, agentType, user.id);
+    const config = await generateAgentConfiguration(prompt, agentType, user.id);
 
     // Create assistant in LangGraph
     const assistant = await client.assistants.create({
@@ -36,26 +44,21 @@ export async function POST(request: Request) {
       config: {
         configurable: {
           ...config.configurable,
-          owner_id: undefined,
         },
       },
     });
 
-    // Create user-assistant relationship
-    const { error: relationError } = await supabase
-      .from('user_assistants')
-      .insert({
-        user_id: user.id,
-        assistant_id: assistant.assistant_id
-      });
-
-    if (relationError) throw relationError;
-
-    return NextResponse.json(assistant);
+    return NextResponse.json({
+      success: true,
+      assistant,
+    });
   } catch (error) {
     console.error("Error creating assistant:", error);
     return NextResponse.json(
-      { error: "Failed to create assistant" },
+      {
+        error:
+          error instanceof Error ? error.message : "Failed to create assistant",
+      },
       { status: 500 }
     );
   }

@@ -8,12 +8,13 @@ export async function POST(
 ) {
   const { workflowId, taskId } = await props.params;
   const supabase = await createClient();
-  const client = new Client({
-    apiUrl: process.env.LANGGRAPH_URL,
-    apiKey: process.env.LANGSMITH_API_KEY,
-  });
 
   try {
+    const client = new Client({
+      apiUrl: process.env.LANGGRAPH_URL,
+      apiKey: process.env.LANGSMITH_API_KEY,
+    });
+
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -34,107 +35,148 @@ export async function POST(
         { status: 404 }
       );
     }
-    console.log("task", task);
+    console.log("Task retrieved:", task);
 
     const { input } = await request.json();
-    console.log("input", input);
+    console.log("Input received:", input);
 
     if (task.task_type === "ai_task") {
-      // Create a task run record
-      const { data: taskRun, error: taskRunError } = await supabase
-        .from("task_runs")
-        .insert({
-          task_id: task.workflow_task_id,
-          status: "running",
-          started_at: new Date().toISOString(),
-          metadata: {},
-        })
-        .select()
-        .single();
-
-      if (taskRunError || !taskRun) {
-        throw new Error("Failed to create task run");
-      }
-
-      console.log("taskRun", taskRun);
-
       try {
-        // Create a stateless run with the assistant
-        console.log(
-          "Creating streaming run with assistant_id:",
-          task.assistant_id
-        );
-        const events = [];
-        let finalResult = null;
+        const encoder = new TextEncoder();
+        const stream = new ReadableStream({
+          async start(controller) {
+            try {
+              console.log("Creating initial run...");
 
-        const run = await client.runs.stream(task.assistant_id, "", {
-          input: {
-            messages: [
-              {
-                role: "user",
-                content: task.config?.input?.prompt || input?.prompt || "",
-              },
-            ],
-            ...input,
+              // Create the initial run without a thread ID
+              const runResponse = await client.runs.create(task.assistant_id, {
+                input: {
+                  messages: [
+                    {
+                      role: "user",
+                      content:
+                        task.config?.input?.prompt || input?.prompt || "",
+                    },
+                  ],
+                },
+                metadata: {
+                  workflow_id: workflowId,
+                  workflow_task_id: taskId,
+                  user_id: user.id,
+                },
+                config: {
+                  configurable: {
+                    ...task.config,
+                  },
+                },
+              });
+
+              console.log("Run created with response:", runResponse);
+
+              // Now create our task run record with the SDK-generated run ID
+              const { data: taskRun, error: taskRunError } = await supabase
+                .from("task_runs")
+                .insert({
+                  task_id: task.workflow_task_id,
+                  run_id: runResponse.run_id, // Use the SDK-generated run ID
+                  status: "running",
+                  started_at: new Date().toISOString(),
+                  metadata: {},
+                })
+                .select()
+                .single();
+
+              if (taskRunError || !taskRun) {
+                throw new Error("Failed to create task run record");
+              }
+
+              console.log("Task run record created:", taskRun);
+
+              // Stream the run
+              const run = await client.runs.stream(task.assistant_id, null, {
+                input: {
+                  messages: [
+                    {
+                      role: "user",
+                      content:
+                        task.config?.input?.prompt || input?.prompt || "",
+                    },
+                  ],
+                  ...input,
+                },
+                metadata: {
+                  workflow_id: workflowId,
+                  workflow_task_id: taskId,
+                  run_id: runResponse.run_id,
+                  user_id: user.id,
+                },
+                config: {
+                  configurable: {
+                    ...task.config,
+                  },
+                },
+                streamMode: "events",
+              });
+
+              console.log("Run stream created successfully");
+
+              let eventCount = 0;
+              for await (const event of run) {
+                eventCount++;
+                console.log(
+                  `Event ${eventCount}:`,
+                  JSON.stringify(event, null, 2)
+                );
+                controller.enqueue(
+                  encoder.encode(`data: ${JSON.stringify(event)}\n\n`)
+                );
+              }
+
+              if (eventCount === 0) {
+                console.warn(
+                  "Warning: No events were received from the stream"
+                );
+                console.log("Attempting to wait for run completion...");
+                const runResult = await client.runs.wait(
+                  task.assistant_id,
+                  null,
+                  {
+                    input: {
+                      messages: [
+                        {
+                          role: "user",
+                          content:
+                            task.config?.input?.prompt || input?.prompt || "",
+                        },
+                      ],
+                    },
+                  }
+                );
+                console.log("Run wait result:", runResult);
+                controller.enqueue(
+                  encoder.encode(`data: ${JSON.stringify(runResult)}\n\n`)
+                );
+              }
+
+              console.log(`Stream completed. Total events: ${eventCount}`);
+              controller.close();
+            } catch (error) {
+              console.error("Error in stream:", error);
+              controller.error(error);
+            }
           },
-          metadata: {
-            workflow_id: workflowId,
-            workflow_task_id: taskId,
-            run_id: taskRun.run_id,
-            user_id: user.id,
-          },
-          config: {
-            configurable: {
-              ...task.config,
-            },
-          },
-          streamMode: "events",
         });
 
-        for await (const event of run) {
-          console.log("Received event:", event);
-          events.push(event);
-
-          // Keep track of the final result
-          if (event.event === "end" && event.data) {
-            finalResult = event.data;
-          }
-        }
-
-        // Update task run with success and all events
-        const { error: updateError } = await supabase
-          .from("task_runs")
-          .update({
-            status: "completed",
-            completed_at: new Date().toISOString(),
-            result: {
-              events,
-              finalResult,
-            },
-          })
-          .eq("run_id", taskRun.run_id);
-
-        if (updateError) {
-          throw new Error("Failed to update task run status");
-        }
-
-        return NextResponse.json({
-          events,
-          finalResult,
+        console.log("Returning stream response");
+        return new Response(stream, {
+          headers: {
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache",
+            Connection: "keep-alive",
+          },
         });
       } catch (error) {
-        // Update task run with error
-        if (taskRun?.run_id) {
-          await supabase
-            .from("task_runs")
-            .update({
-              status: "error",
-              completed_at: new Date().toISOString(),
-              error: error instanceof Error ? error.message : "Unknown error",
-            })
-            .eq("run_id", taskRun.run_id);
-        }
-
+        console.error("Error in run creation:", error);
         throw error;
       }
     } else {

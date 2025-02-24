@@ -2,14 +2,13 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { createAgent } from "./actions";
-import { AGENT_TEMPLATES } from './templates'
-import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { ArrowLeft, Sparkles } from 'lucide-react'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import Link from "next/link";
+import { AGENT_TEMPLATES } from "./templates";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ArrowLeft, Sparkles } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AgentCreationDialog } from "@/components/agents/AgentCreationDialog";
 
 export default function NewAgentPage() {
@@ -27,21 +26,29 @@ export default function NewAgentPage() {
     setError(null);
     setShowCreationDialog(true);
 
-    const formData = new FormData();
-    formData.append("prompt", prompt);
-    formData.append("agentType", template.id);
-    formData.append(
-      "useTemplate",
-      template === AGENT_TEMPLATES[0] ? "false" : "true"
-    );
-
     try {
-      await createAgent(formData);
+      const response = await fetch("/api/assistants", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt,
+          agentType: template.id,
+          useTemplate: template === AGENT_TEMPLATES[0] ? false : true,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to create agent");
+      }
+
+      const data = await response.json();
+      console.log(data);
       router.push("/assistants");
-    } catch (error) {
-      setError(
-        error instanceof Error ? error.message : "Failed to create agent"
-      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create agent");
       setIsSubmitting(false);
       setShowCreationDialog(false);
     }

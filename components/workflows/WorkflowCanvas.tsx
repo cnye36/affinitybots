@@ -59,6 +59,15 @@ export function WorkflowCanvas({
 
   const onNodesDelete = useCallback(
     async (nodesToDelete: Parameters<OnNodesDelete>[0]) => {
+      const deletedIds = new Set(nodesToDelete.map((n) => n.id));
+
+      // More efficient edge filtering
+      const edgesToRemove = edges.filter(
+        (edge) => deletedIds.has(edge.source) || deletedIds.has(edge.target)
+      );
+
+      setEdges((eds) => eds.filter((e) => !edgesToRemove.includes(e)));
+
       // Handle node deletion
       const typedNodes = nodesToDelete as unknown as WorkflowNode[];
       for (const node of typedNodes) {
@@ -83,16 +92,6 @@ export function WorkflowCanvas({
           }
         }
       }
-
-      // Remove connected edges
-      const edgesToRemove = edges.filter((edge) =>
-        typedNodes.some(
-          (node) => edge.source === node.id || edge.target === node.id
-        )
-      );
-      setEdges(
-        edges.filter((edge) => !edgesToRemove.some((e) => e.id === edge.id))
-      );
 
       // Update nodes with hasTask status
       setNodes((prevNodes) => {
@@ -147,37 +146,22 @@ export function WorkflowCanvas({
 
       if (!sourceNode || !targetNode) return;
 
-      const connectionExists = edges.some(
-        (edge) =>
-          edge.source === connection.source && edge.target === connection.target
-      );
-
-      if (connectionExists) {
-        toast({
-          title: "Connection already exists",
-          variant: "destructive",
-        });
-        return;
-      }
-
+      // Fix: Allow agent-to-task connections using correct handles
       if (
-        (sourceNode.type === "task" &&
-          targetNode.type === "task" &&
-          connection.sourceHandle === "task-source" &&
-          connection.targetHandle === "task-target") ||
-        (sourceNode.type === "agent" &&
-          targetNode.type === "agent" &&
-          connection.sourceHandle === "agent-source" &&
-          connection.targetHandle === "agent-target") ||
         (sourceNode.type === "agent" &&
           targetNode.type === "task" &&
           connection.sourceHandle === "task-handle" &&
-          connection.targetHandle === "task-target")
+          connection.targetHandle === "task-target") ||
+        // Add other valid connection patterns
+        (sourceNode.type === "task" &&
+          targetNode.type === "agent" &&
+          connection.sourceHandle === "task-source" &&
+          connection.targetHandle === "agent-target")
       ) {
         setEdges((eds) => addEdge(connection, eds));
       }
     },
-    [nodes, edges, setEdges]
+    [nodes, setEdges]
   );
 
   const onDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {

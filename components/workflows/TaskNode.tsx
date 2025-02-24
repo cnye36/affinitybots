@@ -9,23 +9,11 @@ import {
 } from "@/components/ui/tooltip";
 import { Settings } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Task, TaskType } from "@/types/workflow";
+import { Task, TaskNodeData, TaskType } from "@/types/workflow";
 import { TaskConfigModal } from "./TaskConfigModal";
 
 interface TaskNodeProps {
-  data: {
-    name: string;
-    type: TaskType;
-    description?: string;
-    id: string;
-    assistant_id: string;
-    workflowId: string;
-    status?: "idle" | "running" | "completed" | "error";
-    onConfigureTask?: (id: string) => void;
-    isConfigOpen?: boolean;
-    onConfigClose?: () => void;
-    workflow_task_id: string;
-  };
+  data: TaskNodeData;
 }
 
 const statusColors = {
@@ -97,7 +85,7 @@ export const MemoizedTaskNode = memo(
                 messages: [
                   {
                     role: "user",
-                    content: props.data.description || "Test execution",
+                    content: props.data.config.input.prompt,
                   },
                 ],
               },
@@ -109,7 +97,36 @@ export const MemoizedTaskNode = memo(
           throw new Error("Failed to execute task");
         }
 
-        return await response.json();
+        // Handle streaming response
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
+        let result = "";
+
+        if (!reader) {
+          throw new Error("No response body");
+        }
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value);
+          const lines = chunk.split("\n");
+
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              const data = line.slice(6); // Remove "data: " prefix
+              try {
+                const parsedData = JSON.parse(data);
+                result = parsedData;
+              } catch (e) {
+                console.warn("Failed to parse SSE data:", e);
+              }
+            }
+          }
+        }
+
+        return result;
       } catch (error) {
         console.error("Error testing task:", error);
         throw error;
@@ -200,16 +217,17 @@ export const MemoizedTaskNode = memo(
           isOpen={Boolean(props.data.isConfigOpen)}
           onClose={props.data.onConfigClose || (() => {})}
           task={{
-            id: props.data.workflow_task_id,
+            workflow_task_id: props.data.workflow_task_id,
+            workflow_id: props.data.workflowId,
             name: props.data.name,
             description: props.data.description || "",
             type: props.data.type,
             assistant_id: props.data.assistant_id,
-            workflow_id: props.data.workflowId,
             config: {
               input: {
                 source: "previous_node",
                 parameters: {},
+                prompt: props.data.config?.input?.prompt || "",
               },
               output: {
                 destination: "next_node",
@@ -227,7 +245,9 @@ export const MemoizedTaskNode = memo(
     prevProps.data.type === nextProps.data.type &&
     prevProps.data.description === nextProps.data.description &&
     prevProps.data.status === nextProps.data.status &&
-    prevProps.data.isConfigOpen === nextProps.data.isConfigOpen
+    prevProps.data.isConfigOpen === nextProps.data.isConfigOpen &&
+    JSON.stringify(prevProps.data.config) ===
+      JSON.stringify(nextProps.data.config)
 );
 
 MemoizedTaskNode.displayName = "MemoizedTaskNode";

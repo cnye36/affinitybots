@@ -41,21 +41,28 @@ export const AgentNode = memo(({ data }: AgentNodeProps) => {
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
 
   useEffect(() => {
+    const abortController = new AbortController();
+
     const fetchAssistant = async () => {
       try {
-        const response = await fetch(`/api/assistants/${data.assistant_id}`);
+        const response = await fetch(`/api/assistants/${data.assistant_id}`, {
+          signal: abortController.signal,
+        });
         if (!response.ok) throw new Error("Failed to fetch assistant");
         const assistantData = await response.json();
         setAssistant(assistantData);
       } catch (err) {
-        console.error("Error fetching assistant:", err);
-        setError("Failed to load assistant data");
+        if (err instanceof Error && err.name !== "AbortError") {
+          console.error("Error fetching assistant:", err);
+          setError("Failed to load assistant data");
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchAssistant();
+    return () => abortController.abort();
   }, [data.assistant_id]);
 
   const handleSettingsClick = (e: React.MouseEvent) => {

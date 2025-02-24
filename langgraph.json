@@ -11,7 +11,8 @@
 
   "dependencies": ["."],
   "graphs": {
-    "agent": "./lib/langchain/agent/agent.ts:graph"
+    "agent": "./lib/langchain/agent/agent.ts:graph",
+    "testGraph": "./lib/langchain/agent/testGraph.ts:graph"
   },
   "env": ".env"
 }

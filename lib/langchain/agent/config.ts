@@ -9,10 +9,19 @@ export const AgentMemoryOptionsSchema = z.object({
   relevance_threshold: z.number(),
 });
 
+// Knowledge base options schema
+export const KnowledgeBaseOptionsSchema = z.object({
+  isEnabled: z.boolean(),
+  config: z.object({
+    sources: z.array(z.string()),
+  }),
+});
+
 // Metadata schema
 export const AgentMetadataSchema = z.object({
   description: z.string(),
   agent_type: z.string(),
+  owner_id: z.string(),
 });
 
 // Configurable options schema
@@ -21,8 +30,9 @@ export const AgentConfigurableOptionsSchema = z.object({
   temperature: z.number(),
   tools: z.custom<ToolsConfig>(),
   memory: AgentMemoryOptionsSchema,
+  knowledge_base: KnowledgeBaseOptionsSchema.optional(),
   prompt_template: z.string(),
-  owner_id: z.string(),
+  avatar: z.string(),
 });
 
 // Complete config schema
