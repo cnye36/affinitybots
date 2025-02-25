@@ -11,7 +11,6 @@ import ReactFlow, {
   addEdge,
   applyNodeChanges,
   applyEdgeChanges,
-  useReactFlow,
   BackgroundVariant,
   Panel,
   OnConnect,
@@ -22,16 +21,16 @@ import ReactFlow, {
   OnNodesDelete,
 } from "reactflow";
 import "reactflow/dist/style.css";
-import { AgentNode } from "./AgentNode";
 import { CustomEdge } from "./CustomEdge";
 import { toast } from "@/hooks/use-toast";
 import { WorkflowNode } from "@/types/workflow";
 import { MemoizedTaskNode } from "./TaskNode";
+import { TriggerNode } from "./TriggerNode";
 
 // Define node and edge types outside the component
 const nodeTypes: NodeTypes = {
-  agent: AgentNode,
   task: MemoizedTaskNode,
+  trigger: TriggerNode,
 };
 
 const edgeTypes: EdgeTypes = {
@@ -55,8 +54,6 @@ export function WorkflowCanvas({
   setEdges,
   initialWorkflowId,
 }: WorkflowCanvasProps) {
-  const reactFlowInstance = useReactFlow();
-
   const onNodesDelete = useCallback(
     async (nodesToDelete: Parameters<OnNodesDelete>[0]) => {
       const deletedIds = new Set(nodesToDelete.map((n) => n.id));
@@ -93,50 +90,11 @@ export function WorkflowCanvas({
         }
       }
 
-      // Update nodes with hasTask status
-      setNodes((prevNodes) => {
-        const updatedNodes = prevNodes
-          .filter((node) => !typedNodes.some((n) => n.id === node.id))
-          .map((node) => {
-            if (node.type === "agent") {
-              const hasConnectedTask = edges.some(
-                (edge) =>
-                  edge.source === node.id &&
-                  !typedNodes.some((n) => n.id === edge.target)
-              );
-              return {
-                ...node,
-                data: { ...node.data, hasTask: hasConnectedTask },
-              };
-            }
-            return node;
-          });
-        return updatedNodes;
-      });
-    },
-    [edges, setEdges, setNodes, initialWorkflowId]
-  );
-
-  const onEdgesDelete = useCallback(
-    (edgesToDelete: Edge[]) => {
       setNodes((prevNodes) =>
-        prevNodes.map((node) => {
-          if (node.type === "agent") {
-            const hasConnectedTask = edges.some(
-              (edge) =>
-                edge.source === node.id &&
-                !edgesToDelete.some((e) => e.id === edge.id)
-            );
-            return {
-              ...node,
-              data: { ...node.data, hasTask: hasConnectedTask },
-            };
-          }
-          return node;
-        })
+        prevNodes.filter((node) => !typedNodes.some((n) => n.id === node.id))
       );
     },
-    [edges, setNodes]
+    [edges, setEdges, setNodes, initialWorkflowId]
   );
 
   const onConnect: OnConnect = useCallback(
@@ -146,73 +104,30 @@ export function WorkflowCanvas({
 
       if (!sourceNode || !targetNode) return;
 
-      // Fix: Allow agent-to-task connections using correct handles
+      // Check if trigger node already has a connection
+      if (sourceNode.type === "trigger") {
+        const existingTriggerConnection = edges.some(
+          (edge) => edge.source === sourceNode.id
+        );
+        if (existingTriggerConnection) {
+          toast({
+            title: "Invalid Connection",
+            description: "Trigger node can only connect to one task",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
+      // Only allow trigger-to-task and task-to-task connections
       if (
-        (sourceNode.type === "agent" &&
-          targetNode.type === "task" &&
-          connection.sourceHandle === "task-handle" &&
-          connection.targetHandle === "task-target") ||
-        // Add other valid connection patterns
-        (sourceNode.type === "task" &&
-          targetNode.type === "agent" &&
-          connection.sourceHandle === "task-source" &&
-          connection.targetHandle === "agent-target")
+        (sourceNode.type === "trigger" && targetNode.type === "task") ||
+        (sourceNode.type === "task" && targetNode.type === "task")
       ) {
         setEdges((eds) => addEdge(connection, eds));
       }
     },
-    [nodes, setEdges]
-  );
-
-  const onDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = "move";
-  }, []);
-
-  const onDrop = useCallback(
-    async (event: React.DragEvent<HTMLDivElement>) => {
-      event.preventDefault();
-
-      const assistantId = event.dataTransfer.getData("application/reactflow");
-
-      if (assistantId && initialWorkflowId) {
-        try {
-          const response = await fetch(`/api/assistants/${assistantId}`);
-          if (!response.ok) {
-            throw new Error("Failed to fetch assistant");
-          }
-          const assistant = await response.json();
-
-          const { zoom } = reactFlowInstance.getViewport();
-          const position = reactFlowInstance.screenToFlowPosition({
-            x: event.clientX,
-            y: event.clientY,
-          });
-
-          const newNode: WorkflowNode = {
-            id: `${assistant.assistant_id}-${nodes.length + 1}`,
-            type: "agent" as const,
-            position,
-            data: {
-              assistant_id: assistant.assistant_id,
-              label: assistant.name,
-              workflowId: initialWorkflowId,
-              hasTask: false,
-              status: "idle" as const,
-            },
-          };
-
-          setNodes((nds) => nds.concat(newNode));
-          reactFlowInstance.setViewport({ x: 0, y: 0, zoom });
-        } catch (error) {
-          console.error("Error fetching assistant:", error);
-          toast({
-            title: "Failed to add assistant to workflow",
-          });
-        }
-      }
-    },
-    [nodes, setNodes, reactFlowInstance, initialWorkflowId]
+    [nodes, edges, setEdges]
   );
 
   const onNodesChange: OnNodesChange = useCallback(
@@ -243,12 +158,9 @@ export function WorkflowCanvas({
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onNodesDelete={onNodesDelete}
-        onEdgesDelete={onEdgesDelete}
         onConnect={onConnect}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
-        onDragOver={onDragOver}
-        onDrop={onDrop}
         defaultViewport={{ x: 0, y: 0, zoom: 1.5 }}
         defaultEdgeOptions={{
           type: "custom",
@@ -273,8 +185,8 @@ export function WorkflowCanvas({
           className="bg-background/60 p-2 rounded-lg shadow-sm border"
         >
           <div className="text-sm text-muted-foreground">
-            Add your first Agent and then add tasks to define their behavior.
-            Press Delete or Backspace to remove nodes and edges.
+            Add tasks to define your workflow. Press Delete or Backspace to
+            remove nodes and edges.
           </div>
         </Panel>
       </ReactFlow>

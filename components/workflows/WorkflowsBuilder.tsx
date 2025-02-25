@@ -3,21 +3,56 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Edge, ReactFlowProvider } from "reactflow";
 import { useRouter } from "next/navigation";
-import { TaskType } from "@/types/workflow";
+import {
+  TaskType,
+  WorkflowNode,
+  TriggerNodeData,
+  TaskNodeData,
+  TriggerType,
+} from "@/types/workflow";
 import { Assistant } from "@/types/langgraph";
-import { WorkflowNode } from "@/types/workflow";
 import { createClient } from "@/supabase/client";
 import { EmptyWorkflowState } from "./EmptyWorkflowState";
 import { AgentSelectModal } from "./AgentSelectModal";
 import { WorkflowCanvas } from "./WorkflowCanvas";
 import { WorkflowHeader } from "./WorkflowHeader";
 import { executeWorkflow } from "./WorkflowExecutionManager";
-import { addAgent, addTask } from "./WorkflowNodeManager";
 import { toast } from "@/hooks/use-toast";
 import { TaskSidebar } from "./TaskSidebar";
 
 interface WorkflowsBuilderProps {
   initialWorkflowId?: string;
+}
+
+interface WorkflowTrigger {
+  trigger_id: string;
+  name: string;
+  description: string;
+  trigger_type: TriggerType;
+  workflow_id: string;
+  config: Record<string, unknown>;
+}
+
+interface StoredWorkflowNode {
+  id: string;
+  type: "task";
+  position: { x: number; y: number };
+  data: {
+    workflow_task_id: string;
+    name: string;
+    description: string;
+    task_type: TaskType;
+    workflow_id: string;
+    config: {
+      input: {
+        source: string;
+        parameters: Record<string, unknown>;
+      };
+      output: {
+        destination: string;
+      };
+    };
+  };
 }
 
 function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
@@ -36,25 +71,74 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
   );
   const [isExecuting, setIsExecuting] = useState(false);
   const [isTaskSidebarOpen, setIsTaskSidebarOpen] = useState(false);
-  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [isAgentSelectOpen, setIsAgentSelectOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [selectedTaskForAgent, setSelectedTaskForAgent] = useState<
+    string | null
+  >(null);
 
   const createdWorkflowRef = useRef(false);
 
-  const handleAddTask = useCallback((agentId: string) => {
-    setSelectedAgentId(agentId);
-    setIsTaskSidebarOpen(true);
-  }, []);
+  const handleAddTrigger = useCallback(async () => {
+    if (!workflowId) {
+      toast({
+        title: "Cannot add trigger",
+        description: "Workflow must be created first",
+        variant: "destructive",
+      });
+      return;
+    }
 
-  const handleAddNextAgent = useCallback((sourceAgentId: string) => {
-    setSelectedAgentId(sourceAgentId);
+    try {
+      // For MVP, we only support manual triggers
+      const { data: newTrigger, error } = await supabase
+        .from("workflow_triggers")
+        .insert({
+          workflow_id: workflowId,
+          name: "Entrypoint",
+          description: "Manually trigger this workflow",
+          trigger_type: "manual",
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const newNode: WorkflowNode = {
+        id: `trigger-${newTrigger.trigger_id}`,
+        type: "trigger" as const,
+        position: { x: 100, y: 100 },
+        data: {
+          ...newTrigger,
+          workflow_id: workflowId,
+          onOpenTaskSidebar: () => setIsTaskSidebarOpen(true),
+        } as TriggerNodeData,
+      };
+
+      setNodes((nds) => [...nds, newNode]);
+
+      toast({
+        title: "Entrypoint added",
+        description: "Click the plus button to add your first task",
+        variant: "default",
+      });
+    } catch (err) {
+      console.error("Error adding trigger:", err);
+      toast({
+        title: "Failed to add entrypoint",
+        variant: "destructive",
+      });
+    }
+  }, [workflowId]);
+
+  const handleAssignAgent = useCallback((taskId: string) => {
+    setSelectedTaskForAgent(taskId);
     setIsAgentSelectOpen(true);
   }, []);
 
   const handleConfigureTask = useCallback((taskId: string) => {
-    setNodes((nds) =>
-      nds.map((node) => {
+    setNodes((nds: WorkflowNode[]) =>
+      nds.map((node: WorkflowNode) => {
         if (node.type === "task" && node.data.workflow_task_id === taskId) {
           return {
             ...node,
@@ -63,8 +147,8 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
               isConfigOpen: true,
               onConfigClose: () => {
                 setSelectedTaskId(null);
-                setNodes((prevNodes) =>
-                  prevNodes.map((n) =>
+                setNodes((prevNodes: WorkflowNode[]) =>
+                  prevNodes.map((n: WorkflowNode) =>
                     n.type === "task" && n.data.workflow_task_id === taskId
                       ? { ...n, data: { ...n.data, isConfigOpen: false } }
                       : n
@@ -105,8 +189,8 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
         };
       }>
     ) => {
-      setNodes((nds) =>
-        nds.map((node) =>
+      setNodes((nds: WorkflowNode[]) =>
+        nds.map((node: WorkflowNode) =>
           node.type === "task" &&
           node.data.workflow_task_id === event.detail.taskId
             ? {
@@ -143,7 +227,6 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
   // Create a new workflow immediately if we don't have an ID
   useEffect(() => {
     const initializeWorkflow = async () => {
-      // Skip if we already have a workflow ID or if we've already created one
       if (workflowId || initialWorkflowId || createdWorkflowRef.current) return;
       createdWorkflowRef.current = true;
 
@@ -158,7 +241,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
           return;
         }
 
-        // Create new workflow
+        // Create new empty workflow
         const { data: newWorkflow, error } = await supabase
           .from("workflows")
           .insert({
@@ -201,49 +284,67 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
   // Load existing workflow if ID is provided
   useEffect(() => {
     const loadWorkflow = async () => {
-      // Only load if we have a workflowId (either initial or created) and we're not already loading
       if ((!workflowId && !initialWorkflowId) || loading) return;
 
       const idToLoad = workflowId || initialWorkflowId;
       setLoading(true);
       try {
-        // Load workflow and assistants in parallel
-        const [workflowResult, assistantsResponse] = await Promise.all([
+        const [workflowResult, triggersResult] = await Promise.all([
           supabase
             .from("workflows")
             .select("*")
             .eq("workflow_id", idToLoad)
             .single(),
-          fetch("/api/assistants"),
+          supabase
+            .from("workflow_triggers")
+            .select("*")
+            .eq("workflow_id", idToLoad),
         ]);
 
         if (workflowResult.error) throw workflowResult.error;
+        if (triggersResult.error) throw triggersResult.error;
+
         const workflow = workflowResult.data;
+        const triggers = triggersResult.data as WorkflowTrigger[];
 
         if (workflow) {
           setWorkflowId(workflow.workflow_id);
           setWorkflowName(workflow.name);
-          setNodes(
-            workflow.nodes.map((node: WorkflowNode) => ({
-              ...node,
+
+          // Combine trigger nodes with task nodes
+          const allNodes: WorkflowNode[] = [
+            ...triggers.map((trigger: WorkflowTrigger) => ({
+              id: `trigger-${trigger.trigger_id}`,
+              type: "trigger" as const,
+              position: { x: 100, y: 100 },
               data: {
-                ...node.data,
-                workflowId: workflow.workflow_id,
-                onAddTask: handleAddTask,
-                onAddAgent: handleAddNextAgent,
-                onConfigureTask: handleConfigureTask,
-                isConfigOpen: false,
-              },
-            }))
-          );
+                ...trigger,
+                workflow_id: workflow.workflow_id,
+              } as TriggerNodeData,
+            })),
+            ...((workflow.nodes || []) as StoredWorkflowNode[]).map(
+              (node: StoredWorkflowNode) => ({
+                ...node,
+                type: "task" as const,
+                data: {
+                  workflow_task_id: node.data.workflow_task_id,
+                  workflow_id: workflow.workflow_id,
+                  name: node.data.name,
+                  description: node.data.description,
+                  task_type: node.data.task_type,
+                  assistant_id: "", // Empty string until assigned
+                  config: node.data.config,
+                  onAssignAgent: handleAssignAgent,
+                  onConfigureTask: handleConfigureTask,
+                  isConfigOpen: false,
+                } as TaskNodeData,
+              })
+            ),
+          ];
+
+          setNodes(allNodes);
           setEdges(workflow.edges);
         }
-
-        if (!assistantsResponse.ok) {
-          throw new Error(`HTTP error! status: ${assistantsResponse.status}`);
-        }
-        const assistantsData = await assistantsResponse.json();
-        setAssistants(assistantsData);
       } catch (err) {
         console.error("Error loading workflow:", err);
         toast({
@@ -258,7 +359,52 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
     };
 
     loadWorkflow();
-  }, [workflowId, initialWorkflowId]);
+  }, [workflowId, initialWorkflowId, handleAssignAgent, handleConfigureTask]);
+
+  // Load assistants
+  useEffect(() => {
+    const loadAssistants = async () => {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!user) {
+          throw new Error("User not authenticated");
+        }
+
+        interface UserAssistant {
+          assistant: Assistant;
+        }
+
+        const { data: assistantsData, error } = await supabase
+          .from("user_assistants")
+          .select(
+            `
+            assistant:assistant (*)
+          `
+          )
+          .eq("user_id", user.id);
+
+        if (error) throw error;
+
+        // Extract just the assistant data from the joined results
+        setAssistants(
+          assistantsData?.map((ua: UserAssistant) => ua.assistant) || []
+        );
+      } catch (err) {
+        console.error("Error loading assistants:", err);
+        toast({
+          title: "Failed to load assistants",
+          variant: "destructive",
+        });
+      } finally {
+        setLoadingAssistants(false);
+      }
+    };
+
+    loadAssistants();
+  }, [supabase]);
 
   const handleSave = async () => {
     if (saving) return;
@@ -310,8 +456,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
               data: {
                 ...node.data,
                 workflowId,
-                onAddTask: handleAddTask,
-                onAddAgent: handleAddNextAgent,
+                onAssignAgent: handleAssignAgent,
               },
             }))
           );
@@ -365,30 +510,61 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
   };
 
   const handleAgentSelect = async (assistant: Assistant) => {
-    if (!workflowId) {
+    if (!workflowId || !selectedTaskForAgent) {
       toast({
-        title: "Cannot add agent",
-        description: "Workflow must be created first",
+        title: "Cannot assign agent",
+        description: "Both workflow and task must be selected",
         variant: "destructive",
       });
       return;
     }
 
-    await addAgent({
-      workflowId,
-      nodes,
-      setNodes,
-      setEdges,
-      assistant,
-      sourceAgentId: selectedAgentId || undefined,
-      handlers: {
-        onAddTask: handleAddTask,
-        onAddAgent: handleAddNextAgent,
-        onConfigureTask: handleConfigureTask,
-      },
-    });
-    setIsAgentSelectOpen(false);
-    setSelectedAgentId(null);
+    try {
+      // Update the task with the selected agent
+      const { error: updateError } = await supabase
+        .from("workflow_tasks")
+        .update({ assistant_id: assistant.assistant_id })
+        .eq("workflow_task_id", selectedTaskForAgent);
+
+      if (updateError) throw updateError;
+
+      // Update the node in the UI
+      setNodes((nds) =>
+        nds.map((node) => {
+          if (
+            node.type === "task" &&
+            node.data.workflow_task_id === selectedTaskForAgent
+          ) {
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                assignedAgent: {
+                  id: assistant.assistant_id,
+                  name: assistant.name,
+                  avatar: assistant.config?.configurable.avatar,
+                },
+              },
+            };
+          }
+          return node;
+        })
+      );
+
+      setIsAgentSelectOpen(false);
+      setSelectedTaskForAgent(null);
+
+      toast({
+        title: "Agent assigned successfully",
+        variant: "default",
+      });
+    } catch (err) {
+      console.error("Error assigning agent:", err);
+      toast({
+        title: "Failed to assign agent",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleTaskSelect = async (taskData: {
@@ -396,48 +572,130 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
     label: string;
     description: string;
   }) => {
-    if (!selectedAgentId || !workflowId) {
+    if (!workflowId) {
       toast({
         title: "Cannot add task",
-        description: "Both workflow and agent must be selected",
+        description: "Workflow must be created first",
         variant: "destructive",
       });
       return;
     }
 
     try {
-      const newTask = await addTask({
-        workflowId,
-        nodes,
-        setNodes,
-        setEdges,
-        agentId: selectedAgentId,
-        taskData: {
-          type: taskData.type,
+      const { data: newTask, error } = await supabase
+        .from("workflow_tasks")
+        .insert({
+          workflow_id: workflowId,
           name: taskData.label,
           description: taskData.description,
-          assistant_id: selectedAgentId,
+          task_type: taskData.type,
+          position: nodes.filter((n) => n.type === "task").length,
+          config: {
+            input: {
+              source: "previous_node",
+              parameters: {},
+            },
+            output: {
+              destination: "next_node",
+            },
+          },
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const newNode: WorkflowNode = {
+        id: `task-${newTask.workflow_task_id}`,
+        type: "task" as const,
+        position: { x: 300, y: 100 },
+        data: {
+          workflow_task_id: newTask.workflow_task_id,
+          name: newTask.name,
+          description: newTask.description || "",
+          task_type: newTask.task_type,
           workflow_id: workflowId,
+          assistant_id: "", // Empty string until assigned
+          config: {
+            input: {
+              source: "previous_node",
+              parameters: {},
+              prompt: "",
+            },
+            output: {
+              destination: "next_node",
+            },
+          },
+          status: "idle",
+          onAssignAgent: handleAssignAgent,
+          onConfigureTask: handleConfigureTask,
+          isConfigOpen: false,
+          onConfigClose: () => {
+            setSelectedTaskId(null);
+            setNodes((prevNodes) =>
+              prevNodes.map((n) =>
+                n.type === "task" &&
+                n.data.workflow_task_id === newTask.workflow_task_id
+                  ? { ...n, data: { ...n.data, isConfigOpen: false } }
+                  : n
+              )
+            );
+          },
         },
+      };
+
+      setNodes((nds) => {
+        const updatedNodes = [...nds];
+        // Add the new task node
+        updatedNodes.push(newNode);
+
+        // Update trigger node to show it has a connected task
+        const triggerNodeIndex = updatedNodes.findIndex(
+          (n) => n.type === "trigger"
+        );
+        if (triggerNodeIndex !== -1) {
+          const triggerNode = updatedNodes[triggerNodeIndex];
+          if (triggerNode.type === "trigger") {
+            updatedNodes[triggerNodeIndex] = {
+              ...triggerNode,
+              data: {
+                ...triggerNode.data,
+                hasConnectedTask: true,
+              },
+            };
+          }
+        }
+
+        return updatedNodes;
       });
 
-      if (newTask?.workflow_task_id) {
-        setSelectedTaskId(newTask.workflow_task_id);
+      // If this is the first task, create an edge from the trigger
+      const triggerNode = nodes.find(
+        (n): n is WorkflowNode & { type: "trigger" } => n.type === "trigger"
+      );
+      if (triggerNode) {
+        const newEdge = {
+          id: `edge-${triggerNode.id}-${newNode.id}`,
+          source: triggerNode.id,
+          target: newNode.id,
+        };
+        setEdges((eds) => [...eds, newEdge]);
       }
-    } catch (error) {
-      console.error("Error creating task:", error);
+
+      setIsTaskSidebarOpen(false);
+      setSelectedTaskId(newTask.workflow_task_id);
+
+      toast({
+        title: "Task added successfully",
+        variant: "default",
+      });
+    } catch (err) {
+      console.error("Error creating task:", err);
       toast({
         title: "Failed to create task",
         variant: "destructive",
       });
     }
-
-    setIsTaskSidebarOpen(false);
-    setSelectedAgentId(null);
-  };
-
-  const handleAddFirstAgent = () => {
-    setIsAgentSelectOpen(true);
   };
 
   if (loading) {
@@ -473,10 +731,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
         {nodes.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="pointer-events-auto">
-              <EmptyWorkflowState
-                type="empty"
-                onAddFirstAgent={handleAddFirstAgent}
-              />
+              <EmptyWorkflowState onAddTrigger={handleAddTrigger} />
             </div>
           </div>
         )}
@@ -484,14 +739,16 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
           isOpen={isTaskSidebarOpen}
           onClose={() => {
             setIsTaskSidebarOpen(false);
-            setSelectedAgentId(null);
           }}
           onTaskSelect={handleTaskSelect}
         />
       </div>
       <AgentSelectModal
         isOpen={isAgentSelectOpen}
-        onClose={() => setIsAgentSelectOpen(false)}
+        onClose={() => {
+          setIsAgentSelectOpen(false);
+          setSelectedTaskForAgent(null);
+        }}
         onSelect={handleAgentSelect}
         assistants={assistants}
         loading={loadingAssistants}

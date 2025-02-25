@@ -19,7 +19,6 @@ interface TaskConfigModalProps {
   onClose: () => void;
   task: Task;
   previousNodeOutput?: TaskOutput;
-  onSave: (updatedTask: Task) => Promise<void>;
   onTest: () => Promise<unknown>;
 }
 
@@ -37,7 +36,6 @@ export function TaskConfigModal({
   onClose,
   task,
   previousNodeOutput,
-  onSave,
   onTest,
 }: TaskConfigModalProps) {
   const [currentTask, setCurrentTask] = useState<Task>(task);
@@ -73,24 +71,6 @@ export function TaskConfigModal({
       isMounted = false;
     };
   }, [isOpen, task.assistant_id, assistant]);
-
-  const handleSave = async () => {
-    try {
-      setIsLoading(true);
-      await onSave(currentTask);
-      toast({
-        title: "Task configuration saved successfully",
-      });
-    } catch (err) {
-      console.error("Error saving task:", err);
-      toast({
-        title: "Failed to save task configuration",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleTest = async () => {
     try {
@@ -133,7 +113,6 @@ export function TaskConfigModal({
           assistant={assistant}
           isLoading={isLoading}
           onTest={handleTest}
-          onSave={handleSave}
         />
 
         <div className="grid grid-cols-3 gap-4 mt-4">

@@ -5,7 +5,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Play, Save, Settings2 } from "lucide-react";
+import { Play, Settings2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Task } from "@/types/workflow";
 import { Assistant } from "@/types/langgraph";
@@ -23,7 +23,6 @@ interface TaskModalHeaderProps {
   assistant: Assistant | null;
   isLoading: boolean;
   onTest: () => Promise<void>;
-  onSave: () => Promise<void>;
 }
 
 export function TaskModalHeader({
@@ -31,7 +30,6 @@ export function TaskModalHeader({
   assistant,
   isLoading,
   onTest,
-  onSave,
 }: TaskModalHeaderProps) {
   const [isAgentConfigOpen, setIsAgentConfigOpen] = useState(false);
 
@@ -103,10 +101,6 @@ export function TaskModalHeader({
               >
                 <Play className="h-4 w-4" />
                 Test
-              </Button>
-              <Button onClick={onSave} disabled={isLoading} className="gap-2">
-                <Save className="h-4 w-4" />
-                Save
               </Button>
             </div>
           </div>

@@ -1,41 +1,57 @@
-import { Node } from "reactflow";
 import { IntegrationType } from "./tools";
+
+export type TaskType = "openai" | "custom" | "http" | "email" | "slack";
+export type TriggerType = "manual" | "webhook" | "form" | "integration";
 
 export interface TaskNodeData {
   workflow_task_id: string;
-  id: string;
   name: string;
-  label: string;
   description?: string;
-  type: TaskType;
-  workflowId: string;
-  status?: "idle" | "running" | "completed" | "error";
+  task_type: TaskType;
+  workflow_id: string;
   assistant_id: string;
-  config: TaskConfig;
-  onConfigureTask?: (id: string) => void;
+  config: {
+    input: {
+      source: string;
+      parameters: Record<string, unknown>;
+      prompt?: string;
+    };
+    output: {
+      destination: string;
+    };
+  };
+  status?: "idle" | "running" | "completed" | "error";
+  onAssignAgent?: (taskId: string) => void;
+  onConfigureTask?: (taskId: string) => void;
   isConfigOpen?: boolean;
   onConfigClose?: () => void;
 }
 
-export interface AgentNodeData {
-  assistant_id: string;
-  label: string;
-  workflowId: string;
+export interface TriggerNodeData {
+  name: string;
+  description?: string;
+  trigger_type: TriggerType;
+  trigger_id: string;
+  workflow_id: string;
+  config: Record<string, unknown>;
   status?: "idle" | "running" | "completed" | "error";
-  hasTask?: boolean;
-  onAddTask?: (agentId: string) => void;
-  onAddAgent?: (sourceAgentId: string) => void;
-  onConfigureTask?: (taskId: string) => void;
+  onConfigureTrigger?: (triggerId: string) => void;
+  onOpenTaskSidebar?: () => void;
+  hasConnectedTask?: boolean;
 }
 
-export type WorkflowNode =
-  | (Node<AgentNodeData> & { type: "agent" })
-  | (Node<TaskNodeData> & { type: "task" });
+export type WorkflowNode = {
+  id: string;
+  position: { x: number; y: number };
+} & (
+  | { type: "task"; data: TaskNodeData }
+  | { type: "trigger"; data: TriggerNodeData }
+);
 
 export interface NodeHandlers {
-  onAddTask: (agentId: string) => void;
-  onAddAgent: (sourceAgentId: string) => void;
-  onConfigureTask: (taskId: string) => void;
+  onAssignAgent?: (taskId: string) => void;
+  onConfigureTask?: (taskId: string) => void;
+  onConfigureTrigger?: (triggerId: string) => void;
 }
 
 export type WorkflowStatus =
@@ -112,25 +128,6 @@ export interface TaskRun {
   result?: unknown;
   metadata: Record<string, unknown>;
 }
-
-export type TaskType =
-  // AI task (single type as the agent defines the behavior)
-  | "ai_task"
-  // Integration tasks
-  | "notion_create_page"
-  | "notion_update_page"
-  | "notion_add_to_database"
-  | "notion_search"
-  | "twitter_post_tweet"
-  | "twitter_thread"
-  | "twitter_dm"
-  | "twitter_like"
-  | "twitter_retweet"
-  | "google_calendar_create"
-  | "google_calendar_update"
-  | "google_docs_create"
-  | "google_sheets_update"
-  | "google_drive_upload";
 
 export interface IntegrationConfig {
   type: IntegrationType;

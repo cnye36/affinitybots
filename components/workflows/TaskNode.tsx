@@ -7,13 +7,22 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Settings } from "lucide-react";
+import { Settings, UserPlus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Task, TaskNodeData, TaskType } from "@/types/workflow";
 import { TaskConfigModal } from "./TaskConfigModal";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 interface TaskNodeProps {
-  data: TaskNodeData;
+  data: TaskNodeData & {
+    onAssignAgent?: (taskId: string) => void;
+    assignedAgent?: {
+      id: string;
+      name: string;
+      avatar?: string;
+    };
+  };
 }
 
 const statusColors = {
@@ -32,27 +41,45 @@ export const MemoizedTaskNode = memo(
       }
     };
 
+    const handleAssignAgent = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (props.data.onAssignAgent && props.data.workflow_task_id) {
+        props.data.onAssignAgent(props.data.workflow_task_id);
+      }
+    };
+
     const handleSaveTask = async (updatedTask: Task) => {
       try {
+        // Ensure we have a valid assistant_id
+        if (!updatedTask.assistant_id) {
+          throw new Error("Assistant ID is required");
+        }
+
         const response = await fetch(
-          `/api/workflows/${props.data.workflowId}/tasks/${props.data.workflow_task_id}`,
+          `/api/workflows/${props.data.workflow_id}/tasks/${props.data.workflow_task_id}`,
           {
             method: "PUT",
             headers: {
               "Content-Type": "application/json",
             },
-            body: JSON.stringify(updatedTask),
+            body: JSON.stringify({
+              ...updatedTask,
+              // Ensure these fields are always included
+              workflow_id: props.data.workflow_id,
+              workflow_task_id: props.data.workflow_task_id,
+              assistant_id: updatedTask.assistant_id,
+            }),
           }
         );
 
         if (!response.ok) {
-          throw new Error("Failed to update task");
+          const error = await response.json();
+          throw new Error(error.message || "Failed to update task");
         }
 
-        // Get the updated task data from the response
         const savedTask = await response.json();
 
-        // Update the node data with the new task information
+        // Dispatch update event with all necessary fields
         const event = new CustomEvent("updateTaskNode", {
           detail: {
             taskId: props.data.workflow_task_id,
@@ -60,11 +87,14 @@ export const MemoizedTaskNode = memo(
               name: savedTask.name,
               description: savedTask.description,
               type: savedTask.task_type as TaskType,
+              assistant_id: savedTask.assistant_id,
               config: savedTask.config,
             },
           },
         });
         window.dispatchEvent(event);
+
+        return savedTask;
       } catch (error) {
         console.error("Error saving task:", error);
         throw error;
@@ -74,7 +104,7 @@ export const MemoizedTaskNode = memo(
     const handleTestTask = async () => {
       try {
         const response = await fetch(
-          `/api/workflows/${props.data.workflowId}/tasks/${props.data.workflow_task_id}/execute`,
+          `/api/workflows/${props.data.workflow_id}/tasks/${props.data.workflow_task_id}/execute`,
           {
             method: "POST",
             headers: {
@@ -97,7 +127,6 @@ export const MemoizedTaskNode = memo(
           throw new Error("Failed to execute task");
         }
 
-        // Handle streaming response
         const reader = response.body?.getReader();
         const decoder = new TextDecoder();
         let result = "";
@@ -115,7 +144,7 @@ export const MemoizedTaskNode = memo(
 
           for (const line of lines) {
             if (line.startsWith("data: ")) {
-              const data = line.slice(6); // Remove "data: " prefix
+              const data = line.slice(6);
               try {
                 const parsedData = JSON.parse(data);
                 result = parsedData;
@@ -135,7 +164,7 @@ export const MemoizedTaskNode = memo(
 
     return (
       <>
-        <Card className="min-w-[200px] max-w-[300px]">
+        <Card className="min-w-[200px] max-w-[300px] relative group">
           <CardHeader className="p-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm truncate flex-1">
@@ -176,7 +205,7 @@ export const MemoizedTaskNode = memo(
           <CardContent className="p-3 pt-0">
             <div className="flex flex-wrap gap-1">
               <Badge variant="secondary" className="text-xs">
-                {props.data.type}
+                {props.data.task_type}
               </Badge>
               {props.data.status && (
                 <Badge
@@ -194,6 +223,49 @@ export const MemoizedTaskNode = memo(
                 {props.data.description}
               </p>
             )}
+
+            {/* Agent Assignment Section */}
+            <div className="mt-3 pt-3 border-t">
+              {props.data.assignedAgent ? (
+                <div className="flex items-center gap-2">
+                  <Avatar className="h-6 w-6">
+                    {props.data.assignedAgent.avatar ? (
+                      <AvatarImage
+                        src={props.data.assignedAgent.avatar}
+                        alt={props.data.assignedAgent.name}
+                      />
+                    ) : (
+                      <AvatarFallback>
+                        {props.data.assignedAgent.name
+                          .slice(0, 2)
+                          .toUpperCase()}
+                      </AvatarFallback>
+                    )}
+                  </Avatar>
+                  <span className="text-xs">
+                    {props.data.assignedAgent.name}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="ml-auto"
+                    onClick={handleAssignAgent}
+                  >
+                    Change
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={handleAssignAgent}
+                >
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Assign Agent
+                </Button>
+              )}
+            </div>
           </CardContent>
 
           {/* Task Connection Points */}
@@ -218,10 +290,10 @@ export const MemoizedTaskNode = memo(
           onClose={props.data.onConfigClose || (() => {})}
           task={{
             workflow_task_id: props.data.workflow_task_id,
-            workflow_id: props.data.workflowId,
+            workflow_id: props.data.workflow_id,
             name: props.data.name,
             description: props.data.description || "",
-            type: props.data.type,
+            type: props.data.task_type,
             assistant_id: props.data.assistant_id,
             config: {
               input: {
@@ -242,12 +314,14 @@ export const MemoizedTaskNode = memo(
   },
   (prevProps, nextProps) =>
     prevProps.data.name === nextProps.data.name &&
-    prevProps.data.type === nextProps.data.type &&
+    prevProps.data.task_type === nextProps.data.task_type &&
     prevProps.data.description === nextProps.data.description &&
     prevProps.data.status === nextProps.data.status &&
     prevProps.data.isConfigOpen === nextProps.data.isConfigOpen &&
     JSON.stringify(prevProps.data.config) ===
-      JSON.stringify(nextProps.data.config)
+      JSON.stringify(nextProps.data.config) &&
+    JSON.stringify(prevProps.data.assignedAgent) ===
+      JSON.stringify(nextProps.data.assignedAgent)
 );
 
 MemoizedTaskNode.displayName = "MemoizedTaskNode";

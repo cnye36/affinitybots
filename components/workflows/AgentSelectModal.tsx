@@ -48,7 +48,7 @@ export function AgentSelectModal({
                   <div className="flex items-start gap-4 w-full">
                     <Avatar className="h-12 w-12 flex-shrink-0 ring-2 ring-background">
                       <AvatarImage
-                        src={assistant.config?.configurable.avatar}
+                        src={assistant.config?.configurable?.avatar || ""}
                         alt={assistant.name}
                       />
                       <AvatarFallback

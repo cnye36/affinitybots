@@ -1,10 +1,11 @@
-import React from "react";
+import React, { useCallback, useEffect } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Task } from "@/types/workflow";
 import { Assistant } from "@/types/langgraph";
+import { toast } from "@/hooks/use-toast";
 
 interface TaskConfigurationPanelProps {
   currentTask: Task;
@@ -17,6 +18,43 @@ export function TaskConfigurationPanel({
   setCurrentTask,
   assistant,
 }: TaskConfigurationPanelProps) {
+  // Debounced save function
+  const debouncedSave = useCallback(async (task: Task) => {
+    try {
+      const response = await fetch(
+        `/api/workflows/${task.workflow_id}/tasks/${task.workflow_task_id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(task),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to update task");
+      }
+    } catch (error) {
+      console.error("Error saving task:", error);
+      toast({
+        title: "Failed to save changes",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
+    }
+  }, []);
+
+  // Save changes when task is updated
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      debouncedSave(currentTask);
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [currentTask, debouncedSave]);
+
   return (
     <div className="border rounded-lg p-4">
       <h3 className="font-medium mb-4">Configuration</h3>
