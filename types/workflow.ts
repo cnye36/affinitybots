@@ -1,6 +1,6 @@
 import { IntegrationType } from "./tools";
 
-export type TaskType = "openai" | "custom" | "http" | "email" | "slack";
+export type TaskType = "ai_task" | "integration";
 export type TriggerType = "manual" | "webhook" | "form" | "integration";
 
 export interface TaskNodeData {

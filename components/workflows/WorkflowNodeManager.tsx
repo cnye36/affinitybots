@@ -16,6 +16,7 @@ export async function addTask({
   setNodes,
   setEdges,
   taskData,
+  sourceNodeId,
 }: Omit<WorkflowNodeManagerProps, "edges"> & {
   taskData: {
     name: string;
@@ -31,6 +32,7 @@ export async function addTask({
       };
     };
   };
+  sourceNodeId?: string;
 }) {
   if (!workflowId) {
     toast({
@@ -61,14 +63,20 @@ export async function addTask({
 
     const savedTask = await response.json();
 
-    // Find trigger node to connect to if this is the first task
-    const triggerNode = nodes.find((n) => n.type === "trigger");
-    const lastTaskNode = nodes
-      .filter((n) => n.type === "task")
-      .sort((a, b) => b.position.x - a.position.x)[0];
+    // If sourceNodeId is provided, use that node as the source
+    // Otherwise, find trigger node to connect to if this is the first task
+    let sourceNode;
+    if (sourceNodeId) {
+      sourceNode = nodes.find((n) => n.id === sourceNodeId);
+    } else {
+      const triggerNode = nodes.find((n) => n.type === "trigger");
+      const lastTaskNode = nodes
+        .filter((n) => n.type === "task")
+        .sort((a, b) => b.position.x - a.position.x)[0];
+      sourceNode = lastTaskNode || triggerNode;
+    }
 
-    // Position the task after the trigger or last task
-    const sourceNode = lastTaskNode || triggerNode;
+    // Position the task after the source node
     const position = sourceNode
       ? {
           x: sourceNode.position.x + 300,
@@ -89,6 +97,7 @@ export async function addTask({
         task_type: savedTask.task_type,
         workflow_id: workflowId,
         status: "idle",
+        assistant_id: savedTask.assistant_id,
         config: savedTask.config || {
           input: {
             source: "previous_node",

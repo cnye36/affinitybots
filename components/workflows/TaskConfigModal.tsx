@@ -7,6 +7,9 @@ import { TaskModalHeader } from "./TaskModalHeader";
 import { PreviousNodeOutputPanel } from "./PreviousNodeOutputPanel";
 import { TaskConfigurationPanel } from "./TaskConfigurationPanel";
 import { TestOutputPanel } from "./TestOutputPanel";
+import { Button } from "@/components/ui/button";
+import { UserPlus } from "lucide-react";
+import { AgentSelectModal } from "./AgentSelectModal";
 
 interface TaskOutput {
   result: unknown;
@@ -20,6 +23,7 @@ interface TaskConfigModalProps {
   task: Task;
   previousNodeOutput?: TaskOutput;
   onTest: () => Promise<unknown>;
+  onUpdate: (updatedTask: Task, updatedAssistant: Assistant | null) => void;
 }
 
 type OutputFormat = "json" | "markdown" | "text";
@@ -37,6 +41,7 @@ export function TaskConfigModal({
   task,
   previousNodeOutput,
   onTest,
+  onUpdate,
 }: TaskConfigModalProps) {
   const [currentTask, setCurrentTask] = useState<Task>(task);
   const [outputFormat, setOutputFormat] = useState<OutputFormat>("json");
@@ -44,6 +49,9 @@ export function TaskConfigModal({
   const [testOutput, setTestOutput] = useState<TestOutput | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [assistant, setAssistant] = useState<Assistant | null>(null);
+  const [isAgentSelectOpen, setIsAgentSelectOpen] = useState(false);
+  const [assistants, setAssistants] = useState<Assistant[]>([]);
+  const [loadingAssistants, setLoadingAssistants] = useState(true);
 
   useEffect(() => {
     setCurrentTask(task);
@@ -52,28 +60,82 @@ export function TaskConfigModal({
   useEffect(() => {
     let isMounted = true;
 
-    if (
-      isOpen &&
-      task.assistant_id &&
-      (!assistant || assistant.assistant_id !== task.assistant_id)
-    ) {
-      fetch(`/api/assistants/${task.assistant_id}`)
-        .then((res) => res.json())
-        .then((data) => {
-          if (isMounted) {
-            setAssistant(data);
-          }
-        })
-        .catch((err) => console.error("Error fetching assistant:", err));
+    const loadAssistants = async () => {
+      try {
+        const response = await fetch("/api/assistants");
+        if (!response.ok) throw new Error("Failed to load assistants");
+        const data = await response.json();
+        if (isMounted) {
+          setAssistants(data);
+          setLoadingAssistants(false);
+        }
+      } catch (error) {
+        console.error("Error loading assistants:", error);
+        if (isMounted) {
+          setLoadingAssistants(false);
+        }
+      }
+    };
+
+    if (isOpen) {
+      loadAssistants();
     }
 
     return () => {
       isMounted = false;
     };
-  }, [isOpen, task.assistant_id, assistant]);
+  }, [isOpen]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadAssistant = async () => {
+      if (!currentTask.assistant_id) return;
+
+      try {
+        setLoadingAssistants(true);
+        const response = await fetch(
+          `/api/assistants/${currentTask.assistant_id}`
+        );
+        if (!response.ok) throw new Error("Failed to load assistant");
+        const data = await response.json();
+        if (isMounted) {
+          setAssistant(data);
+        }
+      } catch (error) {
+        console.error("Error loading assistant:", error);
+        toast({
+          title: "Failed to load assigned agent",
+          variant: "destructive",
+        });
+      } finally {
+        if (isMounted) {
+          setLoadingAssistants(false);
+        }
+      }
+    };
+
+    if (isOpen) {
+      loadAssistant();
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen, currentTask.assistant_id]);
+
+  useEffect(() => {
+    if (currentTask && assistant) {
+      onUpdate(currentTask, assistant);
+    }
+  }, [currentTask, assistant, onUpdate]);
 
   const handleTest = async () => {
     try {
+      if (!currentTask.assistant_id) {
+        throw new Error("Please assign an agent before testing");
+      }
+
       setIsLoading(true);
       setIsStreaming(true);
       setTestOutput(null);
@@ -105,37 +167,105 @@ export function TaskConfigModal({
     }
   };
 
+  const handleAgentSelect = async (selectedAssistant: Assistant) => {
+    try {
+      const response = await fetch(
+        `/api/workflows/${currentTask.workflow_id}/tasks/${currentTask.workflow_task_id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            ...currentTask,
+            assistant_id: selectedAssistant.assistant_id,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to update task agent");
+      }
+
+      const updatedTask = {
+        ...currentTask,
+        assistant_id: selectedAssistant.assistant_id,
+      };
+      setCurrentTask(updatedTask);
+      setAssistant(selectedAssistant);
+      setIsAgentSelectOpen(false);
+      onUpdate(updatedTask, selectedAssistant);
+
+      toast({
+        title: "Agent assigned successfully",
+      });
+    } catch (error) {
+      console.error("Error assigning agent:", error);
+      toast({
+        title: "Failed to assign agent",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-7xl">
-        <TaskModalHeader
-          task={currentTask}
-          assistant={assistant}
-          isLoading={isLoading}
-          onTest={handleTest}
-        />
-
-        <div className="grid grid-cols-3 gap-4 mt-4">
-          <PreviousNodeOutputPanel
-            data={previousNodeOutput || null}
-            outputFormat={outputFormat}
-            setOutputFormat={setOutputFormat}
-          />
-
-          <TaskConfigurationPanel
-            currentTask={currentTask}
-            setCurrentTask={setCurrentTask}
+    <>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-7xl">
+          <TaskModalHeader
+            task={currentTask}
             assistant={assistant}
+            isLoading={isLoading || loadingAssistants}
+            onTest={handleTest}
+            onChangeAgent={() => setIsAgentSelectOpen(true)}
           />
 
-          <TestOutputPanel
-            testOutput={testOutput}
-            outputFormat={outputFormat}
-            setOutputFormat={setOutputFormat}
-            isStreaming={isStreaming}
-          />
-        </div>
-      </DialogContent>
-    </Dialog>
+          <div className="grid grid-cols-3 gap-4 mt-4">
+            <PreviousNodeOutputPanel
+              data={previousNodeOutput || null}
+              outputFormat={outputFormat}
+              setOutputFormat={setOutputFormat}
+            />
+
+            {loadingAssistants ? (
+              <div className="border rounded-lg p-4 flex items-center justify-center">
+                Loading agent information...
+              </div>
+            ) : !assistant ? (
+              <div className="border rounded-lg p-4 flex items-center justify-center">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsAgentSelectOpen(true)}
+                >
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Assign Agent
+                </Button>
+              </div>
+            ) : (
+              <TaskConfigurationPanel
+                currentTask={currentTask}
+                setCurrentTask={setCurrentTask}
+                assistant={assistant}
+              />
+            )}
+
+            <TestOutputPanel
+              testOutput={testOutput}
+              outputFormat={outputFormat}
+              setOutputFormat={setOutputFormat}
+              isStreaming={isStreaming}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <AgentSelectModal
+        isOpen={isAgentSelectOpen}
+        onClose={() => setIsAgentSelectOpen(false)}
+        onSelect={handleAgentSelect}
+        assistants={assistants}
+        loading={loadingAssistants}
+      />
+    </>
   );
 }

@@ -7,12 +7,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Settings, UserPlus } from "lucide-react";
+import { Settings, UserPlus, PlusCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Task, TaskNodeData, TaskType } from "@/types/workflow";
-import { TaskConfigModal } from "./TaskConfigModal";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { TaskConfigModal } from "./TaskConfigModal";
+import { TaskNodeData, Task } from "@/types/workflow";
+import { Assistant } from "@/types/langgraph";
 
 interface TaskNodeProps {
   data: TaskNodeData & {
@@ -22,6 +23,8 @@ interface TaskNodeProps {
       name: string;
       avatar?: string;
     };
+    isActive?: boolean;
+    onAddTask?: () => void;
   };
 }
 
@@ -48,57 +51,32 @@ export const MemoizedTaskNode = memo(
       }
     };
 
-    const handleSaveTask = async (updatedTask: Task) => {
-      try {
-        // Ensure we have a valid assistant_id
-        if (!updatedTask.assistant_id) {
-          throw new Error("Assistant ID is required");
-        }
-
-        const response = await fetch(
-          `/api/workflows/${props.data.workflow_id}/tasks/${props.data.workflow_task_id}`,
-          {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              ...updatedTask,
-              // Ensure these fields are always included
-              workflow_id: props.data.workflow_id,
-              workflow_task_id: props.data.workflow_task_id,
-              assistant_id: updatedTask.assistant_id,
-            }),
-          }
-        );
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.message || "Failed to update task");
-        }
-
-        const savedTask = await response.json();
-
-        // Dispatch update event with all necessary fields
-        const event = new CustomEvent("updateTaskNode", {
-          detail: {
-            taskId: props.data.workflow_task_id,
-            updates: {
-              name: savedTask.name,
-              description: savedTask.description,
-              type: savedTask.task_type as TaskType,
-              assistant_id: savedTask.assistant_id,
-              config: savedTask.config,
-            },
+    const handleTaskUpdate = (
+      updatedTask: Task,
+      updatedAssistant: Assistant | null
+    ) => {
+      // Dispatch update event with all necessary fields
+      const event = new CustomEvent("updateTaskNode", {
+        detail: {
+          taskId: props.data.workflow_task_id,
+          updates: {
+            name: updatedTask.name,
+            description: updatedTask.description,
+            type: updatedTask.task_type,
+            assistant_id:
+              updatedAssistant?.assistant_id || props.data.assistant_id,
+            config: updatedTask.config,
+            assignedAgent: updatedAssistant
+              ? {
+                  id: updatedAssistant.assistant_id,
+                  name: updatedAssistant.name,
+                  avatar: updatedAssistant.config?.configurable?.avatar,
+                }
+              : props.data.assignedAgent,
           },
-        });
-        window.dispatchEvent(event);
-
-        return savedTask;
-      } catch (error) {
-        console.error("Error saving task:", error);
-        throw error;
-      }
+        },
+      });
+      window.dispatchEvent(event);
     };
 
     const handleTestTask = async () => {
@@ -164,7 +142,13 @@ export const MemoizedTaskNode = memo(
 
     return (
       <>
-        <Card className="min-w-[200px] max-w-[300px] relative group">
+        <Card
+          className={`min-w-[200px] max-w-[300px] relative group ${
+            props.data.isActive
+              ? "border-2 border-primary"
+              : "border border-border"
+          }`}
+        >
           <CardHeader className="p-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm truncate flex-1">
@@ -266,6 +250,22 @@ export const MemoizedTaskNode = memo(
                 </Button>
               )}
             </div>
+
+            {/* Add Task Button - Show on the right side */}
+            <div className="absolute -right-40 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2 bg-background/60 hover:bg-background"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  props.data.onAddTask?.();
+                }}
+              >
+                <PlusCircle className="h-4 w-4" />
+                <span>Add Task</span>
+              </Button>
+            </div>
           </CardContent>
 
           {/* Task Connection Points */}
@@ -306,8 +306,8 @@ export const MemoizedTaskNode = memo(
               },
             },
           }}
-          onSave={handleSaveTask}
           onTest={handleTestTask}
+          onUpdate={handleTaskUpdate}
         />
       </>
     );
@@ -318,6 +318,7 @@ export const MemoizedTaskNode = memo(
     prevProps.data.description === nextProps.data.description &&
     prevProps.data.status === nextProps.data.status &&
     prevProps.data.isConfigOpen === nextProps.data.isConfigOpen &&
+    prevProps.data.isActive === nextProps.data.isActive &&
     JSON.stringify(prevProps.data.config) ===
       JSON.stringify(nextProps.data.config) &&
     JSON.stringify(prevProps.data.assignedAgent) ===

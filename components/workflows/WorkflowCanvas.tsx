@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import ReactFlow, {
   Edge,
   Controls,
@@ -45,6 +45,9 @@ interface WorkflowCanvasProps {
   initialWorkflowId?: string;
   selectedTaskId?: string | null;
   onTaskConfigClose?: () => void;
+  activeNodeId?: string | null;
+  setActiveNodeId?: (id: string | null) => void;
+  onAddTask?: (sourceNodeId: string) => void;
 }
 
 export function WorkflowCanvas({
@@ -53,6 +56,9 @@ export function WorkflowCanvas({
   edges,
   setEdges,
   initialWorkflowId,
+  activeNodeId,
+  setActiveNodeId,
+  onAddTask,
 }: WorkflowCanvasProps) {
   const onNodesDelete = useCallback(
     async (nodesToDelete: Parameters<OnNodesDelete>[0]) => {
@@ -132,6 +138,13 @@ export function WorkflowCanvas({
 
   const onNodesChange: OnNodesChange = useCallback(
     (changes) => {
+      // Handle node selection
+      changes.forEach((change) => {
+        if (change.type === "select" && setActiveNodeId) {
+          setActiveNodeId(change.selected ? change.id : null);
+        }
+      });
+
       setNodes(
         (nds) =>
           applyNodeChanges(
@@ -140,7 +153,7 @@ export function WorkflowCanvas({
           ) as unknown as WorkflowNode[]
       );
     },
-    [setNodes]
+    [setNodes, setActiveNodeId]
   );
 
   const onEdgesChange: OnEdgesChange = useCallback(
@@ -150,10 +163,23 @@ export function WorkflowCanvas({
     [setEdges]
   );
 
+  // Update nodes with active state and onAddTask handler
+  const nodesWithActiveState = useMemo(() => {
+    return nodes.map((node) => ({
+      ...node,
+      data: {
+        ...node.data,
+        isActive: node.id === activeNodeId,
+        onAddTask:
+          node.type === "task" ? () => onAddTask?.(node.id) : undefined,
+      },
+    }));
+  }, [nodes, activeNodeId, onAddTask]);
+
   return (
     <div className="absolute inset-0">
       <ReactFlow
-        nodes={nodes}
+        nodes={nodesWithActiveState}
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}

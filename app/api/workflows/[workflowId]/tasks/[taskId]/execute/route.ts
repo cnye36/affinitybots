@@ -44,9 +44,7 @@ export async function POST(
 
     if (task.task_type === "ai_task") {
       try {
-        // Verify assistant_id exists
         if (!task.assistant_id) {
-          console.error("Task has no assistant_id:", task);
           return NextResponse.json(
             { error: "Task has no associated assistant" },
             { status: 400 }
@@ -56,13 +54,13 @@ export async function POST(
         const encoder = new TextEncoder();
         const stream = new ReadableStream({
           async start(controller) {
-            try {
-              console.log("Creating initial run...");
+            let runId: string | null = null;
 
-              // Create the initial run without a thread ID
-              const runResponse = await client.runs.create(
+            try {
+              // 1. Directly create and stream the execution
+              const runStream = await client.runs.stream(
+                null, // Stateless runs use null thread ID
                 task.assistant_id,
-                "", // Empty string for stateless runs
                 {
                   input: {
                     messages: [
@@ -79,115 +77,86 @@ export async function POST(
                     user_id: user.id,
                   },
                   config: {
-                    configurable: {
-                      ...task.config,
-                    },
+                    configurable: task.config,
                   },
-                  streamMode: "events",
+                  streamMode: "messages",
                 }
               );
 
-              console.log("Run created with response:", runResponse);
+              // 2. Get run ID from the first event
+              const firstEvent = await runStream.next();
+              runId = firstEvent.value?.data?.run_id;
+              if (!runId) {
+                throw new Error(
+                  "Failed to get run ID from LangGraph execution"
+                );
+              }
 
-              // Now create our task run record with the SDK-generated run ID
-              const { data: taskRun, error: taskRunError } = await supabase
+              // 3. Create task run record with the obtained run ID
+              const { error: insertError } = await supabase
                 .from("task_runs")
                 .insert({
                   task_id: task.workflow_task_id,
-                  run_id: runResponse.run_id, // Use the SDK-generated run ID
+                  run_id: runId,
                   status: "running",
                   started_at: new Date().toISOString(),
-                  metadata: {},
-                })
-                .select()
-                .single();
+                });
 
-              if (taskRunError || !taskRun) {
-                throw new Error("Failed to create task run record");
-              }
+              if (insertError) throw insertError;
 
-              console.log("Task run record created:", taskRun);
-
-              // Stream the run
-              const run = await client.runs.stream(
-                "", // Empty string for stateless runs
-                task.assistant_id,
-                {
-                  input: {
-                    messages: [
-                      {
-                        role: "user",
-                        content:
-                          task.config?.input?.prompt || input?.prompt || "",
-                      },
-                    ],
-                    ...input,
-                  },
-                  metadata: {
-                    workflow_id: workflowId,
-                    workflow_task_id: taskId,
-                    run_id: runResponse.run_id,
-                    user_id: user.id,
-                  },
-                  config: {
-                    configurable: {
-                      ...task.config,
-                    },
-                  },
-                  streamMode: "events",
+              // 4. Process stream events
+              for await (const event of runStream) {
+                if (event.event === "error") {
+                  throw new Error(event.data.error);
                 }
-              );
 
-              console.log("Run stream created successfully");
+                // Handle final output
+                if (event.event === "messages/complete") {
+                  await supabase
+                    .from("task_runs")
+                    .update({
+                      status: "completed",
+                      completed_at: new Date().toISOString(),
+                      result: event.data.output,
+                    })
+                    .eq("run_id", runId);
+                }
 
-              let eventCount = 0;
-              for await (const event of run) {
-                eventCount++;
-                console.log(
-                  `Event ${eventCount}:`,
-                  JSON.stringify(event, null, 2)
-                );
                 controller.enqueue(
                   encoder.encode(`data: ${JSON.stringify(event)}\n\n`)
                 );
               }
 
-              if (eventCount === 0) {
-                console.warn(
-                  "Warning: No events were received from the stream"
-                );
-                console.log("Attempting to wait for run completion...");
-                const runResult = await client.runs.wait(
-                  "", // Empty string for stateless runs
-                  task.assistant_id,
-                  {
-                    input: {
-                      messages: [
-                        {
-                          role: "user",
-                          content:
-                            task.config?.input?.prompt || input?.prompt || "",
-                        },
-                      ],
-                    },
-                  }
-                );
-                console.log("Run wait result:", runResult);
-                controller.enqueue(
-                  encoder.encode(`data: ${JSON.stringify(runResult)}\n\n`)
-                );
-              }
-
-              console.log(`Stream completed. Total events: ${eventCount}`);
               controller.close();
             } catch (error) {
-              console.error("Error in stream:", error);
-              controller.error(error);
+              console.error("Execution error:", error);
+
+              // Update task run with error status
+              if (runId) {
+                await supabase
+                  .from("task_runs")
+                  .update({
+                    status: "error",
+                    completed_at: new Date().toISOString(),
+                    error:
+                      error instanceof Error ? error.message : "Unknown error",
+                  })
+                  .eq("run_id", runId);
+              }
+
+              controller.enqueue(
+                encoder.encode(
+                  `event: error\ndata: ${JSON.stringify({
+                    error:
+                      error instanceof Error ? error.message : "Unknown error",
+                  })}\n\n`
+                )
+              );
+              controller.close();
             }
           },
         });
 
-        console.log("Returning stream response");
         return new Response(stream, {
           headers: {
             "Content-Type": "text/event-stream",
@@ -196,8 +165,11 @@ export async function POST(
           },
         });
       } catch (error) {
-        console.error("Error in run creation:", error);
-        throw error;
+        console.error("Execution setup error:", error);
+        return NextResponse.json(
+          { error: "Failed to start task execution" },
+          { status: 500 }
+        );
       }
     } else {
       // Handle other task types (integrations) here

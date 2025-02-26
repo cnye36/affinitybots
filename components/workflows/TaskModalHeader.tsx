@@ -5,7 +5,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Play, Settings2 } from "lucide-react";
+import { Play, Settings2, UserPlus } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Task } from "@/types/workflow";
 import { Assistant } from "@/types/langgraph";
@@ -23,6 +23,7 @@ interface TaskModalHeaderProps {
   assistant: Assistant | null;
   isLoading: boolean;
   onTest: () => Promise<void>;
+  onChangeAgent: () => void;
 }
 
 export function TaskModalHeader({
@@ -30,6 +31,7 @@ export function TaskModalHeader({
   assistant,
   isLoading,
   onTest,
+  onChangeAgent,
 }: TaskModalHeaderProps) {
   const [isAgentConfigOpen, setIsAgentConfigOpen] = useState(false);
 
@@ -47,7 +49,7 @@ export function TaskModalHeader({
           {/* Agent Info and Task Name */}
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-6">
-              {assistant && (
+              {assistant ? (
                 <div className="flex items-center space-x-2">
                   <span className="text-sm text-muted-foreground">Agent:</span>
                   <div className="flex items-center space-x-2">
@@ -84,7 +86,18 @@ export function TaskModalHeader({
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
+                    <Button variant="ghost" size="sm" onClick={onChangeAgent}>
+                      Change
+                    </Button>
                   </div>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-muted-foreground">Agent:</span>
+                  <Button variant="outline" size="sm" onClick={onChangeAgent}>
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Assign Agent
+                  </Button>
                 </div>
               )}
               <div className="flex items-center space-x-2">
@@ -95,7 +108,7 @@ export function TaskModalHeader({
             <div className="flex space-x-2">
               <Button
                 onClick={onTest}
-                disabled={isLoading}
+                disabled={isLoading || !assistant}
                 variant="secondary"
                 className="gap-2"
               >

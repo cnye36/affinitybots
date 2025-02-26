@@ -22,6 +22,7 @@ export interface TriggerNodeData {
   onConfigureTrigger?: (triggerId: string) => void;
   onOpenTaskSidebar?: () => void;
   hasConnectedTask?: boolean;
+  isActive?: boolean;
 }
 
 const statusColors = {
@@ -48,7 +49,11 @@ export const TriggerNode = memo(({ data }: { data: TriggerNodeData }) => {
 
   return (
     <div className="relative">
-      <Card className="min-w-[200px] max-w-[300px] border-2 border-primary">
+      <Card
+        className={`min-w-[200px] max-w-[300px] ${
+          data.isActive ? "border-2 border-primary" : "border border-border"
+        }`}
+      >
         <CardHeader className="p-3 bg-primary/5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
