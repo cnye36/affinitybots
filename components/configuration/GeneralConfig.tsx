@@ -21,6 +21,18 @@ import { Upload, Loader2 } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { mutate } from "swr";
 import { Slider } from "@/components/ui/slider";
+import { useRouter } from "next/navigation";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "@/hooks/use-toast";
 
 interface GeneralConfigProps {
   config: {
@@ -46,7 +58,9 @@ export function GeneralConfig({
 }: GeneralConfigProps) {
   const supabase = createClient();
   const [isUploading, setIsUploading] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
 
   const handleAvatarUpload = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -136,6 +150,30 @@ export function GeneralConfig({
 
   const triggerFileInput = () => {
     fileInputRef.current?.click();
+  };
+
+  const handleDelete = async () => {
+    try {
+      const response = await fetch(`/api/assistants/${config.assistant_id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete agent");
+      }
+
+      await mutate("/api/assistants");
+      router.push("/assistants");
+      toast({
+        title: "Agent deleted successfully",
+      });
+    } catch (error) {
+      console.error("Error deleting agent:", error);
+      toast({
+        title: "Failed to delete agent",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -253,10 +291,40 @@ export function GeneralConfig({
       <div className="border-t pt-4">
         <h3 className="text-lg font-medium mb-2">Danger Zone</h3>
         <p className="text-sm text-muted-foreground mb-4">
-          These actions are destructive and cannot be undone.
+          These actions are destructive and cannot be undone. Deleting this
+          agent will cause any workflows using it to fail.
         </p>
-        <Button variant="destructive">Delete Agent</Button>
+        <Button
+          variant="destructive"
+          onClick={() => setIsDeleteDialogOpen(true)}
+        >
+          Delete Agent
+        </Button>
       </div>
+
+      <AlertDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete your
+              agent and any workflows using this agent will fail.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete Agent
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

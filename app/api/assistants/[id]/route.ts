@@ -108,3 +108,56 @@ export async function PUT(request: Request, props: { params: Promise<{ id: strin
     );
   }
 }
+export async function DELETE(
+  request: Request,
+  props: { params: Promise<{ id: string }> }
+) {
+  const params = await props.params;
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // First verify the assistant exists and user has access
+    const { data: userAssistant, error: userAssistantError } = await supabase
+      .from("user_assistants")
+      .select("assistant_id")
+      .eq("user_id", user.id)
+      .eq("assistant_id", params.id)
+      .single();
+
+    if (userAssistantError || !userAssistant) {
+      return NextResponse.json(
+        { error: "Assistant not found or access denied" },
+        { status: 404 }
+      );
+    }
+
+    // Delete the assistant
+    const { error: deleteError } = await supabase
+      .from("assistant")
+      .delete()
+      .eq("assistant_id", params.id);
+
+    if (deleteError) {
+      console.error("Error deleting assistant:", deleteError);
+      return NextResponse.json(
+        { error: "Failed to delete assistant" },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ message: "Assistant deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting assistant:", error);
+    return NextResponse.json(
+      { error: "Failed to delete assistant" },
+      { status: 500 }
+    );
+  }
+}

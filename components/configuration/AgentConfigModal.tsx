@@ -49,7 +49,7 @@ export function AgentConfigModal({
     metadata: {
       description: String(assistant.metadata?.description || ""),
       agent_type: String(assistant.metadata?.agent_type || ""),
-      owner_id: String(assistant.metadata?.owner_id || ""),
+      owner_id: String(assistant.metadata.owner_id),
     } as AgentMetadata,
     config: {
       configurable: {
@@ -91,7 +91,9 @@ export function AgentConfigModal({
             )?.relevance_threshold || 0.7
           ),
         },
-        prompt_template: String(assistant.config.configurable.prompt_template || ""),
+        prompt_template: String(
+          assistant.config.configurable.prompt_template || ""
+        ),
         owner_id: String(assistant.metadata?.owner_id || ""),
       } as AgentConfigurableOptions,
     },
