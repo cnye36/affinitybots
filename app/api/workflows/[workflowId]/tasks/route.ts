@@ -104,12 +104,12 @@ export async function POST(
     console.log("Received task data:", taskData);
 
     // Validate task type
-    if (!VALID_TASK_TYPES.includes(taskData.type)) {
+    if (!VALID_TASK_TYPES.includes(taskData.task_type)) {
       return NextResponse.json({ error: "Invalid task type" }, { status: 400 });
     }
 
     // For AI tasks, ensure assistant_id is provided
-    if (taskData.type === "ai_task" && !taskData.assistant_id) {
+    if (taskData.task_type === "ai_task" && !taskData.assistant_id) {
       return NextResponse.json(
         { error: "AI tasks require an assistant_id" },
         { status: 400 }
@@ -135,7 +135,7 @@ export async function POST(
         position,
         name: taskData.name,
         description: taskData.description,
-        task_type: taskData.type,
+        task_type: taskData.task_type,
         assistant_id: taskData.assistant_id,
         config: {
           input: {
