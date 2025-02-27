@@ -175,85 +175,87 @@ export default function ThreadSidebar({
   };
 
   return (
-    <div className="w-72 h-full bg-background border-r border-gray-700 dark:border-gray-700 flex flex-col">
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+    <div className="flex flex-col h-full bg-background">
+      <div className="p-2 sm:p-4 border-b">
         <button
           onClick={onNewThread}
-          className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center justify-center gap-2 transition-colors"
+          className="w-full py-2 px-3 sm:px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center justify-center gap-2 transition-colors text-sm sm:text-base"
         >
-          <PlusCircle className="h-5 w-5" />
+          <PlusCircle className="h-4 w-4 sm:h-5 sm:w-5" />
           <span>New Chat</span>
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-2">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-2">
         {isLoading ? (
-          <div className="flex items-center justify-center py-8 text-gray-500">
-            <Loader2 className="h-5 w-5 animate-spin mr-2" />
+          <div className="flex items-center justify-center py-6 text-muted-foreground text-sm">
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
             <span>Loading chats...</span>
           </div>
         ) : threads.length === 0 ? (
-          <div className="text-center py-8 px-4">
-            <MessageSquare className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-            <p className="text-gray-500">No chats yet</p>
-            <p className="text-sm text-gray-400">Start a new conversation</p>
+          <div className="text-center py-6 px-2">
+            <MessageSquare className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
+            <p className="text-muted-foreground text-sm">No chats yet</p>
+            <p className="text-xs text-muted-foreground/70">
+              Start a new conversation
+            </p>
           </div>
         ) : (
-          <div className="space-y-1">
+          <div className="space-y-0.5">
             {threads.map((thread) => (
               <div
                 key={`thread-${thread.thread_id}`}
-                className={`group flex items-center gap-2 w-full pr-2 rounded-lg transition-colors ${
+                className={`group flex items-center w-full rounded-lg transition-colors ${
                   currentThreadId === thread.thread_id
-                    ? "bg-blue-100 dark:bg-blue-900/50"
-                    : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                    ? "bg-accent"
+                    : "hover:bg-accent/50"
                 }`}
               >
                 <button
                   onClick={() => onThreadSelect(thread.thread_id)}
-                  className="flex-1 px-3 py-2 text-left"
+                  className="flex-1 px-2 py-1.5 text-left min-w-0"
                 >
-                  <div className="flex items-center gap-2">
-                    <MessageSquare className="h-4 w-4 flex-shrink-0" />
-                    <span className="truncate">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <MessageSquare className="h-3.5 w-3.5 flex-shrink-0" />
+                    <span className="truncate text-sm">
                       {thread.metadata?.title ||
                         `Chat ${formatDate(thread.created_at)}`}
                     </span>
                   </div>
                 </button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button className="p-1 rounded-md opacity-0 group-hover:opacity-100 hover:bg-gray-200 dark:hover:bg-gray-700">
-                      <MoreVertical className="h-4 w-4" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      onClick={() => handleRename(thread.thread_id)}
-                    >
-                      <Pencil className="h-4 w-4 mr-2" />
-                      Rename
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="text-red-600 dark:text-red-400"
-                      onClick={() => handleDelete(thread.thread_id)}
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <div className="flex-shrink-0 px-1">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="p-1 rounded-md opacity-0 group-hover:opacity-100 hover:bg-accent/50">
+                        <MoreVertical className="h-3.5 w-3.5" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-[160px]">
+                      <DropdownMenuItem
+                        onClick={() => handleRename(thread.thread_id)}
+                        className="text-sm"
+                      >
+                        <Pencil className="h-3.5 w-3.5 mr-2" />
+                        Rename
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="text-destructive text-sm"
+                        onClick={() => handleDelete(thread.thread_id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5 mr-2" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
             ))}
           </div>
         )}
       </div>
 
-      <Dialog
-        open={isRenaming}
-        onOpenChange={(open) => !open && setIsRenaming(false)}
-      >
-        <DialogContent>
+      <Dialog open={isRenaming} onOpenChange={setIsRenaming}>
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Rename Chat</DialogTitle>
           </DialogHeader>
@@ -261,15 +263,22 @@ export default function ThreadSidebar({
             <Input
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
-              placeholder="Enter new title"
-              className="w-full"
+              className="w-full text-sm"
+              placeholder="Enter chat title"
+              autoFocus
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsRenaming(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsRenaming(false)}
+              className="text-sm"
+            >
               Cancel
             </Button>
-            <Button onClick={handleSaveRename}>Save</Button>
+            <Button onClick={handleSaveRename} className="text-sm">
+              Save
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

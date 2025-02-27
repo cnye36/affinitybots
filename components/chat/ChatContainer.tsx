@@ -6,6 +6,9 @@ import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
 import ThreadSidebar from "./ThreadSidebar";
 import { HumanMessage, AIMessage } from "@langchain/core/messages";
+import { Menu, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface ChatContainerProps {
   assistantId: string;
@@ -21,29 +24,14 @@ export default function ChatContainer({
     initialThreadId
   );
   const [isLoading, setIsLoading] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Initialize chat if no thread exists
   useEffect(() => {
-    const initializeChat = async () => {
-      if (!currentThreadId) {
-        try {
-          const response = await fetch(
-            `/api/assistants/${assistantId}/threads`,
-            {
-              method: "POST",
-            }
-          );
-          if (!response.ok) throw new Error("Failed to create thread");
-          const data = await response.json();
-          setCurrentThreadId(data.thread_id);
-        } catch (error) {
-          console.error("Error creating thread:", error);
-        }
-      }
-    };
-
-    initializeChat();
-  }, [assistantId, currentThreadId]);
+    if (!currentThreadId) {
+      setMessages([]);
+    }
+  }, [currentThreadId]);
 
   // Fetch thread state when switching threads
   useEffect(() => {
@@ -62,11 +50,10 @@ export default function ChatContainer({
         const data = await response.json();
         if (data.values?.messages) {
           setMessages(
-            data.values.messages.map(
-              (msg: { type: string; content: string }) => ({
-                role: msg.type === "human" ? "user" : "assistant",
-                content: msg.content,
-              })
+            data.values.messages.map((msg: { type: string; content: string }) =>
+              msg.type === "human"
+                ? new HumanMessage(msg.content)
+                : new AIMessage(msg.content)
             )
           );
         }
@@ -101,10 +88,10 @@ export default function ChatContainer({
 
   const sendChatMessage = async (content: string) => {
     setIsLoading(true);
-    try {
-      let threadId = currentThreadId;
+    let threadId = currentThreadId;
 
-      // If there's no current thread, create one
+    try {
+      // Create a thread only if we don't have one and we're actually sending a message
       if (!threadId) {
         const response = await fetch(`/api/assistants/${assistantId}/threads`, {
           method: "POST",
@@ -117,8 +104,7 @@ export default function ChatContainer({
 
       // Optimistically add user message
       const userMessage = new HumanMessage(content);
-      const assistantMessage = new AIMessage(content);
-      setMessages((prev) => [...prev, userMessage, assistantMessage]);
+      setMessages((prev) => [...prev, userMessage]);
 
       // Stream the response
       const response = await fetch(
@@ -160,9 +146,10 @@ export default function ChatContainer({
                     newMessages[newMessages.length - 1] = new AIMessage(
                       messageData.content
                     );
-                    return newMessages;
+                  } else {
+                    newMessages.push(new AIMessage(messageData.content));
                   }
-                  return prev;
+                  return newMessages;
                 });
               }
             }
@@ -196,30 +183,64 @@ export default function ChatContainer({
       }
     } catch (error) {
       console.error("Error sending message:", error);
-      setMessages((prev) => {
-        const newMessages = [...prev];
-        const lastMessage = newMessages[newMessages.length - 1];
-        if (lastMessage instanceof AIMessage) {
-          newMessages[newMessages.length - 1] = new AIMessage(
-            "I apologize, but I encountered an error. Please try again."
-          );
-        }
-        return newMessages;
-      });
+      setMessages((prev) => [
+        ...prev,
+        new AIMessage(
+          "I apologize, but I encountered an error. Please try again."
+        ),
+      ]);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex h-full">
-      <ThreadSidebar
-        assistantId={assistantId}
-        currentThreadId={currentThreadId}
-        onThreadSelect={handleThreadSelect}
-        onNewThread={handleNewThread}
-      />
-      <div className="flex-1 flex flex-col min-h-0 bg-background overflow-hidden">
+    <div className="flex h-[calc(100vh-5rem)] mx-2 mb-2 rounded-lg border bg-background shadow-sm relative">
+      {/* Mobile Sidebar Toggle */}
+      <Button
+        variant="ghost"
+        size="icon"
+        className="absolute top-2 left-2 md:hidden z-50"
+        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+      >
+        {isSidebarOpen ? (
+          <X className="h-5 w-5" />
+        ) : (
+          <Menu className="h-5 w-5" />
+        )}
+      </Button>
+
+      {/* Sidebar */}
+      <div
+        className={cn(
+          "fixed md:relative inset-y-0 left-0 z-40 w-80 transform transition-transform duration-200 ease-in-out bg-background md:transform-none",
+          isSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+        )}
+      >
+        <ThreadSidebar
+          assistantId={assistantId}
+          currentThreadId={currentThreadId}
+          onThreadSelect={(threadId) => {
+            handleThreadSelect(threadId);
+            setIsSidebarOpen(false);
+          }}
+          onNewThread={() => {
+            handleNewThread();
+            setIsSidebarOpen(false);
+          }}
+        />
+      </div>
+
+      {/* Mobile Overlay */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-30 md:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col min-h-0 bg-background overflow-hidden border-l border-border">
         <MessageList messages={messages} />
         <MessageInput onSend={sendChatMessage} disabled={isLoading} />
       </div>

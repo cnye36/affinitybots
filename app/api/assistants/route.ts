@@ -3,7 +3,6 @@ import { createClient } from "@/supabase/server";
 import { generateAgentConfiguration } from "@/lib/langchain/agent/agent-generation";
 import { Client } from "@langchain/langgraph-sdk";
 
-export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   const client = new Client({

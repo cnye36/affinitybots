@@ -59,7 +59,7 @@ export default async function AssistantPage(props: AssistantPageProps) {
   return (
     <div className="flex flex-col h-screen">
       <AgentPageHeader assistant={typedAssistant} />
-      <main className="flex-1 overflow-hidden">
+      <main className="flex-1 overflow-hidden relative">
         <ChatContainer assistantId={params.id} />
       </main>
     </div>

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
 import { Client } from "@langchain/langgraph-sdk";
 
-export const runtime = "nodejs";
+
 
 export async function POST(
   request: Request,
@@ -14,8 +14,6 @@ export async function POST(
     apiKey: process.env.LANGSMITH_API_KEY,
   });
 
-  console.log("LangGraph Url", process.env.LANGGRAPH_URL);
-  
   try {
     const supabase = await createClient();
     const {

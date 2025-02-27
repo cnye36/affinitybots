@@ -3,7 +3,7 @@ import { generateChatName } from "@/lib/chat-utils";
 import { createClient } from "@/supabase/server";
 import { Client } from "@langchain/langgraph-sdk";
 
-export const runtime = "nodejs";
+
 
 // POST - Auto-generate a title based on conversation
 export async function POST(

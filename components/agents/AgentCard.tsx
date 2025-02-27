@@ -89,20 +89,20 @@ export function AgentCard({ assistant, onDelete }: AgentCardProps) {
   return (
     <>
       <div
-        className="border rounded-lg p-6 hover:border-primary transition-colors cursor-pointer relative group"
+        className="border rounded-lg p-4 sm:p-6 hover:border-primary transition-colors cursor-pointer relative group"
         onClick={handleClick}
       >
         <Button
           variant="ghost"
           size="icon"
-          className="delete-button absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity"
+          className="delete-button absolute right-1 sm:right-2 top-1 sm:top-2 opacity-0 group-hover:opacity-100 transition-opacity"
           onClick={() => setIsDeleteDialogOpen(true)}
         >
           <Trash2 className="h-4 w-4 text-destructive" />
         </Button>
-        <div className="flex items-start space-x-4">
+        <div className="flex items-start space-x-2 sm:space-x-4">
           <div
-            className="h-12 w-12 rounded-full ring-2 ring-background flex items-center justify-center text-sm font-medium text-white"
+            className="h-10 w-10 sm:h-12 sm:w-12 rounded-full ring-2 ring-background flex items-center justify-center text-xs sm:text-sm font-medium text-white"
             style={{
               backgroundImage: avatarUrl ? `url(${avatarUrl})` : undefined,
               backgroundSize: "cover",
@@ -114,19 +114,21 @@ export function AgentCard({ assistant, onDelete }: AgentCardProps) {
           >
             {!avatarUrl && assistant.name.slice(0, 2).toUpperCase()}
           </div>
-          <div className="flex-1">
-            <h3 className="text-lg font-semibold mb-1">{assistant.name}</h3>
-            <p className="text-sm text-muted-foreground line-clamp-2">
+          <div className="flex-1 min-w-0">
+            <h3 className="text-base sm:text-lg font-semibold mb-1 truncate">
+              {assistant.name}
+            </h3>
+            <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">
               {assistant.description || "No description provided"}
             </p>
           </div>
         </div>
-        <div className="flex items-center text-sm text-muted-foreground mt-4">
+        <div className="flex flex-wrap gap-2 items-center text-xs sm:text-sm text-muted-foreground mt-3 sm:mt-4">
           <span className="flex items-center">
             Model: {assistant.model_type || "Not specified"}
           </span>
-          <span className="mx-2">•</span>
-          <span>{assistant.tools?.length || 0} tools</span>
+          <span className="hidden sm:inline">•</span>
+          <span>{assistant.tools.length || 0} tools</span>
         </div>
       </div>
 

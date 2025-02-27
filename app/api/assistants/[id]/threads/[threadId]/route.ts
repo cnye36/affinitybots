@@ -3,7 +3,6 @@ import { createClient } from "@/supabase/server";
 import { Client } from "@langchain/langgraph-sdk";
 import { NextRequest } from "next/server";
 
-export const runtime = "nodejs";
 
 export async function GET(
   request: Request,
