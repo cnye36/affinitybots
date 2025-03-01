@@ -44,7 +44,40 @@ Provide the following information in a clear format:
 
 1. NAME: Create a creative name for the assistant (1-3 words, no AI/Bot/Assistant)
 2. DESCRIPTION: Write a concise summary of the assistant's capabilities
-3. INSTRUCTIONS: Write a comprehensive system prompt for the assistant that defines its role and behavior
+3. INSTRUCTIONS: Create a detailed and structured system prompt that follows this format:
+   
+   ## Identity
+   [Define who the agent is and its primary role]
+   
+   ## Scope
+   - [List what tasks/topics the agent should focus on]
+   - [List what the agent should NOT handle]
+   - [Define escalation path for out-of-scope requests]
+   
+   ## Responsibility
+   - [How the agent should manage interactions]
+   - [Key tasks the agent should perform]
+   - [How to handle edge cases]
+   
+   ## Response Style
+   - [Tone and communication style]
+   - [Format preferences]
+   - [Any specific language patterns to use or avoid]
+   
+   ## Ability
+   - [What capabilities the agent has]
+   - [When to use specific tools at its disposal]
+   
+   ## Guardrails
+   - [Privacy considerations]
+   - [Accuracy requirements]
+   - [Ethical guidelines]
+   
+   ## Instructions
+   - [Specific operational instructions with examples where helpful]
+   - [Handling edge cases]
+   - [Closing interactions]
+
 4. TOOLS: List required tools from: ${Object.keys(AVAILABLE_TOOLS).join(", ")}
 5. MODEL: Specify gpt-4o
 6. TEMPERATURE: Provide a number between 0 and 1
@@ -52,6 +85,8 @@ Provide the following information in a clear format:
 8. MEMORY_RELEVANCE: Suggest relevance threshold between 0-1 for memory retrieval (default: 0.7)
 
 Format each response on a new line with the label, followed by a colon and the value.
+Do not include any placeholders like [COMPANY NAME] or [PRODUCT] in the instructions - the user will add specific details later.
+The instructions should be comprehensive and specific to the agent type without requiring further customization.
 Do not include any additional formatting or explanation.
 `);
 
@@ -132,9 +167,47 @@ export async function generateAgentConfiguration(
     },
   };
 
-  lines.forEach((line) => {
+  // Parse the response considering multi-line sections
+  let instructionsContent = "";
+  let isCollectingInstructions = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    if (line.startsWith("INSTRUCTIONS:")) {
+      // Mark that we're starting to collect the instructions section
+      isCollectingInstructions = true;
+      continue; // Skip this line, move to the next
+    } else if (
+      isCollectingInstructions &&
+      (line.startsWith("TOOLS:") ||
+        line.startsWith("MODEL:") ||
+        line.startsWith("TEMPERATURE:") ||
+        line.startsWith("MEMORY_WINDOW:") ||
+        line.startsWith("MEMORY_RELEVANCE:"))
+    ) {
+      // We've reached the end of the instructions section
+      isCollectingInstructions = false;
+
+      // Set the collected instructions to the prompt_template
+      if (config.configurable) {
+        config.configurable.prompt_template = instructionsContent.trim();
+      }
+
+      // Continue with regular processing for the current line
+    }
+
+    // If we're collecting instructions, add this line to the instructions content
+    if (isCollectingInstructions) {
+      instructionsContent += line + "\n";
+      continue;
+    }
+
+    // Regular processing for non-instruction sections
     const [key, ...valueParts] = line.split(":");
     const value = valueParts.join(":").trim();
+
+    if (!key || !value) continue;
 
     switch (key.trim().toUpperCase()) {
       case "NAME":
@@ -143,11 +216,6 @@ export async function generateAgentConfiguration(
       case "DESCRIPTION":
         if (config.metadata) {
           config.metadata.description = value;
-        }
-        break;
-      case "INSTRUCTIONS":
-        if (config.configurable) {
-          config.configurable.prompt_template = value;
         }
         break;
       case "TOOLS":
@@ -197,7 +265,7 @@ export async function generateAgentConfiguration(
         }
         break;
     }
-  });
+  }
 
   // After the name is set in the forEach loop, generate the avatar
   if (config.name && config.configurable) {

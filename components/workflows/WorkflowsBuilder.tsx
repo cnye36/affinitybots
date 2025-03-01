@@ -77,6 +77,11 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
     string | null
   >(null);
   const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
+  const [pendingTask, setPendingTask] = useState<{
+    name: string;
+    description: string;
+    task_type: TaskType;
+  } | null>(null);
 
   const createdWorkflowRef = useRef(false);
 
@@ -119,7 +124,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
       setNodes((nds) => [...nds, newNode]);
 
       toast({
-        title: "Entrypoint added",
+        title: "Trigger added",
         description: "Click the plus button to add your first task",
         variant: "default",
       });
@@ -534,16 +539,133 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
   };
 
   const handleAgentSelect = async (assistant: Assistant) => {
-    if (!workflowId || !selectedTaskForAgent) {
+    if (!workflowId) {
       toast({
         title: "Cannot assign agent",
-        description: "Both workflow and task must be selected",
+        description: "Workflow must be selected",
         variant: "destructive",
       });
       return;
     }
 
     try {
+      // Case 1: Creating a new AI task with an assistant
+      if (selectedTaskForAgent === "pending" && pendingTask) {
+        // Create the task with the selected assistant
+        const taskPayload = {
+          workflow_id: workflowId,
+          name: pendingTask.name,
+          description: pendingTask.description,
+          task_type: pendingTask.task_type,
+          assistant_id: assistant.assistant_id,
+        };
+
+        const response = await fetch(`/api/workflows/${workflowId}/tasks`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(taskPayload),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Failed to create task");
+        }
+
+        const newTask = await response.json();
+
+        const newNode: WorkflowNode = {
+          id: `task-${newTask.workflow_task_id}`,
+          type: "task" as const,
+          position: { x: 300, y: 100 },
+          data: {
+            workflow_task_id: newTask.workflow_task_id,
+            name: newTask.name,
+            description: newTask.description || "",
+            task_type: newTask.task_type,
+            workflow_id: workflowId,
+            assistant_id: assistant.assistant_id,
+            assignedAgent: {
+              id: assistant.assistant_id,
+              name: assistant.name,
+              avatar: assistant.config?.configurable.avatar,
+            },
+            config: {
+              input: {
+                source: "previous_node",
+                parameters: {},
+                prompt: "",
+              },
+              output: {
+                destination: "next_node",
+              },
+            },
+            status: "idle",
+            onAssignAgent: handleAssignAgent,
+            onConfigureTask: handleConfigureTask,
+            isConfigOpen: false,
+            onConfigClose: () => {
+              setSelectedTaskId(null);
+              setNodes((prevNodes) =>
+                prevNodes.map((n) =>
+                  n.type === "task" &&
+                  n.data.workflow_task_id === newTask.workflow_task_id
+                    ? { ...n, data: { ...n.data, isConfigOpen: false } }
+                    : n
+                )
+              );
+            },
+          },
+        };
+
+        // Position the new node relative to the active node
+        if (activeNodeId) {
+          const sourceNode = nodes.find((n) => n.id === activeNodeId);
+          if (sourceNode) {
+            newNode.position = {
+              x: sourceNode.position.x + 300,
+              y: sourceNode.position.y,
+            };
+
+            // Create an edge from the source node to the new node
+            const newEdge = {
+              id: `edge-${sourceNode.id}-${newNode.id}`,
+              source: sourceNode.id,
+              target: newNode.id,
+              type: "custom",
+            };
+            setEdges((eds) => [...eds, newEdge]);
+          }
+        }
+
+        setNodes((nds) => [...nds, newNode]);
+        setIsTaskSidebarOpen(false);
+        setSelectedTaskId(newTask.workflow_task_id);
+        setActiveNodeId(newNode.id);
+
+        // Clean up
+        setPendingTask(null);
+        setIsAgentSelectOpen(false);
+        setSelectedTaskForAgent(null);
+
+        toast({
+          title: "AI task created with assigned agent",
+          variant: "default",
+        });
+        return;
+      }
+
+      // Case 2: Updating an existing task with an assistant
+      if (!selectedTaskForAgent || selectedTaskForAgent === "pending") {
+        toast({
+          title: "Cannot assign agent",
+          description: "Task must be selected",
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Update the task with the selected agent
       const { error: updateError } = await supabase
         .from("workflow_tasks")
@@ -602,6 +724,23 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
         title: "Cannot create task without workflow",
         variant: "destructive",
       });
+      return;
+    }
+
+    // For AI tasks, we need to select an assistant first
+    if (taskOption.type === "ai_task") {
+      // Store the task details temporarily
+      setSelectedTaskForAgent("pending");
+      // Store these details in a ref or state to use later
+      const pendingTaskDetails = {
+        name: taskOption.label,
+        description: taskOption.description,
+        task_type: taskOption.type,
+      };
+      // Store in component state for later use
+      setPendingTask(pendingTaskDetails);
+      // Open the agent selection modal
+      setIsAgentSelectOpen(true);
       return;
     }
 

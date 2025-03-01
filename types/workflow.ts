@@ -10,6 +10,11 @@ export interface TaskNodeData {
   task_type: TaskType;
   workflow_id: string;
   assistant_id: string;
+  assignedAgent?: {
+    id: string;
+    name: string;
+    avatar?: string;
+  };
   config: {
     input: {
       source: string;
