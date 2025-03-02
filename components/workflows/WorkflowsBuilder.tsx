@@ -764,7 +764,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
     }
   };
 
-  // Modify handleTaskSelect to use TaskOption type
+  // Handle task selection
   const handleTaskSelect = async (taskOption: {
     type: TaskType;
     label: string;

@@ -1,25 +1,5 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
-import { TaskType } from "@/types/workflow";
-
-const VALID_TASK_TYPES: TaskType[] = [
-  "ai_task",
-  // Integration tasks
-  // "notion_create_page",
-  // "notion_update_page",
-  // "notion_add_to_database",
-  // "notion_search",
-  // "twitter_post_tweet",
-  // "twitter_thread",
-  // "twitter_dm",
-  // "twitter_like",
-  // "twitter_retweet",
-  // "google_calendar_create",
-  // "google_calendar_update",
-  // "google_docs_create",
-  // "google_sheets_update",
-  // "google_drive_upload",
-];
 
 // GET - List tasks for a workflow
 export async function GET(
@@ -102,19 +82,6 @@ export async function POST(
 
     const taskData = await request.json();
     console.log("Received task data:", taskData);
-
-    // Validate task type
-    if (!VALID_TASK_TYPES.includes(taskData.task_type)) {
-      return NextResponse.json({ error: "Invalid task type" }, { status: 400 });
-    }
-
-    // For AI tasks, ensure we have assistant info
-    if (taskData.task_type === "ai_task" && !taskData.assistant_id) {
-      return NextResponse.json(
-        { error: "AI tasks require an assistant" },
-        { status: 400 }
-      );
-    }
 
     // Get the next position number
     const { data: lastTask } = await supabase
