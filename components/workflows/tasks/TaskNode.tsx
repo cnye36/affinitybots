@@ -18,6 +18,7 @@ import { Assistant } from "@/types/langgraph";
 interface TaskNodeProps {
   data: TaskNodeData & {
     onAssignAgent?: (taskId: string) => void;
+    onConfigureTask?: (taskId: string) => void;
     assignedAgent?: {
       id: string;
       name: string;
@@ -25,6 +26,8 @@ interface TaskNodeProps {
     };
     isActive?: boolean;
     onAddTask?: () => void;
+    isConfigOpen?: boolean;
+    onConfigClose?: () => void;
   };
 }
 
@@ -138,6 +141,12 @@ export const MemoizedTaskNode = memo(
       }
     };
 
+    const handleCardDoubleClick = () => {
+      if (props.data.onConfigureTask && props.data.workflow_task_id) {
+        props.data.onConfigureTask(props.data.workflow_task_id);
+      }
+    };
+
     return (
       <>
         <Card
@@ -146,6 +155,7 @@ export const MemoizedTaskNode = memo(
               ? "border-2 border-primary"
               : "border border-border"
           }`}
+          onDoubleClick={handleCardDoubleClick}
         >
           <CardHeader className="p-3">
             <div className="flex items-center justify-between">

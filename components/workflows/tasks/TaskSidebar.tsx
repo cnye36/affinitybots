@@ -28,50 +28,50 @@ const AI_TASKS: TaskOption[] = [
 
 const NOTION_TASKS: TaskOption[] = [
   {
-    type: "integration",
+    type: "notion_create_page",
     label: "Create Page",
     description: "Create a new Notion page",
   },
   {
-    type: "integration",
+    type: "notion_update_page",
     label: "Update Page",
     description: "Update an existing Notion page",
   },
   {
-    type: "integration",
+    type: "notion_add_to_database",
     label: "Add to Database",
     description: "Add an entry to a Notion database",
   },
   {
-    type: "integration",
-    label: "Search",
+    type: "notion_search",
+    label: "Search Database",
     description: "Search through Notion content",
   },
 ];
 
 const TWITTER_TASKS: TaskOption[] = [
   {
-    type: "integration",
+    type: "twitter_post_tweet",
     label: "Post Tweet",
     description: "Post a new tweet",
   },
   {
-    type: "integration",
+    type: "twitter_create_thread",
     label: "Create Thread",
     description: "Create a Twitter thread",
   },
   {
-    type: "integration",
+    type: "twitter_dm",
     label: "Send DM",
     description: "Send a direct message",
   },
   {
-    type: "integration",
+    type: "twitter_like_tweet",
     label: "Like Tweet",
     description: "Like a specific tweet",
   },
   {
-    type: "integration",
+    type: "twitter_retweet",
     label: "Retweet",
     description: "Retweet a specific tweet",
   },
@@ -79,27 +79,27 @@ const TWITTER_TASKS: TaskOption[] = [
 
 const GOOGLE_TASKS: TaskOption[] = [
   {
-    type: "integration",
+    type: "google_calendar_create_event",
     label: "Create Calendar Event",
     description: "Create a new Google Calendar event",
   },
   {
-    type: "integration",
+    type: "google_calendar_update_event",
     label: "Update Calendar Event",
     description: "Update an existing calendar event",
   },
   {
-    type: "integration",
+    type: "google_docs_create",
     label: "Create Doc",
     description: "Create a new Google Doc",
   },
   {
-    type: "integration",
+    type: "google_sheets_update",
     label: "Update Sheet",
     description: "Update a Google Sheet",
   },
   {
-    type: "integration",
+    type: "google_drive_upload",
     label: "Upload to Drive",
     description: "Upload a file to Google Drive",
   },

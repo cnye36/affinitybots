@@ -20,6 +20,7 @@ import { executeWorkflow } from "./WorkflowExecutionManager";
 import { toast } from "@/hooks/use-toast";
 import { TaskSidebar } from "./tasks/TaskSidebar";
 
+
 interface WorkflowsBuilderProps {
   initialWorkflowId?: string;
 }
@@ -82,6 +83,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
     description: string;
     task_type: TaskType;
   } | null>(null);
+  const [isAgentSelectionLoading, setIsAgentSelectionLoading] = useState(false);
 
   const createdWorkflowRef = useRef(false);
 
@@ -558,6 +560,8 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
       return;
     }
 
+    setIsAgentSelectionLoading(true);
+
     try {
       // Case 1: Creating a new task with an assigned agent
       if (selectedTaskForAgent === "pending" && pendingTask) {
@@ -635,7 +639,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
           const sourceNode = nodes.find((n) => n.id === activeNodeId);
           if (sourceNode) {
             newNode.position = {
-              x: sourceNode.position.x + 300,
+              x: sourceNode.position.x + 400,
               y: sourceNode.position.y,
             };
 
@@ -684,6 +688,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
           title: "Task created with assigned agent",
           variant: "default",
         });
+        setIsAgentSelectionLoading(false);
         return;
       }
 
@@ -694,6 +699,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
           description: "Task must be selected",
           variant: "destructive",
         });
+        setIsAgentSelectionLoading(false);
         return;
       }
 
@@ -752,15 +758,19 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
       setSelectedTaskForAgent(null);
 
       toast({
-        title: "Agent assigned successfully",
+        title: "Agent assigned to task",
+        description: `${assistant.name} has been assigned to this task`,
         variant: "default",
       });
-    } catch (err) {
-      console.error("Error assigning agent:", err);
+    } catch (error) {
+      console.error("Error assigning agent:", error);
       toast({
         title: "Failed to assign agent",
+        description: error instanceof Error ? error.message : "Unknown error",
         variant: "destructive",
       });
+    } finally {
+      setIsAgentSelectionLoading(false);
     }
   };
 
@@ -848,7 +858,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
         }}
         onSelect={handleAgentSelect}
         assistants={assistants}
-        loading={loadingAssistants}
+        loading={loadingAssistants || isAgentSelectionLoading}
       />
     </div>
   );

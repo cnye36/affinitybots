@@ -64,7 +64,6 @@ export function WorkflowCanvas({
     async (nodesToDelete: Parameters<OnNodesDelete>[0]) => {
       const deletedIds = new Set(nodesToDelete.map((n) => n.id));
 
-      // More efficient edge filtering
       const edgesToRemove = edges.filter(
         (edge) => deletedIds.has(edge.source) || deletedIds.has(edge.target)
       );
@@ -196,11 +195,11 @@ export function WorkflowCanvas({
         onConnect={onConnect}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
-        defaultViewport={{ x: 0, y: 0, zoom: 1.5 }}
+        defaultViewport={{ x: 0, y: 0, zoom: 1.0 }}
         defaultEdgeOptions={{
           type: "custom",
           animated: true,
-          style: { strokeWidth: 2 },
+          style: { strokeWidth: 1 },
           markerEnd: {
             type: MarkerType.ArrowClosed,
             width: 20,
