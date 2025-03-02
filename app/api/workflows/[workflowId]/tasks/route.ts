@@ -108,10 +108,10 @@ export async function POST(
       return NextResponse.json({ error: "Invalid task type" }, { status: 400 });
     }
 
-    // For AI tasks, ensure assistant_id is provided
+    // For AI tasks, ensure we have assistant info
     if (taskData.task_type === "ai_task" && !taskData.assistant_id) {
       return NextResponse.json(
-        { error: "AI tasks require an assistant_id" },
+        { error: "AI tasks require an assistant" },
         { status: 400 }
       );
     }
@@ -127,30 +127,41 @@ export async function POST(
 
     const position = lastTask ? lastTask.position + 1 : 0;
 
+    // Prepare task data with proper assigned_agent structure
+    const insertData = {
+      workflow_id: workflowId,
+      position,
+      name: taskData.name,
+      description: taskData.description,
+      task_type: taskData.task_type,
+      assistant_id: taskData.assistant_id, // Keep for backward compatibility
+      config: {
+        input: {
+          source: taskData.config?.input?.source || "previous_task",
+          parameters: taskData.config?.input?.parameters || {},
+          prompt: taskData.config?.input?.prompt || "",
+        },
+        output: {
+          destination: taskData.config?.output?.destination || "next_task",
+        },
+        // Store assigned agent information in the config so we can use it in the frontend
+        assigned_agent: {
+          id: taskData.assistant_id,
+          name: taskData.assistant_name || "Assistant",
+          avatar: taskData.assistant_avatar,
+        },
+        ...taskData.config,
+      },
+      status: "pending",
+      metadata: taskData.metadata || {},
+    };
+
+    console.log("Inserting task with data:", insertData);
+
     // Create the workflow task
     const { data: task, error } = await supabase
       .from("workflow_tasks")
-      .insert({
-        workflow_id: workflowId,
-        position,
-        name: taskData.name,
-        description: taskData.description,
-        task_type: taskData.task_type,
-        assistant_id: taskData.assistant_id,
-        config: {
-          input: {
-            source: taskData.config?.input?.source || "previous_task",
-            parameters: taskData.config?.input?.parameters || {},
-            prompt: taskData.config?.input?.prompt || "",
-          },
-          output: {
-            destination: taskData.config?.output?.destination || "next_task",
-          },
-          ...taskData.config,
-        },
-        status: "pending",
-        metadata: taskData.metadata || {},
-      })
+      .insert(insertData)
       .select()
       .single();
 

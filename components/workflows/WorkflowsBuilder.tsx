@@ -117,7 +117,6 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
         data: {
           ...newTrigger,
           workflow_id: workflowId,
-          task_position: 0,
           hasConnectedTask: false,
           onOpenTaskSidebar: () => setIsTaskSidebarOpen(true),
         } as TriggerNodeData,
@@ -328,7 +327,6 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
               data: {
                 ...trigger,
                 workflow_id: workflow.workflow_id,
-                task_position: 0,
                 // Check if this trigger has any connected tasks based on edges
                 hasConnectedTask:
                   Array.isArray(workflow.edges) &&
@@ -340,7 +338,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
               } as TriggerNodeData,
             })),
             ...((workflow.nodes || []) as StoredWorkflowNode[]).map(
-              (node: StoredWorkflowNode, index: number) => ({
+              (node: StoredWorkflowNode) => ({
                 ...node,
                 type: "task" as const,
                 data: {
@@ -349,12 +347,10 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
                   name: node.data.name,
                   description: node.data.description,
                   task_type: node.data.task_type,
-                  assistant_id: "",
                   config: node.data.config,
                   onAssignAgent: handleAssignAgent,
                   onConfigureTask: handleConfigureTask,
                   isConfigOpen: false,
-                  task_position: index + 1,
                   owner_id: "",
                   status: "idle",
                 } as unknown as TaskNodeData,
@@ -572,6 +568,8 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
           description: pendingTask.description,
           task_type: pendingTask.task_type,
           assistant_id: assistant.assistant_id,
+          assistant_name: assistant.name,
+          assistant_avatar: assistant.config?.configurable?.avatar,
         };
 
         const response = await fetch(`/api/workflows/${workflowId}/tasks`, {
@@ -599,8 +597,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
             description: newTask.description || "",
             task_type: newTask.task_type,
             workflow_id: workflowId,
-            assistant_id: assistant.assistant_id,
-            assignedAgent: {
+            assignedAgent: newTask.config?.assigned_agent || {
               id: assistant.assistant_id,
               name: assistant.name,
               avatar: assistant.config?.configurable.avatar,
@@ -630,16 +627,6 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
                 )
               );
             },
-            task_position: activeNodeId
-              ? nodes.find((n) => n.id === activeNodeId)?.type === "trigger"
-                ? 1
-                : ((
-                    nodes.find((n) => n.id === activeNodeId)?.data as
-                      | TaskNodeData
-                      | TriggerNodeData
-                  ).task_position || 0) + 1
-              : 1,
-            owner_id: "",
           } as unknown as TaskNodeData,
         };
 
@@ -710,10 +697,30 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
         return;
       }
 
-      // Update the task with the selected agent
+      // Update the task with the selected agent in the database
       const { error: updateError } = await supabase
         .from("workflow_tasks")
-        .update({ assistant_id: assistant.assistant_id })
+        .update({
+          // Store agent ID in assistant_id field for database queries
+          assistant_id: assistant.assistant_id,
+          // Store full agent details in config for UI
+          config: {
+            ...(await supabase
+              .from("workflow_tasks")
+              .select("config")
+              .eq("workflow_task_id", selectedTaskForAgent)
+              .single()
+              .then(
+                (result: { data: { config: Record<string, unknown> } }) =>
+                  result.data?.config || {}
+              )),
+            assigned_agent: {
+              id: assistant.assistant_id,
+              name: assistant.name,
+              avatar: assistant.config?.configurable?.avatar,
+            },
+          },
+        })
         .eq("workflow_task_id", selectedTaskForAgent);
 
       if (updateError) throw updateError;

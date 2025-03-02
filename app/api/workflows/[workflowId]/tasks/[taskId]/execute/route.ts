@@ -37,6 +37,7 @@ export async function POST(
     }
     console.log("Task retrieved:", task);
     console.log("Task assistant_id:", task.assistant_id);
+    console.log("Task config.assigned_agent:", task.config?.assigned_agent);
     console.log("Task type:", task.task_type);
 
     const { input } = await request.json();
@@ -44,7 +45,10 @@ export async function POST(
 
     if (task.task_type === "ai_task") {
       try {
-        if (!task.assistant_id) {
+        // Check for assistant_id first, then fallback to config.assigned_agent if needed
+        const assistantId =
+          task.assistant_id || task.config?.assigned_agent?.id;
+        if (!assistantId) {
           return NextResponse.json(
             { error: "Task has no associated assistant" },
             { status: 400 }
@@ -60,7 +64,7 @@ export async function POST(
               // 1. Directly create and stream the execution
               const runStream = await client.runs.stream(
                 null, // Stateless runs use null thread ID
-                task.assistant_id,
+                assistantId,
                 {
                   input: {
                     messages: [

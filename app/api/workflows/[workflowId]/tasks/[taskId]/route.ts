@@ -97,7 +97,7 @@ export async function PUT(
     const taskData: Partial<Task> = await request.json();
 
     // Validate task type if it's being updated
-    if (taskData.type && !VALID_TASK_TYPES.includes(taskData.type)) {
+    if (taskData.task_type && !VALID_TASK_TYPES.includes(taskData.task_type)) {
       return NextResponse.json({ error: "Invalid task type" }, { status: 400 });
     }
 
@@ -107,10 +107,22 @@ export async function PUT(
       .update({
         name: taskData.name,
         description: taskData.description,
-        task_type: taskData.type,
-        config: taskData.config,
+        task_type: taskData.task_type,
+        config: taskData.config
+          ? {
+              ...taskData.config,
+              // Store assigned agent information in the config
+              assigned_agent: taskData.assignedAgent
+                ? {
+                    id: taskData.assignedAgent.id,
+                    name: taskData.assignedAgent.name || "Assistant",
+                    avatar: taskData.assignedAgent.avatar,
+                  }
+                : null,
+            }
+          : null,
         integration: taskData.integration,
-        assistant_id: taskData.assistant_id,
+        assistant_id: taskData.assignedAgent?.id,
         updated_at: new Date().toISOString(),
       })
       .eq("workflow_task_id", taskId)

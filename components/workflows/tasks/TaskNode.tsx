@@ -63,9 +63,6 @@ export const MemoizedTaskNode = memo(
             name: updatedTask.name,
             description: updatedTask.description,
             type: updatedTask.task_type,
-            assistant_id:
-              updatedAssistant?.assistant_id || props.data.assistant_id,
-            config: updatedTask.config,
             assignedAgent: updatedAssistant
               ? {
                   id: updatedAssistant.assistant_id,
@@ -73,6 +70,7 @@ export const MemoizedTaskNode = memo(
                   avatar: updatedAssistant.config?.configurable?.avatar,
                 }
               : props.data.assignedAgent,
+            config: updatedTask.config,
           },
         },
       });
@@ -297,6 +295,7 @@ export const MemoizedTaskNode = memo(
             description: props.data.description || "",
             task_type: props.data.task_type,
             assignedAgent: props.data.assignedAgent,
+            status: props.data.status,
             config: {
               input: {
                 source: "previous_node",
@@ -307,8 +306,7 @@ export const MemoizedTaskNode = memo(
                 destination: "next_node",
               },
             },
-            task_position: props.data.task_position,
-            status: props.data.status,
+            position: props.data.position,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
             last_run_at: new Date().toISOString(),

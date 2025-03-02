@@ -1,6 +1,22 @@
 import { IntegrationType } from "./tools";
 
-export type TaskType = "ai_task" | "integration";
+export type TaskType =
+  | "ai_task"
+  | "integration"
+  | "notion_create_page"
+  | "notion_update_page"
+  | "notion_add_to_database"
+  | "notion_search"
+  | "twitter_post_tweet"
+  | "twitter_thread"
+  | "twitter_dm"
+  | "twitter_like"
+  | "twitter_retweet"
+  | "google_calendar_create"
+  | "google_calendar_update"
+  | "google_docs_create"
+  | "google_sheets_update"
+  | "google_drive_upload";
 export type TriggerType = "manual" | "webhook" | "form" | "integration";
 
 export interface TaskNodeData {
@@ -9,7 +25,6 @@ export interface TaskNodeData {
   description?: string;
   task_type: TaskType;
   workflow_id: string;
-  assistant_id: string;
   assignedAgent?: {
     id: string;
     name: string;
@@ -26,7 +41,7 @@ export interface TaskNodeData {
     };
   };
   owner_id: string;
-  task_position: number;
+  position?: number;
   status: TaskStatus;
   onAssignAgent: (taskId: string) => void;
   onConfigureTask: (taskId: string) => void;
@@ -41,8 +56,8 @@ export interface TriggerNodeData {
   trigger_id: string;
   workflow_id: string;
   config: Record<string, unknown>;
-  task_position: number;
-  status?: "idle" | "running" | "completed" | "error";
+  position: { x: number; y: number };
+  status: "idle" | "running" | "completed" | "error";
   onConfigureTrigger?: (triggerId: string) => void;
   onOpenTaskSidebar?: () => void;
   hasConnectedTask?: boolean;
@@ -94,6 +109,7 @@ export interface Task {
   name: string;
   description?: string;
   task_type?: TaskType;
+  position?: number;
   assignedAgent?: {
     id: string;
     name: string;
@@ -101,7 +117,6 @@ export interface Task {
   };
   integration?: IntegrationConfig;
   config: TaskConfig;
-  task_position: number;
   status: TaskStatus;
   created_at: string;
   updated_at: string;
