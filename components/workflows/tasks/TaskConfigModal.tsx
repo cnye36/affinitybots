@@ -9,7 +9,7 @@ import { TaskConfigurationPanel } from "./TaskConfigurationPanel";
 import { TestOutputPanel } from "./TestOutputPanel";
 import { Button } from "@/components/ui/button";
 import { UserPlus } from "lucide-react";
-import { AgentSelectModal } from "./AgentSelectModal";
+import { AgentSelectModal } from "../AgentSelectModal";
 
 interface TaskOutput {
   result: unknown;
@@ -90,12 +90,12 @@ export function TaskConfigModal({
     let isMounted = true;
 
     const loadAssistant = async () => {
-      if (!currentTask.assistant_id) return;
+      if (!currentTask.assignedAgent?.id) return;
 
       try {
         setLoadingAssistants(true);
         const response = await fetch(
-          `/api/assistants/${currentTask.assistant_id}`
+          `/api/assistants/${currentTask.assignedAgent?.id}`
         );
         if (!response.ok) throw new Error("Failed to load assistant");
         const data = await response.json();
@@ -122,7 +122,7 @@ export function TaskConfigModal({
     return () => {
       isMounted = false;
     };
-  }, [isOpen, currentTask.assistant_id]);
+  }, [isOpen, currentTask.assignedAgent?.id]);
 
   useEffect(() => {
     if (currentTask && assistant) {
@@ -132,7 +132,7 @@ export function TaskConfigModal({
 
   const handleTest = async () => {
     try {
-      if (!currentTask.assistant_id) {
+      if (!currentTask.assignedAgent?.id) {
         throw new Error("Please assign an agent before testing");
       }
 

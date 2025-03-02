@@ -160,7 +160,9 @@ export const MemoizedTaskNode = memo(
                     <TooltipTrigger asChild>
                       <div
                         className={`w-3 h-3 rounded-full ${
-                          statusColors[props.data.status || "idle"]
+                          statusColors[
+                            props.data.status as keyof typeof statusColors
+                          ]
                         }`}
                       />
                     </TooltipTrigger>
@@ -293,8 +295,8 @@ export const MemoizedTaskNode = memo(
             workflow_id: props.data.workflow_id,
             name: props.data.name,
             description: props.data.description || "",
-            type: props.data.task_type,
-            assistant_id: props.data.assistant_id,
+            task_type: props.data.task_type,
+            assignedAgent: props.data.assignedAgent,
             config: {
               input: {
                 source: "previous_node",
@@ -305,6 +307,13 @@ export const MemoizedTaskNode = memo(
                 destination: "next_node",
               },
             },
+            task_position: props.data.task_position,
+            status: props.data.status,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            last_run_at: new Date().toISOString(),
+            owner_id: props.data.owner_id,
+            metadata: {},
           }}
           onTest={handleTestTask}
           onUpdate={handleTaskUpdate}

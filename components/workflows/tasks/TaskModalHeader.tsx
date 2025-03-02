@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Task } from "@/types/workflow";
 import { Assistant } from "@/types/langgraph";
 import { Badge } from "@/components/ui/badge";
-import { AgentConfigModal } from "../configuration/AgentConfigModal";
+import { AgentConfigModal } from "../../configuration/AgentConfigModal";
 import {
   Tooltip,
   TooltipContent,

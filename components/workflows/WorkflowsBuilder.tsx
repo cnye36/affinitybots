@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Edge, ReactFlowProvider } from "reactflow";
@@ -18,7 +18,7 @@ import { WorkflowCanvas } from "./WorkflowCanvas";
 import { WorkflowHeader } from "./WorkflowHeader";
 import { executeWorkflow } from "./WorkflowExecutionManager";
 import { toast } from "@/hooks/use-toast";
-import { TaskSidebar } from "./TaskSidebar";
+import { TaskSidebar } from "./tasks/TaskSidebar";
 
 interface WorkflowsBuilderProps {
   initialWorkflowId?: string;
@@ -117,6 +117,8 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
         data: {
           ...newTrigger,
           workflow_id: workflowId,
+          task_position: 0,
+          hasConnectedTask: false,
           onOpenTaskSidebar: () => setIsTaskSidebarOpen(true),
         } as TriggerNodeData,
       };
@@ -326,10 +328,19 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
               data: {
                 ...trigger,
                 workflow_id: workflow.workflow_id,
+                task_position: 0,
+                // Check if this trigger has any connected tasks based on edges
+                hasConnectedTask:
+                  Array.isArray(workflow.edges) &&
+                  workflow.edges.some(
+                    (edge: Edge) =>
+                      edge.source === `trigger-${trigger.trigger_id}`
+                  ),
+                onOpenTaskSidebar: () => setIsTaskSidebarOpen(true),
               } as TriggerNodeData,
             })),
             ...((workflow.nodes || []) as StoredWorkflowNode[]).map(
-              (node: StoredWorkflowNode) => ({
+              (node: StoredWorkflowNode, index: number) => ({
                 ...node,
                 type: "task" as const,
                 data: {
@@ -338,12 +349,15 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
                   name: node.data.name,
                   description: node.data.description,
                   task_type: node.data.task_type,
-                  assistant_id: "", // Empty string until assigned
+                  assistant_id: "",
                   config: node.data.config,
                   onAssignAgent: handleAssignAgent,
                   onConfigureTask: handleConfigureTask,
                   isConfigOpen: false,
-                } as TaskNodeData,
+                  task_position: index + 1,
+                  owner_id: "",
+                  status: "idle",
+                } as unknown as TaskNodeData,
               })
             ),
           ];
@@ -414,13 +428,13 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
 
   // Set trigger as active when workflow is loaded
   useEffect(() => {
-    if (nodes.length > 0) {
+    if (nodes.length > 0 && !activeNodeId) {
       const triggerNode = nodes.find((n) => n.type === "trigger");
       if (triggerNode) {
         setActiveNodeId(triggerNode.id);
       }
     }
-  }, [nodes]);
+  }, [nodes, activeNodeId]);
 
   // Handle adding task from an existing task
   const handleAddTaskFromNode = useCallback(
@@ -549,7 +563,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
     }
 
     try {
-      // Case 1: Creating a new AI task with an assistant
+      // Case 1: Creating a new task with an assigned agent
       if (selectedTaskForAgent === "pending" && pendingTask) {
         // Create the task with the selected assistant
         const taskPayload = {
@@ -616,7 +630,17 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
                 )
               );
             },
-          },
+            task_position: activeNodeId
+              ? nodes.find((n) => n.id === activeNodeId)?.type === "trigger"
+                ? 1
+                : ((
+                    nodes.find((n) => n.id === activeNodeId)?.data as
+                      | TaskNodeData
+                      | TriggerNodeData
+                  ).task_position || 0) + 1
+              : 1,
+            owner_id: "",
+          } as unknown as TaskNodeData,
         };
 
         // Position the new node relative to the active node
@@ -644,13 +668,33 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
         setSelectedTaskId(newTask.workflow_task_id);
         setActiveNodeId(newNode.id);
 
+        // Update the trigger node to indicate it has a connected task
+        if (
+          activeNodeId &&
+          nodes.find((n) => n.id === activeNodeId)?.type === "trigger"
+        ) {
+          setNodes((currentNodes) =>
+            currentNodes.map((node) =>
+              node.id === activeNodeId && node.type === "trigger"
+                ? {
+                    ...node,
+                    data: {
+                      ...node.data,
+                      hasConnectedTask: true,
+                    },
+                  }
+                : node
+            )
+          );
+        }
+
         // Clean up
         setPendingTask(null);
         setIsAgentSelectOpen(false);
         setSelectedTaskForAgent(null);
 
         toast({
-          title: "AI task created with assigned agent",
+          title: "Task created with assigned agent",
           variant: "default",
         });
         return;
@@ -727,121 +771,18 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
       return;
     }
 
-    // For AI tasks, we need to select an assistant first
-    if (taskOption.type === "ai_task") {
-      // Store the task details temporarily
-      setSelectedTaskForAgent("pending");
-      // Store these details in a ref or state to use later
-      const pendingTaskDetails = {
-        name: taskOption.label,
-        description: taskOption.description,
-        task_type: taskOption.type,
-      };
-      // Store in component state for later use
-      setPendingTask(pendingTaskDetails);
-      // Open the agent selection modal
-      setIsAgentSelectOpen(true);
-      return;
-    }
-
-    try {
-      const taskPayload = {
-        workflow_id: workflowId,
-        name: taskOption.label,
-        description: taskOption.description,
-        task_type: taskOption.type,
-      };
-
-      const response = await fetch(`/api/workflows/${workflowId}/tasks`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(taskPayload),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to create task");
-      }
-
-      const newTask = await response.json();
-
-      const newNode: WorkflowNode = {
-        id: `task-${newTask.workflow_task_id}`,
-        type: "task" as const,
-        position: { x: 300, y: 100 },
-        data: {
-          workflow_task_id: newTask.workflow_task_id,
-          name: newTask.name,
-          description: newTask.description || "",
-          task_type: newTask.task_type,
-          workflow_id: workflowId,
-          assistant_id: "", // Empty string until assigned
-          config: {
-            input: {
-              source: "previous_node",
-              parameters: {},
-              prompt: "",
-            },
-            output: {
-              destination: "next_node",
-            },
-          },
-          status: "idle",
-          onAssignAgent: handleAssignAgent,
-          onConfigureTask: handleConfigureTask,
-          isConfigOpen: false,
-          onConfigClose: () => {
-            setSelectedTaskId(null);
-            setNodes((prevNodes) =>
-              prevNodes.map((n) =>
-                n.type === "task" &&
-                n.data.workflow_task_id === newTask.workflow_task_id
-                  ? { ...n, data: { ...n.data, isConfigOpen: false } }
-                  : n
-              )
-            );
-          },
-        },
-      };
-
-      // Position the new node relative to the active node
-      if (activeNodeId) {
-        const sourceNode = nodes.find((n) => n.id === activeNodeId);
-        if (sourceNode) {
-          newNode.position = {
-            x: sourceNode.position.x + 300,
-            y: sourceNode.position.y,
-          };
-
-          // Create an edge from the source node to the new node
-          const newEdge = {
-            id: `edge-${sourceNode.id}-${newNode.id}`,
-            source: sourceNode.id,
-            target: newNode.id,
-            type: "custom",
-          };
-          setEdges((eds) => [...eds, newEdge]);
-        }
-      }
-
-      setNodes((nds) => [...nds, newNode]);
-      setIsTaskSidebarOpen(false);
-      setSelectedTaskId(newTask.workflow_task_id);
-      setActiveNodeId(newNode.id);
-
-      toast({
-        title: "Task added successfully",
-        variant: "default",
-      });
-    } catch (err) {
-      console.error("Error creating task:", err);
-      toast({
-        title: "Failed to create task",
-        variant: "destructive",
-      });
-    }
+    // Store the task details temporarily for all task types
+    setSelectedTaskForAgent("pending");
+    // Store these details in state to use later
+    const pendingTaskDetails = {
+      name: taskOption.label,
+      description: taskOption.description,
+      task_type: taskOption.type,
+    };
+    // Store in component state for later use
+    setPendingTask(pendingTaskDetails);
+    // Open the agent selection modal
+    setIsAgentSelectOpen(true);
   };
 
   if (loading) {
@@ -913,4 +854,3 @@ export function WorkflowsBuilder(props: WorkflowsBuilderProps) {
     </ReactFlowProvider>
   );
 }
-

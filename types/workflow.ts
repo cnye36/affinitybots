@@ -19,16 +19,18 @@ export interface TaskNodeData {
     input: {
       source: string;
       parameters: Record<string, unknown>;
-      prompt?: string;
+      prompt: string;
     };
     output: {
       destination: string;
     };
   };
-  status?: "idle" | "running" | "completed" | "error";
-  onAssignAgent?: (taskId: string) => void;
-  onConfigureTask?: (taskId: string) => void;
-  isConfigOpen?: boolean;
+  owner_id: string;
+  task_position: number;
+  status: TaskStatus;
+  onAssignAgent: (taskId: string) => void;
+  onConfigureTask: (taskId: string) => void;
+  isConfigOpen: boolean;
   onConfigClose?: () => void;
 }
 
@@ -39,6 +41,7 @@ export interface TriggerNodeData {
   trigger_id: string;
   workflow_id: string;
   config: Record<string, unknown>;
+  task_position: number;
   status?: "idle" | "running" | "completed" | "error";
   onConfigureTrigger?: (triggerId: string) => void;
   onOpenTaskSidebar?: () => void;
@@ -54,9 +57,9 @@ export type WorkflowNode = {
 );
 
 export interface NodeHandlers {
-  onAssignAgent?: (taskId: string) => void;
-  onConfigureTask?: (taskId: string) => void;
-  onConfigureTrigger?: (triggerId: string) => void;
+  onAssignAgent: (taskId: string) => void;
+  onConfigureTask: (taskId: string) => void;
+  onConfigureTrigger: (triggerId: string) => void;
 }
 
 export type WorkflowStatus =
@@ -85,21 +88,25 @@ export interface TaskConfig {
 }
 
 export interface Task {
+  owner_id: string;
   workflow_task_id: string;
   workflow_id: string;
   name: string;
   description?: string;
-  type: TaskType;
   task_type?: TaskType;
-  assistant_id: string;
+  assignedAgent?: {
+    id: string;
+    name: string;
+    avatar?: string;
+  };
   integration?: IntegrationConfig;
   config: TaskConfig;
-  position?: number;
-  status?: TaskStatus;
-  created_at?: string;
-  updated_at?: string;
-  last_run_at?: string;
-  metadata?: Record<string, unknown>;
+  task_position: number;
+  status: TaskStatus;
+  created_at: string;
+  updated_at: string;
+  last_run_at: string;
+  metadata: Record<string, unknown>;
 }
 
 export interface Workflow {
@@ -118,19 +125,19 @@ export interface Workflow {
   status: WorkflowStatus;
   created_at: string;
   updated_at: string;
-  last_run_at?: string;
+  last_run_at: string;
   is_active: boolean;
 }
 
 export interface TaskRun {
   run_id: string;
   workflow_task_id: string;
-  task_id?: string;
+  task_id: string;
   status: TaskStatus;
   started_at: string;
-  completed_at?: string;
-  error?: string;
-  result?: unknown;
+  completed_at: string;
+  error: string;
+  result: unknown;
   metadata: Record<string, unknown>;
 }
 

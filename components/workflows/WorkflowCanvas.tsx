@@ -24,7 +24,7 @@ import "reactflow/dist/style.css";
 import { CustomEdge } from "./CustomEdge";
 import { toast } from "@/hooks/use-toast";
 import { WorkflowNode } from "@/types/workflow";
-import { MemoizedTaskNode } from "./TaskNode";
+import { MemoizedTaskNode } from "./tasks/TaskNode";
 import { TriggerNode } from "./TriggerNode";
 
 // Define node and edge types outside the component
@@ -165,13 +165,22 @@ export function WorkflowCanvas({
 
   // Update nodes with active state and onAddTask handler
   const nodesWithActiveState = useMemo(() => {
+    // Check if any task nodes exist in the workflow
+    const hasTaskNodes = nodes.some((node) => node.type === "task");
+
     return nodes.map((node) => ({
       ...node,
       data: {
         ...node.data,
         isActive: node.id === activeNodeId,
         onAddTask:
-          node.type === "task" ? () => onAddTask?.(node.id) : undefined,
+          // Only allow adding tasks from task nodes if task nodes exist
+          // Otherwise, allow adding from the trigger node
+          node.type === "task"
+            ? () => onAddTask?.(node.id)
+            : node.type === "trigger" && !hasTaskNodes
+            ? () => onAddTask?.(node.id)
+            : undefined,
       },
     }));
   }, [nodes, activeNodeId, onAddTask]);

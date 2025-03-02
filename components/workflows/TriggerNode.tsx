@@ -60,7 +60,7 @@ export const TriggerNode = memo(({ data }: { data: TriggerNodeData }) => {
               <div className="p-1 rounded-md bg-primary/10">
                 <Play className="h-4 w-4 text-primary" />
               </div>
-              <CardTitle className="text-sm font-medium">Entrypoint</CardTitle>
+              <CardTitle className="text-sm font-medium">Start Here</CardTitle>
             </div>
             <div className="flex items-center gap-2">
               <TooltipProvider>
