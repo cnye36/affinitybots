@@ -13,22 +13,20 @@ import {
   AIMessage,
 } from "@langchain/core/messages";
 import { ToolCall } from "@langchain/core/messages/tool";
-import { TavilySearchResults } from "@langchain/community/tools/tavily_search";
 import { RunnableConfig } from "@langchain/core/runnables";
 import { AgentConfigurableOptions } from "./config";
 import { AgentState } from "@/types/langgraph";
 import { retrieveRelevantDocuments } from "@/lib/retrieval";
 import { createClient } from "@/supabase/server";
-
-// Define a single tool for simplicity
-const tools = [
-  new TavilySearchResults({
-    apiKey: process.env.TAVILY_API_KEY,
-  }),
-];
+import { getTools } from "@/lib/langchain/tools";
 
 const DEFAULT_SYSTEM_PROMPT = `You are a helpful AI assistant that can use tools to find information.
 When you need to find current or factual information, use the search tool.
+For Wikipedia information, use the Wikipedia tool.
+For mathematical calculations or scientific queries, use the Wolfram Alpha tool.
+For Notion operations, use the Notion tool.
+For Twitter interactions, use the Twitter tool.
+For Google services, use the Google tool.
 Always think step by step and explain your reasoning.`;
 
 /**
@@ -76,13 +74,14 @@ async function retrieveKnowledge(
 }
 
 /**
- * Basic model calling function that accepts configuration
+ * Basic call model function that accepts configuration
  */
 async function callModel(
   state: AgentState,
   config: RunnableConfig
 ): Promise<{ messages: BaseMessage[] }> {
   const agentConfig = config.configurable as AgentConfigurableOptions;
+  const tools = getTools(agentConfig.tools);
 
   const systemPrompt = agentConfig.prompt_template || DEFAULT_SYSTEM_PROMPT;
 
@@ -127,7 +126,7 @@ function routeModelOutput(state: { messages: BaseMessage[] }) {
 const workflow = new StateGraph(MessagesAnnotation)
   .addNode("knowledge", retrieveKnowledge)
   .addNode("callModel", callModel)
-  .addNode("tools", new ToolNode(tools))
+  .addNode("tools", new ToolNode([]))
   .addEdge(START, "knowledge")
   .addEdge("knowledge", "callModel")
   .addConditionalEdges("callModel", routeModelOutput, ["tools", END])

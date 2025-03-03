@@ -11,7 +11,7 @@ import type { ToolID } from "@/lib/langchain/tools/config";
 
 const nameGeneratorPrompt = PromptTemplate.fromTemplate(`
 Given the following agent description and type, generate a creative and memorable name for the AI agent.
-The name should be professional yet engaging, and reflect the agent's primary function.
+The name should be professional yet engaging and futuristic sounding. The name should reflect the agent's primary function. 
 
 Agent Type: {agentType}
 Description: {description}
@@ -38,7 +38,7 @@ ${Object.values(AVAILABLE_TOOLS)
   .map((t) => `- ${t.name}: ${t.description}`)
   .join("\n")}
 
-Note: Web Search (Tavily) is always included by default.
+Note: Only include Search (Tavily) by default.
 
 Provide the following information in a clear format:
 

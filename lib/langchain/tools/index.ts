@@ -20,18 +20,18 @@ export function getTools(toolsConfig: ToolsConfig): Tool[] {
     tools.push(new TavilySearchResults(config));
   }
 
-  if (toolsConfig.wikipedia?.isEnabled) {
+  if (toolsConfig.wikipedia.isEnabled) {
     tools.push(new WikipediaQueryRun());
   }
 
-  if (toolsConfig.wolfram_alpha?.isEnabled) {
+  if (toolsConfig.wolfram_alpha.isEnabled) {
     const config = {
       appid: toolsConfig.wolfram_alpha.credentials.api_key,
     };
     tools.push(new WolframAlphaTool(config));
   }
 
-  if (toolsConfig.notion?.isEnabled) {
+  if (toolsConfig.notion.isEnabled) {
     tools.push(
       new NotionTool({
         enabled: true,
@@ -41,7 +41,7 @@ export function getTools(toolsConfig: ToolsConfig): Tool[] {
     );
   }
 
-  if (toolsConfig.google?.isEnabled) {
+  if (toolsConfig.google.isEnabled) {
     tools.push(
       new GoogleTool({
         enabled: true,
@@ -51,7 +51,7 @@ export function getTools(toolsConfig: ToolsConfig): Tool[] {
     );
   }
 
-  if (toolsConfig.twitter?.isEnabled) {
+  if (toolsConfig.twitter.isEnabled) {
     tools.push(
       new TwitterTool({
         enabled: true,

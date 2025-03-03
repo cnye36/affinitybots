@@ -10,12 +10,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Settings } from "lucide-react";
+import { Settings, Eye, EyeOff, AlertTriangle } from "lucide-react";
 import { ToolID, ToolsConfig } from "@/types/tools";
 import {
   AVAILABLE_TOOLS,
   getDefaultToolConfig,
 } from "@/lib/langchain/tools/config";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface ToolSelectorProps {
   tools: ToolsConfig;
@@ -24,6 +25,12 @@ interface ToolSelectorProps {
 
 export function ToolSelector({ tools, onToolsChange }: ToolSelectorProps) {
   const [openConfigs, setOpenConfigs] = useState<Record<string, boolean>>({});
+  const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>(
+    {}
+  );
+  const [validationErrors, setValidationErrors] = useState<
+    Record<string, string>
+  >({});
 
   const initializedTools = useMemo(
     () => ({
@@ -45,9 +52,60 @@ export function ToolSelector({ tools, onToolsChange }: ToolSelectorProps) {
     }));
   };
 
+  const togglePasswordVisibility = (toolId: string, credentialKey: string) => {
+    const key = `${toolId}-${credentialKey}`;
+    setShowPasswords((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
+
+  const validateToolConfig = (toolId: ToolID): boolean => {
+    const tool = AVAILABLE_TOOLS[toolId];
+    const currentConfig = initializedTools[toolId];
+
+    if (!tool.requiredCredentials.length) return true;
+
+    const missingCredentials = tool.requiredCredentials.filter(
+      (cred) => !currentConfig?.credentials?.[cred]
+    );
+
+    if (missingCredentials.length > 0) {
+      setValidationErrors((prev) => ({
+        ...prev,
+        [toolId]: `Missing required credentials: ${missingCredentials
+          .map((cred) =>
+            cred
+              .split("_")
+              .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+              .join(" ")
+          )
+          .join(", ")}`,
+      }));
+      return false;
+    }
+
+    setValidationErrors((prev) =>
+      Object.fromEntries(Object.entries(prev).filter(([key]) => key !== toolId))
+    );
+    return true;
+  };
+
   const handleToggleTool = (toolId: ToolID) => {
     const currentConfig = initializedTools[toolId];
     const toolConfig = AVAILABLE_TOOLS[toolId];
+    const isEnabling = !currentConfig.isEnabled;
+
+    if (isEnabling && toolConfig.requiredCredentials.length > 0) {
+      const isValid = validateToolConfig(toolId);
+      if (!isValid) {
+        setOpenConfigs((prev) => ({
+          ...prev,
+          [toolId]: true,
+        }));
+        return;
+      }
+    }
 
     const updatedTools: ToolsConfig = {
       ...initializedTools,
@@ -55,7 +113,7 @@ export function ToolSelector({ tools, onToolsChange }: ToolSelectorProps) {
         ...currentConfig,
         isEnabled: !currentConfig.isEnabled,
         config: !currentConfig.isEnabled ? toolConfig.defaultConfig : {},
-        credentials: !currentConfig.isEnabled ? {} : currentConfig.credentials,
+        credentials: !currentConfig.isEnabled ? currentConfig.credentials : {},
       },
     };
     onToolsChange(updatedTools);
@@ -66,7 +124,7 @@ export function ToolSelector({ tools, onToolsChange }: ToolSelectorProps) {
     changes: Record<string, string>
   ) => {
     const currentConfig = initializedTools[toolId];
-    if (!currentConfig?.isEnabled) return;
+    if (!currentConfig) return;
 
     const updatedTools: ToolsConfig = {
       ...initializedTools,
@@ -79,6 +137,7 @@ export function ToolSelector({ tools, onToolsChange }: ToolSelectorProps) {
       },
     };
     onToolsChange(updatedTools);
+    validateToolConfig(toolId);
   };
 
   return (
@@ -106,43 +165,54 @@ export function ToolSelector({ tools, onToolsChange }: ToolSelectorProps) {
                   </div>
                 </div>
                 <div className="flex items-center space-x-4">
-                  {initializedTools[id as ToolID]?.isEnabled &&
-                    tool.requiredCredentials.length > 0 && (
-                      <CollapsibleTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <Settings className="h-4 w-4" />
-                        </Button>
-                      </CollapsibleTrigger>
-                    )}
+                  {tool.requiredCredentials.length > 0 && (
+                    <CollapsibleTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <Settings className="h-4 w-4" />
+                      </Button>
+                    </CollapsibleTrigger>
+                  )}
                   <Switch
                     checked={initializedTools[id as ToolID]?.isEnabled ?? false}
                     onCheckedChange={() => handleToggleTool(id as ToolID)}
                   />
                 </div>
               </div>
-              {initializedTools[id as ToolID]?.isEnabled &&
-                tool.requiredCredentials.length > 0 && (
-                  <CollapsibleContent className="p-4 bg-muted/50 rounded-lg mt-2 space-y-4">
-                    {tool.requiredCredentials.map((cred) => (
-                      <div key={cred} className="space-y-2">
-                        <Label
-                          htmlFor={`${id}-${cred}`}
-                          className="flex items-center space-x-1"
-                        >
-                          <span>
-                            {cred
-                              .split("_")
-                              .map(
-                                (word) =>
-                                  word.charAt(0).toUpperCase() + word.slice(1)
-                              )
-                              .join(" ")}
-                          </span>
-                          <span className="text-destructive">*</span>
-                        </Label>
+
+              {tool.requiredCredentials.length > 0 && (
+                <CollapsibleContent className="p-4 bg-muted/50 rounded-lg mt-2 space-y-4">
+                  {validationErrors[id] && (
+                    <Alert variant="destructive">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>
+                        {validationErrors[id]}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  {tool.requiredCredentials.map((cred) => (
+                    <div key={cred} className="space-y-2">
+                      <Label
+                        htmlFor={`${id}-${cred}`}
+                        className="flex items-center space-x-1"
+                      >
+                        <span>
+                          {cred
+                            .split("_")
+                            .map(
+                              (word) =>
+                                word.charAt(0).toUpperCase() + word.slice(1)
+                            )
+                            .join(" ")}
+                        </span>
+                        <span className="text-destructive">*</span>
+                      </Label>
+                      <div className="relative">
                         <Input
                           id={`${id}-${cred}`}
-                          type="password"
+                          type={
+                            showPasswords[`${id}-${cred}`] ? "text" : "password"
+                          }
                           value={
                             initializedTools[id as ToolID]?.credentials?.[
                               cred
@@ -154,38 +224,53 @@ export function ToolSelector({ tools, onToolsChange }: ToolSelectorProps) {
                             })
                           }
                           required
+                          className="pr-10"
                         />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-0 top-0 h-full px-3"
+                          onClick={() => togglePasswordVisibility(id, cred)}
+                        >
+                          {showPasswords[`${id}-${cred}`] ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </Button>
                       </div>
-                    ))}
-                    {tool.optionalCredentials.map((cred) => (
-                      <div key={cred} className="space-y-2">
-                        <Label htmlFor={`${id}-${cred}`}>
-                          {cred
-                            .split("_")
-                            .map(
-                              (word) =>
-                                word.charAt(0).toUpperCase() + word.slice(1)
-                            )
-                            .join(" ")}
-                        </Label>
-                        <Input
-                          id={`${id}-${cred}`}
-                          type="text"
-                          value={
-                            initializedTools[id as ToolID]?.credentials?.[
-                              cred
-                            ] ?? ""
-                          }
-                          onChange={(e) =>
-                            handleConfigChange(id as ToolID, {
-                              [cred]: e.target.value,
-                            })
-                          }
-                        />
-                      </div>
-                    ))}
-                  </CollapsibleContent>
-                )}
+                    </div>
+                  ))}
+
+                  {tool.optionalCredentials.map((cred) => (
+                    <div key={cred} className="space-y-2">
+                      <Label htmlFor={`${id}-${cred}`}>
+                        {cred
+                          .split("_")
+                          .map(
+                            (word) =>
+                              word.charAt(0).toUpperCase() + word.slice(1)
+                          )
+                          .join(" ")}
+                      </Label>
+                      <Input
+                        id={`${id}-${cred}`}
+                        type="text"
+                        value={
+                          initializedTools[id as ToolID]?.credentials?.[cred] ??
+                          ""
+                        }
+                        onChange={(e) =>
+                          handleConfigChange(id as ToolID, {
+                            [cred]: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                  ))}
+                </CollapsibleContent>
+              )}
             </Collapsible>
           ))}
         </div>
