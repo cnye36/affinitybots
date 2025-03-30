@@ -9,14 +9,15 @@ import { HumanMessage, AIMessage } from "@langchain/core/messages";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { Agent } from "@/types/agent";
 
 interface ChatContainerProps {
-  assistantId: string;
+  agent: Agent;
   threadId?: string;
 }
 
 export default function ChatContainer({
-  assistantId,
+  agent,
   threadId: initialThreadId,
 }: ChatContainerProps) {
   const [messages, setMessages] = useState<AgentState["messages"]>([]);
@@ -43,7 +44,7 @@ export default function ChatContainer({
 
       try {
         const response = await fetch(
-          `/api/assistants/${assistantId}/threads/${currentThreadId}/state`
+          `/api/agents/${agent.id}/threads/${currentThreadId}/state`
         );
         if (!response.ok) throw new Error("Failed to get thread state");
 
@@ -64,7 +65,7 @@ export default function ChatContainer({
     };
 
     fetchThreadState();
-  }, [currentThreadId, assistantId]);
+  }, [currentThreadId, agent.id]);
 
   const handleThreadSelect = (threadId: string) => {
     if (threadId !== currentThreadId) {
@@ -74,7 +75,7 @@ export default function ChatContainer({
 
   const handleNewThread = async () => {
     try {
-      const response = await fetch(`/api/assistants/${assistantId}/threads`, {
+      const response = await fetch(`/api/agents/${agent.id}/threads`, {
         method: "POST",
       });
       if (!response.ok) throw new Error("Failed to create thread");
@@ -93,7 +94,7 @@ export default function ChatContainer({
     try {
       // Create a thread only if we don't have one and we're actually sending a message
       if (!threadId) {
-        const response = await fetch(`/api/assistants/${assistantId}/threads`, {
+        const response = await fetch(`/api/agents/${agent.id}/threads`, {
           method: "POST",
         });
         if (!response.ok) throw new Error("Failed to create thread");
@@ -108,7 +109,7 @@ export default function ChatContainer({
 
       // Stream the response
       const response = await fetch(
-        `/api/assistants/${assistantId}/threads/${threadId}/runs`,
+        `/api/agents/${agent.id}/threads/${threadId}/runs`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -164,7 +165,7 @@ export default function ChatContainer({
         const conversation = `User: ${content}\nAssistant: ${fullResponse}`;
         try {
           const titleResponse = await fetch(
-            `/api/assistants/${assistantId}/threads/${threadId}/rename`,
+            `/api/agents/${agent.id}/threads/${threadId}/rename`,
             {
               method: "POST",
               headers: {
@@ -218,7 +219,7 @@ export default function ChatContainer({
         )}
       >
         <ThreadSidebar
-          assistantId={assistantId}
+          agentId={agent.id}
           currentThreadId={currentThreadId}
           onThreadSelect={(threadId) => {
             handleThreadSelect(threadId);

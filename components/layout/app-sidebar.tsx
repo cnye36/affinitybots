@@ -24,16 +24,16 @@ const data = {
     },
     {
       title: "Agents",
-      url: "/assistants",
+      url: "/agents",
       icon: Bot,
       items: [
         {
           title: "My Agents",
-          url: "/assistants",
+          url: "/agents",
         },
         {
           title: "Create Agent",
-          url: "/assistants/new",
+          url: "/agents/new",
         },
       ],
     },

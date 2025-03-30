@@ -8,7 +8,7 @@ export function AgentHeader() {
   return (
     <div className="flex justify-between items-center mb-8">
       <h1 className="text-2xl font-bold">My Agents</h1>
-      <Link href="/assistants/new">
+      <Link href="/agents/new">
         <Button>
           <PlusCircle className="mr-2" />
           Create Agent

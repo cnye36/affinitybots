@@ -18,11 +18,11 @@ import { ToolSelector } from "@/components/configuration/ToolSelector";
 import { MemoryConfig } from "./MemoryConfig";
 import { KnowledgeConfig } from "./KnowledgeConfig";
 import {
-  AgentConfigurableOptions,
+  Agent,
   AgentMetadata,
+  AgentConfiguration,
   ModelType,
-} from "@/lib/langchain/agent/config";
-import { Assistant } from "@/types/langgraph";
+} from "@/types/agent";
 import { ToolsConfig } from "@/types/tools";
 import { useRouter } from "next/navigation";
 import { mutate } from "swr";
@@ -31,31 +31,92 @@ import { getDefaultToolConfig } from "@/lib/langchain/tools/config";
 interface AgentConfigModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  assistant: Assistant;
+  agent: Agent;
 }
 
 export function AgentConfigModal({
   open,
   onOpenChange,
-  assistant,
+  agent,
 }: AgentConfigModalProps) {
   const [config, setConfig] = useState({
-    assistant_id: assistant.assistant_id,
-    graph_id: assistant.graph_id,
-    created_at: assistant.created_at,
-    updated_at: assistant.updated_at,
-    name: assistant.name,
+    agent_id: agent.id,
+    description: agent.description,
+    agent_avatar: agent.agent_avatar,
+    graph_id: agent.graph_id,
+    created_at: agent.created_at,
+    updated_at: agent.updated_at,
+    name: agent.name,
 
     metadata: {
-      description: String(assistant.metadata?.description || ""),
-      agent_type: String(assistant.metadata?.agent_type || ""),
-      owner_id: String(assistant.metadata.owner_id),
+      owner_id: String(agent.metadata.owner_id),
     } as AgentMetadata,
     config: {
-      configurable: {
-        model: (assistant.config.configurable.model || "gpt-4o") as ModelType,
-        temperature: Number(assistant.config.configurable.temperature || 0.7),
-        avatar: String(assistant.config.configurable.avatar || ""),
+      model: (agent.config.model || "gpt-4o") as ModelType,
+      temperature: Number(agent.config.temperature || 0.7),
+      tools: {
+        web_search: getDefaultToolConfig("web_search"),
+        wikipedia: getDefaultToolConfig("wikipedia"),
+        wolfram_alpha: getDefaultToolConfig("wolfram_alpha"),
+        notion: getDefaultToolConfig("notion"),
+        twitter: getDefaultToolConfig("twitter"),
+        google: getDefaultToolConfig("google"),
+        ...Object.entries(agent.config.tools || {}).reduce(
+          (acc, [key, value]) => ({
+            ...acc,
+            [key]: {
+              isEnabled: Boolean(value?.isEnabled || false),
+              config: value?.config || {},
+            },
+          }),
+          {}
+        ),
+      },
+      memory: {
+        enabled: Boolean(
+          (agent.config.memory as { enabled?: boolean })?.enabled ?? true
+        ),
+        max_entries: Number(
+          (agent.config.memory as { max_entries?: number })?.max_entries || 10
+        ),
+        relevance_threshold: Number(
+          (
+            agent.config.memory as {
+              relevance_threshold?: number;
+            }
+          )?.relevance_threshold || 0.7
+        ),
+      },
+      prompt_template: String(agent.config.prompt_template || ""),
+      owner_id: String(agent.metadata?.owner_id || ""),
+      knowledge_base: agent.config.knowledge_base || {
+        isEnabled: false,
+        config: { sources: [] },
+      },
+    } as AgentConfiguration,
+  });
+
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    setConfig({
+      agent_id: agent.id,
+      description: agent.description,
+      agent_avatar: agent.agent_avatar,
+      graph_id: agent.graph_id,
+      created_at: agent.created_at,
+      updated_at: agent.updated_at,
+      name: agent.name,
+      metadata: {
+        description: String(agent.description || ""),
+        owner_id: String(agent.metadata?.owner_id || ""),
+      } as AgentMetadata,
+      config: {
+        model: (agent.config.model || "gpt-4o") as ModelType,
+        temperature: Number(agent.config.temperature || 0.7),
+        avatar: String(agent.agent_avatar || ""),
         tools: {
           web_search: getDefaultToolConfig("web_search"),
           wikipedia: getDefaultToolConfig("wikipedia"),
@@ -63,7 +124,7 @@ export function AgentConfigModal({
           notion: getDefaultToolConfig("notion"),
           twitter: getDefaultToolConfig("twitter"),
           google: getDefaultToolConfig("google"),
-          ...Object.entries(assistant.config.configurable.tools || {}).reduce(
+          ...Object.entries(agent.config.tools || {}).reduce(
             (acc, [key, value]) => ({
               ...acc,
               [key]: {
@@ -76,92 +137,28 @@ export function AgentConfigModal({
         },
         memory: {
           enabled: Boolean(
-            (assistant.config.configurable.memory as { enabled?: boolean })
-              ?.enabled ?? true
+            (agent.config.memory as { enabled?: boolean })?.enabled ?? true
           ),
           max_entries: Number(
-            (assistant.config.configurable.memory as { max_entries?: number })
-              ?.max_entries || 10
+            (agent.config.memory as { max_entries?: number })?.max_entries || 10
           ),
           relevance_threshold: Number(
             (
-              assistant.config.configurable.memory as {
+              agent.config.memory as {
                 relevance_threshold?: number;
               }
             )?.relevance_threshold || 0.7
           ),
         },
-        prompt_template: String(
-          assistant.config.configurable.prompt_template || ""
-        ),
-        owner_id: String(assistant.metadata?.owner_id || ""),
-      } as AgentConfigurableOptions,
-    },
-  });
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
-
-  useEffect(() => {
-    setConfig({
-      assistant_id: assistant.assistant_id,
-      graph_id: assistant.graph_id,
-      created_at: assistant.created_at,
-      updated_at: assistant.updated_at,
-      name: assistant.name,
-      metadata: {
-        description: String(assistant.metadata?.description || ""),
-        agent_type: String(assistant.metadata?.agent_type || ""),
-        owner_id: String(assistant.metadata?.owner_id || ""),
-      } as AgentMetadata,
-      config: {
-        configurable: {
-          model: (assistant.config.configurable.model || "gpt-4o") as ModelType,
-          temperature: Number(assistant.config.configurable.temperature || 0.7),
-          avatar: String(assistant.config.configurable.avatar || ""),
-          tools: {
-            web_search: getDefaultToolConfig("web_search"),
-            wikipedia: getDefaultToolConfig("wikipedia"),
-            wolfram_alpha: getDefaultToolConfig("wolfram_alpha"),
-            notion: getDefaultToolConfig("notion"),
-            twitter: getDefaultToolConfig("twitter"),
-            google: getDefaultToolConfig("google"),
-            ...Object.entries(assistant.config.configurable.tools || {}).reduce(
-              (acc, [key, value]) => ({
-                ...acc,
-                [key]: {
-                  isEnabled: Boolean(value?.isEnabled || false),
-                  config: value?.config || {},
-                },
-              }),
-              {}
-            ),
-          },
-          memory: {
-            enabled: Boolean(
-              (assistant.config.configurable.memory as { enabled?: boolean })
-                ?.enabled ?? true
-            ),
-            max_entries: Number(
-              (assistant.config.configurable.memory as { max_entries?: number })
-                ?.max_entries || 10
-            ),
-            relevance_threshold: Number(
-              (
-                assistant.config.configurable.memory as {
-                  relevance_threshold?: number;
-                }
-              )?.relevance_threshold || 0.7
-            ),
-          },
-          prompt_template: String(
-            assistant.config.configurable.prompt_template || ""
-          ),
-          owner_id: String(assistant.metadata?.owner_id || ""),
-        } as AgentConfigurableOptions,
-      },
+        prompt_template: String(agent.config.prompt_template || ""),
+        owner_id: String(agent.metadata?.owner_id || ""),
+        knowledge_base: agent.config.knowledge_base || {
+          isEnabled: false,
+          config: { sources: [] },
+        },
+      } as AgentConfiguration,
     });
-  }, [assistant]);
+  }, [agent]);
 
   const handleChange = (field: string, value: unknown) => {
     setConfig((prev) => ({
@@ -179,7 +176,7 @@ export function AgentConfigModal({
       config: {
         ...prev.config,
         configurable: {
-          ...prev.config.configurable,
+          ...prev.config,
           [field]: value,
         },
       },
@@ -192,7 +189,7 @@ export function AgentConfigModal({
       config: {
         ...prev.config,
         configurable: {
-          ...prev.config.configurable,
+          ...prev.config,
           tools: updatedTools,
         },
       },
@@ -203,31 +200,25 @@ export function AgentConfigModal({
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(
-        `/api/assistants/${assistant.assistant_id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            name: config.name,
-            metadata: config.metadata,
-            config: config.config,
-          }),
-        }
-      );
+      const response = await fetch(`/api/assistants/${agent.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: name,
+          description: config.description,
+          metadata: config.metadata,
+          config: config.config,
+        }),
+      });
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const updatedAssistant = await response.json();
-      await mutate(
-        `/api/assistants/${assistant.assistant_id}`,
-        updatedAssistant,
-        false
-      );
+      await mutate(`/api/assistants/${agent.id}`, updatedAssistant, false);
       await mutate("/api/assistants");
       onOpenChange(false);
       router.refresh();
@@ -261,11 +252,12 @@ export function AgentConfigModal({
           <TabsContent value="general">
             <GeneralConfig
               config={{
-                assistant_id: config.assistant_id,
-                name: config.name,
-                metadata: config.metadata,
-                config: config.config,
-                avatar: config.config.configurable.avatar,
+                id: agent.id,
+                name: agent.name,
+                description: agent.description,
+                metadata: agent.metadata,
+                config: agent.config,
+                agent_avatar: agent.agent_avatar,
               }}
               onChange={handleChange}
               onConfigurableChange={handleConfigurableChange}
@@ -274,29 +266,29 @@ export function AgentConfigModal({
 
           <TabsContent value="prompts">
             <PromptsConfig
-              config={config.config.configurable}
+              config={agent.config}
               onChange={handleConfigurableChange}
             />
           </TabsContent>
 
           <TabsContent value="tools">
             <ToolSelector
-              tools={config.config.configurable.tools}
+              tools={agent.config.tools as ToolsConfig}
               onToolsChange={handleToolsChange}
             />
           </TabsContent>
 
           <TabsContent value="knowledge">
             <KnowledgeConfig
-              config={config.config.configurable}
+              config={agent.config.knowledge_base}
               onChange={handleConfigurableChange}
-              assistant_id={config.assistant_id}
+              assistant_id={agent.id}
             />
           </TabsContent>
 
           <TabsContent value="memory">
             <MemoryConfig
-              config={config.config.configurable}
+              config={agent.config.memory}
               onChange={handleConfigurableChange}
             />
           </TabsContent>

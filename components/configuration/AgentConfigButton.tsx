@@ -4,13 +4,13 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AgentConfigModal } from "./AgentConfigModal";
 import { Settings } from "lucide-react";
-import { Assistant } from "@/types/langgraph";
+import { Agent } from "@/types/agent";
 
 interface AgentConfigButtonProps {
-  assistant: Assistant;
+  agent: Agent;
 }
 
-export function AgentConfigButton({ assistant }: AgentConfigButtonProps) {
+export function AgentConfigButton({ agent }: AgentConfigButtonProps) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -24,11 +24,7 @@ export function AgentConfigButton({ assistant }: AgentConfigButtonProps) {
         <Settings className="h-4 w-4" />
         Configure
       </Button>
-      <AgentConfigModal
-        open={open}
-        onOpenChange={setOpen}
-        assistant={assistant}
-      />
+      <AgentConfigModal open={open} onOpenChange={setOpen} agent={agent} />
     </>
   );
 }

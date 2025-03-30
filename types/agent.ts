@@ -1,0 +1,41 @@
+import { ToolsConfig } from "./tools";
+
+export interface Agent {
+  id: string;
+  graph_id: string;
+  name: string;
+  description: string;
+  metadata: AgentMetadata;
+  config: AgentConfiguration;
+  agent_avatar: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AgentConfiguration {
+  model: ModelType;
+  temperature: number;
+  tools: ToolsConfig;
+  memory: {
+    enabled: boolean;
+    max_entries: number;
+    relevance_threshold: number;
+  };
+  prompt_template: string;
+  knowledge_base: {
+    isEnabled: boolean;
+    config: {
+      sources: unknown[];
+    };
+  };
+}
+
+export interface AgentMetadata {
+  owner_id: string;
+}
+
+export type ModelType =
+  | "gpt-4o"
+  | "gpt-4o-mini"
+  | "gpt-o1"
+  | "gpt-o3-mini-high";

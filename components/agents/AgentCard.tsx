@@ -18,22 +18,23 @@ import { useState } from "react";
 import { mutate } from "swr";
 
 interface AgentCardProps {
-  assistant: {
-    assistant_id: string;
+  agent: {
+    id: string;
     name: string;
     description: string;
-    model_type: string;
-    tools: { name: string }[];
+    agent_avatar: string;
     config: {
-      configurable: {
-        avatar: string;
-      };
+      model: string;
+      temperature: number;
+      tools: Record<string, { isEnabled: boolean }>;
+      memory: { enabled: boolean };
+      knowledge_base: { isEnabled: boolean };
     };
   };
-  onDelete: (assistantId: string) => void;
+  onDelete: (agentId: string) => void;
 }
 
-export function AgentCard({ assistant, onDelete }: AgentCardProps) {
+export function AgentCard({ agent, onDelete }: AgentCardProps) {
   const router = useRouter();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
@@ -44,32 +45,29 @@ export function AgentCard({ assistant, onDelete }: AgentCardProps) {
       return;
     }
 
-    if (!assistant.assistant_id || assistant.assistant_id === "undefined") {
-      console.error("Invalid assistant ID");
+    if (!agent.id || agent.id === "undefined") {
+      console.error("Invalid agent ID");
       return;
     }
 
     // Ensure the ID is properly formatted before navigation
-    const assistantId = encodeURIComponent(assistant.assistant_id.trim());
-    router.push(`/assistants/${assistantId}`);
+    const agentId = encodeURIComponent(agent.id.trim());
+    router.push(`/agents/${agentId}`);
   };
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      const response = await fetch(
-        `/api/assistants/${assistant.assistant_id}`,
-        {
-          method: "DELETE",
-        }
-      );
+      const response = await fetch(`/api/agents/${agent.id}`, {
+        method: "DELETE",
+      });
 
       if (!response.ok) {
         throw new Error("Failed to delete agent");
       }
 
-      await mutate("/api/assistants");
-      onDelete(assistant.assistant_id);
+      await mutate("/api/agents");
+      onDelete(agent.id);
       setIsDeleteDialogOpen(false);
       toast({
         title: "Agent deleted successfully",
@@ -84,7 +82,7 @@ export function AgentCard({ assistant, onDelete }: AgentCardProps) {
   };
 
   // Get the avatar URL from the config
-  const avatarUrl = assistant.config.configurable.avatar;
+  const avatarUrl = agent.agent_avatar;
 
   return (
     <>
@@ -108,27 +106,31 @@ export function AgentCard({ assistant, onDelete }: AgentCardProps) {
               backgroundSize: "cover",
               backgroundPosition: "center",
               backgroundColor: !avatarUrl
-                ? `hsl(${(assistant.name.length * 30) % 360}, 70%, 50%)`
+                ? `hsl(${(agent.name.length * 30) % 360}, 70%, 50%)`
                 : undefined,
             }}
           >
-            {!avatarUrl && assistant.name.slice(0, 2).toUpperCase()}
+            {!avatarUrl && agent.name.slice(0, 2).toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="text-base sm:text-lg font-semibold mb-1 truncate">
-              {assistant.name}
+              {agent.name}
             </h3>
             <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">
-              {assistant.description || "No description provided"}
+              {agent.description || "No description provided"}
             </p>
           </div>
         </div>
         <div className="flex flex-wrap gap-2 items-center text-xs sm:text-sm text-muted-foreground mt-3 sm:mt-4">
           <span className="flex items-center">
-            Model: {assistant.model_type || "Not specified"}
+            Model: {agent.config.model || "Not specified"}
           </span>
           <span className="hidden sm:inline">•</span>
-          <span>{assistant.tools.length || 0} tools</span>
+          <span>
+            {Object.values(agent.config.tools).filter((tool) => tool.isEnabled)
+              .length || 0}{" "}
+            tools
+          </span>
         </div>
       </div>
 

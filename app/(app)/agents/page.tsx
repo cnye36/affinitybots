@@ -4,15 +4,15 @@ import { useState, useEffect } from "react";
 import { AgentHeader } from "@/components/agents/AgentHeader";
 import { AgentCard } from "@/components/agents/AgentCard";
 import { EmptyAgents } from "@/components/agents/EmptyAgents";
-import { Assistant } from "@/types/langgraph";
+import { Agent } from "@/types/agent";
 
 export default function AgentsPage() {
-  const [agents, setAgents] = useState<Assistant[] | null>(null);
+  const [agents, setAgents] = useState<Agent[] | null>(null);
 
   useEffect(() => {
     const fetchAgents = async () => {
       try {
-        const response = await fetch("/api/assistants");
+        const response = await fetch("/api/agents");
         if (!response.ok) {
           throw new Error("Failed to fetch agents");
         }
@@ -29,9 +29,7 @@ export default function AgentsPage() {
 
   const handleAgentDelete = (deletedAgentId: string) => {
     if (agents) {
-      setAgents(
-        agents.filter((agent) => agent.assistant_id !== deletedAgentId)
-      );
+      setAgents(agents.filter((agent) => agent.id !== deletedAgentId));
     }
   };
 
@@ -54,21 +52,20 @@ export default function AgentsPage() {
         <EmptyAgents />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {agents.map((assistant) => (
+          {agents.map((agent) => (
             <AgentCard
-              key={assistant.assistant_id}
-              assistant={{
-                assistant_id: assistant.assistant_id,
-                name: assistant.name,
-                description: assistant.metadata.description,
-                model_type: assistant.config?.configurable?.model,
-                tools: Object.entries(
-                  assistant.config?.configurable?.tools || {}
-                ).map(([name]) => ({ name })),
+              key={agent.id}
+              agent={{
+                id: agent.id,
+                name: agent.name,
+                agent_avatar: agent.agent_avatar,
+                description: agent.description,
                 config: {
-                  configurable: {
-                    avatar: assistant.config?.configurable?.avatar,
-                  },
+                  model: agent.config?.model,
+                  temperature: agent.config?.temperature,
+                  tools: agent.config?.tools,
+                  memory: agent.config?.memory,
+                  knowledge_base: agent.config?.knowledge_base,
                 },
               }}
               onDelete={handleAgentDelete}

@@ -4,11 +4,11 @@ import React from "react";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
-import { AgentConfigurableOptions } from "@/lib/langchain/agent/config";
+import { AgentConfiguration } from "@/types/agent";
 
 interface MemoryConfigProps {
-  config: AgentConfigurableOptions;
-  onChange: (field: keyof AgentConfigurableOptions, value: unknown) => void;
+  config: AgentConfiguration;
+  onChange: (field: keyof AgentConfiguration, value: unknown) => void;
 }
 
 export function MemoryConfig({ config, onChange }: MemoryConfigProps) {

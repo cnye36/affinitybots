@@ -10,11 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import {
-  AgentConfigurableOptions,
-  ModelType,
-  AgentMetadata,
-} from "@/lib/langchain/agent/config";
+import { AgentConfiguration, ModelType, AgentMetadata } from "@/types/agent";
 import { createClient } from "@/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Upload, Loader2 } from "lucide-react";
@@ -36,17 +32,16 @@ import { toast } from "@/hooks/use-toast";
 
 interface GeneralConfigProps {
   config: {
-    assistant_id: string;
+    id: string;
     name: string;
+    description: string;
     metadata: AgentMetadata;
-    config: {
-      configurable: AgentConfigurableOptions;
-    };
-    avatar?: string | null;
+    config: AgentConfiguration;
+    agent_avatar?: string | null;
   };
   onChange: (field: string, value: unknown) => void;
   onConfigurableChange: (
-    field: keyof AgentConfigurableOptions,
+    field: keyof AgentConfiguration,
     value: unknown
   ) => void;
 }
@@ -80,12 +75,12 @@ export function GeneralConfig({
         }
 
         const fileExt = file.name.split(".").pop();
-        const fileName = `${config.assistant_id}-${Date.now()}.${fileExt}`;
+        const fileName = `${config.id}-${Date.now()}.${fileExt}`;
         const filePath = `${config.metadata.owner_id}/${fileName}`;
 
         // Delete old avatar if it exists
-        if (config.avatar) {
-          const oldFilePath = config.avatar.split("/").pop();
+        if (config.agent_avatar) {
+          const oldFilePath = config.agent_avatar.split("/").pop();
           if (oldFilePath) {
             await supabase.storage
               .from("agent-avatars")
@@ -112,7 +107,7 @@ export function GeneralConfig({
         onChange("avatar", publicUrl);
 
         // Save the changes immediately to persist the avatar
-        const response = await fetch(`/api/assistants/${config.assistant_id}`, {
+        const response = await fetch(`/api/assistants/${config.id}`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
@@ -128,7 +123,7 @@ export function GeneralConfig({
         }
 
         // Update SWR cache
-        await mutate(`/api/assistants/${config.assistant_id}`);
+        await mutate(`/api/assistants/${config.id}`);
         await mutate("/api/assistants");
       } catch (error) {
         console.error("Error uploading avatar:", error);
@@ -154,7 +149,7 @@ export function GeneralConfig({
 
   const handleDelete = async () => {
     try {
-      const response = await fetch(`/api/assistants/${config.assistant_id}`, {
+      const response = await fetch(`/api/assistants/${config.id}`, {
         method: "DELETE",
       });
 
@@ -181,7 +176,7 @@ export function GeneralConfig({
       <div className="flex flex-col items-center">
         <div className="mb-4">
           <Avatar className="h-24 w-24">
-            <AvatarImage src={config.avatar || ""} alt={config.name} />
+            <AvatarImage src={config.agent_avatar || ""} alt={config.name} />
             <AvatarFallback
               style={{
                 backgroundColor: `hsl(${
@@ -216,16 +211,16 @@ export function GeneralConfig({
             )}
             {isUploading
               ? "Uploading..."
-              : config.avatar
+              : config.agent_avatar
               ? "Change Avatar"
               : "Upload Avatar"}
           </Button>
-          {config.avatar && !isUploading && (
+          {config.agent_avatar && !isUploading && (
             <Button
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => onChange("avatar", null)}
+              onClick={() => onChange("agent_avatar", null)}
             >
               Remove
             </Button>
@@ -246,20 +241,15 @@ export function GeneralConfig({
         <Label htmlFor="description">Description</Label>
         <Input
           id="description"
-          value={config.metadata.description}
-          onChange={(e) =>
-            onChange("metadata", {
-              ...config.metadata,
-              description: e.target.value,
-            })
-          }
+          value={config.description}
+          onChange={(e) => onChange("description", e.target.value)}
         />
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="model">Model</Label>
         <Select
-          value={config.config.configurable.model}
+          value={config.config.model}
           onValueChange={(value: ModelType) =>
             onConfigurableChange("model", value)
           }
@@ -277,9 +267,9 @@ export function GeneralConfig({
       </div>
 
       <div className="space-y-2">
-        <Label>Temperature: {config.config.configurable.temperature}</Label>
+        <Label>Temperature: {config.config.temperature}</Label>
         <Slider
-          value={[config.config.configurable.temperature]}
+          value={[config.config.temperature]}
           min={0}
           max={1}
           step={0.1}

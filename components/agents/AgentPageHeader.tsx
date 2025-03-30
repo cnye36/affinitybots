@@ -1,6 +1,6 @@
 "use client";
 
-import { Assistant } from "@/types/langgraph";
+import { Agent } from "@/types/agent";
 import { AgentConfigButton } from "@/components/configuration/AgentConfigButton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ArrowLeftIcon, Database, Brain, Wrench } from "lucide-react";
@@ -14,24 +14,24 @@ import {
 } from "@/components/ui/tooltip";
 
 interface AgentPageHeaderProps {
-  assistant: Assistant;
+  agent: Agent;
 }
 
-export function AgentPageHeader({ assistant }: AgentPageHeaderProps) {
+export function AgentPageHeader({ agent }: AgentPageHeaderProps) {
   const router = useRouter();
-  // Get first letter of assistant name for avatar fallback
-  const avatarFallback = assistant.name.charAt(0).toUpperCase();
+  // Get first letter of agent name for avatar fallback
+  const avatarFallback = agent.name.charAt(0).toUpperCase();
 
-  const avatarUrl = assistant.config?.configurable.avatar;
+  const avatarUrl = agent.agent_avatar;
 
   // Get configuration states
-  const hasMemory = assistant.config?.configurable.memory?.enabled;
-  const hasKnowledge = assistant.config?.configurable.knowledge_base?.isEnabled;
+  const hasMemory = agent.config?.memory?.enabled;
+  const hasKnowledge = agent.config?.knowledge_base?.isEnabled;
 
   // Count active tools
-  const activeToolsCount = Object.values(
-    assistant.config?.configurable.tools || {}
-  ).filter((tool) => tool?.isEnabled).length;
+  const activeToolsCount = Object.values(agent.config?.tools || {}).filter(
+    (tool) => (tool as { isEnabled?: boolean })?.isEnabled
+  ).length;
 
   return (
     <div className="flex-none border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -48,13 +48,13 @@ export function AgentPageHeader({ assistant }: AgentPageHeaderProps) {
         <div className="flex items-center gap-4 ml-8">
           <Avatar className="h-12 w-12">
             {avatarUrl ? (
-              <AvatarImage src={avatarUrl} alt={assistant.name} />
+              <AvatarImage src={avatarUrl} alt={agent.name} />
             ) : (
               <AvatarFallback
                 className="bg-primary/10"
                 style={{
                   backgroundColor: `hsl(${
-                    (assistant.name.length * 30) % 360
+                    (agent.name.length * 30) % 360
                   }, 70%, 50%)`,
                 }}
               >
@@ -63,9 +63,7 @@ export function AgentPageHeader({ assistant }: AgentPageHeaderProps) {
             )}
           </Avatar>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">
-              {assistant.name}
-            </h1>
+            <h1 className="text-2xl font-bold tracking-tight">{agent.name}</h1>
           </div>
         </div>
 
@@ -117,7 +115,7 @@ export function AgentPageHeader({ assistant }: AgentPageHeaderProps) {
             )}
           </div>
 
-          <AgentConfigButton assistant={assistant} />
+          <AgentConfigButton agent={agent} />
         </div>
       </div>
     </div>

@@ -27,7 +27,7 @@ export default function NewAgentPage() {
     setShowCreationDialog(true);
 
     try {
-      const response = await fetch("/api/assistants", {
+      const response = await fetch("/api/agents", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -46,7 +46,7 @@ export default function NewAgentPage() {
 
       const data = await response.json();
       console.log(data);
-      router.push("/assistants");
+      router.push("/agents");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create agent");
       setIsSubmitting(false);
@@ -58,7 +58,7 @@ export default function NewAgentPage() {
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-3xl mx-auto">
         <div className="flex items-center mb-8">
-          <Link href="/assistants" className="mr-4">
+          <Link href="/agents" className="mr-4">
             <Button variant="ghost" size="icon">
               <ArrowLeft className="h-4 w-4" />
             </Button>

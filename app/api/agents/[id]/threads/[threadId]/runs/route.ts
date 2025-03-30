@@ -2,13 +2,11 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
 import { Client } from "@langchain/langgraph-sdk";
 
-
-
 export async function GET(
   request: Request,
-  props: { params: Promise<{ id: string; threadId: string }> }
+  props: { params: { id: string; threadId: string } }
 ) {
-  const { threadId } = await props.params;
+  const { id, threadId } = props.params;
   const client = new Client({
     apiUrl: process.env.LANGGRAPH_URL,
     apiKey: process.env.LANGSMITH_API_KEY,
@@ -23,7 +21,32 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const runs = await client.threads.get(threadId);
+    // Validate agent ownership from the database
+    const { data: userAgent, error: userAgentError } = await supabase
+      .from("user_agents")
+      .select("agent_id")
+      .eq("user_id", user.id)
+      .eq("agent_id", id)
+      .single();
+
+    if (userAgentError || !userAgent) {
+      return NextResponse.json(
+        { error: "Agent not found or access denied" },
+        { status: 404 }
+      );
+    }
+
+    // Get the thread to verify it belongs to this agent
+    const thread = await client.threads.get(threadId);
+
+    if (!thread || thread.metadata?.agent_id !== id) {
+      return NextResponse.json(
+        { error: "Thread not found or doesn't belong to this agent" },
+        { status: 404 }
+      );
+    }
+
+    const runs = await client.runs.list(threadId);
     return NextResponse.json(runs || []);
   } catch (error) {
     console.error("Error fetching runs:", error);
@@ -37,9 +60,9 @@ export async function GET(
 // POST - Create a new run/message in a thread
 export async function POST(
   request: Request,
-  props: { params: Promise<{ id: string; threadId: string }> }
+  props: { params: { id: string; threadId: string } }
 ) {
-  const { id, threadId } = await props.params;
+  const { id, threadId } = props.params;
   const client = new Client({
     apiUrl: process.env.LANGGRAPH_URL,
     apiKey: process.env.LANGSMITH_API_KEY,
@@ -55,12 +78,42 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Validate assistant ownership
-    const assistant = await client.assistants.get(id);
-    if (!assistant || assistant.assistant_id !== id) {
+    // Validate agent ownership from the database
+    const { data: userAgent, error: userAgentError } = await supabase
+      .from("user_agents")
+      .select("agent_id")
+      .eq("user_id", user.id)
+      .eq("agent_id", id)
+      .single();
+
+    if (userAgentError || !userAgent) {
       return NextResponse.json(
-        { error: "Assistant not found or access denied" },
+        { error: "Agent not found or access denied" },
         { status: 404 }
+      );
+    }
+
+    // Get the thread to verify it belongs to this agent
+    const thread = await client.threads.get(threadId);
+
+    if (!thread || thread.metadata?.agent_id !== id) {
+      return NextResponse.json(
+        { error: "Thread not found or doesn't belong to this agent" },
+        { status: 404 }
+      );
+    }
+
+    // Get agent configuration from the database
+    const { data: agent, error: agentError } = await supabase
+      .from("agent")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (agentError || !agent) {
+      return NextResponse.json(
+        { error: "Failed to fetch agent configuration" },
+        { status: 500 }
       );
     }
 
@@ -80,11 +133,14 @@ export async function POST(
     // Start streaming in the background
     (async () => {
       try {
-        const eventStream = client.runs.stream(threadId, id, {
+        // Use "agent" as the fixed graph_id for all agents
+        const graphId = "agent";
+
+        const eventStream = client.runs.stream(threadId, graphId, {
           input: { messages: [{ role: "user", content }] },
           config: {
             tags: ["chat"],
-            configurable: assistant.config?.configurable,
+            configurable: agent.config,
             recursion_limit: 100,
           },
           streamMode: ["messages"],

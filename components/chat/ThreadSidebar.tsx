@@ -28,20 +28,20 @@ interface Thread {
   created_at: string;
   metadata: {
     user_id: string;
-    assistant_id: string;
+    agent_id: string;
     title?: string;
   };
 }
 
 interface ThreadSidebarProps {
-  assistantId: string;
+  agentId: string;
   currentThreadId?: string;
   onThreadSelect: (threadId: string) => void;
   onNewThread: () => void;
 }
 
 export default function ThreadSidebar({
-  assistantId,
+  agentId,
   currentThreadId,
   onThreadSelect,
   onNewThread,
@@ -55,7 +55,7 @@ export default function ThreadSidebar({
   const fetchThreads = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/assistants/${assistantId}/threads`);
+      const response = await fetch(`/api/agents/${agentId}/threads`);
       if (!response.ok) throw new Error("Failed to fetch threads");
       const data = await response.json();
       const validThreads = Array.isArray(data.threads)
@@ -63,7 +63,7 @@ export default function ThreadSidebar({
             (thread: Thread) =>
               thread &&
               thread.thread_id &&
-              thread.metadata?.assistant_id === assistantId
+              thread.metadata?.agent_id === agentId
           )
         : [];
       setThreads(validThreads);
@@ -72,19 +72,13 @@ export default function ThreadSidebar({
     } finally {
       setIsLoading(false);
     }
-  }, [assistantId]);
+  }, [agentId]);
 
   // Initial fetch
   useEffect(() => {
     fetchThreads();
   }, [fetchThreads]);
 
-  // Refresh when currentThreadId changes
-  useEffect(() => {
-    if (currentThreadId) {
-      fetchThreads();
-    }
-  }, [currentThreadId, fetchThreads]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -116,7 +110,7 @@ export default function ThreadSidebar({
 
     try {
       const response = await fetch(
-        `/api/assistants/${assistantId}/threads/${threadToRename}/rename`,
+        `/api/agents/${agentId}/threads/${threadToRename}/rename`,
         {
           method: "PUT",
           headers: {
@@ -155,7 +149,7 @@ export default function ThreadSidebar({
 
     try {
       const response = await fetch(
-        `/api/assistants/${assistantId}/threads/${threadId}`,
+        `/api/agents/${agentId}/threads/${threadId}`,
         {
           method: "DELETE",
         }
