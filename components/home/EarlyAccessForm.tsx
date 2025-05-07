@@ -21,6 +21,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import axios from "axios";
 
 export function EarlyAccessForm() {
   const { toast } = useToast();
@@ -50,25 +51,28 @@ export function EarlyAccessForm() {
     setIsSubmitting(true);
 
     try {
-      // Here you would send the data to your API
-      // For now, let's just simulate a submission
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      // Send form data to our API endpoint
+      const response = await axios.post("/api/early-access", formData);
 
-      toast({
-        title: "Request Submitted",
-        description:
-          "Thank you for your interest! We'll review your application and get back to you soon.",
-      });
+      if (response.data.success) {
+        toast({
+          title: "Request Submitted",
+          description:
+            "Thank you for your interest! We'll review your application and get back to you soon.",
+        });
 
-      // Reset form
-      setFormData({
-        email: "",
-        name: "",
-        purpose: "",
-        experience: "",
-        organization: "",
-        expectations: "",
-      });
+        // Reset form
+        setFormData({
+          email: "",
+          name: "",
+          purpose: "",
+          experience: "",
+          organization: "",
+          expectations: "",
+        });
+      } else {
+        throw new Error("Submission failed");
+      }
     } catch (error) {
       console.error(error);
       toast({

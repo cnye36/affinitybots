@@ -2,7 +2,7 @@ import { Header } from "@/components/home/Header";
 import { Hero } from "@/components/home/Hero";
 import { HowItWorks } from "@/components/home/HowItWorks";
 import { Benefits } from "@/components/home/Benefits";
-import { Pricing } from "@/components/home/Pricing";
+
 import { CTA } from "@/components/home/CTA";
 
 export default function Home() {
@@ -13,7 +13,7 @@ export default function Home() {
         <Hero />
         <HowItWorks />
         <Benefits />
-        <Pricing />
+
         <CTA />
       </main>
     </div>

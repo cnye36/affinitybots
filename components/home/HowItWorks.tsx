@@ -6,30 +6,30 @@ import { MotionDiv } from "@/components/motion/MotionDiv";
 const steps = [
   {
     number: "01",
-    title: "Create Your Agents",
+    title: "Design Your Agent",
     description:
-      "Design and configure AI agents with specific capabilities tailored to your needs. Choose from various AI models and customize their behavior.",
-    icon: "🤖",
+      "Create an AI agent with the personality and skills you need. Choose a name, description, and customize how it interacts with your users.",
+    icon: "🧠",
   },
   {
     number: "02",
-    title: "Build Workflows",
+    title: "Add Knowledge & Tools",
     description:
-      "Connect your agents in a visual workflow builder. Define how they interact, share data, and work together to achieve your goals.",
-    icon: "🔄",
+      "Equip your agent with knowledge bases, documents, and powerful tools to help it accomplish tasks. Configure memory options to make it even smarter.",
+    icon: "🛠️",
   },
   {
     number: "03",
     title: "Test & Deploy",
     description:
-      "Validate your workflows in a safe environment, then deploy them to production with confidence. Monitor and optimize performance in real-time.",
+      "Test your agent in a sandbox environment, then deploy it to your website, social media, or use it directly in our platform. Go live in minutes.",
     icon: "🚀",
   },
   {
     number: "04",
-    title: "Scale & Optimize",
+    title: "Monitor & Improve",
     description:
-      "Automatically scale your AI workflows based on demand. Continuously improve performance with built-in analytics and optimization tools.",
+      "Track your agent's performance, review conversations, and continuously improve its capabilities based on real user interactions.",
     icon: "📈",
   },
 ];
@@ -41,8 +41,8 @@ export function HowItWorks() {
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-5xl font-bold mb-4">How It Works</h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Get started with AI-Automated in four simple steps. Our platform
-            makes it easy to create, deploy, and manage AI workflows.
+            Create your own AI employees in four simple steps. Our platform
+            makes it easy to design, deploy, and manage customized AI agents.
           </p>
         </div>
 

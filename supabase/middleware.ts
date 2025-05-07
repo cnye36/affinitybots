@@ -34,24 +34,40 @@ export async function updateSession(request: NextRequest) {
   // issues with users being randomly logged out.
 
   // IMPORTANT: DO NOT REMOVE auth.getUser()
-
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  
 
-  if (
-    !user &&
-    !request.nextUrl.pathname.startsWith("/signin") &&
-    !request.nextUrl.pathname.startsWith("/signup") &&
-    !request.nextUrl.pathname.startsWith("/early-access") &&
-    request.nextUrl.pathname !== "/"
-  ) {
-    // no user, potentially respond by redirecting the user to the login page
-    const url = request.nextUrl.clone();
-    console.log("Redirecting to signin");
-    url.pathname = "/signin";
-    return NextResponse.redirect(url);
+  // Get the hostname from the request
+  const hostname = request.headers.get("host") || "";
+
+  // Check if this is the marketing site or the app
+  const isAppDomain = hostname.includes("app.agenthub.click");
+  const isMarketingDomain = hostname.includes("agenthub.click") && !isAppDomain;
+
+  // Different rules for different domains
+  if (isAppDomain) {
+    // App domain requires authentication for most routes
+    if (
+      !user &&
+      !request.nextUrl.pathname.startsWith("/signin") &&
+      !request.nextUrl.pathname.startsWith("/signup") &&
+      request.nextUrl.pathname !== "/"
+    ) {
+      // no user, redirect to signin
+      const url = request.nextUrl.clone();
+      console.log("Redirecting to signin");
+      url.pathname = "/signin";
+      return NextResponse.redirect(url);
+    }
+  } else if (isMarketingDomain) {
+    // Marketing site has no auth requirements except for admin pages
+    if (!user && request.nextUrl.pathname.startsWith("/admin")) {
+      // Admin pages require authentication
+      const url = request.nextUrl.clone();
+      url.pathname = "/signin";
+      return NextResponse.redirect(url);
+    }
   }
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is.

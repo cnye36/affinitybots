@@ -24,19 +24,20 @@ export function CTA() {
           className="max-w-4xl mx-auto text-center"
         >
           <h2 className="text-4xl md:text-6xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600">
-            Ready to Transform Your Business with AI?
+            Ready to Create Your AI Workforce?
           </h2>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Join thousands of businesses already using AI-Automated to build
-            powerful AI workflows. Start your free trial today.
+            Join innovative businesses already using our platform to create
+            custom AI employees that work 24/7. Start building your AI team
+            today.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/signup">
+            <Link href="/early-access">
               <Button
                 size="lg"
                 className="text-lg px-8 py-6 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
               >
-                Start Free Trial
+                Request Early Access
               </Button>
             </Link>
             <Link href="/contact">

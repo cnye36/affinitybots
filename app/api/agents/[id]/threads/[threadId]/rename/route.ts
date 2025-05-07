@@ -4,7 +4,7 @@ import { createClient } from "@/supabase/server";
 import { Client } from "@langchain/langgraph-sdk";
 
 // POST - Auto-generate a title based on conversation
-// @ts-expect-error Next.js App Router type mismatch
+
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string; threadId: string } }
@@ -61,7 +61,6 @@ export async function POST(
 }
 
 // PUT - Manually update the title
-// @ts-expect-error Next.js App Router type mismatch
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string; threadId: string } }

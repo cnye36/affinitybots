@@ -24,12 +24,11 @@ export function Hero() {
           transition={{ duration: 0.8 }}
         >
           <h1 className="text-5xl md:text-7xl font-extrabold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600">
-            Build and Manage AI Agent Workflows
+            Don&apos;t Hire Someone, Create Someone!
           </h1>
           <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Harness the power of AI to automate and optimize your processes.
-            Create, connect, and orchestrate AI agents to transform your
-            business.
+            Build and deploy your own AI employees in minutes. Configure,
+            customize, and deploy AI agents that work for you 24/7.
           </p>
           <div className="flex gap-4 justify-center">
             <Link href="/signup">
@@ -49,22 +48,12 @@ export function Hero() {
           <div className="mt-12 flex items-center justify-center gap-8">
             <div className="flex items-center">
               <div className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600">
-                10+
+                5min
               </div>
               <div className="ml-2 text-sm text-muted-foreground">
-                Hours Per Week
+                To Create
                 <br />
-                Saved
-              </div>
-            </div>
-            <div className="flex items-center">
-              <div className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600">
-                10x
-              </div>
-              <div className="ml-2 text-sm text-muted-foreground">
-                Faster
-                <br />
-                Development
+                an Agent
               </div>
             </div>
             <div className="flex items-center">
@@ -72,9 +61,19 @@ export function Hero() {
                 24/7
               </div>
               <div className="ml-2 text-sm text-muted-foreground">
-                Automated
+                Availability
                 <br />
-                Workflows
+                Always On
+              </div>
+            </div>
+            <div className="flex items-center">
+              <div className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600">
+                100%
+              </div>
+              <div className="ml-2 text-sm text-muted-foreground">
+                Customizable
+                <br />
+                Agents
               </div>
             </div>
           </div>

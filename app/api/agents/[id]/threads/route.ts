@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
 import { Client } from "@langchain/langgraph-sdk";
 
-// @ts-expect-error Next.js App Router type mismatch
+
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -72,7 +72,7 @@ export async function POST(
 }
 
 // GET - List all threads for an agent
-// @ts-expect-error Next.js App Router type mismatch
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }

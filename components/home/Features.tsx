@@ -2,16 +2,18 @@ import React from "react";
 
 const features = [
   {
-    title: "Create Agents",
-    description: "Design custom AI agents tailored to your needs",
+    title: "Customizable AI Agents",
+    description:
+      "Design AI employees with unique personalities and capabilities",
   },
   {
-    title: "Build Workflows",
-    description: "Connect agents to create powerful automation flows",
+    title: "Knowledge Integration",
+    description: "Equip your agents with documents, websites, and custom data",
   },
   {
-    title: "Monitor & Optimize",
-    description: "Track performance and continuously improve your AI workflows",
+    title: "Multi-Platform Deployment",
+    description:
+      "Deploy your AI agents to your website, social media, or use in our platform",
   },
 ];
 

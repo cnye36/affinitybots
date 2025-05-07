@@ -31,9 +31,6 @@ export function Header() {
         <a href="#benefits" className="text-sm font-medium hover:text-primary">
           Benefits
         </a>
-        <a href="#pricing" className="text-sm font-medium hover:text-primary">
-          Pricing
-        </a>
       </nav>
 
       <div className="flex items-center space-x-4">
