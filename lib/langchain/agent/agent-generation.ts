@@ -1,12 +1,8 @@
 import { ChatOpenAI } from "@langchain/openai";
 import { PromptTemplate } from "@langchain/core/prompts";
-import { ToolConfig } from "@/types/tools";
 import { generateAgentAvatar } from "@/lib/image-generation";
-import {
-  AVAILABLE_TOOLS,
-  getDefaultToolConfig,
-} from "@/lib/langchain/tools/config";
-import type { ToolID } from "@/lib/langchain/tools/config";
+import { AVAILABLE_MCP_SERVERS } from "@/lib/langchain/tools/mcpToolIndex";
+import type { AgentConfiguration } from "@/types/agent";
 
 // Store previously generated names per user with a maximum cache size
 const MAX_USERS_IN_CACHE = 1000; // Maximum number of users to store in cache
@@ -94,14 +90,14 @@ Return only the name, nothing else.
 `);
 
 const configurationPrompt = PromptTemplate.fromTemplate(`
-Create a comprehensive configuration for an AI assistant based on the following description.
-Focus on making the assistant highly effective at its specific task while maintaining appropriate constraints.
+Create a comprehensive configuration for an AI agent based on the following description.
+Focus on making the agent highly effective at its specific task while maintaining appropriate constraints.
 
 User's Description: {description}
-Assistant Type: {agentType}
+Agent Type: {agentType}
 
 Available Tools:
-${Object.values(AVAILABLE_TOOLS)
+${Object.values(AVAILABLE_MCP_SERVERS)
   .map((t) => `- ${t.name}: ${t.description}`)
   .join("\n")}
 
@@ -109,8 +105,8 @@ Note: Only include Search (Tavily) by default.
 
 Provide the following information in a clear format:
 
-1. NAME: Create a creative name for the assistant (1-3 words, no AI/Bot/Assistant)
-2. DESCRIPTION: Write a concise summary of the assistant's capabilities
+1. NAME: Create a creative name for the agent (1-3 words, no AI/Bot/Assistant)
+2. DESCRIPTION: Write a concise summary of the agent's capabilities
 3. INSTRUCTIONS: Create a detailed and structured system prompt that follows this format:
    
    ## Identity
@@ -145,7 +141,9 @@ Provide the following information in a clear format:
    - [Handling edge cases]
    - [Closing interactions]
 
-4. TOOLS: List required tools from: ${Object.keys(AVAILABLE_TOOLS).join(", ")}
+4. TOOLS: List required tools from: ${Object.keys(AVAILABLE_MCP_SERVERS).join(
+  ", "
+)}
 5. MODEL: Specify gpt-4o
 6. TEMPERATURE: Provide a number between 0 and 1
 7. MEMORY_WINDOW: Suggest number of past messages to consider (default: 10)
@@ -185,30 +183,14 @@ export async function generateAgentName(
   return generatedName;
 }
 
-interface GeneratedConfig {
+export interface GeneratedConfig {
   owner_id: string;
   name: string;
   description: string;
   agent_avatar: string;
   agent_type: string;
-  metadata: object;
-  config: {
-    model: string;
-    temperature: number;
-    tools: Record<ToolID, ToolConfig>;
-    memory: {
-      enabled: boolean;
-      max_entries: number;
-      relevance_threshold: number;
-    };
-    prompt_template: string;
-    knowledge_base: {
-      isEnabled: boolean;
-      config: {
-        sources: unknown[];
-      };
-    };
-  };
+  config: AgentConfiguration;
+  metadata: Record<string, unknown>;
 }
 
 export async function generateAgentConfiguration(
@@ -233,94 +215,58 @@ export async function generateAgentConfiguration(
   // Parse the response into structured data
   const lines = responseText.split("\n").filter((line) => line.trim());
 
-  // Create a temporary structure to hold the parsed data before transforming
-  const tempConfig: {
-    name?: string;
-
-    config: {
-      model: string;
-      temperature: number;
-      tools: Record<ToolID, ToolConfig>;
-      memory: {
-        enabled: boolean;
-        max_entries: number;
-        relevance_threshold: number;
-      };
-      prompt_template: string;
-      knowledge_base: {
-        isEnabled: boolean;
-        config: {
-          sources: unknown[];
-        };
-      };
-    };
-    metadata: {
-      owner_id: string;
-      description: string;
-      agent_type: string;
-      [key: string]: unknown;
-    };
-  } = {
+  // Initialize the configuration with default values
+  const config: GeneratedConfig = {
+    owner_id: ownerId,
+    name: "",
+    description: "",
+    agent_avatar: "/default-avatar.png", // Will be updated after name generation
+    agent_type: agentType,
     config: {
       model: "gpt-4o",
       temperature: 0.7,
-      tools: {
-        web_search: getDefaultToolConfig("web_search"),
-        wikipedia: getDefaultToolConfig("wikipedia"),
-        wolfram_alpha: getDefaultToolConfig("wolfram_alpha"),
-        notion: getDefaultToolConfig("notion"),
-        twitter: getDefaultToolConfig("twitter"),
-        google: getDefaultToolConfig("google"),
-      },
+      tools: [],
       memory: {
         enabled: true,
         max_entries: 10,
         relevance_threshold: 0.7,
       },
       prompt_template: "",
-      knowledge_base: { isEnabled: false, config: { sources: [] } },
+      knowledge_base: {
+        isEnabled: false,
+        config: {
+          sources: [],
+        },
+      },
+      enabled_mcp_servers: ["memory"], // Memory server is always enabled
     },
-    metadata: {
-      owner_id: ownerId,
-      description: "",
-      agent_type: agentType,
-    },
+    metadata: {},
   };
 
-  // Parse the response considering multi-line sections
+  // Parse the response and collect instructions
   let instructionsContent = "";
   let isCollectingInstructions = false;
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-
+  for (const line of lines) {
     if (line.startsWith("INSTRUCTIONS:")) {
-      // Mark that we're starting to collect the instructions section
       isCollectingInstructions = true;
-      continue; // Skip this line, move to the next
-    } else if (
-      isCollectingInstructions &&
-      (line.startsWith("TOOLS:") ||
+      continue;
+    }
+
+    if (isCollectingInstructions) {
+      if (
+        line.startsWith("TOOLS:") ||
         line.startsWith("MODEL:") ||
         line.startsWith("TEMPERATURE:") ||
         line.startsWith("MEMORY_WINDOW:") ||
-        line.startsWith("MEMORY_RELEVANCE:"))
-    ) {
-      // We've reached the end of the instructions section
-      isCollectingInstructions = false;
-
-      // Set the collected instructions to the prompt_template
-      if (tempConfig.config) {
-        tempConfig.config.prompt_template = instructionsContent.trim();
+        line.startsWith("MEMORY_RELEVANCE:")
+      ) {
+        isCollectingInstructions = false;
+        config.config.prompt_template = instructionsContent.trim();
+      } else {
+        instructionsContent += line + "\n";
+        continue;
       }
-
-      // Continue with regular processing for the current line
-    }
-
-    // If we're collecting instructions, add this line to the instructions content
-    if (isCollectingInstructions) {
-      instructionsContent += line + "\n";
-      continue;
     }
 
     // Regular processing for non-instruction sections
@@ -331,95 +277,54 @@ export async function generateAgentConfiguration(
 
     switch (key.trim().toUpperCase()) {
       case "NAME":
-        tempConfig.name = value;
+        config.name = value;
         break;
       case "DESCRIPTION":
-        if (tempConfig.metadata) {
-          tempConfig.metadata.description = value;
-        }
+        config.description = value;
         break;
       case "TOOLS":
-        if (tempConfig.config) {
-          // Initialize tools configuration
-          const toolsConfig: Record<ToolID, ToolConfig> = {
-            web_search: getDefaultToolConfig("web_search"),
-            wikipedia: getDefaultToolConfig("wikipedia"),
-            wolfram_alpha: getDefaultToolConfig("wolfram_alpha"),
-            notion: getDefaultToolConfig("notion"),
-            twitter: getDefaultToolConfig("twitter"),
-            google: getDefaultToolConfig("google"),
-          };
-
-          // Update requested tools to enabled
-          const requestedTools = value
-            .split(",")
-            .map((t) => t.trim() as ToolID);
-          requestedTools.forEach((toolId) => {
-            if (AVAILABLE_TOOLS[toolId as ToolID]) {
-              toolsConfig[toolId] = getDefaultToolConfig(toolId);
-              toolsConfig[toolId].isEnabled = true;
-            }
-          });
-
-          tempConfig.config.tools = toolsConfig;
-        }
+        // Parse requested MCP servers
+        const requestedServers = value.split(",").map((t) => t.trim());
+        config.config.enabled_mcp_servers = [
+          "memory",
+          ...requestedServers.filter(
+            (server) =>
+              Object.prototype.hasOwnProperty.call(
+                AVAILABLE_MCP_SERVERS,
+                server
+              ) && server !== "memory"
+          ),
+        ];
         break;
       case "MODEL":
-        if (tempConfig.config) {
-          tempConfig.config.model = value as "gpt-4o";
-        }
+        config.config.model = value as "gpt-4o";
         break;
       case "TEMPERATURE":
-        if (tempConfig.config) {
-          tempConfig.config.temperature = parseFloat(value);
-        }
+        config.config.temperature = parseFloat(value);
         break;
       case "MEMORY_WINDOW":
-        if (tempConfig.config?.memory) {
-          tempConfig.config.memory.max_entries = parseInt(value, 10);
-        }
+        config.config.memory.max_entries = parseInt(value, 10);
         break;
       case "MEMORY_RELEVANCE":
-        if (tempConfig.config?.memory) {
-          tempConfig.config.memory.relevance_threshold = parseFloat(value);
-        }
+        config.config.memory.relevance_threshold = parseFloat(value);
         break;
     }
   }
 
-  // After the name is set in the forEach loop, generate the avatar and ensure we have a name
-  let agent_avatar = "/default-avatar.png";
-
-  // If NAME was not provided in the configuration or we want a more creative name,
-  // use our enhanced name generator
-  if (!tempConfig.name) {
-    tempConfig.name = await generateAgentName(description, agentType, ownerId);
-  }
-
-  // Generate the avatar
-  if (tempConfig.name) {
-    agent_avatar = await generateAgentAvatar(tempConfig.name, agentType);
-  }
-
-  // Transform tempConfig to match our new schema
-  const config: GeneratedConfig = {
-    owner_id: ownerId,
-    name: tempConfig.name || "",
-    description: tempConfig.metadata?.description || "",
-    agent_avatar: agent_avatar,
-    agent_type: agentType,
-    metadata: {
-      owner_id: ownerId,
-    },
-    config: {
-      ...tempConfig.config,
-    },
-  };
-
-  // Ensure all required fields are present
-  if (!config.name || !config.config?.prompt_template || !config.description) {
+  // Ensure required fields are present
+  if (!config.name || !config.config.prompt_template || !config.description) {
     throw new Error("Missing required fields in agent configuration");
   }
+
+  // Generate avatar asynchronously - this can happen in parallel with saving the config
+  generateAgentAvatar(config.name, config.agent_type)
+    .then((avatarPath) => {
+      config.agent_avatar = avatarPath;
+    })
+    .catch((error) => {
+      console.error("Failed to generate avatar:", error);
+      // Keep the default avatar
+    });
 
   return config;
 }

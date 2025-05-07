@@ -37,7 +37,7 @@ export function Hero() {
                 size="lg"
                 className="text-lg px-8 py-6 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
               >
-                Get Started Free
+                Request Early Access
               </Button>
             </Link>
             <Link href="#how-it-works">
@@ -49,12 +49,12 @@ export function Hero() {
           <div className="mt-12 flex items-center justify-center gap-8">
             <div className="flex items-center">
               <div className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600">
-                100+
+                10+
               </div>
               <div className="ml-2 text-sm text-muted-foreground">
-                AI Models
+                Hours Per Week
                 <br />
-                Supported
+                Saved
               </div>
             </div>
             <div className="flex items-center">

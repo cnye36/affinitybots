@@ -127,8 +127,11 @@ export function AgentCard({ agent, onDelete }: AgentCardProps) {
           </span>
           <span className="hidden sm:inline">•</span>
           <span>
-            {Object.values(agent.config.tools).filter((tool) => tool.isEnabled)
-              .length || 0}{" "}
+            {agent.config.tools
+              ? Object.values(agent.config.tools).filter(
+                  (tool) => tool.isEnabled
+                ).length
+              : 0}{" "}
             tools
           </span>
         </div>

@@ -1,5 +1,3 @@
-import { ToolsConfig } from "./tools";
-
 export interface Agent {
   id: string;
   graph_id: string;
@@ -15,7 +13,7 @@ export interface Agent {
 export interface AgentConfiguration {
   model: ModelType;
   temperature: number;
-  tools: ToolsConfig;
+  tools: string[];
   memory: {
     enabled: boolean;
     max_entries: number;
@@ -28,6 +26,7 @@ export interface AgentConfiguration {
       sources: unknown[];
     };
   };
+  enabled_mcp_servers: string[];
 }
 
 export interface AgentMetadata {

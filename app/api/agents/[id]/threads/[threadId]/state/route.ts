@@ -1,14 +1,13 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
 import { Client } from "@langchain/langgraph-sdk";
 
-
-
+// @ts-expect-error Next.js App Router type mismatch
 export async function GET(
-  request: Request,
-  props: { params: Promise<{ id: string; threadId: string }> }
+  request: NextRequest,
+  { params }: { params: { id: string; threadId: string } }
 ) {
-  const { threadId } = await props.params;
+  const { threadId } = params;
   const client = new Client({
     apiUrl: process.env.LANGGRAPH_URL,
     apiKey: process.env.LANGSMITH_API_KEY,

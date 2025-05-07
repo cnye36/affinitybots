@@ -3,16 +3,13 @@
     "RUN npm install -g corepack@latest",
     "RUN corepack enable",
     "RUN corepack prepare pnpm@latest-9 --activate",
-    "WORKDIR /app",
-    "COPY . .",
-    "RUN pnpm install",
-    "RUN pnpm run build"
+    "ENV NODE_OPTIONS=--max_old_space_size=4096",
+    "ENV PNPM_NETWORK_TIMEOUT=300000"
   ],
 
   "dependencies": ["."],
   "graphs": {
-    "agent": "./lib/langchain/agent/agent.ts:graph",
-    "testGraph": "./lib/langchain/agent/testGraph.ts:graph"
+    "reactAgent": "./lib/langchain/agent/reactAgent.ts:graph"
   },
   "env": ".env"
 }

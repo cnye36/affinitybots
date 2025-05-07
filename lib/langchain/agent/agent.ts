@@ -14,11 +14,19 @@ import {
 } from "@langchain/core/messages";
 import { ToolCall } from "@langchain/core/messages/tool";
 import { RunnableConfig } from "@langchain/core/runnables";
-import { AgentConfigurableOptions } from "./config";
+// import { AgentConfigurableOptions } from "./config";
 import { AgentState } from "@/types/langgraph";
 import { retrieveRelevantDocuments } from "@/lib/retrieval";
 import { createClient } from "@/supabase/server";
-import { getTools } from "@/lib/langchain/tools";
+// import { getTools } from "@/lib/langchain/tools";
+
+import { AgentConfiguration } from "@/types/agent";
+import { MultiServerMCPClient } from "@langchain/mcp-adapters";
+
+const mcpClient = new MultiServerMCPClient();
+
+await mcpClient.initializeConnections();
+const mcpTools = mcpClient.getTools();
 
 const DEFAULT_SYSTEM_PROMPT = `You are a helpful AI assistant that can use tools to find information.
 When you need to find current or factual information, use the search tool.
@@ -36,7 +44,7 @@ async function retrieveKnowledge(
   state: AgentState,
   config: RunnableConfig
 ): Promise<{ messages: BaseMessage[] }> {
-  const agentConfig = config.configurable as AgentConfigurableOptions;
+  const agentConfig = config.configurable as AgentConfiguration;
   const messages = state.messages;
   const lastMessage = messages[messages.length - 1];
 
@@ -80,16 +88,14 @@ async function callModel(
   state: AgentState,
   config: RunnableConfig
 ): Promise<{ messages: BaseMessage[] }> {
-  const agentConfig = config.configurable as AgentConfigurableOptions;
-  const tools = getTools(agentConfig.tools);
-
+  const agentConfig = config.configurable as AgentConfiguration;
   const systemPrompt = agentConfig.prompt_template || DEFAULT_SYSTEM_PROMPT;
 
   // Initialize the model with tool calling capabilities
   const model = new ChatOpenAI({
     model: agentConfig.model,
     temperature: agentConfig.temperature,
-  }).bindTools(tools);
+  }).bindTools(mcpTools);
 
   const messages = state.messages.map((msg) =>
     msg instanceof HumanMessage
@@ -104,6 +110,7 @@ async function callModel(
 
   return { messages: Array.isArray(response) ? response : [response] };
 }
+
 
 /**
  * Simple routing function to determine if we need to use tools
@@ -126,7 +133,7 @@ function routeModelOutput(state: { messages: BaseMessage[] }) {
 const workflow = new StateGraph(MessagesAnnotation)
   .addNode("knowledge", retrieveKnowledge)
   .addNode("callModel", callModel)
-  .addNode("tools", new ToolNode([]))
+  .addNode("tools", new ToolNode(mcpTools))
   .addEdge(START, "knowledge")
   .addEdge("knowledge", "callModel")
   .addConditionalEdges("callModel", routeModelOutput, ["tools", END])

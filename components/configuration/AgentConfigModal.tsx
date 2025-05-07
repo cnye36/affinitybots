@@ -23,10 +23,8 @@ import {
   AgentConfiguration,
   ModelType,
 } from "@/types/agent";
-import { ToolsConfig } from "@/types/tools";
 import { useRouter } from "next/navigation";
 import { mutate } from "swr";
-import { getDefaultToolConfig } from "@/lib/langchain/tools/config";
 
 interface AgentConfigModalProps {
   open: boolean;
@@ -47,31 +45,13 @@ export function AgentConfigModal({
     created_at: agent.created_at,
     updated_at: agent.updated_at,
     name: agent.name,
-
     metadata: {
       owner_id: String(agent.metadata.owner_id),
     } as AgentMetadata,
     config: {
       model: (agent.config.model || "gpt-4o") as ModelType,
       temperature: Number(agent.config.temperature || 0.7),
-      tools: {
-        web_search: getDefaultToolConfig("web_search"),
-        wikipedia: getDefaultToolConfig("wikipedia"),
-        wolfram_alpha: getDefaultToolConfig("wolfram_alpha"),
-        notion: getDefaultToolConfig("notion"),
-        twitter: getDefaultToolConfig("twitter"),
-        google: getDefaultToolConfig("google"),
-        ...Object.entries(agent.config.tools || {}).reduce(
-          (acc, [key, value]) => ({
-            ...acc,
-            [key]: {
-              isEnabled: Boolean(value?.isEnabled || false),
-              config: value?.config || {},
-            },
-          }),
-          {}
-        ),
-      },
+      enabled_mcp_servers: agent.config.enabled_mcp_servers || ["memory"],
       memory: {
         enabled: Boolean(
           (agent.config.memory as { enabled?: boolean })?.enabled ?? true
@@ -88,7 +68,6 @@ export function AgentConfigModal({
         ),
       },
       prompt_template: String(agent.config.prompt_template || ""),
-      owner_id: String(agent.metadata?.owner_id || ""),
       knowledge_base: agent.config.knowledge_base || {
         isEnabled: false,
         config: { sources: [] },
@@ -110,31 +89,12 @@ export function AgentConfigModal({
       updated_at: agent.updated_at,
       name: agent.name,
       metadata: {
-        description: String(agent.description || ""),
-        owner_id: String(agent.metadata?.owner_id || ""),
+        owner_id: String(agent.metadata.owner_id),
       } as AgentMetadata,
       config: {
         model: (agent.config.model || "gpt-4o") as ModelType,
         temperature: Number(agent.config.temperature || 0.7),
-        avatar: String(agent.agent_avatar || ""),
-        tools: {
-          web_search: getDefaultToolConfig("web_search"),
-          wikipedia: getDefaultToolConfig("wikipedia"),
-          wolfram_alpha: getDefaultToolConfig("wolfram_alpha"),
-          notion: getDefaultToolConfig("notion"),
-          twitter: getDefaultToolConfig("twitter"),
-          google: getDefaultToolConfig("google"),
-          ...Object.entries(agent.config.tools || {}).reduce(
-            (acc, [key, value]) => ({
-              ...acc,
-              [key]: {
-                isEnabled: Boolean(value?.isEnabled || false),
-                config: value?.config || {},
-              },
-            }),
-            {}
-          ),
-        },
+        enabled_mcp_servers: agent.config.enabled_mcp_servers || ["memory"],
         memory: {
           enabled: Boolean(
             (agent.config.memory as { enabled?: boolean })?.enabled ?? true
@@ -151,7 +111,6 @@ export function AgentConfigModal({
           ),
         },
         prompt_template: String(agent.config.prompt_template || ""),
-        owner_id: String(agent.metadata?.owner_id || ""),
         knowledge_base: agent.config.knowledge_base || {
           isEnabled: false,
           config: { sources: [] },
@@ -167,31 +126,22 @@ export function AgentConfigModal({
     }));
   };
 
-  const handleConfigurableChange = (
-    field: string | number | symbol,
-    value: unknown
-  ) => {
+  const handleConfigurableChange = (field: string, value: unknown) => {
     setConfig((prev) => ({
       ...prev,
       config: {
         ...prev.config,
-        configurable: {
-          ...prev.config,
-          [field]: value,
-        },
+        [field]: value,
       },
     }));
   };
 
-  const handleToolsChange = (updatedTools: ToolsConfig) => {
+  const handleMCPServersChange = (servers: string[]) => {
     setConfig((prev) => ({
       ...prev,
       config: {
         ...prev.config,
-        configurable: {
-          ...prev.config,
-          tools: updatedTools,
-        },
+        enabled_mcp_servers: servers,
       },
     }));
   };
@@ -200,13 +150,13 @@ export function AgentConfigModal({
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/assistants/${agent.id}`, {
+      const response = await fetch(`/api/agents/${agent.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          name: name,
+          name: config.name,
           description: config.description,
           metadata: config.metadata,
           config: config.config,
@@ -217,14 +167,14 @@ export function AgentConfigModal({
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const updatedAssistant = await response.json();
-      await mutate(`/api/assistants/${agent.id}`, updatedAssistant, false);
-      await mutate("/api/assistants");
+      const updatedAgent = await response.json();
+      await mutate(`/api/agents/${agent.id}`, updatedAgent, false);
+      await mutate("/api/agents");
       onOpenChange(false);
       router.refresh();
     } catch (err) {
-      console.error("Error updating assistant:", err);
-      setError("Failed to update assistant configuration.");
+      console.error("Error updating agent:", err);
+      setError("Failed to update agent configuration.");
     } finally {
       setLoading(false);
     }
@@ -273,14 +223,16 @@ export function AgentConfigModal({
 
           <TabsContent value="tools">
             <ToolSelector
-              tools={agent.config.tools as ToolsConfig}
-              onToolsChange={handleToolsChange}
+              enabledMCPServers={
+                config.config.enabled_mcp_servers || ["memory"]
+              }
+              onMCPServersChange={handleMCPServersChange}
             />
           </TabsContent>
 
           <TabsContent value="knowledge">
             <KnowledgeConfig
-              config={agent.config.knowledge_base}
+              config={config.config}
               onChange={handleConfigurableChange}
               assistant_id={agent.id}
             />
@@ -288,7 +240,7 @@ export function AgentConfigModal({
 
           <TabsContent value="memory">
             <MemoryConfig
-              config={agent.config.memory}
+              config={config.config}
               onChange={handleConfigurableChange}
             />
           </TabsContent>

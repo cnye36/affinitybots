@@ -1,16 +1,15 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { generateChatName } from "@/lib/chat-utils";
 import { createClient } from "@/supabase/server";
 import { Client } from "@langchain/langgraph-sdk";
 
-
-
 // POST - Auto-generate a title based on conversation
+// @ts-expect-error Next.js App Router type mismatch
 export async function POST(
-  request: Request,
-  props: { params: Promise<{ id: string; threadId: string }> }
+  request: NextRequest,
+  { params }: { params: { id: string; threadId: string } }
 ) {
-  const { threadId } = await props.params;
+  const { threadId } = params;
   const client = new Client({
     apiUrl: process.env.LANGGRAPH_URL,
     apiKey: process.env.LANGSMITH_API_KEY,
@@ -62,11 +61,12 @@ export async function POST(
 }
 
 // PUT - Manually update the title
+// @ts-expect-error Next.js App Router type mismatch
 export async function PUT(
-  request: Request,
-  props: { params: Promise<{ id: string; threadId: string }> }
+  request: NextRequest,
+  { params }: { params: { id: string; threadId: string } }
 ) {
-  const { threadId } = await props.params;
+  const { threadId } = params;
   const client = new Client({
     apiUrl: process.env.LANGGRAPH_URL,
     apiKey: process.env.LANGSMITH_API_KEY,

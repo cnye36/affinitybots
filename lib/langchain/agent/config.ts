@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { type LangGraphRunnableConfig } from "@langchain/langgraph";
-import { ToolsConfig } from "@/types/tools";
+import { AVAILABLE_MCP_SERVERS } from "../tools/mcpToolIndex";
 
 export type ModelType = "gpt-4o" | "gpt-4o-mini" | "gpt-o1" | "gpt-o1-mini";
 
@@ -30,11 +30,11 @@ export const AgentMetadataSchema = z.object({
 export const AgentConfigurableOptionsSchema = z.object({
   model: z.enum(["gpt-4o", "gpt-4o-mini", "gpt-o1", "gpt-o1-mini"]),
   temperature: z.number(),
-  tools: z.custom<ToolsConfig>(),
+  tools: z.array(z.string()),
   memory: AgentMemoryOptionsSchema,
   knowledge_base: KnowledgeBaseOptionsSchema.optional(),
   prompt_template: z.string(),
-  avatar: z.string(),
+  agent_avatar: z.string(),
 });
 
 // Complete config schema
