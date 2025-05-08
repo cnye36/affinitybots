@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { TaskConfigModal } from "./TaskConfigModal";
 import { TaskNodeData, Task } from "@/types/workflow";
-import { Assistant } from "@/types/langgraph";
+import { Agent } from "@/types/agent";
 
 interface TaskNodeProps {
   data: TaskNodeData & {
@@ -56,7 +56,7 @@ export const MemoizedTaskNode = memo(
 
     const handleTaskUpdate = (
       updatedTask: Task,
-      updatedAssistant: Assistant | null
+      updatedAgent: Agent | null
     ) => {
       // Dispatch update event with all necessary fields
       const event = new CustomEvent("updateTaskNode", {
@@ -66,11 +66,11 @@ export const MemoizedTaskNode = memo(
             name: updatedTask.name,
             description: updatedTask.description,
             type: updatedTask.task_type,
-            assignedAgent: updatedAssistant
+            assignedAgent: updatedAgent
               ? {
-                  id: updatedAssistant.assistant_id,
-                  name: updatedAssistant.name,
-                  avatar: updatedAssistant.config?.configurable?.avatar,
+                  id: updatedAgent.id,
+                  name: updatedAgent.name,
+                  avatar: updatedAgent.agent_avatar,
                 }
               : props.data.assignedAgent,
             config: updatedTask.config,

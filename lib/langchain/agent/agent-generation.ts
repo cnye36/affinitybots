@@ -2,7 +2,7 @@ import { ChatOpenAI } from "@langchain/openai";
 import { PromptTemplate } from "@langchain/core/prompts";
 import { generateAgentAvatar } from "@/lib/image-generation";
 import { AVAILABLE_MCP_SERVERS } from "@/lib/langchain/tools/mcpToolIndex";
-import type { AgentConfiguration } from "@/types/agent";
+import type { AgentConfiguration, ModelType } from "@/types/agent";
 
 // Store previously generated names per user with a maximum cache size
 const MAX_USERS_IN_CACHE = 1000; // Maximum number of users to store in cache
@@ -223,7 +223,7 @@ export async function generateAgentConfiguration(
     agent_avatar: "/default-avatar.png", // Will be updated after name generation
     agent_type: agentType,
     config: {
-      model: "gpt-4o",
+      model: "gpt-4.1",
       temperature: 0.7,
       tools: [],
       memory: {
@@ -297,7 +297,7 @@ export async function generateAgentConfiguration(
         ];
         break;
       case "MODEL":
-        config.config.model = value as "gpt-4o";
+        config.config.model = value as ModelType;
         break;
       case "TEMPERATURE":
         config.config.temperature = parseFloat(value);

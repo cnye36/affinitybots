@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Task } from "@/types/workflow";
 import { toast } from "@/hooks/use-toast";
-import { Assistant } from "@/types/langgraph";
 import { TaskModalHeader } from "./TaskModalHeader";
 import { PreviousNodeOutputPanel } from "./PreviousNodeOutputPanel";
 import { TaskConfigurationPanel } from "./TaskConfigurationPanel";
@@ -10,6 +9,7 @@ import { TestOutputPanel } from "./TestOutputPanel";
 import { Button } from "@/components/ui/button";
 import { UserPlus } from "lucide-react";
 import { AgentSelectModal } from "../AgentSelectModal";
+import { Agent } from "@/types/agent";
 
 interface TaskOutput {
   result: unknown;
@@ -23,7 +23,7 @@ interface TaskConfigModalProps {
   task: Task;
   previousNodeOutput?: TaskOutput;
   onTest: () => Promise<unknown>;
-  onUpdate: (updatedTask: Task, updatedAssistant: Assistant | null) => void;
+  onUpdate: (updatedTask: Task, updatedAgent: Agent | null) => void;
 }
 
 type OutputFormat = "json" | "markdown" | "text";
@@ -48,10 +48,10 @@ export function TaskConfigModal({
   const [isLoading, setIsLoading] = useState(false);
   const [testOutput, setTestOutput] = useState<TestOutput | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [assistant, setAssistant] = useState<Assistant | null>(null);
+  const [agent, setAgent] = useState<Agent | null>(null);
   const [isAgentSelectOpen, setIsAgentSelectOpen] = useState(false);
-  const [assistants, setAssistants] = useState<Assistant[]>([]);
-  const [loadingAssistants, setLoadingAssistants] = useState(true);
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [loadingAgents, setLoadingAgents] = useState(true);
 
   useEffect(() => {
     setCurrentTask(task);
@@ -66,13 +66,13 @@ export function TaskConfigModal({
         if (!response.ok) throw new Error("Failed to load assistants");
         const data = await response.json();
         if (isMounted) {
-          setAssistants(data);
-          setLoadingAssistants(false);
+          setAgents(data);
+          setLoadingAgents(false);
         }
       } catch (error) {
         console.error("Error loading assistants:", error);
         if (isMounted) {
-          setLoadingAssistants(false);
+          setLoadingAgents(false);
         }
       }
     };
@@ -93,24 +93,24 @@ export function TaskConfigModal({
       if (!currentTask.assignedAgent?.id) return;
 
       try {
-        setLoadingAssistants(true);
+        setLoadingAgents(true);
         const response = await fetch(
-          `/api/assistants/${currentTask.assignedAgent?.id}`
+          `/api/agents/${currentTask.assignedAgent?.id}`
         );
-        if (!response.ok) throw new Error("Failed to load assistant");
+        if (!response.ok) throw new Error("Failed to load agent");
         const data = await response.json();
         if (isMounted) {
-          setAssistant(data);
+          setAgent(data);
         }
       } catch (error) {
-        console.error("Error loading assistant:", error);
+        console.error("Error loading agent:", error);
         toast({
           title: "Failed to load assigned agent",
           variant: "destructive",
         });
       } finally {
         if (isMounted) {
-          setLoadingAssistants(false);
+          setLoadingAgents(false);
         }
       }
     };
@@ -125,10 +125,10 @@ export function TaskConfigModal({
   }, [isOpen, currentTask.assignedAgent?.id]);
 
   useEffect(() => {
-    if (currentTask && assistant) {
-      onUpdate(currentTask, assistant);
+    if (currentTask && agent) {
+      onUpdate(currentTask, agent);
     }
-  }, [currentTask, assistant, onUpdate]);
+  }, [currentTask, agent, onUpdate]);
 
   const handleTest = async () => {
     try {
@@ -167,7 +167,7 @@ export function TaskConfigModal({
     }
   };
 
-  const handleAgentSelect = async (selectedAssistant: Assistant) => {
+  const handleAgentSelect = async (selectedAgent: Agent) => {
     try {
       const response = await fetch(
         `/api/workflows/${currentTask.workflow_id}/tasks/${currentTask.workflow_task_id}`,
@@ -178,7 +178,7 @@ export function TaskConfigModal({
           },
           body: JSON.stringify({
             ...currentTask,
-            assistant_id: selectedAssistant.assistant_id,
+            agent_id: selectedAgent.id,
           }),
         }
       );
@@ -189,12 +189,12 @@ export function TaskConfigModal({
 
       const updatedTask = {
         ...currentTask,
-        assistant_id: selectedAssistant.assistant_id,
+        agent_id: selectedAgent.id,
       };
       setCurrentTask(updatedTask);
-      setAssistant(selectedAssistant);
+      setAgent(selectedAgent);
       setIsAgentSelectOpen(false);
-      onUpdate(updatedTask, selectedAssistant);
+      onUpdate(updatedTask, selectedAgent);
 
       toast({
         title: "Agent assigned successfully",
@@ -214,8 +214,8 @@ export function TaskConfigModal({
         <DialogContent className="max-w-7xl">
           <TaskModalHeader
             task={currentTask}
-            assistant={assistant}
-            isLoading={isLoading || loadingAssistants}
+            agent={agent}
+            isLoading={isLoading || loadingAgents}
             onTest={handleTest}
             onChangeAgent={() => setIsAgentSelectOpen(true)}
           />
@@ -227,11 +227,11 @@ export function TaskConfigModal({
               setOutputFormat={setOutputFormat}
             />
 
-            {loadingAssistants ? (
+            {loadingAgents ? (
               <div className="border rounded-lg p-4 flex items-center justify-center">
                 Loading agent information...
               </div>
-            ) : !assistant ? (
+            ) : !agent ? (
               <div className="border rounded-lg p-4 flex items-center justify-center">
                 <Button
                   variant="outline"
@@ -245,7 +245,7 @@ export function TaskConfigModal({
               <TaskConfigurationPanel
                 currentTask={currentTask}
                 setCurrentTask={setCurrentTask}
-                assistant={assistant}
+                agent={agent}
               />
             )}
 
@@ -263,8 +263,8 @@ export function TaskConfigModal({
         isOpen={isAgentSelectOpen}
         onClose={() => setIsAgentSelectOpen(false)}
         onSelect={handleAgentSelect}
-        assistants={assistants}
-        loading={loadingAssistants}
+        agents={agents}
+        loading={loadingAgents}
       />
     </>
   );

@@ -101,7 +101,7 @@ export async function POST(
       name: taskData.name,
       description: taskData.description,
       task_type: taskData.task_type,
-      assistant_id: taskData.assistant_id, // Keep for backward compatibility
+      agent_id: taskData.agent_id, // Keep for backward compatibility
       config: {
         input: {
           source: taskData.config?.input?.source || "previous_task",
@@ -113,9 +113,9 @@ export async function POST(
         },
         // Store assigned agent information in the config so we can use it in the frontend
         assigned_agent: {
-          id: taskData.assistant_id,
-          name: taskData.assistant_name || "Assistant",
-          avatar: taskData.assistant_avatar,
+          id: taskData.agent_id,
+          name: taskData.agent_name || "Agent",
+          avatar: taskData.agent_avatar,
         },
         ...taskData.config,
       },

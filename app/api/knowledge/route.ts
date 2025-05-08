@@ -10,15 +10,15 @@ export async function POST(req: Request) {
   try {
     const formData = await req.formData();
     const file = formData.get("file") as File;
-    const assistantId = formData.get("assistantId") as string;
+    const agentId = formData.get("agentId") as string;
 
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    if (!assistantId || assistantId.trim() === "") {
+    if (!agentId || agentId.trim() === "") {
       return NextResponse.json(
-        { error: "Valid assistant ID is required" },
+        { error: "Valid agent ID is required" },
         { status: 400 }
       );
     }
@@ -69,7 +69,7 @@ export async function POST(req: Request) {
         metadata: {
           ...doc.metadata,
           filename: file.name,
-          assistant_id: assistantId.trim(),
+          agent_id: agentId.trim(),
           uploaded_at: new Date().toISOString(),
         },
       })),

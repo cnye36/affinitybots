@@ -37,7 +37,7 @@ export async function GET(
     }
 
     // Get all runs for this workflow
-    const runs = await client.runs.list(workflow.assistant_id);
+    const runs = await client.runs.list(workflow.agent_id);
 
     return NextResponse.json(runs || []);
   } catch (error) {
@@ -87,7 +87,7 @@ export async function POST(
 
     // Create a new background run for the workflow
     const run = await client.runs.create(
-      workflow.assistant_id,
+      workflow.agent_id,
       workflow.thread_id || "",
       {
         input,

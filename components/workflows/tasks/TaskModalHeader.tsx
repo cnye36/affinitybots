@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Play, Settings2, UserPlus } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Task } from "@/types/workflow";
-import { Assistant } from "@/types/langgraph";
+import { Agent } from "@/types/agent";
 import { Badge } from "@/components/ui/badge";
 import { AgentConfigModal } from "../../configuration/AgentConfigModal";
 import {
@@ -20,7 +20,7 @@ import {
 
 interface TaskModalHeaderProps {
   task: Task;
-  assistant: Assistant | null;
+  agent: Agent | null;
   isLoading: boolean;
   onTest: () => Promise<void>;
   onChangeAgent: () => void;
@@ -28,7 +28,7 @@ interface TaskModalHeaderProps {
 
 export function TaskModalHeader({
   task,
-  assistant,
+  agent,
   isLoading,
   onTest,
   onChangeAgent,
@@ -49,26 +49,26 @@ export function TaskModalHeader({
           {/* Agent Info and Task Name */}
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-6">
-              {assistant ? (
+              {agent ? (
                 <div className="flex items-center space-x-2">
                   <span className="text-sm text-muted-foreground">Agent:</span>
                   <div className="flex items-center space-x-2">
                     <Avatar className="h-6 w-6">
                       <AvatarImage
-                        src={assistant.config?.configurable?.avatar}
-                        alt={assistant.name}
+                        src={agent?.agent_avatar}
+                        alt={agent?.name}
                       />
                       <AvatarFallback
                         style={{
                           backgroundColor: `hsl(${
-                            (assistant.name.length * 30) % 360
+                            (agent?.name?.length || 0 * 30) % 360
                           }, 70%, 50%)`,
                         }}
                       >
-                        {assistant.name.slice(0, 2).toUpperCase()}
+                        {agent?.name.slice(0, 2).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="font-medium">{assistant.name}</span>
+                    <span className="font-medium">{agent?.name}</span>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -108,7 +108,7 @@ export function TaskModalHeader({
             <div className="flex space-x-2">
               <Button
                 onClick={onTest}
-                disabled={isLoading || !assistant}
+                disabled={isLoading || !agent}
                 variant="secondary"
                 className="gap-2"
               >
@@ -119,45 +119,39 @@ export function TaskModalHeader({
           </div>
 
           {/* Agent Capabilities */}
-          {assistant && (
+          {agent && (
             <div className="flex flex-wrap items-center gap-3 rounded-md border bg-muted/50 p-2">
-              {assistant.config?.configurable?.model && (
+              {agent?.config?.model && (
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-medium text-muted-foreground">
                     Model:
                   </span>
                   <Badge variant="secondary" className="text-xs">
-                    {assistant.config.configurable.model}
+                    {agent.config.model}
                   </Badge>
                 </div>
               )}
-              {assistant.config?.configurable?.tools && (
+              {agent.config?.tools && (
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-medium text-muted-foreground">
                     Tools:
                   </span>
                   <div className="flex flex-wrap gap-1">
-                    {Object.keys(assistant.config.configurable.tools).map(
-                      (tool) => (
-                        <Badge
-                          key={tool}
-                          variant="secondary"
-                          className="text-xs"
-                        >
-                          {tool}
-                        </Badge>
-                      )
-                    )}
+                    {Object.keys(agent.config.tools).map((tool) => (
+                      <Badge key={tool} variant="secondary" className="text-xs">
+                        {tool}
+                      </Badge>
+                    ))}
                   </div>
                 </div>
               )}
-              {assistant.config?.configurable?.memory?.enabled && (
+              {agent.config?.memory?.enabled && (
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-medium text-muted-foreground">
                     Memory:
                   </span>
                   <Badge variant="secondary" className="text-xs">
-                    {assistant.config.configurable.memory.max_entries} entries
+                    {agent.config.memory.max_entries} entries
                   </Badge>
                 </div>
               )}
@@ -167,11 +161,11 @@ export function TaskModalHeader({
       </DialogHeader>
 
       {/* Agent Configuration Modal */}
-      {assistant && (
+      {agent && (
         <AgentConfigModal
           open={isAgentConfigOpen}
           onOpenChange={setIsAgentConfigOpen}
-          assistant={assistant}
+          agent={agent}
         />
       )}
     </>

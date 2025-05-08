@@ -33,8 +33,4 @@ export interface AgentMetadata {
   owner_id: string;
 }
 
-export type ModelType =
-  | "gpt-4o"
-  | "gpt-4o-mini"
-  | "gpt-o1"
-  | "gpt-o3-mini-high";
+export type ModelType = "gpt-4.1" | "gpt-4.1-mini" | "gpt-4.1-nano" | "gpt-o3";

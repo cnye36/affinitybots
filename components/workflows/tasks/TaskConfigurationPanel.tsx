@@ -4,19 +4,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Task } from "@/types/workflow";
-import { Assistant } from "@/types/langgraph";
+import { Agent } from "@/types/agent";
 import { toast } from "@/hooks/use-toast";
 
 interface TaskConfigurationPanelProps {
   currentTask: Task;
   setCurrentTask: (task: Task) => void;
-  assistant: Assistant | null;
+  agent: Agent | null;
 }
 
 export function TaskConfigurationPanel({
   currentTask,
   setCurrentTask,
-  assistant,
+  agent,
 }: TaskConfigurationPanelProps) {
   // Debounced save function
   const debouncedSave = useCallback(async (task: Task) => {
@@ -110,7 +110,7 @@ export function TaskConfigurationPanel({
                 });
               }}
               placeholder={`Enter your prompt for ${
-                assistant?.name || "the agent"
+                agent?.name || "the agent"
               }...`}
               className="min-h-[200px]"
               required

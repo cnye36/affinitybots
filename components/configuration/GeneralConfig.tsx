@@ -107,7 +107,7 @@ export function GeneralConfig({
         onChange("avatar", publicUrl);
 
         // Save the changes immediately to persist the avatar
-        const response = await fetch(`/api/assistants/${config.id}`, {
+        const response = await fetch(`/api/agents/${config.id}`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
@@ -123,8 +123,8 @@ export function GeneralConfig({
         }
 
         // Update SWR cache
-        await mutate(`/api/assistants/${config.id}`);
-        await mutate("/api/assistants");
+        await mutate(`/api/agents/${config.id}`);
+        await mutate("/api/agents");
       } catch (error) {
         console.error("Error uploading avatar:", error);
         if (error instanceof Error) {
@@ -149,7 +149,7 @@ export function GeneralConfig({
 
   const handleDelete = async () => {
     try {
-      const response = await fetch(`/api/assistants/${config.id}`, {
+      const response = await fetch(`/api/agents/${config.id}`, {
         method: "DELETE",
       });
 
@@ -157,8 +157,8 @@ export function GeneralConfig({
         throw new Error("Failed to delete agent");
       }
 
-      await mutate("/api/assistants");
-      router.push("/assistants");
+      await mutate("/api/agents");
+      router.push("/agents");
       toast({
         title: "Agent deleted successfully",
       });

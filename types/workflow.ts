@@ -1,5 +1,3 @@
-import { IntegrationType } from "./tools";
-
 export type TaskType =
   | "ai_task"
   | "integration"
@@ -167,3 +165,11 @@ export interface IntegrationConfig {
   };
   settings: Record<string, unknown>;
 }
+
+export type IntegrationType =
+  | "notion"
+  | "twitter"
+  | "google_calendar"
+  | "google_docs"
+  | "google_sheets"
+  | "google_drive";

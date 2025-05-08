@@ -10,13 +10,11 @@ const VALID_TASK_TYPES: TaskType[] = [
   "notion_search",
   // Twitter tasks
   "twitter_post_tweet",
-  "twitter_thread",
   "twitter_dm",
-  "twitter_like",
   "twitter_retweet",
   // Google tasks
-  "google_calendar_create",
-  "google_calendar_update",
+  "google_calendar_create_event",
+  "google_calendar_update_event",
   "google_docs_create",
   "google_sheets_update",
   "google_drive_upload",
@@ -115,7 +113,7 @@ export async function PUT(
               assigned_agent: taskData.assignedAgent
                 ? {
                     id: taskData.assignedAgent.id,
-                    name: taskData.assignedAgent.name || "Assistant",
+                    name: taskData.assignedAgent.name || "Agent",
                     avatar: taskData.assignedAgent.avatar,
                   }
                 : null,

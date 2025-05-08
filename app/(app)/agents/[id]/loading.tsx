@@ -7,7 +7,7 @@ export default function Loading() {
       </div>
       <div className="flex-1 overflow-hidden">
         <div className="h-full flex items-center justify-center">
-          <div className="text-gray-400">Loading assistant...</div>
+          <div className="text-gray-400">Loading agent...</div>
         </div>
       </div>
     </div>

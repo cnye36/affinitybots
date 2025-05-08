@@ -52,7 +52,7 @@ export default async function Dashboard() {
     activityLogs?.map((log) => ({
       type: log.type as
         | "workflow_completed"
-        | "assistant_created"
+        | "agent_created"
         | "workflow_error",
       message: log.message,
       time: formatRelativeTime(log.created_at),
@@ -70,7 +70,7 @@ export default async function Dashboard() {
 
   // Fetch total agents count
   const { count: totalAgents, error: agentCountError } = await supabase
-    .from("user_assistants")
+    .from("user_agents")
     .select("*", { count: "exact", head: true })
     .eq("user_id", user.id);
 
