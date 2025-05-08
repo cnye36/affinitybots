@@ -6,7 +6,7 @@ import { CheckCircle } from "lucide-react";
 
 const benefits = [
   {
-    title: "Build In Minutes, Not Months",
+    title: "Design Your Digital Worker",
     description:
       "Create customized AI agents quickly and easily. Our intuitive platform lets you deploy powerful AI employees without any coding required.",
     features: [

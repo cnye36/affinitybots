@@ -24,11 +24,12 @@ export function Hero() {
           transition={{ duration: 0.8 }}
         >
           <h1 className="text-5xl md:text-7xl font-extrabold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600">
-            Don&apos;t Hire Someone, Create Someone!
+            Build AI Employees in Minutes, Not Months
           </h1>
           <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Build and deploy your own AI employees in minutes. Configure,
-            customize, and deploy AI agents that work for you 24/7.
+            Ditch the hiring headaches. With AgentHub, you can instantly design,
+            deploy, and manage AI-powered agents that work for you 24/7 — no
+            coding required.
           </p>
           <div className="flex gap-4 justify-center">
             <Link href="/signup">
