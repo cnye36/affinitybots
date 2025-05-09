@@ -4,7 +4,12 @@ const features = [
   {
     title: "Customizable AI Agents",
     description:
-      "Design AI employees with unique personalities and capabilities",
+      "Design AI employees with unique personalities, skills, and capabilities",
+  },
+  {
+    title: "Internal & External Agents",
+    description:
+      "Create agents for your own use or to interact with your customers",
   },
   {
     title: "Knowledge Integration",
@@ -13,13 +18,13 @@ const features = [
   {
     title: "Multi-Platform Deployment",
     description:
-      "Deploy your AI agents to your website, social media, or use in our platform",
+      "Keep agents private or deploy them to your website and social media",
   },
 ];
 
 export function Features() {
   return (
-    <section className="grid md:grid-cols-3 gap-8">
+    <section className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
       {features.map((feature, index) => (
         <div key={index} className="relative p-6 rounded-lg overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 opacity-75 blur-lg"></div>

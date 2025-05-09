@@ -8,7 +8,7 @@ const steps = [
     number: "01",
     title: "Design Your Agent",
     description:
-      "Create an AI agent with the personality and skills you need. Choose a name, description, and customize how it interacts with your users.",
+      "Create an AI agent with the personality and skills you need. Define whether it will be a personal assistant or customer-facing representative.",
     icon: "🧠",
   },
   {
@@ -20,16 +20,16 @@ const steps = [
   },
   {
     number: "03",
-    title: "Test & Deploy",
+    title: "Test & Implement",
     description:
-      "Test your agent in a sandbox environment, then deploy it to your website, social media, or use it directly in our platform. Go live in minutes.",
+      "Test your agent in a sandbox environment, then use it privately within your workspace or deploy it externally to interact with customers.",
     icon: "🚀",
   },
   {
     number: "04",
     title: "Monitor & Improve",
     description:
-      "Track your agent's performance, review conversations, and continuously improve its capabilities based on real user interactions.",
+      "Track your agent's performance, review conversations, and continuously improve its capabilities based on real interactions.",
     icon: "📈",
   },
 ];
@@ -41,8 +41,9 @@ export function HowItWorks() {
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-5xl font-bold mb-4">How It Works</h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Create your own AI employees in four simple steps. Our platform
-            makes it easy to design, deploy, and manage customized AI agents.
+            Build your AI workforce in four simple steps. Create agents that
+            work directly with you or deploy them to handle customer
+            interactions automatically.
           </p>
         </div>
 

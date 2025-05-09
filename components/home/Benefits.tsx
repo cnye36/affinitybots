@@ -6,19 +6,19 @@ import { CheckCircle } from "lucide-react";
 
 const benefits = [
   {
-    title: "Design Your Digital Worker",
+    title: "Build Your Digital Agency",
     description:
-      "Create customized AI agents quickly and easily. Our intuitive platform lets you deploy powerful AI employees without any coding required.",
+      "Create a complete AI workforce with agents that handle both internal tasks and customer interactions. Each agent serves a specific purpose in your business.",
     features: [
-      "No-code agent builder",
-      "Pre-built templates for common roles",
-      "Instant deployment to multiple platforms",
+      "Personal assistants for your own use",
+      "Customer-facing agents for your website",
+      "Specialized roles for specific tasks",
     ],
   },
   {
     title: "Your AI, Your Rules",
     description:
-      "Full control over your AI agents. Configure exactly how they work, what they know, and how they interact with users.",
+      "Full control over your AI agents. Configure exactly how they work, what they know, and how they interact with both you and your customers.",
     features: [
       "Customizable personality and tone",
       "Selective knowledge sharing",
@@ -26,13 +26,13 @@ const benefits = [
     ],
   },
   {
-    title: "Scale Your Workforce",
+    title: "Scale Your Operations",
     description:
-      "Deploy as many AI employees as you need. Each agent can handle unlimited conversations simultaneously, working 24/7 without breaks.",
+      "Enhance your productivity with AI agents that work alongside you. Deploy customer-facing agents to handle inquiries while you focus on higher-level tasks.",
     features: [
-      "Unlimited conversations",
+      "Internal & external agents",
       "24/7 availability",
-      "Cost-effective AI workforce",
+      "Cost-effective digital workforce",
     ],
   },
 ];
@@ -43,11 +43,12 @@ export function Benefits() {
       <div className="container mx-auto px-4">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-5xl font-bold mb-4">
-            Why Create AI Employees?
+            Your AI Workforce Hub
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Our platform provides everything you need to build, deploy, and
-            manage powerful AI agents that work for you around the clock.
+            Build a complete AI agency with agents that work directly with you
+            behind the scenes and others that interact with your customers on
+            your behalf.
           </p>
         </div>
 

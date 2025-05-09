@@ -27,9 +27,9 @@ export function CTA() {
             Ready to Create Your AI Workforce?
           </h2>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Join innovative businesses already using our platform to create
-            custom AI employees that work 24/7. Start building your AI team
-            today.
+            Create a complete digital workforce with agents that work directly
+            with you and others that serve your customers. Build your
+            personalized AI hub today.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/early-access">
@@ -46,9 +46,6 @@ export function CTA() {
               </Button>
             </Link>
           </div>
-          <p className="mt-6 text-sm text-muted-foreground">
-            No credit card required. 14-day free trial.
-          </p>
         </MotionDiv>
       </div>
     </section>
