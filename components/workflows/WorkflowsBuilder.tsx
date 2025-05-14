@@ -254,7 +254,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
           .from("workflows")
           .insert({
             name: workflowName,
-            owner_id: user.id,
+            user_id: user.id,
             nodes: [],
             edges: [],
             status: "draft",
@@ -352,7 +352,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
                   onAssignAgent: handleAssignAgent,
                   onConfigureTask: handleConfigureTask,
                   isConfigOpen: false,
-                  owner_id: "",
+                  user_id: "",
                   status: "idle",
                 } as unknown as TaskNodeData,
               })
@@ -470,7 +470,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
         name: workflowName.trim(),
         nodes,
         edges,
-        owner_id: undefined,
+        user_id: undefined,
       };
 
       if (workflowId) {
@@ -704,8 +704,8 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
       const { error: updateError } = await supabase
         .from("workflow_tasks")
         .update({
-          // Store agent ID in assistant_id field for database queries
-          assistant_id: agent.id,
+          // Store agent ID in agent_id field for database queries
+          agent_id: agent.id,
           // Store full agent details in config for UI
           config: {
             ...(await supabase

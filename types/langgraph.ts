@@ -1,11 +1,11 @@
-// import { AgentConfigurableOptions } from "@/lib/langchain/agent/config";
+// import { AgentConfigurableOptions } from "@/lib/agent/config";
 import { Tool } from "@langchain/core/tools";
 import { BaseMessage } from "@langchain/core/messages";
 import {
   AgentConfigurableOptions,
   AgentConfig,
   AgentMetadata,
-} from "@/lib/langchain/agent/config";
+} from "@/lib/agent/config";
 
 export interface ThreadConfig {
   tags?: string[];

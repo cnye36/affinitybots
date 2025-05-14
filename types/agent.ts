@@ -27,6 +27,7 @@ export interface AgentConfiguration {
     };
   };
   enabled_mcp_servers: string[];
+  agentId?: string;
 }
 
 export interface AgentMetadata {

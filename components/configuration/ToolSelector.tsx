@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Settings, Eye, EyeOff, AlertTriangle } from "lucide-react";
-import { AVAILABLE_MCP_SERVERS } from "@/lib/langchain/tools/mcpToolIndex";
+import { AVAILABLE_MCP_SERVERS } from "@/lib/tools/mcpToolIndex";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 type MCPServer = {

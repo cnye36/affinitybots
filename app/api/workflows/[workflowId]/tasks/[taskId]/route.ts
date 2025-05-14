@@ -120,7 +120,7 @@ export async function PUT(
             }
           : null,
         integration: taskData.integration,
-        assistant_id: taskData.assignedAgent?.id,
+        agent_id: taskData.assignedAgent?.id,
         updated_at: new Date().toISOString(),
       })
       .eq("workflow_task_id", taskId)

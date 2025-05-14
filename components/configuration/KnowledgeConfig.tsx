@@ -10,13 +10,13 @@ import { useToast } from "@/hooks/use-toast";
 interface KnowledgeConfigProps {
   config: AgentConfiguration;
   onChange: (field: keyof AgentConfiguration, value: unknown) => void;
-  assistant_id: string;
+  agent_id: string;
 }
 
 export function KnowledgeConfig({
   config,
   onChange,
-  assistant_id,
+  agent_id,
 }: KnowledgeConfigProps) {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -50,18 +50,35 @@ export function KnowledgeConfig({
   };
 
   const handleFiles = async (files: File[]) => {
-    const invalidFiles = files.filter(
-      (file) =>
-        ![
-          "application/pdf",
-          "text/plain",
-          "application/msword",
-          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        ].includes(file.type)
-    );
+    const allowedFileTypes = [
+      "application/pdf",
+      "text/plain",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "text/csv",
+      "application/csv",
+      "application/vnd.ms-excel",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/json",
+      "text/markdown",
+      "application/xml",
+      "text/xml",
+    ];
+
+    const invalidFiles = files.filter((file) => {
+      // Handle CSV files that might be misidentified
+      if (file.name.endsWith(".csv")) {
+        return false; // Accept CSV files based on extension
+      }
+      return !allowedFileTypes.includes(file.type);
+    });
 
     if (invalidFiles.length > 0) {
-      setUploadError("Only PDF, TXT, and DOC/DOCX files are supported");
+      setUploadError(
+        `Only PDF, TXT, DOC/DOCX, CSV, XLS/XLSX, JSON, MD, and XML files are supported. Invalid files: ${invalidFiles
+          .map((f) => f.name)
+          .join(", ")}`
+      );
       return;
     }
 
@@ -78,7 +95,7 @@ export function KnowledgeConfig({
         // Create FormData for file upload
         const formData = new FormData();
         formData.append("file", file);
-        formData.append("assistantId", assistant_id);
+        formData.append("agentId", agent_id);
 
         // Upload and process file
         const response = await fetch("/api/knowledge", {
@@ -121,17 +138,50 @@ export function KnowledgeConfig({
     }
   };
 
-  const handleRemoveSource = (index: number) => {
+  const handleRemoveSource = async (index: number) => {
     const currentSources =
       (config.knowledge_base?.config?.sources as string[]) || [];
-    const newSources = currentSources.filter((_, i) => i !== index);
+    const sourceToRemove = currentSources[index];
 
-    onChange("knowledge_base", {
-      isEnabled: newSources.length > 0,
-      config: {
-        sources: newSources,
-      },
-    });
+    try {
+      // Delete document embeddings from the database
+      const response = await fetch(
+        `/api/knowledge?agentId=${agent_id}&filename=${encodeURIComponent(
+          sourceToRemove
+        )}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete ${sourceToRemove} from database`);
+      }
+
+      toast({
+        title: "Success",
+        description: `Successfully removed ${sourceToRemove}`,
+        variant: "default",
+      });
+
+      // Update the UI
+      const newSources = currentSources.filter((_, i) => i !== index);
+      onChange("knowledge_base", {
+        isEnabled: newSources.length > 0,
+        config: {
+          sources: newSources,
+        },
+      });
+    } catch (error) {
+      console.error("Error removing document:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error occurred";
+      toast({
+        title: "Error",
+        description: `Failed to remove document: ${errorMessage}`,
+        variant: "destructive",
+      });
+    }
   };
 
   const sources = (config.knowledge_base?.config?.sources as string[]) || [];
@@ -165,7 +215,7 @@ export function KnowledgeConfig({
           <input
             type="file"
             onChange={handleFileSelect}
-            accept=".pdf,.txt,.doc,.docx"
+            accept=".pdf,.txt,.doc,.docx,.csv,.xls,.xlsx,.json,.md,.xml"
             className="hidden"
             multiple
             id="file-upload"
@@ -178,7 +228,8 @@ export function KnowledgeConfig({
                 : "Drag and drop files here, or click to select"}
             </p>
             <p className="text-sm text-muted-foreground mt-2">
-              Supported formats: PDF, TXT, DOC, DOCX
+              Supported formats: PDF, TXT, DOC, DOCX, CSV, XLS, XLSX, JSON, MD,
+              XML
             </p>
           </label>
         </div>

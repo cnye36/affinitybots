@@ -18,7 +18,6 @@ import { RunnableConfig } from "@langchain/core/runnables";
 import { AgentState } from "@/types/langgraph";
 import { retrieveRelevantDocuments } from "@/lib/retrieval";
 import { createClient } from "@/supabase/server";
-// import { getTools } from "@/lib/langchain/tools";
 
 import { AgentConfiguration } from "@/types/agent";
 import { MultiServerMCPClient } from "@langchain/mcp-adapters";
@@ -110,7 +109,6 @@ async function callModel(
 
   return { messages: Array.isArray(response) ? response : [response] };
 }
-
 
 /**
  * Simple routing function to determine if we need to use tools

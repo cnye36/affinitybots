@@ -140,7 +140,10 @@ export async function POST(
           input: { messages: [{ role: "user", content }] },
           config: {
             tags: ["chat"],
-            configurable: agent.config,
+            configurable: {
+              ...(agent.config || {}),
+              agentId: id,
+            },
             recursion_limit: 100,
           },
           streamMode: ["messages"],

@@ -98,6 +98,10 @@ export async function POST(
             workflow_id: workflowId,
             user_id: user.id,
           },
+          configurable: {
+            ...(config?.configurable || {}),
+            agentId: workflow.agent_id,
+          },
         },
         streamMode: ["values", "messages"],
       }

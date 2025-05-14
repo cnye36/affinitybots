@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
-import { generateAgentConfiguration } from "@/lib/langchain/agent/agent-generation";
+import { generateAgentConfiguration } from "@/lib/agent/agent-generation";
 
 export async function POST(request: Request) {
   try {

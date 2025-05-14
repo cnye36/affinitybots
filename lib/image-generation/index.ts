@@ -11,7 +11,7 @@ export interface ImageGenerationConfig {
 const DEFAULT_CONFIG: ImageGenerationConfig = {
   width: 256,
   height: 256,
-  defaultImage: "/default-avatar.png",
+  defaultImage: "/images/default-avatar.png",
   bucketName: "agent-avatars",
 };
 

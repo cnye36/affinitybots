@@ -39,20 +39,20 @@ const benefits = [
 
 export function Benefits() {
   return (
-    <section className="py-20 bg-muted/50">
+    <section id="benefits" className="py-12 md:py-20 bg-muted/50">
       <div className="container mx-auto px-4">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-5xl font-bold mb-4">
+        <div className="text-center mb-10 md:mb-16">
+          <h2 className="text-2xl sm:text-3xl md:text-5xl font-bold mb-3 md:mb-4">
             Your AI Workforce Hub
           </h2>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
             Build a complete AI agency with agents that work directly with you
             behind the scenes and others that interact with your customers on
             your behalf.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8">
+        <div className="grid gap-6 md:gap-8 sm:grid-cols-2 lg:grid-cols-3">
           {benefits.map((benefit, index) => (
             <MotionDiv
               key={benefit.title}
@@ -60,17 +60,19 @@ export function Benefits() {
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
               viewport={{ once: true }}
-              className="bg-background rounded-lg p-8 shadow-lg"
+              className="bg-background rounded-lg p-6 md:p-8 shadow-lg"
             >
-              <h3 className="text-2xl font-semibold mb-4">{benefit.title}</h3>
-              <p className="text-muted-foreground mb-6">
+              <h3 className="text-xl md:text-2xl font-semibold mb-3 md:mb-4">
+                {benefit.title}
+              </h3>
+              <p className="text-sm md:text-base text-muted-foreground mb-4 md:mb-6">
                 {benefit.description}
               </p>
-              <ul className="space-y-3">
+              <ul className="space-y-2 md:space-y-3">
                 {benefit.features.map((feature) => (
                   <li key={feature} className="flex items-start">
-                    <CheckCircle className="h-5 w-5 text-primary mt-1 mr-2 flex-shrink-0" />
-                    <span>{feature}</span>
+                    <CheckCircle className="h-4 md:h-5 w-4 md:w-5 text-primary mt-0.5 mr-2 flex-shrink-0" />
+                    <span className="text-sm md:text-base">{feature}</span>
                   </li>
                 ))}
               </ul>

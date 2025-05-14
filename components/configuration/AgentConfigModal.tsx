@@ -234,7 +234,7 @@ export function AgentConfigModal({
             <KnowledgeConfig
               config={config.config}
               onChange={handleConfigurableChange}
-              assistant_id={agent.id}
+              agent_id={agent.id}
             />
           </TabsContent>
 

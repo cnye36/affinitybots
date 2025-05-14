@@ -1,8 +1,7 @@
 import { z } from "zod";
 import { type LangGraphRunnableConfig } from "@langchain/langgraph";
-import { AVAILABLE_MCP_SERVERS } from "../tools/mcpToolIndex";
 
-export type ModelType = "gpt-4o" | "gpt-4o-mini" | "gpt-o1" | "gpt-o1-mini";
+export type ModelType = "gpt-4.1" | "gpt-4.1-mini" | "gpt-4.1-nano" | "gpt-o3";
 
 // Memory options schema
 export const AgentMemoryOptionsSchema = z.object({
@@ -23,12 +22,12 @@ export const KnowledgeBaseOptionsSchema = z.object({
 export const AgentMetadataSchema = z.object({
   description: z.string(),
   agent_type: z.string(),
-  owner_id: z.string(),
+  user_id: z.string(),
 });
 
 // Configurable options schema
 export const AgentConfigurableOptionsSchema = z.object({
-  model: z.enum(["gpt-4o", "gpt-4o-mini", "gpt-o1", "gpt-o1-mini"]),
+  model: z.enum(["gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "gpt-o3"]),
   temperature: z.number(),
   tools: z.array(z.string()),
   memory: AgentMemoryOptionsSchema,

@@ -9,7 +9,7 @@
 
   "dependencies": ["."],
   "graphs": {
-    "reactAgent": "./lib/langchain/agent/reactAgent.ts:graph"
+    "reactAgent": "./lib/agent/reactAgent.ts:graph"
   },
   "env": ".env"
 }

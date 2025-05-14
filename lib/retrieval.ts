@@ -15,15 +15,21 @@ import { Document } from "@langchain/core/documents";
 export async function retrieveRelevantDocuments(
   query: string,
   supabase: SupabaseClient,
-  topK: number = 5
+  topK: number = 5,
+  agentId?: string
 ): Promise<Document[]> {
   const embeddings = new OpenAIEmbeddings();
+
+  const filter: Record<string, unknown> = {};
+  if (agentId) {
+    filter.agent_id = agentId;
+  }
 
   const vectorStore = await SupabaseVectorStore.fromExistingIndex(embeddings, {
     client: supabase,
     tableName: "document_vectors",
     queryName: "match_documents",
-    filter: {},
+    filter: filter,
   });
 
   const similarDocs = await vectorStore.similaritySearch(query, topK);

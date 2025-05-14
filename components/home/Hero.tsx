@@ -8,14 +8,14 @@ import { MotionDiv } from "@/components/motion/MotionDiv";
 
 export function Hero() {
   return (
-    <section className="relative min-h-[80vh] flex items-center overflow-hidden">
+    <section className="relative py-12 md:py-0 md:min-h-[80vh] flex items-center overflow-hidden">
       {/* Animated background gradient */}
       <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-purple-600/20 animate-gradient" />
 
       {/* Animated circles in background */}
       <div className="absolute inset-0">
-        <div className="absolute top-20 left-20 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-20 right-20 w-72 h-72 bg-purple-500/10 rounded-full blur-3xl animate-pulse delay-700" />
+        <div className="absolute top-10 md:top-20 left-10 md:left-20 w-48 md:w-72 h-48 md:h-72 bg-blue-500/10 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-10 md:bottom-20 right-10 md:right-20 w-48 md:w-72 h-48 md:h-72 bg-purple-500/10 rounded-full blur-3xl animate-pulse delay-700" />
       </div>
 
       <div className="container mx-auto px-4">
@@ -27,59 +27,59 @@ export function Hero() {
             transition={{ duration: 0.8 }}
             className="relative z-10 text-left"
           >
-            <h1 className="text-5xl md:text-7xl font-extrabold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600">
+            <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold mb-4 md:mb-6 bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600">
               Don&apos;t Hire... Create!
             </h1>
-            <p className="text-xl md:text-2xl text-muted-foreground mb-8">
+            <p className="text-lg sm:text-xl md:text-2xl text-muted-foreground mb-6 md:mb-8">
               AgentHub lets you spin up fully operational AI agents in minutes.
               Customize their skills, deploy them instantly, and let them handle
               the workload while you focus on growth.
             </p>
-            <div className="flex gap-4">
-              <Link href="/early-access">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Link href="/early-access" className="w-full sm:w-auto">
                 <Button
                   size="lg"
-                  className="text-lg px-8 py-6 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
+                  className="text-base md:text-lg w-full sm:w-auto px-6 md:px-8 py-5 md:py-6 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
                 >
                   Request Early Access
                 </Button>
               </Link>
-              <Link href="#how-it-works">
+              <Link href="#how-it-works" className="w-full sm:w-auto">
                 <Button
                   size="lg"
                   variant="outline"
-                  className="text-lg px-8 py-6"
+                  className="text-base md:text-lg w-full sm:w-auto px-6 md:px-8 py-5 md:py-6"
                 >
                   See How It Works
                 </Button>
               </Link>
             </div>
-            <div className="mt-12 flex items-center gap-8">
-              <div className="flex items-center">
-                <div className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600">
+            <div className="mt-8 md:mt-12 grid grid-cols-3 gap-2 md:gap-8">
+              <div className="flex flex-col md:flex-row md:items-center">
+                <div className="text-3xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600">
                   5min
                 </div>
-                <div className="ml-2 text-sm text-muted-foreground">
+                <div className="mt-1 md:mt-0 md:ml-2 text-xs md:text-sm text-muted-foreground">
                   To Create
                   <br />
                   an Agent
                 </div>
               </div>
-              <div className="flex items-center">
-                <div className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600">
+              <div className="flex flex-col md:flex-row md:items-center">
+                <div className="text-3xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600">
                   24/7
                 </div>
-                <div className="ml-2 text-sm text-muted-foreground">
+                <div className="mt-1 md:mt-0 md:ml-2 text-xs md:text-sm text-muted-foreground">
                   Availability
                   <br />
                   Always On
                 </div>
               </div>
-              <div className="flex items-center">
-                <div className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600">
+              <div className="flex flex-col md:flex-row md:items-center">
+                <div className="text-3xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600">
                   100%
                 </div>
-                <div className="ml-2 text-sm text-muted-foreground">
+                <div className="mt-1 md:mt-0 md:ml-2 text-xs md:text-sm text-muted-foreground">
                   Customizable
                   <br />
                   Agents
@@ -93,9 +93,9 @@ export function Hero() {
             initial={{ opacity: 0, x: 50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.3 }}
-            className="relative hidden lg:block"
+            className="relative mt-8 lg:mt-0"
           >
-            <div className="relative h-[600px] w-full">
+            <div className="relative h-[300px] sm:h-[400px] md:h-[500px] lg:h-[600px] w-full">
               <Image
                 src="/images/ai-agents-image-agenthub-website.png"
                 alt="AI Bot Assistant"

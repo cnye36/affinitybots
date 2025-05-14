@@ -1,7 +1,7 @@
 import { ChatOpenAI } from "@langchain/openai";
 import { PromptTemplate } from "@langchain/core/prompts";
 import { generateAgentAvatar } from "@/lib/image-generation";
-import { AVAILABLE_MCP_SERVERS } from "@/lib/langchain/tools/mcpToolIndex";
+import { AVAILABLE_MCP_SERVERS } from "@/lib/tools/mcpToolIndex";
 import type { AgentConfiguration, ModelType } from "@/types/agent";
 
 // Store previously generated names per user with a maximum cache size
@@ -220,7 +220,7 @@ export async function generateAgentConfiguration(
     owner_id: ownerId,
     name: "",
     description: "",
-    agent_avatar: "/default-avatar.png", // Will be updated after name generation
+    agent_avatar: "/images/default-avatar.png", // Will be updated after name generation
     agent_type: agentType,
     config: {
       model: "gpt-4.1",
@@ -239,6 +239,7 @@ export async function generateAgentConfiguration(
         },
       },
       enabled_mcp_servers: ["memory"], // Memory server is always enabled
+      agentId: ownerId, // Store the agentId directly in the config
     },
     metadata: {},
   };

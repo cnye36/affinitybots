@@ -25,7 +25,7 @@ export async function POST(
     // Get task with workflow ownership check
     const { data: task } = await supabase
       .from("workflow_tasks")
-      .select("*, workflow:workflows(owner_id), assistant_id")
+      .select("*, workflow:workflows(owner_id), agent_id")
       .eq("workflow_task_id", taskId)
       .single();
 
@@ -36,7 +36,7 @@ export async function POST(
       );
     }
     console.log("Task retrieved:", task);
-    console.log("Task assistant_id:", task.assistant_id);
+    console.log("Task agent_id:", task.agent_id);
     console.log("Task config.assigned_agent:", task.config?.assigned_agent);
     console.log("Task type:", task.task_type);
 
@@ -45,12 +45,11 @@ export async function POST(
 
     if (task.task_type === "ai_task") {
       try {
-        // Check for assistant_id first, then fallback to config.assigned_agent if needed
-        const assistantId =
-          task.assistant_id || task.config?.assigned_agent?.id;
-        if (!assistantId) {
+        // Check for agent_id first, then fallback to config.assigned_agent if needed
+        const agentId = task.agent_id || task.config?.assigned_agent?.id;
+        if (!agentId) {
           return NextResponse.json(
-            { error: "Task has no associated assistant" },
+            { error: "Task has no associated agent" },
             { status: 400 }
           );
         }
@@ -64,7 +63,7 @@ export async function POST(
               // 1. Directly create and stream the execution
               const runStream = await client.runs.stream(
                 null, // Stateless runs use null thread ID
-                assistantId,
+                agentId,
                 {
                   input: {
                     messages: [
@@ -81,7 +80,10 @@ export async function POST(
                     user_id: user.id,
                   },
                   config: {
-                    configurable: task.config,
+                    configurable: {
+                      ...(task.config || {}),
+                      agentId,
+                    },
                   },
                   streamMode: "messages",
                 }

@@ -26,4 +26,10 @@ export const AVAILABLE_MCP_SERVERS = {
     icon: Brain,
     requiredCredentials: [],
   },
+  notionApi: {
+    name: "Notion API",
+    description: "Notion API",
+    icon: Brain,
+    requiredCredentials: ["notion_integration_secret"],
+  },
 };

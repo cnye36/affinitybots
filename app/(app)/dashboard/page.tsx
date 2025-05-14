@@ -62,7 +62,7 @@ export default async function Dashboard() {
   const { count: totalWorkflows, error: workflowCountError } = await supabase
     .from("workflows")
     .select("*", { count: "exact", head: true })
-    .eq("owner_id", user.id);
+    .eq("user_id", user.id);
 
   if (workflowCountError) {
     console.error("Error fetching total workflows:", workflowCountError);
