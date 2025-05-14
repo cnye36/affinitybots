@@ -56,16 +56,6 @@ export function AgentConfigModal({
         enabled: Boolean(
           (agent.config.memory as { enabled?: boolean })?.enabled ?? true
         ),
-        max_entries: Number(
-          (agent.config.memory as { max_entries?: number })?.max_entries || 10
-        ),
-        relevance_threshold: Number(
-          (
-            agent.config.memory as {
-              relevance_threshold?: number;
-            }
-          )?.relevance_threshold || 0.7
-        ),
       },
       prompt_template: String(agent.config.prompt_template || ""),
       knowledge_base: agent.config.knowledge_base || {
@@ -98,16 +88,6 @@ export function AgentConfigModal({
         memory: {
           enabled: Boolean(
             (agent.config.memory as { enabled?: boolean })?.enabled ?? true
-          ),
-          max_entries: Number(
-            (agent.config.memory as { max_entries?: number })?.max_entries || 10
-          ),
-          relevance_threshold: Number(
-            (
-              agent.config.memory as {
-                relevance_threshold?: number;
-              }
-            )?.relevance_threshold || 0.7
           ),
         },
         prompt_template: String(agent.config.prompt_template || ""),
@@ -242,6 +222,7 @@ export function AgentConfigModal({
             <MemoryConfig
               config={config.config}
               onChange={handleConfigurableChange}
+              agentId={agent.id}
             />
           </TabsContent>
         </Tabs>

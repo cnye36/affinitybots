@@ -30,18 +30,23 @@ export const store = new InMemoryStore();
 
 // Function to extract and write user memories
 async function writeMemory(state: AgentState, config: LangGraphRunnableConfig) {
-  const configurable = (config.configurable as { agentId?: string }) || {};
+  const configurable =
+    (config.configurable as {
+      agentId?: string;
+      memory?: { enabled: boolean };
+    }) || {};
   const userId = configurable.agentId; // Using agentId as userId for now
+  const memoryEnabled = configurable.memory?.enabled ?? true; // Default to enabled if not specified
 
-  if (!userId) {
-    console.warn("No userId provided in config, skipping memory writing");
-    return { messages: state.messages }; // Pass through
+  // Skip memory writing if memory is disabled or no userId
+  if (!userId || !memoryEnabled) {
+    return { messages: state.messages, has_memory_updates: false };
   }
 
   // We only analyze the most recent user message
   const userMessage = state.messages.at(-1);
   if (!userMessage || !(userMessage instanceof HumanMessage)) {
-    return { messages: state.messages }; // Not a user message, pass through
+    return { messages: state.messages, has_memory_updates: false }; // Not a user message, pass through
   }
 
   // Get user message content
@@ -143,8 +148,11 @@ function shouldUpdateMemory(state: typeof MessagesAnnotation.State) {
 }
 
 // Function to retrieve user memories
-async function retrieveMemories(userId: string | undefined) {
-  if (!userId) {
+async function retrieveMemories(
+  userId: string | undefined,
+  memoryEnabled: boolean = true
+) {
+  if (!userId || !memoryEnabled) {
     return [];
   }
 
@@ -306,13 +314,14 @@ async function callModel(
   const agentConfig = config.configurable as AgentConfiguration;
   const userId = (config.configurable as { agentId?: string })?.agentId;
   const systemPrompt = agentConfig.prompt_template || DEFAULT_SYSTEM_PROMPT;
+  const memoryEnabled = agentConfig.memory?.enabled ?? true; // Default to enabled if not specified
 
   // Retrieve user memories
-  const memories = await retrieveMemories(userId);
+  const memories = await retrieveMemories(userId, memoryEnabled);
 
   // Format memories for inclusion in the prompt
   let memoryContext = "";
-  if (memories.length > 0) {
+  if (memories.length > 0 && memoryEnabled) {
     memoryContext = "\n\nUser Profile Information:\n";
     const profileData: Record<string, unknown> = {};
 

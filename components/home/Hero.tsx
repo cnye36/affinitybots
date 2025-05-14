@@ -88,14 +88,14 @@ export function Hero() {
             </div>
           </MotionDiv>
 
-          {/* Image Section - Right Side */}
+          {/* Image Section - Right Side - Hidden on mobile, visible on sm and above */}
           <MotionDiv
             initial={{ opacity: 0, x: 50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.3 }}
-            className="relative mt-8 lg:mt-0"
+            className="hidden sm:block relative mt-8 lg:mt-0"
           >
-            <div className="relative h-[300px] sm:h-[400px] md:h-[500px] lg:h-[600px] w-full">
+            <div className="relative h-[400px] md:h-[500px] lg:h-[600px] w-full">
               <Image
                 src="/images/ai-agents-image-agenthub-website.png"
                 alt="AI Bot Assistant"

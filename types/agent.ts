@@ -16,8 +16,8 @@ export interface AgentConfiguration {
   tools: string[];
   memory: {
     enabled: boolean;
-    max_entries: number;
-    relevance_threshold: number;
+    max_entries?: number;
+    relevance_threshold?: number;
   };
   prompt_template: string;
   knowledge_base: {

@@ -78,7 +78,7 @@ export function AgentPageHeader({ agent }: AgentPageHeaderProps) {
                   </Badge>
                 </TooltipTrigger>
                 <TooltipContent>
-                  Memory is enabled for this agent
+                  Agent can remember information about you
                 </TooltipContent>
               </Tooltip>
             )}

@@ -3,23 +3,30 @@
 import React from "react";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Slider } from "@/components/ui/slider";
+import { Button } from "@/components/ui/button";
 import { AgentConfiguration } from "@/types/agent";
+import { useRouter } from "next/navigation";
 
 interface MemoryConfigProps {
   config: AgentConfiguration;
   onChange: (field: keyof AgentConfiguration, value: unknown) => void;
+  agentId?: string;
 }
 
-export function MemoryConfig({ config, onChange }: MemoryConfigProps) {
-  const handleMemoryChange = (
-    field: keyof typeof config.memory,
-    value: unknown
-  ) => {
+export function MemoryConfig({ config, onChange, agentId }: MemoryConfigProps) {
+  const router = useRouter();
+
+  const handleMemoryToggle = (enabled: boolean) => {
     onChange("memory", {
       ...config.memory,
-      [field]: value,
+      enabled,
     });
+  };
+
+  const navigateToMemoryManager = () => {
+    if (agentId) {
+      router.push(`/agents/${agentId}/memories`);
+    }
   };
 
   return (
@@ -29,53 +36,29 @@ export function MemoryConfig({ config, onChange }: MemoryConfigProps) {
           <div className="space-y-0.5">
             <Label>Memory</Label>
             <p className="text-sm text-muted-foreground">
-              Enable memory to let your agent remember past conversations
+              Enable memory to let your agent remember information about you
             </p>
           </div>
           <Switch
-            checked={config.memory.enabled}
-            onCheckedChange={(checked) =>
-              handleMemoryChange("enabled", checked)
-            }
+            checked={config.memory?.enabled || false}
+            onCheckedChange={handleMemoryToggle}
           />
         </div>
 
-        {config.memory.enabled && (
-          <>
-            <div className="space-y-2">
-              <Label>Memory Window: {config.memory.max_entries} messages</Label>
-              <Slider
-                value={[config.memory.max_entries]}
-                min={5}
-                max={50}
-                step={5}
-                onValueChange={([value]) =>
-                  handleMemoryChange("max_entries", value)
-                }
-              />
-              <p className="text-sm text-muted-foreground">
-                Number of past messages to consider
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label>
-                Relevance Threshold: {config.memory.relevance_threshold}
-              </Label>
-              <Slider
-                value={[config.memory.relevance_threshold]}
-                min={0}
-                max={1}
-                step={0.1}
-                onValueChange={([value]) =>
-                  handleMemoryChange("relevance_threshold", value)
-                }
-              />
-              <p className="text-sm text-muted-foreground">
-                Minimum relevance score for retrieving past messages
-              </p>
-            </div>
-          </>
+        {config.memory?.enabled && (
+          <div className="pt-2">
+            <Button
+              variant="outline"
+              onClick={navigateToMemoryManager}
+              disabled={!agentId}
+            >
+              Manage Memories
+            </Button>
+            <p className="text-sm text-muted-foreground mt-2">
+              View and manage stored information your agent has learned about
+              you
+            </p>
+          </div>
         )}
       </div>
     </div>

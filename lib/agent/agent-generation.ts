@@ -1,7 +1,7 @@
 import { ChatOpenAI } from "@langchain/openai";
 import { PromptTemplate } from "@langchain/core/prompts";
-import { generateAgentAvatar } from "@/lib/image-generation";
-import { AVAILABLE_MCP_SERVERS } from "@/lib/tools/mcpToolIndex";
+import { generateAgentAvatar } from "@/lib/avatar-generation";
+import { AVAILABLE_MCP_SERVERS } from "@/lib/mcpToolIndex";
 import type { AgentConfiguration, ModelType } from "@/types/agent";
 
 // Store previously generated names per user with a maximum cache size
@@ -317,15 +317,17 @@ export async function generateAgentConfiguration(
     throw new Error("Missing required fields in agent configuration");
   }
 
-  // Generate avatar asynchronously - this can happen in parallel with saving the config
-  generateAgentAvatar(config.name, config.agent_type)
-    .then((avatarPath) => {
-      config.agent_avatar = avatarPath;
-    })
-    .catch((error) => {
-      console.error("Failed to generate avatar:", error);
-      // Keep the default avatar
-    });
+  try {
+    // Generate avatar and wait for the result instead of doing it asynchronously
+    const avatarPath = await generateAgentAvatar(
+      config.name,
+      config.agent_type
+    );
+    config.agent_avatar = avatarPath;
+  } catch (error) {
+    console.error("Failed to generate avatar:", error);
+    // Keep the default avatar
+  }
 
   return config;
 }

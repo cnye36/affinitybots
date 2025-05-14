@@ -13,11 +13,7 @@ interface KnowledgeConfigProps {
   agent_id: string;
 }
 
-export function KnowledgeConfig({
-  config,
-  onChange,
-  agent_id,
-}: KnowledgeConfigProps) {
+export function KnowledgeConfig({ config, onChange, agent_id }: KnowledgeConfigProps) {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const { toast } = useToast();
