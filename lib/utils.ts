@@ -37,3 +37,5 @@ export function formatRelativeTime(date: Date | string): string {
   const diffInYears = Math.floor(diffInDays / 365);
   return `${diffInYears} year${diffInYears === 1 ? "" : "s"} ago`;
 }
+
+

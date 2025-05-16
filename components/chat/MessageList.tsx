@@ -6,12 +6,25 @@ import { oneDark } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import remarkGfm from "remark-gfm";
 import { Check, Copy } from "lucide-react";
 import { HumanMessage, AIMessage } from "@langchain/core/messages";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 interface MessageListProps {
   messages: AgentState["messages"];
+  agentAvatar?: string;
+  userAvatar?: string;
+  userInitials?: string;
+  agentInitials?: string;
+  isThinking?: boolean;
 }
 
-export default function MessageList({ messages }: MessageListProps) {
+export default function MessageList({
+  messages,
+  agentAvatar,
+  userAvatar,
+  userInitials = "U",
+  agentInitials = "A",
+  isThinking,
+}: MessageListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
@@ -82,93 +95,79 @@ export default function MessageList({ messages }: MessageListProps) {
           Start a conversation by typing a message below.
         </div>
       ) : (
-        messages.map((message, index) => (
-          <div
-            key={index}
-            className={`flex ${
-              message instanceof HumanMessage ? "justify-end" : "justify-start"
-            }`}
-          >
+        messages.map((message, index) => {
+          const isUser = message instanceof HumanMessage;
+          return (
             <div
-              className={`max-w-[90%] sm:max-w-[85%] rounded-lg px-3 sm:px-4 py-2 sm:py-3 shadow-sm text-sm sm:text-base ${
-                message instanceof AIMessage
-                  ? "bg-blue-200 dark:bg-blue-600"
-                  : "bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600"
-              }`}
-              role="document"
-              aria-label={
-                message instanceof HumanMessage
-                  ? "User message"
-                  : "Assistant message"
-              }
+              key={index}
+              className={`flex ${isUser ? "justify-end" : "justify-start"}`}
             >
+              {/* Avatar */}
+              {!isUser && (
+                <div className="flex-shrink-0 mr-2">
+                  <Avatar className="h-8 w-8">
+                    {agentAvatar ? (
+                      <AvatarImage src={agentAvatar} alt="Agent" />
+                    ) : (
+                      <AvatarFallback>{agentInitials}</AvatarFallback>
+                    )}
+                  </Avatar>
+                </div>
+              )}
               <div
-                className={`prose dark:prose-invert prose-sm sm:prose-base ${
-                  message instanceof HumanMessage
-                    ? "prose-white"
-                    : "prose-gray dark:prose-gray-light"
-                } max-w-none [&_pre]:!mt-0 [&_pre]:!mb-0 [&_p]:!mt-0 [&_p]:!mb-2 last:[&_p]:!mb-0`}
+                className={`max-w-[90%] sm:max-w-[85%] rounded-lg px-3 sm:px-4 py-2 sm:py-3 shadow-sm text-sm sm:text-base ${
+                  isUser
+                    ? "bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600"
+                    : "bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-600"
+                }`}
+                role="document"
+                aria-label={isUser ? "User message" : "Assistant message"}
               >
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  components={{
-                    ...components,
-                    code(
-                      props: ComponentPropsWithoutRef<"code"> & {
-                        inline?: boolean;
-                      }
-                    ) {
-                      const { inline, className, children } = props;
-                      const match = /language-(\w+)/.exec(className || "");
-                      const code = String(children).replace(/\n$/, "");
-
-                      if (!inline && match) {
-                        return (
-                          <div className="relative group">
-                            <button
-                              onClick={() => copyToClipboard(code)}
-                              className="absolute right-1 sm:right-2 top-1 sm:top-2 p-1.5 sm:p-2 rounded bg-gray-800 text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity"
-                              aria-label="Copy code"
-                            >
-                              {copiedCode === code ? (
-                                <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                              ) : (
-                                <Copy className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                              )}
-                            </button>
-                            <SyntaxHighlighter
-                              {...props}
-                              style={oneDark}
-                              language={match[1]}
-                              PreTag="div"
-                              className="rounded-md text-xs sm:text-sm !mt-0 !mb-0"
-                              customStyle={{
-                                padding: "0.75rem",
-                                margin: 0,
-                              }}
-                            >
-                              {code}
-                            </SyntaxHighlighter>
-                          </div>
-                        );
-                      }
-                      return (
-                        <code
-                          className="rounded bg-gray-200 dark:bg-gray-800 px-1 py-0.5 text-sm sm:text-base"
-                          {...props}
-                        >
-                          {children}
-                        </code>
-                      );
-                    },
-                  }}
+                <div
+                  className={`prose dark:prose-invert prose-sm sm:prose-base max-w-none [&_pre]:!mt-0 [&_pre]:!mb-0 [&_p]:!mt-0 [&_p]:!mb-2 last:[&_p]:!mb-0`}
                 >
-                  {message.content.toString()}
-                </ReactMarkdown>
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={components}
+                  >
+                    {message.content.toString()}
+                  </ReactMarkdown>
+                </div>
               </div>
+              {/* User Avatar */}
+              {isUser && (
+                <div className="flex-shrink-0 ml-2">
+                  <Avatar className="h-8 w-8">
+                    {userAvatar ? (
+                      <AvatarImage src={userAvatar} alt="User" />
+                    ) : (
+                      <AvatarFallback>{userInitials}</AvatarFallback>
+                    )}
+                  </Avatar>
+                </div>
+              )}
             </div>
+          );
+        })
+      )}
+      {/* Thinking indicator */}
+      {isThinking && (
+        <div className="flex justify-start">
+          <div className="flex-shrink-0 mr-2">
+            <Avatar className="h-8 w-8">
+              {agentAvatar ? (
+                <AvatarImage src={agentAvatar} alt="Agent" />
+              ) : (
+                <AvatarFallback>{agentInitials}</AvatarFallback>
+              )}
+            </Avatar>
           </div>
-        ))
+          <div className="max-w-[85%] rounded-lg px-3 py-2 shadow-sm text-sm bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 flex items-center">
+            <span className="italic text-gray-500 dark:text-gray-400">
+              Thinking…
+            </span>
+          </div>
+        </div>
       )}
       <div ref={messagesEndRef} />
     </div>

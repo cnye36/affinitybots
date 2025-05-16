@@ -133,6 +133,35 @@ async function uploadWithoutUser(
   }
 }
 
+// Retry wrapper for uploadImageToSupabase
+async function uploadImageToSupabaseWithRetry(
+  imageUrl: string,
+  fileName: string,
+  bucketName: string,
+  maxRetries = 3,
+  delayMs = 1000
+): Promise<string> {
+  let lastError: any;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await uploadImageToSupabase(imageUrl, fileName, bucketName);
+    } catch (error: any) {
+      lastError = error;
+      // Only retry on network errors (ECONNRESET, fetch failed, etc.)
+      const isNetworkError =
+        error?.code === 'ECONNRESET' ||
+        error?.name === 'TypeError' ||
+        (error?.message && error.message.includes('fetch failed'));
+      if (!isNetworkError || attempt === maxRetries) {
+        throw error;
+      }
+      console.warn(`Upload attempt ${attempt} failed, retrying in ${delayMs}ms...`, error);
+      await new Promise(res => setTimeout(res, delayMs));
+    }
+  }
+  throw lastError;
+}
+
 export async function generateImage(
   prompt: string,
   fileName: string,
@@ -187,7 +216,7 @@ export async function generateImage(
     );
 
     // Upload to Supabase and get public URL
-    const publicUrl = await uploadImageToSupabase(
+    const publicUrl = await uploadImageToSupabaseWithRetry(
       imageUrl,
       fileName,
       finalConfig.bucketName!

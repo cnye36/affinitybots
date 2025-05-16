@@ -10,6 +10,7 @@ import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Agent } from "@/types/agent";
+import { createClient } from "@/supabase/client";
 
 interface ChatContainerProps {
   agent: Agent;
@@ -26,6 +27,8 @@ export default function ChatContainer({
   );
   const [isLoading, setIsLoading] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [userAvatar, setUserAvatar] = useState<string | undefined>(undefined);
+  const [userInitials, setUserInitials] = useState<string>("U");
 
   // Initialize chat if no thread exists
   useEffect(() => {
@@ -67,6 +70,43 @@ export default function ChatContainer({
     fetchThreadState();
   }, [currentThreadId, agent.id]);
 
+  // Fetch user profile for avatar/initials
+  useEffect(() => {
+    async function loadUserProfile() {
+      try {
+        const supabase = createClient();
+        const {
+          data: { user: authUser },
+        } = await supabase.auth.getUser();
+        if (authUser) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("name, email, avatar_url")
+            .eq("id", authUser.id)
+            .single();
+          const authMetadata = authUser.user_metadata || {};
+          const name =
+            profile?.name ||
+            authMetadata.full_name ||
+            authMetadata.name ||
+            authUser.email?.split("@")[0] ||
+            "User";
+          setUserInitials(name.substring(0, 2).toUpperCase());
+          setUserAvatar(
+            profile?.avatar_url ||
+              authMetadata.avatar_url ||
+              authMetadata.picture
+          );
+        }
+      } catch (err) {
+        // fallback to default
+        setUserInitials("U");
+        setUserAvatar(undefined);
+      }
+    }
+    loadUserProfile();
+  }, []);
+
   const handleThreadSelect = (threadId: string) => {
     if (threadId !== currentThreadId) {
       setCurrentThreadId(threadId);
@@ -90,9 +130,7 @@ export default function ChatContainer({
   const sendChatMessage = async (content: string) => {
     setIsLoading(true);
     let threadId = currentThreadId;
-
     try {
-      // Create a thread only if we don't have one and we're actually sending a message
       if (!threadId) {
         const response = await fetch(`/api/agents/${agent.id}/threads`, {
           method: "POST",
@@ -102,11 +140,11 @@ export default function ChatContainer({
         threadId = data.thread_id;
         setCurrentThreadId(threadId);
       }
-
       // Optimistically add user message
       const userMessage = new HumanMessage(content);
       setMessages((prev) => [...prev, userMessage]);
-
+      // Show 'Thinking...' indicator
+      setIsLoading(true);
       // Stream the response
       const response = await fetch(
         `/api/agents/${agent.id}/threads/${threadId}/runs`,
@@ -116,39 +154,38 @@ export default function ChatContainer({
           body: JSON.stringify({ content }),
         }
       );
-
       if (!response.ok || !response.body) {
         throw new Error("No response stream received");
       }
-
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let fullResponse = "";
-
+      let agentMessageAdded = false;
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-
         const chunk = decoder.decode(value);
         const lines = chunk.split("\n").filter(Boolean);
-
         for (const line of lines) {
           try {
             if (line.startsWith("data: ")) {
               const jsonData = JSON.parse(line.slice(6));
               const messageData = jsonData[0];
-
               if (messageData?.content !== undefined) {
                 fullResponse = messageData.content;
                 setMessages((prev) => {
+                  // Only add the agent message once, or update it if already present
                   const newMessages = [...prev];
-                  const lastMessage = newMessages[newMessages.length - 1];
-                  if (lastMessage instanceof AIMessage) {
+                  if (
+                    agentMessageAdded &&
+                    newMessages[newMessages.length - 1] instanceof AIMessage
+                  ) {
                     newMessages[newMessages.length - 1] = new AIMessage(
                       messageData.content
                     );
                   } else {
                     newMessages.push(new AIMessage(messageData.content));
+                    agentMessageAdded = true;
                   }
                   return newMessages;
                 });
@@ -159,7 +196,6 @@ export default function ChatContainer({
           }
         }
       }
-
       // Generate title after first message exchange if not already set
       if (messages.length === 0) {
         const conversation = `User: ${content}\nAssistant: ${fullResponse}`;
@@ -174,7 +210,6 @@ export default function ChatContainer({
               body: JSON.stringify({ conversation }),
             }
           );
-
           if (!titleResponse.ok) {
             console.error("Failed to generate title");
           }
@@ -242,7 +277,16 @@ export default function ChatContainer({
 
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col min-h-0 bg-background overflow-hidden border-l border-border">
-        <MessageList messages={messages} />
+        <MessageList
+          messages={messages}
+          agentAvatar={agent.agent_avatar}
+          agentInitials={
+            agent.name ? agent.name.substring(0, 2).toUpperCase() : "A"
+          }
+          userAvatar={userAvatar}
+          userInitials={userInitials}
+          isThinking={isLoading}
+        />
         <MessageInput onSend={sendChatMessage} disabled={isLoading} />
       </div>
     </div>

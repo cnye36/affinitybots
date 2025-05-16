@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { createClient } from "@/supabase/server";
 
 interface EarlyAccessRequest {
   email: string;
@@ -22,8 +23,57 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Store the request in the database (you may implement this later)
-    // For now, we'll just send the email notification
+    const supabase = await createClient();
+
+    // Store the request in the database
+    const { data: existingRequest, error: selectError } = await supabase
+      .from("early_access_invites")
+      .select("id")
+      .eq("email", body.email)
+      .maybeSingle();
+
+    if (selectError && selectError.code !== "PGRST116") {
+      // PGRST116: Row not found, which is fine
+      console.error("Error checking for existing request:", selectError);
+      return NextResponse.json(
+        { error: "Database error checking request" },
+        { status: 500 }
+      );
+    }
+
+    if (existingRequest) {
+      return NextResponse.json(
+        { message: "You have already requested early access." },
+        { status: 200 }
+      );
+    }
+
+    const { error: insertError } = await supabase
+      .from("early_access_invites")
+      .insert([
+        {
+          email: body.email,
+          name: body.name,
+          // status will default to 'requested'
+          // You can add other fields from EarlyAccessRequest here if you add them to your table
+        },
+      ]);
+
+    if (insertError) {
+      console.error("Error inserting early access request:", insertError);
+      // Check for unique constraint violation (duplicate email)
+      if (insertError.code === "23505") {
+        // PostgreSQL unique_violation
+        return NextResponse.json(
+          { message: "You have already requested early access." },
+          { status: 200 }
+        ); // Or 409 Conflict
+      }
+      return NextResponse.json(
+        { error: "Failed to save request to database" },
+        { status: 500 }
+      );
+    }
 
     // Send email notification
     const apiKey = process.env.SENDGRID_API_KEY;
@@ -81,7 +131,10 @@ Details:
     sgMail.default.setApiKey(apiKey);
     await sgMail.default.send(emailData);
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      message: "Thank you for your request! We will be in touch.",
+    });
   } catch (error) {
     console.error("Error processing early access request:", error);
     return NextResponse.json(

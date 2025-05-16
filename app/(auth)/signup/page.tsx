@@ -16,9 +16,15 @@ export default function SignUpPage() {
   async function handleSignUp(formData: FormData) {
     const password = formData.get("password") as string;
     const confirmPassword = formData.get("confirmPassword") as string;
+    const inviteCode = formData.get("inviteCode") as string;
 
     if (password !== confirmPassword) {
       setError("Passwords do not match");
+      return;
+    }
+
+    if (!inviteCode) {
+      setError("Invite code is required.");
       return;
     }
 
@@ -70,6 +76,10 @@ export default function SignUpPage() {
               type="password"
               required
             />
+          </div>
+          <div>
+            <Label htmlFor="inviteCode">Invite Code</Label>
+            <Input id="inviteCode" name="inviteCode" type="text" required />
           </div>
           <Button formAction={handleSignUp} className="w-full">
             Sign Up

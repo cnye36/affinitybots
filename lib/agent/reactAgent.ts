@@ -279,7 +279,11 @@ async function initializeMCPClient(enabledServers: string[]) {
 const DEFAULT_SYSTEM_PROMPT = `You are a helpful AI assistant that can use tools to find information`;
 
 // Initialize base tools and model
-const baseTools = await initializeMCPClient(["notionApi"]);
+const baseTools = await initializeMCPClient([
+  "tavily",
+  "wolfram-alpha",
+  "notion",
+]);
 const toolNode = new ToolNode(baseTools);
 
 // Create a model and give it access to the tools
