@@ -150,7 +150,10 @@ export async function POST(
         });
 
         for await (const event of eventStream) {
-          if (event.data?.[0]?.content !== undefined) {
+          if (
+            Array.isArray(event.data) &&
+            event.data[0]?.content !== undefined
+          ) {
             const chunk = `data: ${JSON.stringify(event.data)}\n\n`;
             await writer.write(encoder.encode(chunk));
           }

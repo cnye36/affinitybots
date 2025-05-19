@@ -4,7 +4,7 @@
       "command": "docker",
       "args": ["run", "-i", "--rm", "-e", "TAVILY_API_KEY", "mcp/tavily"],
       "env": {
-        "TAVILY_API_KEY": "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"
+        "TAVILY_API_KEY": ""
       }
     },
     "wolfram-alpha": {
@@ -18,7 +18,7 @@
         "mcp/wolfram-alpha"
       ],
       "env": {
-        "WOLFRAM_API_KEY": "W42G68-L564QPEHXE"
+        "WOLFRAM_API_KEY": ""
       }
     },
     "notion": {
@@ -32,7 +32,7 @@
         "mcp/notion"
       ],
       "env": {
-        "INTERNAL_INTEGRATION_TOKEN": "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"
+        "INTERNAL_INTEGRATION_TOKEN": ""
       }
     }
   }

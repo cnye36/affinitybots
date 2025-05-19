@@ -123,7 +123,8 @@ export async function POST(
                     .update({
                       status: "completed",
                       completed_at: new Date().toISOString(),
-                      result: event.data.output,
+                      result:
+                        "output" in event.data ? event.data.output : event.data,
                     })
                     .eq("run_id", runId);
                 }

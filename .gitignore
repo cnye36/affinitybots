@@ -45,3 +45,6 @@ next-env.d.ts
 
 # Docker
 docker-compose.yml
+
+# MCP 
+mcp.json

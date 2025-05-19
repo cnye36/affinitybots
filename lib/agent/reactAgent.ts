@@ -241,6 +241,16 @@ function getEnabledMCPServers(enabledServers: string[]) {
     if (allServers[serverName]) {
       const serverConfig = allServers[serverName];
 
+      // Apply environment variables for API keys
+      if (serverConfig.env) {
+        // Replace env values with process.env values where they exist
+        Object.keys(serverConfig.env).forEach((key) => {
+          if (process.env[key]) {
+            serverConfig.env![key] = process.env[key]!;
+          }
+        });
+      }
+
       if (serverConfig.transport === "sse" && serverConfig.url) {
         const sseConfig: SSEConnection = {
           transport: "sse",

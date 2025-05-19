@@ -18,10 +18,8 @@ services:
             - .env
         environment:
             REDIS_URI: redis://langgraph-redis:6379
-            OPENAI_API_KEY: ${OPENAI_API_KEY}
-            TAVILY_API_KEY: ${TAVILY_API_KEY}
-            WOLFRAM_ALPHA_APP_ID: ${WOLFRAM_ALPHA_APP_ID}
-            POSTGRES_URI: postgresql://postgres.lcnkzptzirdcvemvbjan:1zmFyZOWylOfM0ic@aws-0-us-west-1.pooler.supabase.com:5432/postgres
+            
+            POSTGRES_URI: postgresql://postgres.lcnkzptzirdcvemvbjan:GMRjt41fMuDShNoV@aws-0-us-west-1.pooler.supabase.com:5432/postgres
             LANGSMITH_API_KEY: ${LANGSMITH_API_KEY}
             LANGSMITH_ENDPOINT: ${LANGSMITH_ENDPOINT}
             LANGSMITH_PROJECT: ${LANGSMITH_PROJECT}

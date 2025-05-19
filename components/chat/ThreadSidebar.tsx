@@ -74,11 +74,19 @@ export default function ThreadSidebar({
     }
   }, [agentId]);
 
-  // Initial fetch
+  // Initial fetch and when currentThreadId changes
   useEffect(() => {
     fetchThreads();
-  }, [fetchThreads]);
+  }, [fetchThreads, currentThreadId]);
 
+  // Set up polling to refresh threads periodically
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      fetchThreads();
+    }, 5000); // Refresh every 5 seconds
+
+    return () => clearInterval(intervalId);
+  }, [fetchThreads]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -279,3 +287,4 @@ export default function ThreadSidebar({
     </div>
   );
 }
+

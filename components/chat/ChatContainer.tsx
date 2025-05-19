@@ -29,6 +29,7 @@ export default function ChatContainer({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [userAvatar, setUserAvatar] = useState<string | undefined>(undefined);
   const [userInitials, setUserInitials] = useState<string>("U");
+  const [sidebarKey, setSidebarKey] = useState<number>(0);
 
   // Initialize chat if no thread exists
   useEffect(() => {
@@ -122,6 +123,29 @@ export default function ChatContainer({
       const data = await response.json();
       setCurrentThreadId(data.thread_id);
       setMessages([]);
+
+      // Generate title immediately after creating a new thread
+      try {
+        const titleResponse = await fetch(
+          `/api/agents/${agent.id}/threads/${data.thread_id}/rename`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              conversation: `New Chat`,
+            }),
+          }
+        );
+        if (!titleResponse.ok) {
+          console.error("Failed to generate title");
+        }
+        // Force sidebar to refresh to show the new thread with title
+        setSidebarKey((prev) => prev + 1);
+      } catch (error) {
+        console.error("Error generating title:", error);
+      }
     } catch (error) {
       console.error("Error creating new thread:", error);
     }
@@ -139,6 +163,48 @@ export default function ChatContainer({
         const data = await response.json();
         threadId = data.thread_id;
         setCurrentThreadId(threadId);
+
+        // Generate title immediately after creating a new thread
+        try {
+          const titleResponse = await fetch(
+            `/api/agents/${agent.id}/threads/${threadId}/rename`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ conversation: `User: ${content}` }),
+            }
+          );
+          if (!titleResponse.ok) {
+            console.error("Failed to generate title");
+          }
+          // Force sidebar to refresh to show the new thread with title
+          setSidebarKey((prev) => prev + 1);
+        } catch (error) {
+          console.error("Error generating title:", error);
+        }
+      } else if (messages.length === 0) {
+        // If this is the first message in an existing thread, also generate title
+        try {
+          const titleResponse = await fetch(
+            `/api/agents/${agent.id}/threads/${threadId}/rename`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ conversation: `User: ${content}` }),
+            }
+          );
+          if (!titleResponse.ok) {
+            console.error("Failed to generate title");
+          }
+          // Force sidebar to refresh
+          setSidebarKey((prev) => prev + 1);
+        } catch (error) {
+          console.error("Error generating title:", error);
+        }
       }
       // Optimistically add user message
       const userMessage = new HumanMessage(content);
@@ -196,27 +262,7 @@ export default function ChatContainer({
           }
         }
       }
-      // Generate title after first message exchange if not already set
-      if (messages.length === 0) {
-        const conversation = `User: ${content}\nAssistant: ${fullResponse}`;
-        try {
-          const titleResponse = await fetch(
-            `/api/agents/${agent.id}/threads/${threadId}/rename`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({ conversation }),
-            }
-          );
-          if (!titleResponse.ok) {
-            console.error("Failed to generate title");
-          }
-        } catch (error) {
-          console.error("Error generating title:", error);
-        }
-      }
+      // We no longer need to generate a title here as we do it immediately after thread creation
     } catch (error) {
       console.error("Error sending message:", error);
       setMessages((prev) => [
@@ -254,6 +300,7 @@ export default function ChatContainer({
         )}
       >
         <ThreadSidebar
+          key={sidebarKey}
           agentId={agent.id}
           currentThreadId={currentThreadId}
           onThreadSelect={(threadId) => {
