@@ -251,6 +251,24 @@ function getEnabledMCPServers(enabledServers: string[]) {
         });
       }
 
+      // Process headers to replace environment variable placeholders
+      if (serverConfig.headers) {
+        Object.keys(serverConfig.headers).forEach((key) => {
+          const headerValue = serverConfig.headers![key];
+          if (typeof headerValue === "string" && headerValue.includes("${")) {
+            // Extract environment variable name from ${ENV_VAR} pattern
+            const envVarMatch = headerValue.match(/\${([^}]+)}/);
+            if (envVarMatch && envVarMatch[1] && process.env[envVarMatch[1]]) {
+              // Replace the placeholder with the actual environment variable value
+              serverConfig.headers![key] = headerValue.replace(
+                `\${${envVarMatch[1]}}`,
+                process.env[envVarMatch[1]]!
+              );
+            }
+          }
+        });
+      }
+
       if (serverConfig.transport === "sse" && serverConfig.url) {
         const sseConfig: SSEConnection = {
           transport: "sse",
