@@ -8,16 +8,11 @@ export const AVAILABLE_MCP_SERVERS = {
     requiredCredentials: ["tavily_api_key"],
     isEnabled: true, // Tavily is always enabled by default
   },
-  sequential_thinking: {
-    name: "Sequential Thinking",
-    description: "Think step by step",
+  agenthubTestServer: {
+    name: "AgentHub Test Server",
+    description: "AgentHub Test Server",
     icon: Brain,
     requiredCredentials: [],
-  },
-  notionApi: {
-    name: "Notion API",
-    description: "Notion API",
-    icon: Brain,
-    requiredCredentials: ["notion_integration_secret"],
+    isEnabled: true,
   },
 };

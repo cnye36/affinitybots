@@ -58,7 +58,7 @@ async function writeMemory(state: AgentState, config: LangGraphRunnableConfig) {
   try {
     // Use the LLM to extract memories from the message
     const memoryExtractor = new ChatOpenAI({
-      model: "gpt-4.1",
+      model: "gpt-4.1-mini",
       temperature: 0,
     });
 
@@ -219,106 +219,13 @@ export async function retrieveKb(state: AgentState, config: RunnableConfig) {
   };
 }
 
-// Function to get enabled MCP servers configuration
-interface MCPServerConfig {
-  transport?: "stdio" | "sse";
-  command?: string;
-  args?: string[];
-  env?: Record<string, string>;
-  url?: string;
-  headers?: Record<string, string>;
-  useNodeEventSource?: boolean;
-}
-
-// Get the enabled MCP servers configuration
-function getEnabledMCPServers(enabledServers: string[]) {
-  const allServers = JSON.parse(
-    fs.readFileSync("./lib/agent/mcp.json", "utf-8")
-  ).servers as Record<string, MCPServerConfig>;
-
-  const enabledServerConfig: Record<string, Connection> = {};
-  enabledServers.forEach((serverName) => {
-    if (allServers[serverName]) {
-      const serverConfig = allServers[serverName];
-
-      // Apply environment variables for API keys
-      if (serverConfig.env) {
-        // Replace env values with process.env values where they exist
-        Object.keys(serverConfig.env).forEach((key) => {
-          if (process.env[key]) {
-            serverConfig.env![key] = process.env[key]!;
-          }
-        });
-      }
-
-      // Process headers to replace environment variable placeholders
-      if (serverConfig.headers) {
-        Object.keys(serverConfig.headers).forEach((key) => {
-          const headerValue = serverConfig.headers![key];
-          if (typeof headerValue === "string" && headerValue.includes("${")) {
-            // Extract environment variable name from ${ENV_VAR} pattern
-            const envVarMatch = headerValue.match(/\${([^}]+)}/);
-            if (envVarMatch && envVarMatch[1] && process.env[envVarMatch[1]]) {
-              // Replace the placeholder with the actual environment variable value
-              serverConfig.headers![key] = headerValue.replace(
-                `\${${envVarMatch[1]}}`,
-                process.env[envVarMatch[1]]!
-              );
-            }
-          }
-        });
-      }
-
-      if (serverConfig.transport === "sse" && serverConfig.url) {
-        const sseConfig: SSEConnection = {
-          transport: "sse",
-          url: serverConfig.url,
-          headers: serverConfig.headers,
-          useNodeEventSource: serverConfig.useNodeEventSource,
-        };
-        enabledServerConfig[serverName] = sseConfig;
-      } else if (serverConfig.command && serverConfig.args) {
-        const stdioConfig: StdioConnection = {
-          transport: "stdio",
-          command: serverConfig.command,
-          args: serverConfig.args,
-          env: serverConfig.env,
-        };
-        enabledServerConfig[serverName] = stdioConfig;
-      } else {
-        console.warn(
-          `Server "${serverName}" has invalid configuration. Skipping.`
-        );
-      }
-    }
-  });
-
-  return enabledServerConfig;
-}
-
-// Initialize MCP client with enabled servers
-async function initializeMCPClient(enabledServers: string[]) {
-  const mcpConfig = getEnabledMCPServers(enabledServers);
-  const mcpClient = new MultiServerMCPClient(mcpConfig);
-  await mcpClient.initializeConnections();
-  return mcpClient.getTools();
-}
-
 const DEFAULT_SYSTEM_PROMPT = `You are a helpful AI assistant that can use tools to find information`;
 
-// Initialize base tools and model
-const baseTools = await initializeMCPClient([
-  "tavily",
-  "wolfram-alpha",
-  "notion",
-]);
+// Initialize base tools and model using the simplified MCP client
+const mcpClient = new MultiServerMCPClient();
+await mcpClient.initializeConnections();
+const baseTools = mcpClient.getTools();
 const toolNode = new ToolNode(baseTools);
-
-// Create a model and give it access to the tools
-const model = new ChatOpenAI({
-  model: "gpt-4.1",
-  temperature: 0.5,
-}).bindTools(baseTools);
 
 // Define the function that determines whether to continue or not
 function shouldContinue({ messages }: typeof MessagesAnnotation.State) {
@@ -377,6 +284,12 @@ async function callModel(
       }
     }
   }
+
+  // Create a model and give it access to the tools
+  const model = new ChatOpenAI({
+    model: agentConfig.model || "gpt-4.1",
+    temperature: agentConfig.temperature || 0.5,
+  }).bindTools(baseTools);
 
   // Combine system prompt with memory context
   const enhancedSystemPrompt = `${systemPrompt}${memoryContext}`;
