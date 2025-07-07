@@ -83,6 +83,12 @@ export function Header() {
           >
             Benefits
           </a>
+          <Link
+            href="/pitch-deck"
+            className="text-md font-medium hover:text-primary"
+          >
+            Pitch Deck
+          </Link>
         </nav>
 
         <div className="flex items-center space-x-4">
@@ -139,6 +145,13 @@ export function Header() {
             >
               Benefits
             </a>
+            <Link
+              href="/pitch-deck"
+              className="text-md font-medium hover:text-primary py-2"
+              onClick={handleNavClick}
+            >
+              Pitch Deck
+            </Link>
             <Link
               href="/early-access"
               className="mt-2"
