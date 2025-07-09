@@ -1,7 +1,6 @@
 import { ChatOpenAI } from "@langchain/openai";
 import { PromptTemplate } from "@langchain/core/prompts";
 import { generateAgentAvatar } from "@/lib/avatar-generation";
-import { AVAILABLE_MCP_SERVERS } from "@/lib/mcpToolIndex";
 import type { AgentConfiguration, ModelType } from "@/types/agent";
 
 // Store previously generated names per user with a maximum cache size
@@ -97,11 +96,10 @@ User's Description: {description}
 Agent Type: {agentType}
 
 Available Tools:
-${Object.values(AVAILABLE_MCP_SERVERS)
-  .map((t) => `- ${t.name}: ${t.description}`)
-  .join("\n")}
+- Web Search: AI-powered web search and content extraction
+- Various MCP servers available through the Smithery registry
 
-Note: Only include Search (Tavily) by default.
+Note: Tools can be configured and enabled after agent creation through the agent configuration interface.
 
 Provide the following information in a clear format:
 
@@ -141,9 +139,7 @@ Provide the following information in a clear format:
    - [Handling edge cases]
    - [Closing interactions]
 
-4. TOOLS: List required tools from: ${Object.keys(AVAILABLE_MCP_SERVERS).join(
-  ", "
-)}
+4. TOOLS: List suggested tools that would be helpful for this agent (generic descriptions)
 5. MODEL: Specify gpt-4o
 6. TEMPERATURE: Provide a number between 0 and 1
 7. MEMORY_WINDOW: Suggest number of past messages to consider (default: 10)
@@ -195,139 +191,68 @@ export interface GeneratedConfig {
 
 export async function generateAgentConfiguration(
   description: string,
-  agentType: string,
-  ownerId: string
-): Promise<GeneratedConfig> {
-  const model = new ChatOpenAI({
-    modelName: "gpt-4o",
-    temperature: 0.7,
+  agentType: string = "general"
+): Promise<{
+  name: string;
+  description: string;
+  instructions: string;
+  tools: string[];
+  model: string;
+  temperature: number;
+  memory: { enabled: boolean; max_entries: number };
+  knowledge: { enabled: boolean };
+}> {
+  const llm = new ChatOpenAI({
+    model: "gpt-4o-mini",
+    temperature: 0.3,
   });
 
-  const formattedPrompt = await configurationPrompt.format({
+  const prompt = await configurationPrompt.format({
     description,
     agentType,
-    ownerId,
   });
 
-  const response = await model.invoke(formattedPrompt);
-  const responseText = response.content.toString();
-
-  // Parse the response into structured data
-  const lines = responseText.split("\n").filter((line) => line.trim());
-
-  // Initialize the configuration with default values
-  const config: GeneratedConfig = {
-    owner_id: ownerId,
-    name: "",
-    description: "",
-    agent_avatar: "/images/default-avatar.png", // Will be updated after name generation
-    agent_type: agentType,
-    config: {
-      model: "gpt-4.1",
-      temperature: 0.7,
-      tools: [],
-      memory: {
-        enabled: true,
-        max_entries: 10,
-        relevance_threshold: 0.7,
-      },
-      prompt_template: "",
-      knowledge_base: {
-        isEnabled: false,
-        config: {
-          sources: [],
-        },
-      },
-      enabled_mcp_servers: ["memory"], // Memory server is always enabled
-      agentId: ownerId, // Store the agentId directly in the config
-    },
-    metadata: {},
-  };
-
-  // Parse the response and collect instructions
-  let instructionsContent = "";
-  let isCollectingInstructions = false;
-
-  for (const line of lines) {
-    if (line.startsWith("INSTRUCTIONS:")) {
-      isCollectingInstructions = true;
-      continue;
-    }
-
-    if (isCollectingInstructions) {
-      if (
-        line.startsWith("TOOLS:") ||
-        line.startsWith("MODEL:") ||
-        line.startsWith("TEMPERATURE:") ||
-        line.startsWith("MEMORY_WINDOW:") ||
-        line.startsWith("MEMORY_RELEVANCE:")
-      ) {
-        isCollectingInstructions = false;
-        config.config.prompt_template = instructionsContent.trim();
-      } else {
-        instructionsContent += line + "\n";
-        continue;
-      }
-    }
-
-    // Regular processing for non-instruction sections
-    const [key, ...valueParts] = line.split(":");
-    const value = valueParts.join(":").trim();
-
-    if (!key || !value) continue;
-
-    switch (key.trim().toUpperCase()) {
-      case "NAME":
-        config.name = value;
-        break;
-      case "DESCRIPTION":
-        config.description = value;
-        break;
-      case "TOOLS":
-        // Parse requested MCP servers
-        const requestedServers = value.split(",").map((t) => t.trim());
-        config.config.enabled_mcp_servers = [
-          "memory",
-          ...requestedServers.filter(
-            (server) =>
-              Object.prototype.hasOwnProperty.call(
-                AVAILABLE_MCP_SERVERS,
-                server
-              ) && server !== "memory"
-          ),
-        ];
-        break;
-      case "MODEL":
-        config.config.model = value as ModelType;
-        break;
-      case "TEMPERATURE":
-        config.config.temperature = parseFloat(value);
-        break;
-      case "MEMORY_WINDOW":
-        config.config.memory.max_entries = parseInt(value, 10);
-        break;
-      case "MEMORY_RELEVANCE":
-        config.config.memory.relevance_threshold = parseFloat(value);
-        break;
-    }
-  }
-
-  // Ensure required fields are present
-  if (!config.name || !config.config.prompt_template || !config.description) {
-    throw new Error("Missing required fields in agent configuration");
-  }
+  const response = await llm.invoke(prompt);
+  const content = response.content as string;
 
   try {
-    // Generate avatar and wait for the result instead of doing it asynchronously
-    const avatarPath = await generateAgentAvatar(
-      config.name,
-      config.agent_type
-    );
-    config.agent_avatar = avatarPath;
-  } catch (error) {
-    console.error("Failed to generate avatar:", error);
-    // Keep the default avatar
-  }
+    // Extract JSON from the response
+    const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/) || content.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error("No JSON found in response");
+    }
 
-  return config;
+    const jsonStr = jsonMatch[1] || jsonMatch[0];
+    const parsed = JSON.parse(jsonStr);
+
+    return {
+      name: parsed.name || "Unnamed Agent",
+      description: parsed.description || "No description provided",
+      instructions: parsed.instructions || "You are a helpful AI assistant.",
+      tools: [], // Tools are configured separately through the UI
+      model: parsed.model || "gpt-4o-mini",
+      temperature: parsed.temperature || 0.7,
+      memory: {
+        enabled: parsed.memory?.enabled || false,
+        max_entries: parsed.memory?.max_entries || 50,
+      },
+      knowledge: {
+        enabled: parsed.knowledge?.enabled || false,
+      },
+    };
+  } catch (error) {
+    console.error("Error parsing agent configuration:", error);
+    
+    // Fallback configuration
+    return {
+      name: "Custom Agent",
+      description: description || "A helpful AI assistant",
+      instructions: `You are a helpful AI assistant focused on: ${description}`,
+      tools: [],
+      model: "gpt-4o-mini",
+      temperature: 0.7,
+      memory: { enabled: false, max_entries: 50 },
+      knowledge: { enabled: false },
+    };
+  }
 }

@@ -26,6 +26,7 @@ export interface AgentConfiguration {
       sources: unknown[];
     };
   };
+  // Array of qualified names from Smithery registry (e.g., "@tavily/tavily", "@supabase/supabase-mcp")
   enabled_mcp_servers: string[];
   agentId?: string;
 }

@@ -1,28 +1,42 @@
 "use client"
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Switch } from "@/components/ui/switch";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Settings, Eye, EyeOff, AlertTriangle } from "lucide-react";
-import { AVAILABLE_MCP_SERVERS } from "@/lib/mcpToolIndex";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Settings, CheckCircle, XCircle, Globe, Server, Loader2 } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-type MCPServer = {
-  name: string;
-  description: string;
-  icon: React.ComponentType<{ className?: string }>;
-  requiredCredentials: string[];
-  credentials?: Record<string, string>;
-};
+interface SmitheryServer {
+  qualifiedName: string;
+  displayName?: string;
+  description?: string;
+  iconUrl?: string;
+  logo?: string;
+  isLocal?: boolean;
+  security?: {
+    scanPassed?: boolean;
+    provider?: string;
+  };
+  connections?: Array<{
+    configSchema?: any;
+    deploymentUrl?: string;
+    type?: string;
+  }>;
+}
 
-type MCPServers = Record<string, MCPServer>;
+interface UserMCPServer {
+  id: string;
+  qualified_name: string;
+  config: any;
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
 
 interface ToolSelectorProps {
   enabledMCPServers: string[];
@@ -33,204 +47,284 @@ export function ToolSelector({
   enabledMCPServers = [],
   onMCPServersChange,
 }: ToolSelectorProps) {
-  const [openConfigs, setOpenConfigs] = useState<Record<string, boolean>>({});
-  const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>(
-    {}
-  );
-  const [validationErrors, setValidationErrors] = useState<
-    Record<string, string>
-  >({});
+  const [smitheryServers, setSmitheryServers] = useState<SmitheryServer[]>([]);
+  const [userServers, setUserServers] = useState<UserMCPServer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [logos, setLogos] = useState<Record<string, string>>({});
 
-  const servers = AVAILABLE_MCP_SERVERS as MCPServers;
+  // Fetch data on component mount
+  useEffect(() => {
+    fetchData();
+  }, []);
 
-  const toggleConfig = (toolId: string) => {
-    setOpenConfigs((prev) => ({
-      ...prev,
-      [toolId]: !prev[toolId],
-    }));
-  };
+  const fetchData = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Fetch both Smithery servers and user configurations in parallel
+      const [smitheryRes, userRes] = await Promise.all([
+        fetch('/api/smithery').then(r => r.json()),
+        fetch('/api/user-mcp-servers').then(r => r.json())
+      ]);
 
-  const togglePasswordVisibility = (toolId: string, credentialKey: string) => {
-    const key = `${toolId}-${credentialKey}`;
-    setShowPasswords((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
-  };
-
-  const handleConfigChange = (
-    toolId: string,
-    changes: Record<string, string>
-  ) => {
-    const server = servers[toolId];
-    if (!server) return;
-
-    // Update the server's credentials
-    server.credentials = {
-      ...server.credentials,
-      ...changes,
-    };
-    validateToolConfig(toolId);
-  };
-
-  const handleToggleTool = (serverId: string) => {
-    if (!onMCPServersChange) return;
-
-    const isEnabled = enabledMCPServers.includes(serverId);
-    const server = servers[serverId];
-
-    if (!isEnabled && server.requiredCredentials.length > 0) {
-      const isValid = validateToolConfig(serverId);
-      if (!isValid) {
-        setOpenConfigs((prev) => ({
-          ...prev,
-          [serverId]: true,
-        }));
-        return;
+      if (smitheryRes.error) {
+        throw new Error(smitheryRes.error);
       }
+
+      if (userRes.error) {
+        throw new Error(userRes.error);
+      }
+
+      const servers = smitheryRes.servers?.servers || [];
+      setSmitheryServers(servers);
+      setUserServers(userRes.servers || []);
+
+      // Fetch logos for servers that have them
+      const serversWithLogos = servers.filter((s: SmitheryServer) => s.iconUrl || s.logo);
+      if (serversWithLogos.length > 0) {
+        const logoMap: Record<string, string> = {};
+        serversWithLogos.forEach((server: SmitheryServer) => {
+          if (server.iconUrl || server.logo) {
+            logoMap[server.qualifiedName] = server.iconUrl || server.logo || '';
+          }
+        });
+        setLogos(logoMap);
+      }
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch tools');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleToggleTool = (qualifiedName: string) => {
+    const isEnabled = enabledMCPServers.includes(qualifiedName);
+    const userServer = userServers.find(s => s.qualified_name === qualifiedName);
+    
+    // If enabling but not configured, don't allow toggle
+    if (!isEnabled && !userServer?.enabled) {
+      return;
     }
 
     const updatedServers = isEnabled
-      ? enabledMCPServers.filter((id) => id !== serverId)
-      : [...enabledMCPServers, serverId];
+      ? enabledMCPServers.filter(name => name !== qualifiedName)
+      : [...enabledMCPServers, qualifiedName];
 
     onMCPServersChange(updatedServers);
   };
 
-  const validateToolConfig = (serverId: string): boolean => {
-    const server = servers[serverId];
-    if (!server.requiredCredentials.length) return true;
-
-    const credentials = server.credentials || {};
-    const missingCredentials = server.requiredCredentials.filter(
-      (cred: string) => !credentials[cred]
-    );
-
-    if (missingCredentials.length > 0) {
-      setValidationErrors((prev) => ({
-        ...prev,
-        [serverId]: `Missing required credentials: ${missingCredentials
-          .map((cred: string) =>
-            cred
-              .split("_")
-              .map(
-                (word: string) => word.charAt(0).toUpperCase() + word.slice(1)
-              )
-              .join(" ")
-          )
-          .join(", ")}`,
-      }));
-      return false;
-    }
-
-    setValidationErrors((prev) =>
-      Object.fromEntries(
-        Object.entries(prev).filter(([key]) => key !== serverId)
-      )
-    );
-    return true;
+  const isConfigured = (qualifiedName: string) => {
+    const userServer = userServers.find(s => s.qualified_name === qualifiedName);
+    return userServer?.enabled || false;
   };
 
-  return (
-    <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-2">
-      <h3 className="text-lg font-semibold sticky top-0 bg-background py-2">
-        Tools
-      </h3>
-      <div className="space-y-2">
-        {Object.entries(servers).map(([id, tool]) => (
-          <Collapsible
-            key={id}
-            open={openConfigs[id]}
-            onOpenChange={() => toggleConfig(id)}
+  const isEnabled = (qualifiedName: string) => {
+    return enabledMCPServers.includes(qualifiedName);
+  };
+
+  const needsConfiguration = (server: SmitheryServer) => {
+    return server.connections?.[0]?.configSchema && 
+           Object.keys(server.connections[0].configSchema.properties || {}).length > 0;
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-6 w-6 animate-spin mr-2" />
+        Loading tools...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Alert variant="destructive">
+        <XCircle className="h-4 w-4" />
+        <AlertDescription>
+          {error}
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={fetchData}
+            className="ml-2"
           >
-            <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-              <div className="flex items-center space-x-4">
-                <tool.icon className="h-6 w-6" />
-                <div className="space-y-1">
-                  <div className="font-medium">{tool.name}</div>
-                  <div className="text-sm text-muted-foreground">
-                    {tool.description}
-                  </div>
-                </div>
+            Retry
+          </Button>
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  // Separate configured and unconfigured servers
+  const configuredServers = smitheryServers.filter(server => isConfigured(server.qualifiedName));
+  const unconfiguredServers = smitheryServers.filter(server => !isConfigured(server.qualifiedName));
+
+  const ServerCard = ({ server, isConfiguredSection }: { server: SmitheryServer; isConfiguredSection: boolean }) => {
+    const configured = isConfigured(server.qualifiedName);
+    const enabled = isEnabled(server.qualifiedName);
+    const requiresConfig = needsConfiguration(server);
+    
+    return (
+      <Card className="p-4">
+        <div className="flex items-start gap-3">
+          {/* Icon */}
+          <div className="flex-shrink-0 mt-1">
+            {logos[server.qualifiedName] ? (
+              <Image
+                src={logos[server.qualifiedName]}
+                alt={server.displayName || server.qualifiedName}
+                width={32}
+                height={32}
+                className="rounded-full bg-white border"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-lg">
+                🛠️
               </div>
-              <div className="flex items-center space-x-4">
-                {tool.requiredCredentials.length > 0 && (
-                  <CollapsibleTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <Settings className="h-4 w-4" />
-                    </Button>
-                  </CollapsibleTrigger>
+            )}
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex-1">
+                <h3 className="font-medium text-sm">
+                  {server.displayName || server.qualifiedName}
+                </h3>
+                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                  {server.description || "No description available"}
+                </p>
+              </div>
+              
+              {/* Toggle Switch */}
+              <div className="flex items-center gap-2">
+                {configured && (
+                  <Switch
+                    checked={enabled}
+                    onCheckedChange={() => handleToggleTool(server.qualifiedName)}
+                  />
                 )}
-                <Switch
-                  checked={enabledMCPServers.includes(id)}
-                  onCheckedChange={() => handleToggleTool(id)}
-                  disabled={id === "tavily"} // Tavily is always enabled
-                />
               </div>
             </div>
 
-            {tool.requiredCredentials.length > 0 && (
-              <CollapsibleContent className="p-4 bg-muted/50 rounded-lg mt-2 space-y-4">
-                {validationErrors[id] && (
-                  <Alert variant="destructive">
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertDescription>{validationErrors[id]}</AlertDescription>
-                  </Alert>
+            {/* Status badges */}
+            <div className="flex flex-wrap gap-1 mt-2">
+              {configured ? (
+                <Badge variant="default" className="text-xs">
+                  <CheckCircle className="w-3 h-3 mr-1" />
+                  Configured
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-xs">
+                  Not Configured
+                </Badge>
+              )}
+              
+              {server.security?.scanPassed && (
+                <Badge variant="secondary" className="text-xs">
+                  Security Verified
+                </Badge>
+              )}
+              
+              <Badge variant="outline" className="text-xs">
+                {server.isLocal ? (
+                  <>
+                    <Server className="w-3 h-3 mr-1" />
+                    Local
+                  </>
+                ) : (
+                  <>
+                    <Globe className="w-3 h-3 mr-1" />
+                    Remote
+                  </>
                 )}
+              </Badge>
+            </div>
 
-                {tool.requiredCredentials.map((cred: string) => (
-                  <div key={cred} className="space-y-2">
-                    <Label
-                      htmlFor={`${id}-${cred}`}
-                      className="flex items-center space-x-1"
-                    >
-                      <span>
-                        {cred
-                          .split("_")
-                          .map(
-                            (word: string) =>
-                              word.charAt(0).toUpperCase() + word.slice(1)
-                          )
-                          .join(" ")}
-                      </span>
-                      <span className="text-destructive">*</span>
-                    </Label>
-                    <div className="relative">
-                      <Input
-                        id={`${id}-${cred}`}
-                        type={
-                          showPasswords[`${id}-${cred}`] ? "text" : "password"
-                        }
-                        value={servers[id]?.credentials?.[cred] ?? ""}
-                        onChange={(e) =>
-                          handleConfigChange(id, {
-                            [cred]: e.target.value,
-                          })
-                        }
-                        required
-                        className="pr-10"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="absolute right-0 top-0 h-full px-3"
-                        onClick={() => togglePasswordVisibility(id, cred)}
-                      >
-                        {showPasswords[`${id}-${cred}`] ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </CollapsibleContent>
+            {/* Configure button */}
+            {!configured && (
+              <div className="mt-3">
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="text-xs"
+                  asChild
+                >
+                  <Link href={`/tools/${encodeURIComponent(server.qualifiedName)}`}>
+                    <Settings className="w-3 h-3 mr-1" />
+                    {requiresConfig ? 'Configure' : 'Connect'}
+                  </Link>
+                </Button>
+              </div>
             )}
-          </Collapsible>
-        ))}
-      </div>
+          </div>
+        </div>
+      </Card>
+    );
+  };
+
+  return (
+    <div className="space-y-6 max-h-[70vh] overflow-y-auto">
+      {/* Configured Tools Section */}
+      {configuredServers.length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 mb-4">
+            <h3 className="text-lg font-semibold">Configured Tools</h3>
+            <Badge variant="secondary">{configuredServers.length}</Badge>
+          </div>
+          <div className="grid grid-cols-1 gap-3">
+            {configuredServers.map((server) => (
+              <ServerCard 
+                key={server.qualifiedName} 
+                server={server} 
+                isConfiguredSection={true}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Separator */}
+      {configuredServers.length > 0 && unconfiguredServers.length > 0 && (
+        <Separator />
+      )}
+
+      {/* Available Tools Section */}
+      {unconfiguredServers.length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 mb-4">
+            <h3 className="text-lg font-semibold">Available Tools</h3>
+            <Badge variant="outline">{unconfiguredServers.length}</Badge>
+          </div>
+          <div className="grid grid-cols-1 gap-3">
+            {unconfiguredServers.map((server) => (
+              <ServerCard 
+                key={server.qualifiedName} 
+                server={server} 
+                isConfiguredSection={false}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Empty state */}
+      {smitheryServers.length === 0 && (
+        <div className="text-center py-8 text-muted-foreground">
+          <p>No tools available at the moment.</p>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={fetchData}
+            className="mt-2"
+          >
+            Refresh
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

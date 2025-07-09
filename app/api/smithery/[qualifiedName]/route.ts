@@ -1,5 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 
+// Simple in-memory cache for server details
+const serverCache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+const isCacheValid = (timestamp: number): boolean => {
+  return Date.now() - timestamp < CACHE_DURATION;
+};
+
 export async function GET(request: NextRequest, { params }: { params: { qualifiedName: string } }) {
   const apiKey = process.env.SMITHERY_API_KEY;
   const { qualifiedName } = params;
@@ -12,9 +20,15 @@ export async function GET(request: NextRequest, { params }: { params: { qualifie
     return NextResponse.json({ error: 'Qualified name is required' }, { status: 400 });
   }
 
-const encodedQualifiedName = encodeURIComponent(qualifiedName);
-const response = await fetch(
-  `https://registry.smithery.ai/servers/${encodedQualifiedName}`,
+  // Check cache first
+  const cached = serverCache.get(qualifiedName);
+  if (cached && isCacheValid(cached.timestamp)) {
+    return NextResponse.json({ server: cached.data });
+  }
+
+  const encodedQualifiedName = encodeURIComponent(qualifiedName);
+  const response = await fetch(
+    `https://registry.smithery.ai/servers/${encodedQualifiedName}`,
     {
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -28,5 +42,12 @@ const response = await fetch(
   }
 
   const data = await response.json();
+  
+  // Cache the result
+  serverCache.set(qualifiedName, {
+    data: data,
+    timestamp: Date.now()
+  });
+
   return NextResponse.json({ server: data });
 }

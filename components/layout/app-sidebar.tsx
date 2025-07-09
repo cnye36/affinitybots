@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Home, Bot, Sliders } from "lucide-react";
+import { Home, Bot, Sliders, Hammer } from "lucide-react";
 
 import { NavMain } from "@/components/layout/nav-main";
 import { NavUser } from "@/components/layout/nav-user";
@@ -34,6 +34,21 @@ const data = {
         {
           title: "Create Agent",
           url: "/agents/new",
+        },
+      ],
+    },
+    {
+      title: "Tools",
+      url: "/tools",
+      icon: Hammer,
+      items: [
+        {
+          title: "All Tools",
+          url: "/tools",
+        },
+        {
+          title: "Configured Tools",
+          url: "/tools/configured",
         },
       ],
     },

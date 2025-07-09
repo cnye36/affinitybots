@@ -24,6 +24,9 @@ const nextConfig = {
         pathname: "/storage/v1/object/public/**",
       },
     ],
+    domains: [
+      "icons.duckduckgo.com",
+    ]
   },
 };
 

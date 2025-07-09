@@ -51,7 +51,7 @@ export function AgentConfigModal({
     config: {
       model: (agent.config.model || "gpt-4o") as ModelType,
       temperature: Number(agent.config.temperature || 0.7),
-      enabled_mcp_servers: agent.config.enabled_mcp_servers || ["memory"],
+      enabled_mcp_servers: agent.config.enabled_mcp_servers || [],
       memory: {
         enabled: Boolean(
           (agent.config.memory as { enabled?: boolean })?.enabled ?? true
@@ -84,7 +84,7 @@ export function AgentConfigModal({
       config: {
         model: (agent.config.model || "gpt-4o") as ModelType,
         temperature: Number(agent.config.temperature || 0.7),
-        enabled_mcp_servers: agent.config.enabled_mcp_servers || ["memory"],
+        enabled_mcp_servers: agent.config.enabled_mcp_servers || [],
         memory: {
           enabled: Boolean(
             (agent.config.memory as { enabled?: boolean })?.enabled ?? true
@@ -204,7 +204,7 @@ export function AgentConfigModal({
           <TabsContent value="tools">
             <ToolSelector
               enabledMCPServers={
-                config.config.enabled_mcp_servers || ["memory"]
+                config.config.enabled_mcp_servers || []
               }
               onMCPServersChange={handleMCPServersChange}
             />

@@ -23,23 +23,38 @@ export async function POST(request: Request) {
     }
 
     // Generate the agent configuration
-    const agentConfig = await generateAgentConfiguration(
+    const generatedConfig = await generateAgentConfiguration(
       prompt,
-      agentType,
-      user.id
+      agentType
     );
+
+    // Structure the agent data for database insertion
+    const agentData = {
+      name: generatedConfig.name,
+      description: generatedConfig.description,
+      agent_avatar: "/images/default-avatar.png", // Default avatar for now
+      metadata: {
+        owner_id: user.id,
+      },
+      config: {
+        model: generatedConfig.model,
+        temperature: generatedConfig.temperature,
+        tools: generatedConfig.tools,
+        memory: generatedConfig.memory,
+        prompt_template: generatedConfig.instructions,
+        knowledge_base: {
+          isEnabled: generatedConfig.knowledge.enabled,
+          config: { sources: [] },
+        },
+        enabled_mcp_servers: [], // Start with no tools enabled
+        agentId: user.id,
+      },
+    };
 
     // Create agent in the database
     const { data: agent, error: insertError } = await supabase
       .from("agent")
-      .insert({
-        name: agentConfig.name,
-        description: agentConfig.description,
-        agent_avatar: agentConfig.agent_avatar,
-        metadata: agentConfig.metadata,
-        config: agentConfig.config,
-        user_id: user.id,
-      })
+      .insert(agentData)
       .select()
       .single();
 
