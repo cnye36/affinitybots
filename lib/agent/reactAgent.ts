@@ -15,7 +15,6 @@ import {
 import { MultiServerMCPClient } from "@langchain/mcp-adapters";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { createSmitheryUrl } from "@smithery/sdk/dist/shared/config.js";
 import { RunnableConfig } from "@langchain/core/runnables";
 import { AgentConfiguration } from "@/types/agent";
 import { retrieveRelevantDocuments } from "@/lib/retrieval";
@@ -26,6 +25,34 @@ import { getUserMcpServers } from "./getUserMcpServers";
 
 // Initialize the memory store
 export const store = new InMemoryStore();
+
+// Local implementation of createSmitheryUrl to avoid SDK import issues
+interface SmitheryUrlOptions {
+  config?: any;
+  apiKey?: string;
+  profile?: string;
+}
+
+function createSmitheryUrl(baseUrl: string, options?: SmitheryUrlOptions): URL {
+  const url = new URL(`${baseUrl}/mcp`);
+  
+  if (options?.config) {
+    const param = typeof window !== "undefined"
+      ? btoa(JSON.stringify(options.config))
+      : Buffer.from(JSON.stringify(options.config)).toString("base64");
+    url.searchParams.set("config", param);
+  }
+  
+  if (options?.apiKey) {
+    url.searchParams.set("api_key", options.apiKey);
+  }
+  
+  if (options?.profile) {
+    url.searchParams.set("profile", options.profile);
+  }
+  
+  return url;
+}
 
 // Function to extract and write user memories
 async function writeMemory(state: AgentState, config: LangGraphRunnableConfig) {
