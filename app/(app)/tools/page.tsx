@@ -45,27 +45,26 @@ const isCacheValid = (timestamp: number): boolean => {
 };
 
 export default function ToolsPage() {
-  const [servers, setServers] = useState<any[]>([]);
+  const [allServers, setAllServers] = useState<any[]>([]);
   const [logos, setLogos] = useState<Record<string, string>>({});
   const [userServers, setUserServers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
 
   useEffect(() => {
     async function fetchData() {
       setLoading(true);
       const [allRes, userRes] = await Promise.all([
-        fetch(`/api/smithery?page=${page}&pageSize=${PAGE_SIZE}`).then((r) => r.json()),
+        // Fetch all servers at once with a large page size
+        fetch(`/api/smithery?pageSize=200`).then((r) => r.json()),
         fetch("/api/user-mcp-servers").then((r) => r.json()),
       ]);
       const serverList = allRes?.servers?.servers || [];
-      setServers(serverList);
+      setAllServers(serverList);
       setUserServers(userRes.servers || []);
-      setTotal(allRes?.servers?.total || 0);
       setLoading(false);
 
-      // Load cached logos immediately
+      // Load cached logos immediately for all servers
       const logoCache = getLogoCache();
       const cachedLogos: Record<string, string> = {};
       const serversNeedingLogos: any[] = [];
@@ -88,7 +87,7 @@ export default function ToolsPage() {
         const newCache = { ...logoCache };
 
         try {
-          const qualifiedNames = serversNeedingLogos.map(s => s.qualifiedName);
+          const qualifiedNames = serversNeedingLogos.map((s: any) => s.qualifiedName);
           const bulkResponse = await fetch('/api/smithery/bulk', {
             method: 'POST',
             headers: {
@@ -139,7 +138,14 @@ export default function ToolsPage() {
       }
     }
     fetchData();
-  }, [page]);
+  }, []); // Only fetch once when component mounts
+
+  // Calculate pagination values
+  const total = allServers.length;
+  const totalPages = Math.ceil(total / PAGE_SIZE);
+  const startIndex = (page - 1) * PAGE_SIZE;
+  const endIndex = startIndex + PAGE_SIZE;
+  const currentPageServers = allServers.slice(startIndex, endIndex);
 
   if (loading) return <div className="text-center py-12 text-lg">Loading tools...</div>;
 
@@ -147,13 +153,23 @@ export default function ToolsPage() {
   const isConfigured = (qualifiedName: string) =>
     userServers.some((s: any) => s.qualified_name === qualifiedName);
 
-  const totalPages = Math.ceil(total / PAGE_SIZE);
+  // Helper to truncate description to 30 words
+  const truncateDescription = (description: string, maxWords: number = 30): string => {
+    if (!description) return "No description provided.";
+    
+    const words = description.split(' ');
+    if (words.length <= maxWords) {
+      return description;
+    }
+    
+    return words.slice(0, maxWords).join(' ') + '...';
+  };
 
   return (
     <div className="max-w-5xl mx-auto py-10 px-4">
       <h1 className="text-4xl font-bold mb-8 text-center">Tools</h1>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
-        {servers.map((server) => (
+        {currentPageServers.map((server: any) => (
           <Link 
             key={server.qualifiedName || server.id} 
             href={`/tools/${encodeURIComponent(server.qualifiedName)}`}
@@ -182,7 +198,7 @@ export default function ToolsPage() {
               </CardHeader>
               <CardContent className="flex flex-col flex-1 justify-between">
                 <div className="mb-4 text-sm text-muted-foreground min-h-[48px]">
-                  {server.description || "No description provided."}
+                  {truncateDescription(server.description)}
                 </div>
                 <div className="mt-auto flex justify-center">
                   {isConfigured(server.qualifiedName) ? (

@@ -64,8 +64,9 @@ export function ToolSelector({
     
     try {
       // Fetch both Smithery servers and user configurations in parallel
+      // Use a large page size to get all servers for the tool selector
       const [smitheryRes, userRes] = await Promise.all([
-        fetch('/api/smithery').then(r => r.json()),
+        fetch('/api/smithery?pageSize=100').then(r => r.json()),
         fetch('/api/user-mcp-servers').then(r => r.json())
       ]);
 

@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState } from "react";
+import { useEffect, useCallback, useState, useImperativeHandle, forwardRef } from "react";
 import {
   PlusCircle,
   MessageSquare,
@@ -38,14 +38,20 @@ interface ThreadSidebarProps {
   currentThreadId?: string;
   onThreadSelect: (threadId: string) => void;
   onNewThread: () => void;
+  refreshTrigger?: number; // Add this prop to trigger refreshes
 }
 
-export default function ThreadSidebar({
+export interface ThreadSidebarRef {
+  refreshThreads: () => void;
+}
+
+const ThreadSidebar = forwardRef<ThreadSidebarRef, ThreadSidebarProps>(({
   agentId,
   currentThreadId,
   onThreadSelect,
   onNewThread,
-}: ThreadSidebarProps) {
+  refreshTrigger,
+}, ref) => {
   const [threads, setThreads] = useState<Thread[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
@@ -74,19 +80,25 @@ export default function ThreadSidebar({
     }
   }, [agentId]);
 
-  // Initial fetch and when currentThreadId changes
+  // Expose the refresh method to parent component
+  useImperativeHandle(ref, () => ({
+    refreshThreads: fetchThreads,
+  }));
+
+  // Initial fetch when component mounts or agentId changes
   useEffect(() => {
     fetchThreads();
-  }, [fetchThreads, currentThreadId]);
-
-  // Set up polling to refresh threads periodically
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      fetchThreads();
-    }, 5000); // Refresh every 5 seconds
-
-    return () => clearInterval(intervalId);
   }, [fetchThreads]);
+
+  // Refresh when refreshTrigger prop changes
+  useEffect(() => {
+    if (refreshTrigger !== undefined) {
+      fetchThreads();
+    }
+  }, [refreshTrigger, fetchThreads]);
+
+  // Remove the polling useEffect completely
+  // The old polling code has been removed for optimization
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -286,5 +298,9 @@ export default function ThreadSidebar({
       </Dialog>
     </div>
   );
-}
+});
+
+ThreadSidebar.displayName = "ThreadSidebar";
+
+export default ThreadSidebar;
 

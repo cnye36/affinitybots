@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { AgentState } from "@/types/langgraph";
 import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
-import ThreadSidebar from "./ThreadSidebar";
+import ThreadSidebar, { ThreadSidebarRef } from "./ThreadSidebar";
 import { HumanMessage, AIMessage } from "@langchain/core/messages";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -29,7 +29,7 @@ export default function ChatContainer({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [userAvatar, setUserAvatar] = useState<string | undefined>(undefined);
   const [userInitials, setUserInitials] = useState<string>("U");
-  const [sidebarKey, setSidebarKey] = useState<number>(0);
+  const threadSidebarRef = useRef<ThreadSidebarRef>(null);
 
   // Initialize chat if no thread exists
   useEffect(() => {
@@ -141,8 +141,8 @@ export default function ChatContainer({
         if (!titleResponse.ok) {
           console.error("Failed to generate title");
         }
-        // Force sidebar to refresh to show the new thread with title
-        setSidebarKey((prev) => prev + 1);
+        // Refresh sidebar to show the new thread with title
+        threadSidebarRef.current?.refreshThreads();
       } catch (error) {
         console.error("Error generating title:", error);
       }
@@ -179,8 +179,8 @@ export default function ChatContainer({
           if (!titleResponse.ok) {
             console.error("Failed to generate title");
           }
-          // Force sidebar to refresh to show the new thread with title
-          setSidebarKey((prev) => prev + 1);
+          // Refresh sidebar to show the new thread with title
+          threadSidebarRef.current?.refreshThreads();
         } catch (error) {
           console.error("Error generating title:", error);
         }
@@ -200,8 +200,8 @@ export default function ChatContainer({
           if (!titleResponse.ok) {
             console.error("Failed to generate title");
           }
-          // Force sidebar to refresh
-          setSidebarKey((prev) => prev + 1);
+          // Refresh sidebar to show the updated title
+          threadSidebarRef.current?.refreshThreads();
         } catch (error) {
           console.error("Error generating title:", error);
         }
@@ -235,22 +235,60 @@ export default function ChatContainer({
         for (const line of lines) {
           try {
             if (line.startsWith("data: ")) {
-              const jsonData = JSON.parse(line.slice(6));
-              const messageData = jsonData[0];
-              if (messageData?.content !== undefined) {
-                fullResponse = messageData.content;
+              const jsonString = line.slice(6).trim();
+              
+              // Skip empty data lines
+              if (!jsonString) continue;
+              
+              const jsonData = JSON.parse(jsonString);
+              
+              // Handle different event formats
+              if (Array.isArray(jsonData)) {
+                // Handle array format (normal messages)
+                if (jsonData.length > 0) {
+                  const messageData = jsonData[0];
+                  
+                  // Check for error events
+                  if (messageData?.event === "error") {
+                    console.error("Stream error:", messageData.data);
+                    continue;
+                  }
+                  
+                  // Check for message content
+                  if (messageData?.content !== undefined) {
+                    fullResponse = messageData.content;
+                    setMessages((prev) => {
+                      // Only add the agent message once, or update it if already present
+                      const newMessages = [...prev];
+                      if (
+                        agentMessageAdded &&
+                        newMessages[newMessages.length - 1] instanceof AIMessage
+                      ) {
+                        newMessages[newMessages.length - 1] = new AIMessage(
+                          messageData.content
+                        );
+                      } else {
+                        newMessages.push(new AIMessage(messageData.content));
+                        agentMessageAdded = true;
+                      }
+                      return newMessages;
+                    });
+                  }
+                }
+              } else if (jsonData?.content !== undefined) {
+                // Handle direct object format (fallback)
+                fullResponse = jsonData.content;
                 setMessages((prev) => {
-                  // Only add the agent message once, or update it if already present
                   const newMessages = [...prev];
                   if (
                     agentMessageAdded &&
                     newMessages[newMessages.length - 1] instanceof AIMessage
                   ) {
                     newMessages[newMessages.length - 1] = new AIMessage(
-                      messageData.content
+                      jsonData.content
                     );
                   } else {
-                    newMessages.push(new AIMessage(messageData.content));
+                    newMessages.push(new AIMessage(jsonData.content));
                     agentMessageAdded = true;
                   }
                   return newMessages;
@@ -258,7 +296,10 @@ export default function ChatContainer({
               }
             }
           } catch (e) {
-            console.error("Error parsing chunk:", e, line);
+            // Only log if it's not an empty line or common non-JSON line
+            if (line.trim() && !line.match(/^(event:|id:|retry:)/)) {
+              console.warn("Skipping unparseable chunk:", { error: e, line });
+            }
           }
         }
       }
@@ -300,7 +341,7 @@ export default function ChatContainer({
         )}
       >
         <ThreadSidebar
-          key={sidebarKey}
+          ref={threadSidebarRef}
           agentId={agent.id}
           currentThreadId={currentThreadId}
           onThreadSelect={(threadId) => {
