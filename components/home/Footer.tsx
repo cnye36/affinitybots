@@ -84,6 +84,14 @@ export function Footer() {
                   Benefits
                 </Link>
               </li>
+              <li>
+                <Link
+                  href="/pitch-deck"
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  Pitch Deck
+                </Link>
+              </li>
             </ul>
           </div>
 
