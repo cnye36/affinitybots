@@ -43,7 +43,14 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 OPENAI_API_KEY=
 ANTHROPIC_API_KEY= (Optional)
+STRIPE_SECRET_KEY= (Your Stripe secret key)
 ```
+
+### Stripe Payments
+
+Payments processed through the application use Stripe. The default payee email
+is `cnye@ai-automated.xyz`. Configure `STRIPE_SECRET_KEY` with your Stripe
+secret key to enable checkout sessions.
 
 4. Run the development server
 `pnpm dev`
