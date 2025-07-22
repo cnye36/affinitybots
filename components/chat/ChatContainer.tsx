@@ -26,6 +26,7 @@ export default function ChatContainer({
     initialThreadId
   );
   const [isLoading, setIsLoading] = useState(false);
+  const [hasAssistantMessage, setHasAssistantMessage] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [userAvatar, setUserAvatar] = useState<string | undefined>(undefined);
   const [userInitials, setUserInitials] = useState<string>("U");
@@ -36,6 +37,7 @@ export default function ChatContainer({
     if (!currentThreadId) {
       setMessages([]);
     }
+    setHasAssistantMessage(false);
   }, [currentThreadId]);
 
   // Fetch thread state when switching threads
@@ -153,6 +155,7 @@ export default function ChatContainer({
 
   const sendChatMessage = async (content: string) => {
     setIsLoading(true);
+    setHasAssistantMessage(false);
     let threadId = currentThreadId;
     try {
       if (!threadId) {
@@ -255,8 +258,12 @@ export default function ChatContainer({
                   }
                   
                   // Check for message content
-                  if (messageData?.content !== undefined) {
+                  if (
+                    typeof messageData?.content === "string" &&
+                    messageData.content.trim() !== ""
+                  ) {
                     fullResponse = messageData.content;
+                    setHasAssistantMessage(true);
                     setMessages((prev) => {
                       // Only add the agent message once, or update it if already present
                       const newMessages = [...prev];
@@ -275,9 +282,13 @@ export default function ChatContainer({
                     });
                   }
                 }
-              } else if (jsonData?.content !== undefined) {
+              } else if (
+                typeof jsonData?.content === "string" &&
+                jsonData.content.trim() !== ""
+              ) {
                 // Handle direct object format (fallback)
                 fullResponse = jsonData.content;
+                setHasAssistantMessage(true);
                 setMessages((prev) => {
                   const newMessages = [...prev];
                   if (
@@ -373,7 +384,7 @@ export default function ChatContainer({
           }
           userAvatar={userAvatar}
           userInitials={userInitials}
-          isThinking={isLoading}
+          isThinking={isLoading && !hasAssistantMessage}
         />
         <MessageInput onSend={sendChatMessage} disabled={isLoading} />
       </div>
