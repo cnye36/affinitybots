@@ -20,6 +20,13 @@ export default function MessageInput({ onSend, disabled }: MessageInputProps) {
     }
   }, [message]);
 
+  // Automatically focus the input when it becomes enabled
+  useEffect(() => {
+    if (!disabled && textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }, [disabled]);
+
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (message.trim() && !disabled) {
@@ -27,6 +34,7 @@ export default function MessageInput({ onSend, disabled }: MessageInputProps) {
       setMessage("");
       if (textareaRef.current) {
         textareaRef.current.style.height = "44px";
+        textareaRef.current.focus();
       }
     }
   };
