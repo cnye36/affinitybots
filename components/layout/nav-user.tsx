@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react";
+import logger from "@/lib/logger";
 import {
   ChevronsUpDown,
   CreditCard,
@@ -75,7 +76,7 @@ export function NavUser({ user: initialUser }: { user?: UserData }) {
           setUser(userData);
         }
       } catch (err) {
-        console.error("Error loading user profile:", err);
+        logger.error("Error loading user profile:", err);
       }
     }
 

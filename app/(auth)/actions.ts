@@ -3,6 +3,7 @@
 import { createClient } from "@/supabase/server";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import logger from "@/lib/logger";
 
 export async function signIn(formData: FormData) {
   const supabase = await createClient();
@@ -41,7 +42,7 @@ export async function signUp(formData: FormData) {
     .single(); // Expecting a single, unique invite code
 
   if (inviteError || !invite) {
-    console.error("Invite code validation error:", inviteError);
+    logger.error("Invite code validation error:", inviteError);
     return {
       error:
         "Invalid or expired invite code. Please check your code and try again.",
@@ -92,7 +93,7 @@ export async function signUp(formData: FormData) {
   if (updateInviteError) {
     // This is not ideal, as the user is created but the invite status isn't updated.
     // Log this for admin attention. Potentially attempt a rollback or flag for manual review.
-    console.error(
+    logger.error(
       `Failed to update invite status for user ${signUpData.user.id} (invite ID: ${invite.id}):`,
       updateInviteError
     );

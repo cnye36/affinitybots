@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useMemo } from "react";
+import logger from "@/lib/logger";
 import ReactFlow, {
   Edge,
   Controls,
@@ -86,7 +87,7 @@ export function WorkflowCanvas({
               }
             );
           } catch (error) {
-            console.error("Error deleting task:", error);
+            logger.error("Error deleting task:", error);
             toast({
               title: "Failed to delete task",
               variant: "destructive",

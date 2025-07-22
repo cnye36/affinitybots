@@ -4,6 +4,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import Link from "next/link";
 import React, { useState, useEffect } from "react";
 import { Trash2, Plus } from "lucide-react";
+import logger from "@/lib/logger";
 import { createClient } from "@/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
@@ -74,7 +75,7 @@ export default function WorkflowsPage() {
         }
       } catch (err) {
         if (mounted) {
-          console.error("Error fetching workflows:", err);
+          logger.error("Error fetching workflows:", err);
           setError(
             err instanceof Error ? err.message : "An unexpected error occurred"
           );
@@ -121,7 +122,7 @@ export default function WorkflowsPage() {
         variant: "default",
       });
     } catch (error) {
-      console.error("Error deleting workflow:", error);
+      logger.error("Error deleting workflow:", error);
       toast({
         title: "Failed to delete workflow",
         description:

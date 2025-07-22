@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createClient } from "@/supabase/server";
+import logger from "@/lib/logger";
 
 interface EarlyAccessRequest {
   email: string;
@@ -34,7 +35,7 @@ export async function POST(request: NextRequest) {
 
     if (selectError && selectError.code !== "PGRST116") {
       // PGRST116: Row not found, which is fine
-      console.error("Error checking for existing request:", selectError);
+      logger.error("Error checking for existing request:", selectError);
       return NextResponse.json(
         { error: "Database error checking request" },
         { status: 500 }
@@ -60,7 +61,7 @@ export async function POST(request: NextRequest) {
       ]);
 
     if (insertError) {
-      console.error("Error inserting early access request:", insertError);
+      logger.error("Error inserting early access request:", insertError);
       // Check for unique constraint violation (duplicate email)
       if (insertError.code === "23505") {
         // PostgreSQL unique_violation
@@ -78,7 +79,7 @@ export async function POST(request: NextRequest) {
     // Send email notification
     const apiKey = process.env.SENDGRID_API_KEY;
     if (!apiKey) {
-      console.error("SendGrid API key is not configured");
+      logger.error("SendGrid API key is not configured");
       return NextResponse.json(
         { error: "Email service not configured" },
         { status: 500 }
@@ -88,7 +89,7 @@ export async function POST(request: NextRequest) {
     // Recipient email from environment variable
     const notificationEmail = process.env.NOTIFICATION_EMAIL;
     if (!notificationEmail) {
-      console.error("Notification email is not configured");
+      logger.error("Notification email is not configured");
       return NextResponse.json(
         { error: "Notification email not configured" },
         { status: 500 }
@@ -136,7 +137,7 @@ Details:
       message: "Thank you for your request! We will be in touch.",
     });
   } catch (error) {
-    console.error("Error processing early access request:", error);
+    logger.error("Error processing early access request:", error);
     return NextResponse.json(
       { error: "Failed to process request" },
       { status: 500 }

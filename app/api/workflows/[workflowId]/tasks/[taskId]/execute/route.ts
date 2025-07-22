@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
 import { Client } from "@langchain/langgraph-sdk";
+import logger from "@/lib/logger";
 
 export async function POST(
   request: Request,
@@ -35,13 +36,13 @@ export async function POST(
         { status: 404 }
       );
     }
-    console.log("Task retrieved:", task);
-    console.log("Task agent_id:", task.agent_id);
-    console.log("Task config.assigned_agent:", task.config?.assigned_agent);
-    console.log("Task type:", task.task_type);
+    logger.debug("Task retrieved:", task);
+    logger.debug("Task agent_id:", task.agent_id);
+    logger.debug("Task config.assigned_agent:", task.config?.assigned_agent);
+    logger.debug("Task type:", task.task_type);
 
     const { input } = await request.json();
-    console.log("Input received:", input);
+    logger.debug("Input received:", input);
 
     if (task.task_type === "ai_task") {
       try {
@@ -136,7 +137,7 @@ export async function POST(
 
               controller.close();
             } catch (error) {
-              console.error("Execution error:", error);
+              logger.error("Execution error:", error);
 
               // Update task run with error status
               if (runId) {
@@ -172,7 +173,7 @@ export async function POST(
           },
         });
       } catch (error) {
-        console.error("Execution setup error:", error);
+        logger.error("Execution setup error:", error);
         return NextResponse.json(
           { error: "Failed to start task execution" },
           { status: 500 }
@@ -186,7 +187,7 @@ export async function POST(
       );
     }
   } catch (error) {
-    console.error("Error executing task:", error);
+    logger.error("Error executing task:", error);
     return NextResponse.json(
       { error: "Failed to execute task" },
       { status: 500 }

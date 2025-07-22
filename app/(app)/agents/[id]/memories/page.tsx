@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import logger from "@/lib/logger";
 import {
   Card,
   CardContent,
@@ -42,7 +43,7 @@ export default function MemoriesPage() {
         const data = await response.json();
         setMemories(data);
       } catch (err) {
-        console.error("Error fetching memories:", err);
+        logger.error("Error fetching memories:", err);
         setError(
           err instanceof Error ? err.message : "Failed to load memories"
         );
@@ -69,7 +70,7 @@ export default function MemoriesPage() {
       // Remove the deleted memory from the state
       setMemories(memories.filter((memory) => memory.id !== memoryId));
     } catch (err) {
-      console.error("Error deleting memory:", err);
+      logger.error("Error deleting memory:", err);
       setError(err instanceof Error ? err.message : "Failed to delete memory");
     }
   };

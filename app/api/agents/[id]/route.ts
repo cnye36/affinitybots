@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
+import logger from "@/lib/logger";
 
 export async function GET(
   request: Request,
@@ -47,7 +48,7 @@ export async function GET(
 
     return NextResponse.json(agent);
   } catch (error) {
-    console.error("Error fetching agent:", error);
+    logger.error("Error fetching agent:", error);
     return NextResponse.json(
       { error: "Failed to fetch agent" },
       { status: 500 }
@@ -102,7 +103,7 @@ export async function PUT(
       .single();
 
     if (updateError) {
-      console.error("Error updating agent:", updateError);
+      logger.error("Error updating agent:", updateError);
       return NextResponse.json(
         { error: "Failed to update agent" },
         { status: 500 }
@@ -111,7 +112,7 @@ export async function PUT(
 
     return NextResponse.json(updatedAgent);
   } catch (error) {
-    console.error("Error updating agent:", error);
+    logger.error("Error updating agent:", error);
     return NextResponse.json(
       { error: "Failed to update agent" },
       { status: 500 }
@@ -155,7 +156,7 @@ export async function DELETE(
       .eq("id", params.id);
 
     if (deleteError) {
-      console.error("Error deleting agent:", deleteError);
+      logger.error("Error deleting agent:", deleteError);
       return NextResponse.json(
         { error: "Failed to delete agent" },
         { status: 500 }
@@ -164,7 +165,7 @@ export async function DELETE(
 
     return NextResponse.json({ message: "Agent deleted successfully" });
   } catch (error) {
-    console.error("Error deleting agent:", error);
+    logger.error("Error deleting agent:", error);
     return NextResponse.json(
       { error: "Failed to delete agent" },
       { status: 500 }

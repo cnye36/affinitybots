@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
+import logger from "@/lib/logger";
 
 // GET - List tasks for a workflow
 export async function GET(
@@ -42,7 +43,7 @@ export async function GET(
 
     return NextResponse.json({ tasks: tasks || [] });
   } catch (error) {
-    console.error("Error fetching tasks:", error);
+    logger.error("Error fetching tasks:", error);
     return NextResponse.json(
       { error: "Failed to fetch tasks" },
       { status: 500 }
@@ -81,7 +82,7 @@ export async function POST(
     }
 
     const taskData = await request.json();
-    console.log("Received task data:", taskData);
+    logger.debug("Received task data:", taskData);
 
     // Get the next position number
     const { data: lastTask } = await supabase
@@ -123,7 +124,7 @@ export async function POST(
       metadata: taskData.metadata || {},
     };
 
-    console.log("Inserting task with data:", insertData);
+    logger.debug("Inserting task with data:", insertData);
 
     // Create the workflow task
     const { data: task, error } = await supabase
@@ -136,7 +137,7 @@ export async function POST(
 
     return NextResponse.json(task);
   } catch (error) {
-    console.error("Error creating task:", error);
+    logger.error("Error creating task:", error);
     return NextResponse.json(
       { error: "Failed to create task" },
       { status: 500 }

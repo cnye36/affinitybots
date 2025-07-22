@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server"; // Assuming same Supabase client setup
+import logger from "@/lib/logger";
 
 export async function GET(request: Request) {
   // TODO: Implement robust admin authentication/authorization here
@@ -19,7 +20,7 @@ export async function GET(request: Request) {
       .order("requested_at", { ascending: false }); // Order by most recent requests
 
     if (error) {
-      console.error("Error fetching early access requests:", error);
+      logger.error("Error fetching early access requests:", error);
       return NextResponse.json(
         { error: "Failed to fetch early access requests" },
         { status: 500 }
@@ -28,7 +29,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error(
+    logger.error(
       "Unexpected error in GET /api/admin/early-access-requests:",
       error
     );

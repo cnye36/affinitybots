@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import logger from "@/lib/logger";
 import {
   Card,
   CardContent,
@@ -74,7 +75,7 @@ export function EarlyAccessForm() {
         throw new Error("Submission failed");
       }
     } catch (error) {
-      console.error(error);
+      logger.error(error);
       toast({
         title: "Submission Failed",
         description:

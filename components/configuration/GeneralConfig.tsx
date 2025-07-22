@@ -2,6 +2,7 @@
 
 import React, { useCallback, useState, useRef } from "react";
 import { Input } from "@/components/ui/input";
+import logger from "@/lib/logger";
 import {
   Select,
   SelectContent,
@@ -126,7 +127,7 @@ export function GeneralConfig({
         await mutate(`/api/agents/${config.id}`);
         await mutate("/api/agents");
       } catch (error) {
-        console.error("Error uploading avatar:", error);
+        logger.error("Error uploading avatar:", error);
         if (error instanceof Error) {
           alert(error.message);
         } else {
@@ -163,7 +164,7 @@ export function GeneralConfig({
         title: "Agent deleted successfully",
       });
     } catch (error) {
-      console.error("Error deleting agent:", error);
+      logger.error("Error deleting agent:", error);
       toast({
         title: "Failed to delete agent",
         variant: "destructive",

@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import logger from '@/lib/logger'
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -56,7 +57,7 @@ export async function updateSession(request: NextRequest) {
     ) {
       // no user, redirect to signin
       const url = request.nextUrl.clone();
-      console.log("Redirecting to signin");
+      logger.debug("Redirecting to signin");
       url.pathname = "/signin";
       return NextResponse.redirect(url);
     }

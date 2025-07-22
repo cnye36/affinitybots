@@ -1,4 +1,5 @@
 import { createClient } from "@/supabase/server";
+import logger from "@/lib/logger";
 
 export interface ImageGenerationConfig {
   width?: number;
@@ -22,7 +23,7 @@ async function uploadImageToSupabase(
   const supabase = await createClient();
 
   try {
-    console.log(
+    logger.debug(
       `Uploading image to Supabase bucket: ${bucketName}, file: ${fileName}`
     );
 
@@ -30,28 +31,28 @@ async function uploadImageToSupabase(
     const { data } = await supabase.auth.getUser();
 
     if (!data || !data.user || !data.user.id) {
-      console.warn("No authenticated user found, using default user ID");
+      logger.warn("No authenticated user found, using default user ID");
       // Fall back to a default path if no user is found
       return uploadWithoutUser(imageUrl, fileName, bucketName, supabase);
     }
 
     const user = data.user;
-    console.log(`Authenticated as user: ${user.id.substring(0, 8)}...`);
+    logger.debug(`Authenticated as user: ${user.id.substring(0, 8)}...`);
 
     // Fetch the image from the URL
     const response = await fetch(imageUrl);
     if (!response.ok) {
-      console.error(
+      logger.error(
         `Failed to fetch image: ${response.status} ${response.statusText}`
       );
       throw new Error("Failed to fetch image");
     }
     const imageBlob = await response.blob();
-    console.log(`Image fetched successfully: ${imageBlob.size} bytes`);
+    logger.debug(`Image fetched successfully: ${imageBlob.size} bytes`);
 
     // Upload to Supabase Storage with metadata
     const filePath = `${user.id}/${fileName}.png`;
-    console.log(`Uploading to path: ${filePath}`);
+    logger.debug(`Uploading to path: ${filePath}`);
 
     const { error, data: uploadData } = await supabase.storage
       .from(bucketName)
@@ -61,22 +62,22 @@ async function uploadImageToSupabase(
       });
 
     if (error) {
-      console.error("Supabase storage error:", error);
+      logger.error("Supabase storage error:", error);
       throw error;
     }
 
-    console.log(`Upload successful: ${uploadData?.path}`);
+    logger.debug(`Upload successful: ${uploadData?.path}`);
 
     // Get public URL
     const {
       data: { publicUrl },
     } = supabase.storage.from(bucketName).getPublicUrl(filePath);
 
-    console.log(`Generated public URL: ${publicUrl}`);
+    logger.debug(`Generated public URL: ${publicUrl}`);
 
     return publicUrl;
   } catch (error) {
-    console.error("Failed to upload image to Supabase:", error);
+    logger.error("Failed to upload image to Supabase:", error);
     throw error;
   }
 }
@@ -89,7 +90,7 @@ async function uploadWithoutUser(
   supabase: Awaited<ReturnType<typeof createClient>>
 ): Promise<string> {
   try {
-    console.log("No authenticated user, uploading to public folder");
+    logger.debug("No authenticated user, uploading to public folder");
 
     // Use a default folder for images without a user
     const defaultPath = `public/${fileName}.png`;
@@ -97,13 +98,13 @@ async function uploadWithoutUser(
     // Fetch the image from the URL
     const response = await fetch(imageUrl);
     if (!response.ok) {
-      console.error(
+      logger.error(
         `Failed to fetch image from URL: ${response.status} ${response.statusText}`
       );
       throw new Error("Failed to fetch image");
     }
     const imageBlob = await response.blob();
-    console.log(`Successfully fetched image: ${imageBlob.size} bytes`);
+    logger.debug(`Successfully fetched image: ${imageBlob.size} bytes`);
 
     // Upload to Supabase Storage
     const { error, data } = await supabase.storage
@@ -114,21 +115,21 @@ async function uploadWithoutUser(
       });
 
     if (error) {
-      console.error("Supabase storage upload error:", error);
+      logger.error("Supabase storage upload error:", error);
       throw error;
     }
 
-    console.log("Successfully uploaded image to public folder:", data?.path);
+    logger.debug("Successfully uploaded image to public folder:", data?.path);
 
     // Get public URL
     const {
       data: { publicUrl },
     } = supabase.storage.from(bucketName).getPublicUrl(defaultPath);
 
-    console.log(`Got public URL: ${publicUrl}`);
+    logger.debug(`Got public URL: ${publicUrl}`);
     return publicUrl;
   } catch (error) {
-    console.error("Failed to upload image without user:", error);
+    logger.error("Failed to upload image without user:", error);
     throw error;
   }
 }
@@ -155,7 +156,7 @@ async function uploadImageToSupabaseWithRetry(
       if (!isNetworkError || attempt === maxRetries) {
         throw error;
       }
-      console.warn(`Upload attempt ${attempt} failed, retrying in ${delayMs}ms...`, error);
+      logger.warn(`Upload attempt ${attempt} failed, retrying in ${delayMs}ms...`, error);
       await new Promise(res => setTimeout(res, delayMs));
     }
   }
@@ -170,7 +171,7 @@ export async function generateImage(
   const finalConfig = { ...DEFAULT_CONFIG, ...config };
 
   try {
-    console.log(
+    logger.debug(
       `Generating image with DALL-E 3: ${prompt.substring(0, 50)}...`
     );
 
@@ -195,23 +196,23 @@ export async function generateImage(
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      console.error("OpenAI API error:", errorData);
+      logger.error("OpenAI API error:", errorData);
       throw new Error(
         `OpenAI API error: ${response.status} ${response.statusText}`
       );
     }
 
     const data = await response.json();
-    console.log("OpenAI image generation successful");
+    logger.debug("OpenAI image generation successful");
 
     // Check if the data has the expected structure
     if (!data || !data.data || !data.data[0] || !data.data[0].url) {
-      console.error("Unexpected API response structure:", data);
+      logger.error("Unexpected API response structure:", data);
       throw new Error("Invalid response format from OpenAI API");
     }
 
     const imageUrl = data.data[0].url;
-    console.log(
+    logger.debug(
       `Successfully retrieved image URL: ${imageUrl.substring(0, 50)}...`
     );
 
@@ -222,7 +223,7 @@ export async function generateImage(
       finalConfig.bucketName!
     );
 
-    console.log(
+    logger.debug(
       `Successfully uploaded image to Supabase: ${publicUrl.substring(
         0,
         50
@@ -230,7 +231,7 @@ export async function generateImage(
     );
     return publicUrl;
   } catch (error) {
-    console.error("Failed to generate or upload image:", error);
+    logger.error("Failed to generate or upload image:", error);
     return finalConfig.defaultImage!;
   }
 }

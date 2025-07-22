@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
 import { sendInviteEmail } from "@/lib/sendInviteEmail";
+import logger from "@/lib/logger";
 
 export async function POST(
   request: Request,
@@ -43,7 +44,7 @@ export async function POST(
     });
     return NextResponse.json({ message: "Invite email resent successfully." });
   } catch (error) {
-    console.error("Failed to resend invite email:", error);
+    logger.error("Failed to resend invite email:", error);
     return NextResponse.json(
       { error: "Failed to resend invite email." },
       { status: 500 }

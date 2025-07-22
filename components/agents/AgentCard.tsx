@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import logger from "@/lib/logger";
 import { Trash2 } from "lucide-react";
 import {
   AlertDialog,
@@ -46,7 +47,7 @@ export function AgentCard({ agent, onDelete }: AgentCardProps) {
     }
 
     if (!agent.id || agent.id === "undefined") {
-      console.error("Invalid agent ID");
+      logger.error("Invalid agent ID");
       return;
     }
 
@@ -73,7 +74,7 @@ export function AgentCard({ agent, onDelete }: AgentCardProps) {
         title: "Agent deleted successfully",
       });
     } catch (error) {
-      console.error("Error deleting agent:", error);
+      logger.error("Error deleting agent:", error);
       toast({
         title: "Failed to delete agent",
         variant: "destructive",

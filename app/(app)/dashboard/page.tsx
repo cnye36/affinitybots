@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Clock, BarChart3 } from "lucide-react";
 import { StatsOverview } from "@/components/dashboard/StatsOverview";
 import { QuickActions } from "@/components/dashboard/QuickActions";
+import logger from "@/lib/logger";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { LatestWorkflows } from "@/components/dashboard/ActiveWorkflows";
 import { formatRelativeTime } from "@/lib/utils";
@@ -16,7 +17,7 @@ export default async function Dashboard() {
   } = await supabase.auth.getUser();
 
   if (userError) {
-    console.error("Error fetching user:", userError);
+    logger.error("Error fetching user:", userError);
   }
 
   if (!user) {
@@ -32,7 +33,7 @@ export default async function Dashboard() {
     .limit(3);
 
   if (workflowsError) {
-    console.error("Error fetching workflows:", workflowsError);
+    logger.error("Error fetching workflows:", workflowsError);
   }
 
   // Fetch recent activity from the activity_log table
@@ -44,7 +45,7 @@ export default async function Dashboard() {
     .limit(5);
 
   if (activityError) {
-    console.error("Error fetching activity logs:", activityError);
+    logger.error("Error fetching activity logs:", activityError);
   }
 
   // Transform activity logs into the format expected by RecentActivity component
@@ -65,7 +66,7 @@ export default async function Dashboard() {
     .eq("user_id", user.id);
 
   if (workflowCountError) {
-    console.error("Error fetching total workflows:", workflowCountError);
+    logger.error("Error fetching total workflows:", workflowCountError);
   }
 
   // Fetch total agents count
@@ -75,7 +76,7 @@ export default async function Dashboard() {
     .eq("user_id", user.id);
 
   if (agentCountError) {
-    console.error("Error fetching total agents:", agentCountError);
+    logger.error("Error fetching total agents:", agentCountError);
   }
 
   // Calculate stats

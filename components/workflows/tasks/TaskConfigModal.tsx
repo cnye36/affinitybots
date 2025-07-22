@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Task } from "@/types/workflow";
 import { toast } from "@/hooks/use-toast";
+import logger from "@/lib/logger";
 import { TaskModalHeader } from "./TaskModalHeader";
 import { PreviousNodeOutputPanel } from "./PreviousNodeOutputPanel";
 import { TaskConfigurationPanel } from "./TaskConfigurationPanel";
@@ -70,7 +71,7 @@ export function TaskConfigModal({
           setLoadingAgents(false);
         }
       } catch (error) {
-        console.error("Error loading assistants:", error);
+        logger.error("Error loading assistants:", error);
         if (isMounted) {
           setLoadingAgents(false);
         }
@@ -103,7 +104,7 @@ export function TaskConfigModal({
           setAgent(data);
         }
       } catch (error) {
-        console.error("Error loading agent:", error);
+        logger.error("Error loading agent:", error);
         toast({
           title: "Failed to load assigned agent",
           variant: "destructive",
@@ -147,7 +148,7 @@ export function TaskConfigModal({
       const result = await onTest();
       setTestOutput(result as TestOutput);
     } catch (err) {
-      console.error("Error testing task:", err);
+      logger.error("Error testing task:", err);
       toast({
         title:
           typeof err === "string"
@@ -200,7 +201,7 @@ export function TaskConfigModal({
         title: "Agent assigned successfully",
       });
     } catch (error) {
-      console.error("Error assigning agent:", error);
+      logger.error("Error assigning agent:", error);
       toast({
         title: "Failed to assign agent",
         variant: "destructive",

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
 import { generateAgentConfiguration } from "@/lib/agent/agent-generation";
+import logger from "@/lib/logger";
 
 export async function POST(request: Request) {
   try {
@@ -44,7 +45,7 @@ export async function POST(request: Request) {
       .single();
 
     if (insertError) {
-      console.error("Error inserting agent:", insertError);
+      logger.error("Error inserting agent:", insertError);
       throw new Error("Failed to create agent");
     }
 
@@ -55,7 +56,7 @@ export async function POST(request: Request) {
     });
 
     if (relationError) {
-      console.error("Error creating user-agent relationship:", relationError);
+      logger.error("Error creating user-agent relationship:", relationError);
       // Rollback agent creation
       await supabase.from("agent").delete().eq("id", agent.id);
       throw new Error("Failed to create user-agent relationship");
@@ -66,7 +67,7 @@ export async function POST(request: Request) {
       agent,
     });
   } catch (error) {
-    console.error("Error creating agent:", error);
+    logger.error("Error creating agent:", error);
     return NextResponse.json(
       {
         error:
@@ -114,7 +115,7 @@ export async function GET() {
 
     return NextResponse.json(formattedAgents);
   } catch (error) {
-    console.error("Error in GET handler:", error);
+    logger.error("Error in GET handler:", error);
     return NextResponse.json(
       { error: "Failed to fetch agents" },
       { status: 500 }

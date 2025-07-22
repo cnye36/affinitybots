@@ -13,6 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import logger from "@/lib/logger";
 import {
   Dialog,
   DialogContent,
@@ -68,7 +69,7 @@ export default function ThreadSidebar({
         : [];
       setThreads(validThreads);
     } catch (error) {
-      console.error("Error fetching threads:", error);
+      logger.error("Error fetching threads:", error);
     } finally {
       setIsLoading(false);
     }
@@ -144,7 +145,7 @@ export default function ThreadSidebar({
         )
       );
     } catch (error) {
-      console.error("Error renaming thread:", error);
+      logger.error("Error renaming thread:", error);
     } finally {
       setIsRenaming(false);
       setThreadToRename(null);
@@ -172,7 +173,7 @@ export default function ThreadSidebar({
         onNewThread();
       }
     } catch (error) {
-      console.error("Error deleting thread:", error);
+      logger.error("Error deleting thread:", error);
     }
   };
 

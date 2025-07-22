@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import logger from "@/lib/logger";
 import {
   Dialog,
   DialogContent,
@@ -153,7 +154,7 @@ export function AgentConfigModal({
       onOpenChange(false);
       router.refresh();
     } catch (err) {
-      console.error("Error updating agent:", err);
+      logger.error("Error updating agent:", err);
       setError("Failed to update agent configuration.");
     } finally {
       setLoading(false);

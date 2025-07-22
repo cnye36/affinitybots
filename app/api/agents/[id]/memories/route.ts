@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { store } from "@/lib/agent/reactAgent";
 import { createClient } from "@/supabase/client";
+import logger from "@/lib/logger";
 
 export async function GET(
   request: NextRequest,
@@ -45,7 +46,7 @@ export async function GET(
 
     return NextResponse.json(formattedMemories);
   } catch (error) {
-    console.error("Error fetching memories:", error);
+    logger.error("Error fetching memories:", error);
     return NextResponse.json(
       { error: "Failed to fetch memories" },
       { status: 500 }

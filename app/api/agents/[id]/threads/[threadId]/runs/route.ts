@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
 import { Client } from "@langchain/langgraph-sdk";
+import logger from "@/lib/logger";
 
 export async function GET(
   request: NextRequest,
@@ -49,7 +50,7 @@ export async function GET(
     const runs = await client.runs.list(threadId);
     return NextResponse.json(runs || []);
   } catch (error) {
-    console.error("Error fetching runs:", error);
+    logger.error("Error fetching runs:", error);
     return NextResponse.json(
       { error: "Failed to fetch runs" },
       { status: 500 }
@@ -159,7 +160,7 @@ export async function POST(
           }
         }
       } catch (error) {
-        console.error("Stream error:", error);
+        logger.error("Stream error:", error);
         const errorEvent = {
           event: "error",
           data: { message: "An error occurred while streaming the response" },
@@ -180,7 +181,7 @@ export async function POST(
       },
     });
   } catch (error) {
-    console.error("Error in POST:", error);
+    logger.error("Error in POST:", error);
     return NextResponse.json(
       { error: "Failed to process request" },
       { status: 500 }

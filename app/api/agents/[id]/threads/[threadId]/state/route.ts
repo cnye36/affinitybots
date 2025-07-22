@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
 import { Client } from "@langchain/langgraph-sdk";
+import logger from "@/lib/logger";
 
 
 export async function GET(
@@ -26,7 +27,7 @@ export async function GET(
     const state = await client.threads.getState(threadId);
     return NextResponse.json(state || { values: { messages: [] } });
   } catch (error) {
-    console.error("Error fetching thread state:", error);
+    logger.error("Error fetching thread state:", error);
     return NextResponse.json(
       { error: "Failed to fetch thread state" },
       { status: 500 }

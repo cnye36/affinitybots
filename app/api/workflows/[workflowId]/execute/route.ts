@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
 import { Task } from "@/types/workflow";
+import logger from "@/lib/logger";
 
 export async function POST(
   request: Request,
@@ -107,7 +108,7 @@ export async function POST(
       task_runs: taskRuns,
     });
   } catch (error) {
-    console.error("Error executing workflow:", error);
+    logger.error("Error executing workflow:", error);
 
     // Update workflow status to failed
     await supabase

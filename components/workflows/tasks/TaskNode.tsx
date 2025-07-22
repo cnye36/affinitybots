@@ -10,6 +10,7 @@ import {
 import { Settings, UserPlus, PlusCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import logger from "@/lib/logger";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { TaskConfigModal } from "./TaskConfigModal";
 import { TaskNodeData, Task } from "@/types/workflow";
@@ -128,7 +129,7 @@ export const MemoizedTaskNode = memo(
                 const parsedData = JSON.parse(data);
                 result = parsedData;
               } catch (e) {
-                console.warn("Failed to parse SSE data:", e);
+                logger.warn("Failed to parse SSE data:", e);
               }
             }
           }
@@ -136,7 +137,7 @@ export const MemoizedTaskNode = memo(
 
         return result;
       } catch (error) {
-        console.error("Error testing task:", error);
+        logger.error("Error testing task:", error);
         throw error;
       }
     };

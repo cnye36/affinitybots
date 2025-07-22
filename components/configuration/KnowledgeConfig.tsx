@@ -6,6 +6,7 @@ import { X, Upload } from "lucide-react";
 import { AgentConfiguration } from "@/types/agent";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import logger from "@/lib/logger";
 
 interface KnowledgeConfigProps {
   config: AgentConfiguration;
@@ -122,7 +123,7 @@ export function KnowledgeConfig({ config, onChange, agent_id }: KnowledgeConfigP
         },
       });
     } catch (error) {
-      console.error("Error processing files:", error);
+      logger.error("Error processing files:", error);
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error occurred";
       setUploadError(`Error processing files: ${errorMessage}`);
@@ -169,7 +170,7 @@ export function KnowledgeConfig({ config, onChange, agent_id }: KnowledgeConfigP
         },
       });
     } catch (error) {
-      console.error("Error removing document:", error);
+      logger.error("Error removing document:", error);
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error occurred";
       toast({

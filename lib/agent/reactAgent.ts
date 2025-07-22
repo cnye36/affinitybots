@@ -12,6 +12,7 @@ import {
   InMemoryStore,
   LangGraphRunnableConfig,
 } from "@langchain/langgraph";
+import logger from "@/lib/logger";
 import {
   MultiServerMCPClient,
   Connection,
@@ -105,7 +106,7 @@ async function writeMemory(state: AgentState, config: LangGraphRunnableConfig) {
         }
       });
 
-      console.log("Extracted new user data:", extractedData);
+      logger.debug("Extracted new user data:", extractedData);
 
       // Store each piece of extracted information as a separate memory
       for (const [key, value] of Object.entries(extractedData)) {
@@ -120,14 +121,14 @@ async function writeMemory(state: AgentState, config: LangGraphRunnableConfig) {
             extracted_at: new Date().toISOString(),
             source_message: userContent,
           });
-          console.log(`Stored new memory: ${key} = ${JSON.stringify(value)}`);
+          logger.debug(`Stored new memory: ${key} = ${JSON.stringify(value)}`);
         }
       }
 
       return { messages: updatedMessages, has_memory_updates: true };
     }
   } catch (error) {
-    console.error("Error extracting or storing memory:", error);
+    logger.error("Error extracting or storing memory:", error);
   }
 
   // No memory updates
@@ -161,7 +162,7 @@ async function retrieveMemories(
     const memories = await store.search(namespace, { filter: {} });
     return memories;
   } catch (error) {
-    console.error("Error retrieving memories:", error);
+    logger.error("Error retrieving memories:", error);
     return [];
   }
 }
@@ -286,7 +287,7 @@ function getEnabledMCPServers(enabledServers: string[]) {
         };
         enabledServerConfig[serverName] = stdioConfig;
       } else {
-        console.warn(
+        logger.warn(
           `Server "${serverName}" has invalid configuration. Skipping.`
         );
       }

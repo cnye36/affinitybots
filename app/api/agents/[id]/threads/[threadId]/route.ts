@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
 import { Client } from "@langchain/langgraph-sdk";
 import { NextRequest } from "next/server";
+import logger from "@/lib/logger";
 
 
 export async function GET(
@@ -30,7 +31,7 @@ export async function GET(
       return NextResponse.json({ error: "Thread not found" }, { status: 404 });
     }
     const threadState = await client.threads.get(threadId);
-    console.log("Thread State", threadState);
+    logger.debug("Thread State", threadState);
 
     // Verify thread ownership
     if (thread.metadata?.user_id !== user.id) {
@@ -39,7 +40,7 @@ export async function GET(
 
     return NextResponse.json(thread);
   } catch (error) {
-    console.error("Error fetching thread:", error);
+    logger.error("Error fetching thread:", error);
     return NextResponse.json(
       { error: "Failed to fetch thread" },
       { status: 500 }
@@ -83,7 +84,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting thread:", error);
+    logger.error("Error deleting thread:", error);
     return NextResponse.json(
       { error: "Failed to delete thread" },
       { status: 500 }

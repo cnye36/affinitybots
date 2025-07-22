@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CreditCard, Settings2, User } from "lucide-react";
 import { createClient } from "@/supabase/client";
 import { ProfileSettings } from "@/components/settings/ProfileSettings";
+import logger from "@/lib/logger";
 import { BillingSettings } from "@/components/settings/BillingSettings";
 import { PreferencesSettings } from "@/components/settings/PreferencesSettings";
 
@@ -90,7 +91,7 @@ export default function SettingsPage() {
           }
         }
       } catch (err) {
-        console.error("Error loading user data:", err);
+        logger.error("Error loading user data:", err);
       } finally {
         setLoading(false);
       }

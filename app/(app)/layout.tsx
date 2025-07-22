@@ -2,6 +2,7 @@ import { createClient } from "@/supabase/server";
 import { redirect } from "next/navigation";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/app-sidebar";
+import logger from "@/lib/logger";
 
 export default async function AuthenticatedLayout({
   children,
@@ -15,7 +16,7 @@ export default async function AuthenticatedLayout({
   } = await supabase.auth.getUser();
 
   if (userError) {
-    console.error("Error fetching user:", userError);
+    logger.error("Error fetching user:", userError);
   }
 
   if (!user) {

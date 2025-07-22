@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
 import { Task, TaskType } from "@/types/workflow";
+import logger from "@/lib/logger";
 
 const VALID_TASK_TYPES: TaskType[] = [
   // Notion tasks
@@ -54,7 +55,7 @@ export async function GET(
 
     return NextResponse.json(task);
   } catch (error) {
-    console.error("Error fetching task:", error);
+    logger.error("Error fetching task:", error);
     return NextResponse.json(
       { error: "Failed to fetch task" },
       { status: 500 }
@@ -131,7 +132,7 @@ export async function PUT(
 
     return NextResponse.json(task);
   } catch (error) {
-    console.error("Error updating task:", error);
+    logger.error("Error updating task:", error);
     return NextResponse.json(
       { error: "Failed to update task" },
       { status: 500 }
@@ -201,7 +202,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting task:", error);
+    logger.error("Error deleting task:", error);
     return NextResponse.json(
       { error: "Failed to delete task" },
       { status: 500 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
 import { Client } from "@langchain/langgraph-sdk";
+import logger from "@/lib/logger";
 
 // GET - List runs for a workflow
 export async function GET(
@@ -41,7 +42,7 @@ export async function GET(
 
     return NextResponse.json(runs || []);
   } catch (error) {
-    console.error("Error fetching runs:", error);
+    logger.error("Error fetching runs:", error);
     return NextResponse.json(
       { error: "Failed to fetch runs" },
       { status: 500 }
@@ -109,7 +110,7 @@ export async function POST(
 
     return NextResponse.json(run);
   } catch (error) {
-    console.error("Error creating run:", error);
+    logger.error("Error creating run:", error);
     return NextResponse.json(
       { error: "Failed to create run" },
       { status: 500 }

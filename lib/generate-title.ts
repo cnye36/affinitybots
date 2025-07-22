@@ -1,5 +1,6 @@
 import { ChatOpenAI } from "@langchain/openai";
 import { PromptTemplate } from "@langchain/core/prompts";
+import logger from "@/lib/logger";
 
 const titleGeneratorPrompt = PromptTemplate.fromTemplate(`
 You are a helpful assistant that generates concise chat titles. Create a clear and descriptive title that captures the main topic or purpose of the conversation. The title should be 2-4 words maximum.
@@ -33,7 +34,7 @@ export async function generateChatName(conversation: string): Promise<string> {
 
     return title || "New Chat";
   } catch (error) {
-    console.error("Error generating chat name:", error);
+    logger.error("Error generating chat name:", error);
     return "New Chat";
   }
 }

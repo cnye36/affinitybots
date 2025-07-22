@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { AgentHeader } from "@/components/agents/AgentHeader";
 import { AgentCard } from "@/components/agents/AgentCard";
 import { EmptyAgents } from "@/components/agents/EmptyAgents";
+import logger from "@/lib/logger";
 import { Agent } from "@/types/agent";
 
 export default function AgentsPage() {
@@ -19,7 +20,7 @@ export default function AgentsPage() {
         const data = await response.json();
         setAgents(data);
       } catch (error) {
-        console.error("Error fetching agents:", error);
+        logger.error("Error fetching agents:", error);
         setAgents([]); // Set empty array on error to show empty state
       }
     };

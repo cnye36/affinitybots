@@ -3,6 +3,7 @@ import { createClient } from "@/supabase/server";
 import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
 import { DocxLoader } from "@langchain/community/document_loaders/fs/docx";
 import { CSVLoader } from "@langchain/community/document_loaders/fs/csv";
+import logger from "@/lib/logger";
 import { OpenAIEmbeddings } from "@langchain/openai";
 import { SupabaseVectorStore } from "@langchain/community/vectorstores/supabase";
 import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
@@ -13,14 +14,14 @@ export async function POST(req: Request) {
     const formData = await req.formData();
     const file = formData.get("file") as File;
     const agentId = formData.get("agentId") as string;
-    console.log("[Knowledge API] Received agentId from formData:", agentId);
+    logger.debug("[Knowledge API] Received agentId from formData:", agentId);
 
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
     if (!agentId || agentId.trim() === "") {
-      console.error(
+      logger.error(
         "[Knowledge API] Validation failed: agentId is null, empty, or whitespace. Value:",
         agentId
       );
@@ -31,7 +32,7 @@ export async function POST(req: Request) {
     }
 
     const trimmedAgentId = agentId.trim();
-    console.log(
+    logger.debug(
       "[Knowledge API] Trimmed agentId to be used in metadata:",
       trimmedAgentId
     );
@@ -50,14 +51,14 @@ export async function POST(req: Request) {
       .single();
 
     if (docError || !documentEntry) {
-      console.error("[Knowledge API] Error creating document entry:", docError);
+      logger.error("[Knowledge API] Error creating document entry:", docError);
       return NextResponse.json(
         { error: "Failed to create document entry in database" },
         { status: 500 }
       );
     }
     const documentId = documentEntry.id;
-    console.log("[Knowledge API] Created document entry with ID:", documentId);
+    logger.debug("[Knowledge API] Created document entry with ID:", documentId);
 
     // Process the file based on its type
     let docs;
@@ -191,7 +192,7 @@ export async function POST(req: Request) {
         document_id: documentId,
         uploaded_at: new Date().toISOString(),
       };
-      console.log("[Knowledge API] Metadata for doc vector:", docMetadata);
+      logger.debug("[Knowledge API] Metadata for doc vector:", docMetadata);
       return {
         ...doc,
         metadata: docMetadata,
@@ -206,7 +207,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, filename: file.name });
   } catch (error) {
-    console.error("Error processing document:", error);
+    logger.error("Error processing document:", error);
     return NextResponse.json(
       { error: "Error processing document" },
       { status: 500 }
@@ -238,7 +239,7 @@ export async function DELETE(req: Request) {
       .single();
 
     if (findError || !documentEntry) {
-      console.error("[Knowledge API] Error finding document:", findError);
+      logger.error("[Knowledge API] Error finding document:", findError);
       return NextResponse.json(
         { error: "Document not found in database" },
         { status: 404 }
@@ -254,7 +255,7 @@ export async function DELETE(req: Request) {
       .eq("metadata->>document_id", documentId);
 
     if (vectorDeleteError) {
-      console.error(
+      logger.error(
         "[Knowledge API] Error deleting vector embeddings:",
         vectorDeleteError
       );
@@ -271,7 +272,7 @@ export async function DELETE(req: Request) {
       .eq("id", documentId);
 
     if (docDeleteError) {
-      console.error(
+      logger.error(
         "[Knowledge API] Error deleting document entry:",
         docDeleteError
       );
@@ -286,7 +287,7 @@ export async function DELETE(req: Request) {
       message: `Document '${filename}' successfully removed`,
     });
   } catch (error) {
-    console.error("Error deleting document:", error);
+    logger.error("Error deleting document:", error);
     return NextResponse.json(
       { error: "Error deleting document" },
       { status: 500 }

@@ -1,5 +1,6 @@
 import { WorkflowNode } from "@/types/workflow";
 import { toast } from "@/hooks/use-toast";
+import logger from "@/lib/logger";
 
 interface ExecuteWorkflowParams {
   workflowId: string;
@@ -59,7 +60,7 @@ export async function executeWorkflow({
       variant: "default",
     });
   } catch (error) {
-    console.error("Error executing workflow:", error);
+    logger.error("Error executing workflow:", error);
     toast({
       title: "Failed to execute workflow",
       variant: "destructive",

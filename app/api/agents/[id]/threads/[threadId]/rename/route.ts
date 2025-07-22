@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateChatName } from "@/lib/generate-title";
 import { createClient } from "@/supabase/server";
 import { Client } from "@langchain/langgraph-sdk";
+import logger from "@/lib/logger";
 
 // POST - Auto-generate a title based on conversation
 
@@ -52,7 +53,7 @@ export async function POST(
 
     return NextResponse.json({ success: true, title });
   } catch (error) {
-    console.error("Error generating thread title:", error);
+    logger.error("Error generating thread title:", error);
     return NextResponse.json(
       { error: "Failed to generate thread title" },
       { status: 500 }
@@ -102,7 +103,7 @@ export async function PUT(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error renaming thread:", error);
+    logger.error("Error renaming thread:", error);
     return NextResponse.json(
       { error: "Failed to rename thread" },
       { status: 500 }

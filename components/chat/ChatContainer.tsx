@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { AgentState } from "@/types/langgraph";
 import MessageList from "./MessageList";
+import logger from "@/lib/logger";
 import MessageInput from "./MessageInput";
 import ThreadSidebar from "./ThreadSidebar";
 import { HumanMessage, AIMessage } from "@langchain/core/messages";
@@ -63,7 +64,7 @@ export default function ChatContainer({
           );
         }
       } catch (error) {
-        console.error("Error fetching thread state:", error);
+        logger.error("Error fetching thread state:", error);
         setMessages([]);
       }
     };
@@ -139,15 +140,15 @@ export default function ChatContainer({
           }
         );
         if (!titleResponse.ok) {
-          console.error("Failed to generate title");
+          logger.error("Failed to generate title");
         }
         // Force sidebar to refresh to show the new thread with title
         setSidebarKey((prev) => prev + 1);
       } catch (error) {
-        console.error("Error generating title:", error);
+        logger.error("Error generating title:", error);
       }
     } catch (error) {
-      console.error("Error creating new thread:", error);
+      logger.error("Error creating new thread:", error);
     }
   };
 
@@ -177,12 +178,12 @@ export default function ChatContainer({
             }
           );
           if (!titleResponse.ok) {
-            console.error("Failed to generate title");
+            logger.error("Failed to generate title");
           }
           // Force sidebar to refresh to show the new thread with title
           setSidebarKey((prev) => prev + 1);
         } catch (error) {
-          console.error("Error generating title:", error);
+          logger.error("Error generating title:", error);
         }
       } else if (messages.length === 0) {
         // If this is the first message in an existing thread, also generate title
@@ -198,12 +199,12 @@ export default function ChatContainer({
             }
           );
           if (!titleResponse.ok) {
-            console.error("Failed to generate title");
+            logger.error("Failed to generate title");
           }
           // Force sidebar to refresh
           setSidebarKey((prev) => prev + 1);
         } catch (error) {
-          console.error("Error generating title:", error);
+          logger.error("Error generating title:", error);
         }
       }
       // Optimistically add user message
@@ -258,13 +259,13 @@ export default function ChatContainer({
               }
             }
           } catch (e) {
-            console.error("Error parsing chunk:", e, line);
+            logger.error("Error parsing chunk:", e, line);
           }
         }
       }
       // We no longer need to generate a title here as we do it immediately after thread creation
     } catch (error) {
-      console.error("Error sending message:", error);
+      logger.error("Error sending message:", error);
       setMessages((prev) => [
         ...prev,
         new AIMessage(

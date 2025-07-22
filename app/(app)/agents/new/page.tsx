@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from "next/link";
+import logger from "@/lib/logger";
 import { AGENT_TEMPLATES } from "./templates";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -45,7 +46,7 @@ export default function NewAgentPage() {
       }
 
       const data = await response.json();
-      console.log(data);
+      logger.debug(data);
       router.push("/agents");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create agent");

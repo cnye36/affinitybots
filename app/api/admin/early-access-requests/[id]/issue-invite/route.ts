@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
 import crypto from "crypto";
 import { sendInviteEmail } from "@/lib/sendInviteEmail";
+import logger from "@/lib/logger";
 
 export async function POST(
   request: Request,
@@ -40,7 +41,7 @@ export async function POST(
           { status: 404 }
         );
       }
-      console.error("Error fetching early access request:", fetchError);
+      logger.error("Error fetching early access request:", fetchError);
       return NextResponse.json(
         { error: "Database error fetching request" },
         { status: 500 }
@@ -78,7 +79,7 @@ export async function POST(
       .single();
 
     if (updateError) {
-      console.error("Error updating early access request:", updateError);
+      logger.error("Error updating early access request:", updateError);
       return NextResponse.json(
         { error: "Failed to issue invite code" },
         { status: 500 }
@@ -94,7 +95,7 @@ export async function POST(
         expiresAt: updatedRecord.expires_at,
       });
     } catch (emailError) {
-      console.error("Failed to send invite email:", emailError);
+      logger.error("Failed to send invite email:", emailError);
       // Do not block the response if email fails
     }
 
@@ -103,7 +104,7 @@ export async function POST(
       data: updatedRecord,
     });
   } catch (error) {
-    console.error(
+    logger.error(
       "Unexpected error in POST /api/admin/early-access-requests/[id]/issue-invite:",
       error
     );

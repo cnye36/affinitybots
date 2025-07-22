@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import logger from "@/lib/logger";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -73,7 +74,7 @@ export function ProfileSettings({
         provider: initialData?.provider,
       });
     } catch (err) {
-      console.error("Error updating profile:", err);
+      logger.error("Error updating profile:", err);
       onError?.(err instanceof Error ? err : new Error("An error occurred"));
     }
   };
@@ -109,7 +110,7 @@ export function ProfileSettings({
 
         setAvatar(publicUrl);
       } catch (err) {
-        console.error("Error uploading avatar:", err);
+        logger.error("Error uploading avatar:", err);
         onError?.(
           err instanceof Error ? err : new Error("Failed to upload avatar")
         );

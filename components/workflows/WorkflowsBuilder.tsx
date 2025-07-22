@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Edge, ReactFlowProvider } from "reactflow";
 import { useRouter } from "next/navigation";
+import logger from "@/lib/logger";
 import {
   TaskType,
   WorkflowNode,
@@ -131,7 +132,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
         variant: "default",
       });
     } catch (err) {
-      console.error("Error adding trigger:", err);
+      logger.error("Error adding trigger:", err);
       toast({
         title: "Failed to add entrypoint",
         variant: "destructive",
@@ -276,7 +277,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
           `/workflows/${newWorkflow.workflow_id}`
         );
       } catch (err) {
-        console.error("Error creating workflow:", err);
+        logger.error("Error creating workflow:", err);
         toast({
           title: "Failed to create workflow",
           variant: "destructive",
@@ -363,7 +364,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
           setEdges(workflow.edges);
         }
       } catch (err) {
-        console.error("Error loading workflow:", err);
+        logger.error("Error loading workflow:", err);
         toast({
           title: "Error loading workflow",
           variant: "destructive",
@@ -408,7 +409,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
         // Extract just the agent data from the joined results
         setAgents(agentsData?.map((ua: UserAgent) => ua.agent) || []);
       } catch (err) {
-        console.error("Error loading agents:", err);
+        logger.error("Error loading agents:", err);
         toast({
           title: "Failed to load agents",
           variant: "destructive",
@@ -520,7 +521,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
         }
       }
     } catch (err) {
-      console.error("Error saving workflow:", err);
+      logger.error("Error saving workflow:", err);
       toast({
         title: "Failed to save workflow",
         variant: "destructive",
@@ -760,7 +761,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
         variant: "default",
       });
     } catch (error) {
-      console.error("Error assigning agent:", error);
+      logger.error("Error assigning agent:", error);
       toast({
         title: "Failed to assign agent",
         description: error instanceof Error ? error.message : "Unknown error",

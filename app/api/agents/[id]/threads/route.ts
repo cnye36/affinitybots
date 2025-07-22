@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
 import { Client } from "@langchain/langgraph-sdk";
+import logger from "@/lib/logger";
 
 
 export async function POST(
@@ -63,7 +64,7 @@ export async function POST(
 
     return NextResponse.json({ thread_id: thread.thread_id });
   } catch (error) {
-    console.error("Error creating thread:", error);
+    logger.error("Error creating thread:", error);
     return NextResponse.json(
       { error: "Failed to create thread" },
       { status: 500 }
@@ -116,7 +117,7 @@ export async function GET(
     });
     return NextResponse.json({ threads });
   } catch (error) {
-    console.error("Error fetching threads:", error);
+    logger.error("Error fetching threads:", error);
     return NextResponse.json(
       { error: "Failed to fetch threads" },
       { status: 500 }

@@ -1,6 +1,7 @@
 import { ChatOpenAI } from "@langchain/openai";
 import { PromptTemplate } from "@langchain/core/prompts";
 import { generateAgentAvatar } from "@/lib/avatar-generation";
+import logger from "@/lib/logger";
 import { AVAILABLE_MCP_SERVERS } from "@/lib/mcpToolIndex";
 import type { AgentConfiguration, ModelType } from "@/types/agent";
 
@@ -325,7 +326,7 @@ export async function generateAgentConfiguration(
     );
     config.agent_avatar = avatarPath;
   } catch (error) {
-    console.error("Failed to generate avatar:", error);
+    logger.error("Failed to generate avatar:", error);
     // Keep the default avatar
   }
 

@@ -3,6 +3,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import logger from "@/lib/logger";
 import { Task } from "@/types/workflow";
 import { Agent } from "@/types/agent";
 import { toast } from "@/hooks/use-toast";
@@ -37,7 +38,7 @@ export function TaskConfigurationPanel({
         throw new Error(error.message || "Failed to update task");
       }
     } catch (error) {
-      console.error("Error saving task:", error);
+      logger.error("Error saving task:", error);
       toast({
         title: "Failed to save changes",
         description: error instanceof Error ? error.message : "Unknown error",
