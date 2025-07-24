@@ -10,10 +10,17 @@ export async function GET(
   try {
     const supabase = await createClient();
     
+    // Get authenticated user
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     // Get server configuration from Supabase
     const { data, error } = await supabase
       .from('user_mcp_servers')
-      .select('qualified_name, config_json, is_enabled, created_at, updated_at')
+      .select('qualified_name, config, is_enabled, created_at, updated_at')
+      .eq('user_id', user.id)
       .eq('qualified_name', decodeURIComponent(qualifiedName))
       .single();
 
@@ -26,7 +33,7 @@ export async function GET(
 
     return NextResponse.json({ 
       server: data,
-      config: data.config_json 
+      config: data.config 
     });
   } catch (error) {
     console.error('Error fetching server configuration:', error);
@@ -51,12 +58,19 @@ export async function PUT(
 
     const supabase = await createClient();
     
+    // Get authenticated user
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    
     // Upsert the configuration
     const { data, error } = await supabase
       .from('user_mcp_servers')
       .upsert({
+        user_id: user.id,
         qualified_name: decodeURIComponent(qualifiedName),
-        config_json: config,
+        config: config,
         is_enabled: isEnabled,
         updated_at: new Date().toISOString()
       })
@@ -86,9 +100,16 @@ export async function DELETE(
   try {
     const supabase = await createClient();
     
+    // Get authenticated user
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    
     const { data, error } = await supabase
       .from('user_mcp_servers')
       .delete()
+      .eq('user_id', user.id)
       .eq('qualified_name', decodeURIComponent(qualifiedName))
       .select()
       .single();

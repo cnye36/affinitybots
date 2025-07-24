@@ -1,109 +1,164 @@
-# AgentHub by AI-Automated
+# AgentHub
 
-AgentHub is a powerful platform for building and managing AI agent workflows. It allows users to create, customize, and orchestrate AI agents for various tasks and automation needs.
+AgentHub is a full-stack web application with Next.js TypeScript frontend and Langgraph backend.
 
-## Features
+## Quick Start
 
-- 🤖 **Custom AI Agents**: Create and configure AI agents with specific capabilities
-- 🔄 **Workflow Management**: Build and manage complex agent workflows
-- 📊 **Dashboard Interface**: Monitor and control your AI agents and workflows
-- 🎨 **Theme Support**: Dark and light mode with customizable UI
-- 🔒 **Authentication**: Secure user authentication via Supabase
-- 🛠️ **Tool Integration**: Various built-in tools for agent capabilities
+```bash
+# Install dependencies
+pnpm install
 
-## Tech Stack
+# Start development server
+pnpm dev
 
-- **Framework**: Next.js 15.1.0
-- **Language**: TypeScript
+# Start Langgraph backend (separate terminal)
+docker-compose up langgraph-api
+```
+
+## Testing
+
+This project uses a comprehensive testing setup with multiple testing strategies:
+
+### Unit & Integration Tests (Jest + React Testing Library)
+
+```bash
+# Run all unit tests
+pnpm test
+
+# Run tests in watch mode during development
+pnpm test:watch
+
+# Generate coverage report
+pnpm test:coverage
+
+# Run specific test file
+pnpm test Button.test.tsx
+```
+
+**Test Structure:**
+- **Unit tests**: `*.test.ts`, `*.test.tsx` files
+- **Component tests**: Use React Testing Library in `components/__tests__/`
+- **Utility tests**: Pure function tests in `__tests__/`
+- **Test utilities**: Shared helpers in `lib/test-utils.tsx`
+
+### End-to-End Tests (Playwright)
+
+```bash
+# Run E2E tests
+pnpm test:e2e
+
+# Run E2E tests with UI mode
+pnpm test:e2e:ui
+
+# Run E2E tests in debug mode
+pnpm test:e2e:debug
+
+# Run specific browser
+pnpm test:e2e --project=chromium
+```
+
+**E2E Test Features:**
+- Cross-browser testing (Chromium, Firefox, WebKit)
+- Mobile device simulation
+- Screenshot and video capture on failure
+- Test trace recording
+- Automatic dev server startup
+
+### Running All Tests
+
+```bash
+# Run both unit and E2E tests
+pnpm test:all
+```
+
+### Test Configuration
+
+- **Jest Config**: `jest.config.mjs` - Unit test configuration
+- **Playwright Config**: `playwright.config.ts` - E2E test configuration
+- **Test Setup**: `jest.setup.js` - Global test setup and mocks
+
+### Writing Tests
+
+**Component Test Example:**
+```typescript
+import { render, screen, fireEvent } from '@/lib/test-utils'
+import { Button } from '@/components/ui/Button'
+
+describe('Button Component', () => {
+  it('renders with children', () => {
+    render(<Button>Click me</Button>)
+    expect(screen.getByRole('button', { name: 'Click me' })).toBeInTheDocument()
+  })
+})
+```
+
+**E2E Test Example:**
+```typescript
+import { test, expect } from '@playwright/test'
+
+test('should load home page', async ({ page }) => {
+  await page.goto('/')
+  await expect(page).toHaveTitle(/AgentHub/)
+})
+```
+
+**API Test Example:**
+```typescript
+import { NextRequest } from 'next/server'
+import { GET } from '@/app/api/health/route'
+
+describe('/api/health', () => {
+  it('should return health status', async () => {
+    const request = new NextRequest('http://localhost:3000/api/health')
+    const response = await GET(request)
+    expect(response.status).toBe(200)
+  })
+})
+```
+
+## Development
+
+```bash
+# Start development
+pnpm dev
+
+# Lint code
+pnpm lint
+
+# Fix linting issues
+pnpm lint --fix
+
+# Build for production
+pnpm build
+
+# Start production server
+pnpm start
+```
+
+## Architecture
+
+- **Frontend**: Next.js 14 with App Router and TypeScript
+- **Backend**: Langgraph platform running in Docker
+- **Database**: Supabase (PostgreSQL)
 - **Authentication**: Supabase Auth
-- **Database**: Supabase
-- **UI Components**: 
-  - Radix UI
-  - Tailwind CSS
-  - shadcn/ui
-- **AI/ML**: 
-  - LangChain
-  - OpenAI
 - **State Management**: Zustand
-- **Workflow Visualization**: React Flow
+- **Styling**: Tailwind CSS
+- **Testing**: Jest + React Testing Library + Playwright
+- **AI/LLM**: Langgraph with various LLM providers
 
-## Getting Started
+## Environment Setup
 
-1. Clone the repository
-`git clone https://github.com/cnye36/ai-agent-saas-v0`
+Create a `.env.local` file with your configuration:
 
-2. Install dependencies
-`pnpm install`
-
-3. Set up environment variables:
-Create a `.env` file with the following variables:
-
+```env
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+# Add other environment variables as needed
 ```
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-OPENAI_API_KEY=
-ANTHROPIC_API_KEY= (Optional)
-STRIPE_SECRET_KEY= (Your Stripe secret key)
-```
-
-### Stripe Payments
-
-Payments processed through the application use Stripe. The default payee email
-is `cnye@ai-automated.xyz`. Configure `STRIPE_SECRET_KEY` with your Stripe
-secret key to enable checkout sessions.
-
-4. Run the development server
-`pnpm dev`
-
-
-5. Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-## Project Structure
-
-- `/app`: Next.js app router pages and layouts
-- `/components`: Reusable React components
-- `/lib`: Utility functions and configurations
-- `/types`: TypeScript type definitions
-- `/public`: Static assets
-
-## Available Agent Templates
-
-The platform comes with several pre-configured agent templates:
-
-- Research Analyst
-- Content Creator
-- Chat Assistant
-- Data Analyst
-
-Each template can be customized with specific tools and configurations.
-
-## Tools and Capabilities
-
-Agents can be equipped with various tools including:
-
-- Web Search
-- Web Scraping
-- Document Analysis
-- Spreadsheet Integration
-- Chat Memory
-- Task Scheduling
-- Database Queries
-- Knowledge Base Integration
-
-## License
-
-This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## Support
-
-For support, please open an issue in the GitHub repository or contact the maintenance team.
+1. Run `pnpm lint` before committing
+2. Ensure all tests pass with `pnpm test:all`
+3. Add tests for new features
+4. Follow the coding standards in `AGENT.md`

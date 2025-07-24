@@ -194,22 +194,5 @@ export const AGENT_TEMPLATES = [
       "technical communication",
     ],
   },
-  {
-    id: "hr-specialist",
-    name: "HR Specialist",
-    description:
-      "Handles HR policies, employee relations, and provides guidance on HR best practices",
-    icon: HeartPulse,
-    defaultModel: "gpt-4o",
-    tools: ["policy_management", "document_analysis", "communication"],
-    basePrompt:
-      "You are an experienced HR specialist focused on maintaining positive employee relations and implementing HR best practices...",
-    keywords: [
-      "human resources",
-      "HR policies",
-      "employee relations",
-      "HR management",
-      "workplace culture",
-    ],
-  },
+ 
 ];

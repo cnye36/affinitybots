@@ -22,17 +22,19 @@ export async function POST(request: Request) {
       );
     }
 
-    // Generate the agent configuration
+    // Generate the agent configuration with avatar generation
     const generatedConfig = await generateAgentConfiguration(
       prompt,
-      agentType
+      agentType,
+      user.id // Pass user ID for avatar generation
     );
 
     // Structure the agent data for database insertion
     const agentData = {
       name: generatedConfig.name,
       description: generatedConfig.description,
-      agent_avatar: "/images/default-avatar.png", // Default avatar for now
+      agent_avatar: generatedConfig.agent_avatar, // Use generated avatar
+      user_id: user.id,
       metadata: {
         owner_id: user.id,
       },
@@ -63,19 +65,6 @@ export async function POST(request: Request) {
       throw new Error("Failed to create agent");
     }
 
-    // Create user-agent relationship
-    const { error: relationError } = await supabase.from("user_agents").insert({
-      user_id: user.id,
-      agent_id: agent.id,
-    });
-
-    if (relationError) {
-      console.error("Error creating user-agent relationship:", relationError);
-      // Rollback agent creation
-      await supabase.from("agent").delete().eq("id", agent.id);
-      throw new Error("Failed to create user-agent relationship");
-    }
-
     return NextResponse.json({
       success: true,
       agent,
@@ -83,10 +72,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Error creating agent:", error);
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error ? error.message : "Failed to create agent",
-      },
+      { error: "Failed to create agent" },
       { status: 500 }
     );
   }
