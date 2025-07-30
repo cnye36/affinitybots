@@ -33,7 +33,7 @@ interface UserMCPServer {
   id: string;
   qualified_name: string;
   config: any;
-  enabled: boolean;
+  is_enabled: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -102,15 +102,15 @@ export function ToolSelector({
   };
 
   const handleToggleTool = (qualifiedName: string) => {
-    const isEnabled = enabledMCPServers.includes(qualifiedName);
+    const isEnabledForAgent = enabledMCPServers.includes(qualifiedName);
     const userServer = userServers.find(s => s.qualified_name === qualifiedName);
     
-    // If enabling but not configured, don't allow toggle
-    if (!isEnabled && !userServer?.enabled) {
+    // If enabling but not configured and enabled, don't allow toggle
+    if (!isEnabledForAgent && !userServer?.is_enabled) {
       return;
     }
 
-    const updatedServers = isEnabled
+    const updatedServers = isEnabledForAgent
       ? enabledMCPServers.filter(name => name !== qualifiedName)
       : [...enabledMCPServers, qualifiedName];
 
@@ -119,10 +119,10 @@ export function ToolSelector({
 
   const isConfigured = (qualifiedName: string) => {
     const userServer = userServers.find(s => s.qualified_name === qualifiedName);
-    return userServer?.enabled || false;
+    return userServer?.is_enabled || false;
   };
 
-  const isEnabled = (qualifiedName: string) => {
+  const isEnabledForAgent = (qualifiedName: string) => {
     return enabledMCPServers.includes(qualifiedName);
   };
 
@@ -165,7 +165,7 @@ export function ToolSelector({
 
   const ServerCard = ({ server, isConfiguredSection }: { server: SmitheryServer; isConfiguredSection: boolean }) => {
     const configured = isConfigured(server.qualifiedName);
-    const enabled = isEnabled(server.qualifiedName);
+    const enabled = isEnabledForAgent(server.qualifiedName);
     const requiresConfig = needsConfiguration(server);
     
     return (

@@ -100,7 +100,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
-    "@langchain/langgraph-cli": "^0.0.10",
+    "@langchain/langgraph-cli": "^0.0.54",
     "@playwright/test": "^1.54.1",
     "@tailwindcss/typography": "0.5.10",
     "@testing-library/jest-dom": "^6.6.3",

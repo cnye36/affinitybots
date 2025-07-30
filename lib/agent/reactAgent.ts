@@ -13,8 +13,6 @@ import {
   LangGraphRunnableConfig,
 } from "@langchain/langgraph";
 import { MultiServerMCPClient } from "@langchain/mcp-adapters";
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { RunnableConfig } from "@langchain/core/runnables";
 import { AgentConfiguration } from "@/types/agent";
 import { retrieveRelevantDocuments } from "@/lib/retrieval";
@@ -26,32 +24,92 @@ import { getUserMcpServers } from "./getUserMcpServers";
 // Initialize the memory store
 export const store = new InMemoryStore();
 
-// Local implementation of createSmitheryUrl to avoid SDK import issues
-interface SmitheryUrlOptions {
-  config?: any;
-  apiKey?: string;
-  profile?: string;
-}
+// Cache for MCP clients and tools to avoid recreating them on every call
+const mcpClientCache = new Map<string, { client: MultiServerMCPClient; tools: any[] }>();
 
-function createSmitheryUrl(baseUrl: string, options?: SmitheryUrlOptions): URL {
-  const url = new URL(`${baseUrl}/mcp`);
+// Function to create MCP client and get tools
+async function createMcpClientAndTools(userId: string, enabledServers: string[]) {
+  const cacheKey = `${userId}:${enabledServers.sort().join(",")}`;
   
-  if (options?.config) {
-    const param = typeof window !== "undefined"
-      ? btoa(JSON.stringify(options.config))
-      : Buffer.from(JSON.stringify(options.config)).toString("base64");
-    url.searchParams.set("config", param);
+  // Check cache first
+  if (mcpClientCache.has(cacheKey)) {
+    return mcpClientCache.get(cacheKey)!;
   }
-  
-  if (options?.apiKey) {
-    url.searchParams.set("api_key", options.apiKey);
+
+  try {
+    const allServers = await getUserMcpServers(userId);
+    
+    // Check if SMITHERY_API_KEY is set
+    const smitheryApiKey = process.env.SMITHERY_API_KEY;
+    if (!smitheryApiKey) {
+      console.warn("SMITHERY_API_KEY environment variable is not set - MCP servers may not work");
+    } else {
+      console.log("SMITHERY_API_KEY is configured");
+    }
+    
+    const mcpServers: Record<string, any> = {};
+
+    // Build server configuration for MultiServerMCPClient
+    for (const qualifiedName of enabledServers) {
+      if (allServers[qualifiedName]) {
+        const serverConfig = allServers[qualifiedName];
+        
+        // Convert to MultiServerMCPClient format - use the server config directly
+        mcpServers[qualifiedName] = {
+          transport: "streamable_http",
+          url: serverConfig.url,
+          headers: {
+            ...(serverConfig.apiKey && { "Authorization": `Bearer ${serverConfig.apiKey}` }),
+            "Content-Type": "application/json"
+          },
+          // Pass config directly to MultiServerMCPClient
+          ...(serverConfig.config && Object.keys(serverConfig.config).length > 0 && {
+            config: serverConfig.config
+          })
+        };
+      }
+    }
+
+    if (Object.keys(mcpServers).length === 0) {
+      return { client: null, tools: [] };
+    }
+
+    // Create MultiServerMCPClient
+    console.log(`Creating MultiServerMCPClient with servers:`, Object.keys(mcpServers));
+    console.log(`MCP Server configs:`, mcpServers);
+    
+    const client = new MultiServerMCPClient({
+      mcpServers,
+      useStandardContentBlocks: true,
+      throwOnLoadError: false, // Don't throw on individual tool load errors
+    });
+
+    // Get all tools from all servers
+    console.log(`Getting tools from MCP client...`);
+    const tools = await client.getTools();
+    console.log(`MCP client returned ${tools.length} tools`);
+    
+    const result = { client, tools };
+    mcpClientCache.set(cacheKey, result);
+    
+    console.log(`Loaded ${tools.length} tools from ${Object.keys(mcpServers).length} MCP servers`);
+    if (tools.length > 0) {
+      console.log(`Tool names: ${tools.map(t => t.name).join(", ")}`);
+      console.log(`Tool details:`, tools.map(t => ({
+        name: t.name,
+        description: t.description,
+        schema: t.schema || 'No schema',
+        hasInvoke: typeof t.invoke === 'function',
+        constructor: t.constructor?.name
+      })));
+    }
+    
+    return result;
+  } catch (error) {
+    console.error("Error creating MCP client and tools:", error);
+    console.error("Error details:", error instanceof Error ? error.message : String(error));
+    return { client: null, tools: [] };
   }
-  
-  if (options?.profile) {
-    url.searchParams.set("profile", options.profile);
-  }
-  
-  return url;
 }
 
 // Function to extract and write user memories
@@ -245,91 +303,13 @@ export async function retrieveKb(state: AgentState, config: RunnableConfig) {
   };
 }
 
-const DEFAULT_SYSTEM_PROMPT = `You are a helpful AI assistant that can use tools to find information`;
+const DEFAULT_SYSTEM_PROMPT = `You are a helpful AI assistant that can use tools to find information. 
+
+IMPORTANT: You have access to various tools and should actively use them when they would be helpful to answer the user's questions. Don't hesitate to call tools when appropriate - they are there to help you provide better, more accurate responses.
+
+When you receive a question that could benefit from using a tool (like searching for information, getting data, or performing calculations), please use the available tools.`;
 
 // --- MAIN ENTRY POINT ---
-
-// NOTE: This function is kept for backward compatibility but is no longer used.
-// All production traffic goes through the LangGraph Platform deployed graph below.
-export async function createAgentGraphForUserAgent(
-  userId: string,
-  agentConfig: AgentConfiguration
-) {
-  console.warn("createAgentGraphForUserAgent is deprecated. Use LangGraph Platform deployment instead.");
-  // Implementation removed - use the deployed graph on LangGraph Platform
-  return null;
-}
-
-// Dynamic tool node that can handle runtime tool loading
-class DynamicToolNode extends ToolNode {
-  constructor() {
-    super([]);
-  }
-
-  async invoke(state: any, config: any): Promise<any> {
-    const agentConfig = config.configurable as AgentConfiguration;
-    const userId = config.configurable.agentId as string;
-    
-    // Dynamically load MCP tools based on configuration
-    const tools: any[] = [];
-    if (agentConfig.enabled_mcp_servers && agentConfig.enabled_mcp_servers.length > 0) {
-      try {
-        const allServers = await getUserMcpServers(userId);
-        
-        for (const qualifiedName of agentConfig.enabled_mcp_servers) {
-          if (allServers[qualifiedName]) {
-            const serverConfig = allServers[qualifiedName];
-            
-            try {
-              // Create Smithery URL with configuration
-              const serverUrl = createSmitheryUrl(serverConfig.url, {
-                config: serverConfig.config,
-                apiKey: serverConfig.apiKey
-              });
-
-              // Create StreamableHTTP transport
-              const transport = new StreamableHTTPClientTransport(serverUrl);
-
-              // Create MCP client
-              const client = new Client({
-                name: "AgentHub",
-                version: "1.0.0"
-              });
-
-              // Connect to the server
-              await client.connect(transport);
-
-              // Get tools from this server
-              const serverTools = await client.listTools();
-              if (serverTools.tools) {
-                // Add server prefix to tool names to avoid conflicts
-                const prefixedTools = serverTools.tools.map(tool => ({
-                  ...tool,
-                  name: `${qualifiedName}__${tool.name}`,
-                  originalName: tool.name,
-                  serverName: qualifiedName
-                }));
-                tools.push(...prefixedTools);
-              }
-            } catch (error) {
-              console.error(`Failed to connect to MCP server ${qualifiedName}:`, error);
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Error loading MCP servers:", error);
-      }
-    }
-    
-    // Update tools if any were loaded
-    if (tools.length > 0) {
-      (this as any).tools = tools;
-    }
-    
-    // Call the parent invoke method
-    return super.invoke(state, config);
-  }
-}
 
 // Define the function that calls the model with dynamic configuration
 async function callModel(
@@ -375,69 +355,44 @@ async function callModel(
     }
   }
 
-  // Dynamically load MCP tools based on configuration
-  const tools: any[] = [];
-  if (agentConfig.enabled_mcp_servers && agentConfig.enabled_mcp_servers.length > 0) {
-    try {
-      const allServers = await getUserMcpServers(userId);
-      
-      for (const qualifiedName of agentConfig.enabled_mcp_servers) {
-        if (allServers[qualifiedName]) {
-          const serverConfig = allServers[qualifiedName];
-          
-          try {
-            // Create Smithery URL with configuration
-            const serverUrl = createSmitheryUrl(serverConfig.url, {
-              config: serverConfig.config,
-              apiKey: serverConfig.apiKey
-            });
-
-            // Create StreamableHTTP transport
-            const transport = new StreamableHTTPClientTransport(serverUrl);
-
-            // Create MCP client
-            const client = new Client({
-              name: "AgentHub",
-              version: "1.0.0"
-            });
-
-            // Connect to the server
-            await client.connect(transport);
-
-            // Get tools from this server
-            const serverTools = await client.listTools();
-            if (serverTools.tools) {
-              // Add server prefix to tool names to avoid conflicts
-              const prefixedTools = serverTools.tools.map(tool => ({
-                ...tool,
-                name: `${qualifiedName}__${tool.name}`,
-                originalName: tool.name,
-                serverName: qualifiedName
-              }));
-              tools.push(...prefixedTools);
-            }
-          } catch (error) {
-            console.error(`Failed to connect to MCP server ${qualifiedName}:`, error);
-          }
-        }
-      }
-    } catch (error) {
-      console.error("Error loading MCP servers:", error);
-    }
-  }
+  // Load MCP tools
+  const enabledServers = agentConfig.enabled_mcp_servers || [];
+  const { tools } = await createMcpClientAndTools(userId, enabledServers);
+  
+  console.log(`Agent ${userId}: Binding ${tools.length} tools to model`);
+  console.log(`Enabled servers: ${enabledServers.join(", ")}`);
   
   // Create a model and give it access to the tools
-  const model = new ChatOpenAI({
-    model: agentConfig.model || "gpt-4o-mini",
+  const baseModel = new ChatOpenAI({
+    model: agentConfig.model || "gpt-4.1-mini",
     temperature: agentConfig.temperature || 0.5,
-  }).bindTools(tools);
+  });
+  
+  console.log(`Binding ${tools.length} tools to ${baseModel.modelName} model...`);
+  const model = baseModel.bindTools(tools);
+  console.log(`Model binding complete. Model has tools: ${!!(model as any).bound_tools || !!(model as any).tools}`);
   
   // Combine system prompt with memory context
   const enhancedSystemPrompt = `${systemPrompt}${memoryContext}`;
+  
+  console.log(`Invoking model with ${tools.length} bound tools...`);
   const response = await model.invoke([
     new SystemMessage(enhancedSystemPrompt),
     ...state.messages,
   ]);
+  
+  console.log(`Model response received. Type: ${response.constructor.name}`);
+  console.log(`Response has tool_calls: ${!!response.tool_calls}`);
+  console.log(`Tool calls count: ${response.tool_calls?.length || 0}`);
+  if (response.tool_calls && response.tool_calls.length > 0) {
+    console.log(`Tool calls:`, response.tool_calls.map(tc => ({
+      name: tc.name,
+      id: tc.id,
+      argsKeys: Object.keys(tc.args || {})
+    })));
+  }
+  console.log(`Response content preview: ${typeof response.content === 'string' ? response.content.substring(0, 200) : JSON.stringify(response.content).substring(0, 200)}...`);
+  
   return { messages: [response] };
 }
 
@@ -445,22 +400,59 @@ async function callModel(
 function shouldContinue({ messages }: typeof MessagesAnnotation.State) {
   const lastMessage = messages[messages.length - 1] as AIMessage;
 
+  console.log(`Checking if should continue. Last message type: ${lastMessage.constructor.name}`);
+  console.log(`Tool calls found: ${lastMessage.tool_calls?.length || 0}`);
+  
   // If the LLM makes a tool call, then we route to the "tools" node
   if (lastMessage.tool_calls?.length) {
+    console.log(`Routing to tools node. Tool calls:`, lastMessage.tool_calls.map(tc => tc.name));
     return "tools";
   }
+  console.log("No tool calls found, ending conversation");
   return "__end__";
 }
 
-// Create a dynamic tool node that can handle runtime tool loading
-const dynamicToolNode = new DynamicToolNode();
+// Create a dynamic tool node that loads tools at runtime
+async function createToolNode(state: any, config: any): Promise<any> {
+  const agentConfig = config.configurable as AgentConfiguration;
+  const userId = config.configurable.agentId as string;
+  const enabledServers = agentConfig.enabled_mcp_servers || [];
+  
+  console.log(`Tool node for agent ${userId}: Loading ${enabledServers.length} servers`);
+  
+  // Get the same tools that were used in callModel
+  const { tools } = await createMcpClientAndTools(userId, enabledServers);
+  
+  console.log(`Tool node: Executing with ${tools.length} available tools`);
+  
+  // Create a standard ToolNode with the loaded tools
+  const toolNode = new ToolNode(tools);
+  
+  // Debug the incoming state for tool execution
+  const lastMessage = state.messages?.[state.messages.length - 1];
+  console.log(`Tool node executing. Last message type: ${lastMessage?.constructor?.name}`);
+  console.log(`Last message tool_calls:`, lastMessage?.tool_calls?.map((tc: any) => tc.name) || []);
+  
+  // Invoke the tool node
+  console.log(`About to invoke ToolNode with ${tools.length} tools...`);
+  const result = await toolNode.invoke(state, config);
+  
+  console.log(`ToolNode execution completed. Result messages: ${result.messages?.length || 0}`);
+  if (result.messages && result.messages.length > 0) {
+    result.messages.forEach((msg: any, i: number) => {
+      console.log(`Result message ${i}: ${msg.constructor.name}, content preview: ${typeof msg.content === 'string' ? msg.content.substring(0, 100) : JSON.stringify(msg.content).substring(0, 100)}...`);
+    });
+  }
+  
+  return result;
+}
 
 // Define and export the graph for LangGraph Platform
 const workflow = new StateGraph(MessagesAnnotation)
   .addNode("retrieveKb", retrieveKb)
   .addNode("writeMemory", writeMemory)
   .addNode("agent", callModel)
-  .addNode("tools", dynamicToolNode)
+  .addNode("tools", createToolNode)
   .addNode("skipMemory", (state) => state) // Pass-through node that does nothing
 
   // Flow from start to Knowledge Base retrieval

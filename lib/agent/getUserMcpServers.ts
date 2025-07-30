@@ -10,6 +10,9 @@ export async function getUserMcpServers(userId: string) {
 
   if (error) throw new Error(error.message);
 
+  console.log(`getUserMcpServers: Found ${data?.length || 0} enabled servers for user ${userId}`);
+  console.log(`Enabled server names:`, data?.map(s => s.qualified_name) || []);
+
   // Transform to mcpServers object with Smithery server configurations
   const mcpServers: Record<string, any> = {};
   
@@ -27,7 +30,7 @@ export async function getUserMcpServers(userId: string) {
       mcpServers[server.qualified_name] = {
         url: `https://server.smithery.ai/${server.qualified_name}`,
         transport: "streamable_http",
-        config: server.config_json || {},
+        config: server.config || {},
         apiKey: apiKey
       };
     } catch (err) {
