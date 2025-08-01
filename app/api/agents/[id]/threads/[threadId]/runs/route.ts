@@ -145,6 +145,7 @@ export async function POST(
             configurable: {
               ...(agent.config || {}),
               agentId: id,
+              threadId: threadId, // Pass threadId for attachment retrieval
             },
             recursion_limit: 100,
           },

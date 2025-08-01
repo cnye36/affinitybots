@@ -385,6 +385,7 @@ export default function ChatContainer({
           userAvatar={userAvatar}
           userInitials={userInitials}
           isThinking={isLoading && !hasAssistantMessage}
+          threadId={currentThreadId}
         />
         <MessageInput onSend={sendChatMessage} disabled={isLoading} />
       </div>

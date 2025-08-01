@@ -7,6 +7,8 @@ import remarkGfm from "remark-gfm";
 import { Check, Copy } from "lucide-react";
 import { HumanMessage, AIMessage } from "@langchain/core/messages";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import AttachmentCard from "./AttachmentCard";
+import { useThreadAttachments } from "@/hooks/useThreadAttachments";
 
 interface MessageListProps {
   messages: AgentState["messages"];
@@ -15,6 +17,7 @@ interface MessageListProps {
   userInitials?: string;
   agentInitials?: string;
   isThinking?: boolean;
+  threadId?: string;
 }
 
 export default function MessageList({
@@ -24,9 +27,11 @@ export default function MessageList({
   userInitials = "U",
   agentInitials = "A",
   isThinking,
+  threadId,
 }: MessageListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const { attachments, getThumbnailUrl } = useThreadAttachments(threadId);
 
   useEffect(() => {
     scrollToBottom();
@@ -97,55 +102,81 @@ export default function MessageList({
       ) : (
         messages.map((message, index) => {
           const isUser = message instanceof HumanMessage;
+          const isLastUserMessage = isUser && index === messages.length - 1;
+          
+          // Get attachments for the current message (only show on the last user message)
+          const messageAttachments = isLastUserMessage ? attachments : [];
+          
           return (
-            <div
-              key={index}
-              className={`flex ${isUser ? "justify-end" : "justify-start"}`}
-            >
-              {/* Avatar */}
-              {!isUser && (
-                <div className="flex-shrink-0 mr-2">
-                  <Avatar className="h-8 w-8">
-                    {agentAvatar ? (
-                      <AvatarImage src={agentAvatar} alt="Agent" />
-                    ) : (
-                      <AvatarFallback>{agentInitials}</AvatarFallback>
-                    )}
-                  </Avatar>
+            <div key={index} className="space-y-2">
+              {/* Attachment cards (show above the last user message) */}
+              {messageAttachments.length > 0 && (
+                <div className="flex justify-end">
+                  <div className="max-w-[90%] sm:max-w-[85%] space-y-2">
+                    {messageAttachments.map((attachment) => (
+                      <AttachmentCard
+                        key={attachment.id}
+                        fileName={attachment.original_filename}
+                        fileSize={attachment.file_size}
+                        attachmentType={attachment.attachment_type}
+                        processingStatus={attachment.processing_status}
+                        thumbnailUrl={getThumbnailUrl(attachment)}
+                        className="ml-auto"
+                      />
+                    ))}
+                  </div>
                 </div>
               )}
+              
+              {/* The actual message */}
               <div
-                className={`max-w-[90%] sm:max-w-[85%] rounded-lg px-3 sm:px-4 py-2 sm:py-3 shadow-sm text-sm sm:text-base ${
-                  isUser
-                    ? "bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600"
-                    : "bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-600"
-                }`}
-                role="document"
-                aria-label={isUser ? "User message" : "Assistant message"}
+                className={`flex ${isUser ? "justify-end" : "justify-start"}`}
               >
+                {/* Avatar */}
+                {!isUser && (
+                  <div className="flex-shrink-0 mr-2">
+                    <Avatar className="h-8 w-8">
+                      {agentAvatar ? (
+                        <AvatarImage src={agentAvatar} alt="Agent" />
+                      ) : (
+                        <AvatarFallback>{agentInitials}</AvatarFallback>
+                      )}
+                    </Avatar>
+                  </div>
+                )}
                 <div
-                  className={`prose dark:prose-invert prose-sm sm:prose-base max-w-none [&_pre]:!mt-0 [&_pre]:!mb-0 [&_p]:!mt-0 [&_p]:!mb-2 last:[&_p]:!mb-0`}
+                  className={`max-w-[90%] sm:max-w-[85%] rounded-lg px-3 sm:px-4 py-2 sm:py-3 shadow-sm text-sm sm:text-base ${
+                    isUser
+                      ? "bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600"
+                      : "bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-600"
+                  }`}
+                  role="document"
+                  aria-label={isUser ? "User message" : "Assistant message"}
                 >
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    components={components}
+                  <div
+                    className={`prose dark:prose-invert prose-sm sm:prose-base max-w-none [&_pre]:!mt-0 [&_pre]:!mb-0 [&_p]:!mt-0 [&_p]:!mb-2 last:[&_p]:!mb-0`}
                   >
-                    {message.content.toString()}
-                  </ReactMarkdown>
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={components}
+                    >
+                      {message.content.toString()}
+                    </ReactMarkdown>
+                  </div>
                 </div>
+                {/* User Avatar */}
+                {isUser && (
+                  <div className="flex-shrink-0 ml-2">
+                    <Avatar className="h-8 w-8">
+                      {userAvatar ? (
+                        <AvatarImage src={userAvatar} alt="User" />
+                      ) : (
+                        <AvatarFallback>{userInitials}</AvatarFallback>
+                      )}
+                    </Avatar>
+                  </div>
+                )}
               </div>
-              {/* User Avatar */}
-              {isUser && (
-                <div className="flex-shrink-0 ml-2">
-                  <Avatar className="h-8 w-8">
-                    {userAvatar ? (
-                      <AvatarImage src={userAvatar} alt="User" />
-                    ) : (
-                      <AvatarFallback>{userInitials}</AvatarFallback>
-                    )}
-                  </Avatar>
-                </div>
-              )}
             </div>
           );
         })

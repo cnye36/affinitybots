@@ -59,7 +59,7 @@ export default function MessageInput({ onSend, disabled }: MessageInputProps) {
         formData.append("file", file);
 
         try {
-          const res = await fetch("/api/chat-files", {
+          const res = await fetch("/api/chat-attachments", {
             method: "POST",
             body: formData,
           });

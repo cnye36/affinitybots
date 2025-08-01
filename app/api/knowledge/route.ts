@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
+import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
 import { DocxLoader } from "@langchain/community/document_loaders/fs/docx";
 import { CSVLoader } from "@langchain/community/document_loaders/fs/csv";
@@ -198,8 +199,14 @@ export async function POST(req: Request) {
       };
     });
 
+    // Create a service role client to bypass RLS for vector insertion
+    const serviceClient = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
     await SupabaseVectorStore.fromDocuments(documentsWithMetadata, embeddings, {
-      client: supabase,
+      client: serviceClient,
       tableName: "document_vectors",
       queryName: "match_documents",
     });

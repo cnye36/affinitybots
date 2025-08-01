@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   // Get pagination parameters from query string
   const { searchParams } = new URL(request.url);
   const page = parseInt(searchParams.get('page') || '1', 10);
-  const pageSize = parseInt(searchParams.get('pageSize') || '50', 10);
+  const pageSize = parseInt(searchParams.get('pageSize') || '100', 10);
   const search = searchParams.get('search') || '';
 
   // Build query parameters
@@ -38,25 +38,35 @@ export async function GET(request: NextRequest) {
 
   const data = await response.json();
 
-  // Normalize the response structure for frontend
-  // Handle different possible response formats from Smithery
+  // Debug: Log the actual structure we're getting from Smithery
+  console.log('Smithery API Response Structure:', {
+    keys: Object.keys(data),
+    hasServers: !!data.servers,
+    hasPagination: !!data.pagination,
+    pagination: data.pagination,
+    serversLength: data.servers ? data.servers.length : 'N/A'
+  });
+
+  // Parse the Smithery API response according to their documented format
   let servers = [];
   let total = 0;
   
-  if (Array.isArray(data)) {
-    // If data is directly an array
+  if (data.servers && Array.isArray(data.servers)) {
+    servers = data.servers;
+    
+    // Check for pagination object first (documented format)
+    if (data.pagination && data.pagination.totalCount) {
+      total = data.pagination.totalCount;
+    } else {
+      // Fallback to other possible total count fields
+      total = data.total || data.totalCount || data.servers.length;
+    }
+  } else if (Array.isArray(data)) {
+    // Fallback: If data is directly an array
     servers = data;
     total = data.length;
-  } else if (data.servers && Array.isArray(data.servers)) {
-    // If data has a servers property with array
-    servers = data.servers;
-    total = data.total || data.totalCount || data.servers.length;
-  } else if (data.data && Array.isArray(data.data)) {
-    // If data has a data property with array
-    servers = data.data;
-    total = data.total || data.totalCount || data.data.length;
   } else {
-    // Fallback - try to extract from any array property
+    // Final fallback - try to extract from any array property
     const arrayProp = Object.values(data).find(val => Array.isArray(val));
     if (arrayProp) {
       servers = arrayProp as any[];
@@ -64,59 +74,7 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // If we don't have a proper total count and we're on the first page, 
-  // try to get the total by making a request for a larger page size
-  if (total === servers.length && page === 1 && servers.length === pageSize) {
-    try {
-      const countQueryParams = new URLSearchParams({
-        'q': search ? `is:verified is:deployed ${search}` : 'is:verified is:deployed',
-        'page': '1',
-        'pageSize': '1000', // Request a large number to get total count
-      });
 
-      const countResponse = await fetch(
-        `https://registry.smithery.ai/servers?${countQueryParams}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Accept': 'application/json'
-          }
-        }
-      );
-
-      if (countResponse.ok) {
-        const countData = await countResponse.json();
-        let countServers = [];
-        
-        if (Array.isArray(countData)) {
-          countServers = countData;
-        } else if (countData.servers && Array.isArray(countData.servers)) {
-          countServers = countData.servers;
-          if (countData.total || countData.totalCount) {
-            total = countData.total || countData.totalCount;
-          } else {
-            total = countServers.length;
-          }
-        } else if (countData.data && Array.isArray(countData.data)) {
-          countServers = countData.data;
-          if (countData.total || countData.totalCount) {
-            total = countData.total || countData.totalCount;
-          } else {
-            total = countServers.length;
-          }
-        } else {
-          const arrayProp = Object.values(countData).find(val => Array.isArray(val));
-          if (arrayProp) {
-            countServers = arrayProp as any[];
-            total = countData.total || countData.totalCount || countServers.length;
-          }
-        }
-      }
-    } catch (error) {
-      // If count request fails, fall back to using the current page data
-      console.error('Failed to get total count:', error);
-    }
-  }
 
   return NextResponse.json({ 
     servers: {
@@ -125,6 +83,16 @@ export async function GET(request: NextRequest) {
       page: page,
       pageSize: pageSize,
       totalPages: Math.ceil(total / pageSize)
+    },
+    // Debug: Include raw response structure
+    debug: {
+      smitheryResponse: {
+        keys: Object.keys(data),
+        hasServers: !!data.servers,
+        hasPagination: !!data.pagination,
+        pagination: data.pagination,
+        serversCount: data.servers ? data.servers.length : 0
+      }
     }
   });
 }

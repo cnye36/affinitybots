@@ -9,8 +9,7 @@
 
   "dependencies": ["."],
   "graphs": {
-    "reactAgent": "./lib/agent/reactAgent.ts:graph",
-    "mcpAgent": "./lib/agent/mcpAgent.ts:graph"
+    "reactAgent": "./lib/agent/reactAgent.ts:graph"
   },
   "env": ".env"
 }

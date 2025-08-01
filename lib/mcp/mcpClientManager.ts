@@ -103,7 +103,7 @@ export class MCPClientManager {
         let finalUrl = serverConfig.url;
         
         // Check if this server uses OAuth
-        if (this.isOAuthServer(serverConfig.url)) {
+        if (this.isOAuthServer(serverConfig)) {
           const oauthResult = await this.handleOAuthServer(qualifiedName, serverConfig);
           if (oauthResult) {
             // For OAuth servers, we'll use our OAuth client wrapper
@@ -167,12 +167,27 @@ export class MCPClientManager {
   }
 
   /**
-   * Checks if a server URL indicates OAuth authentication
+   * Checks if a server uses OAuth authentication
+   * First checks server config, then falls back to URL pattern detection
    */
-  private isOAuthServer(url: string): boolean {
-    // For now, we'll detect OAuth servers by looking for specific patterns
-    // This could be enhanced to check server capabilities first
-    return url.includes('/oauth/') || url.includes('oauth=true') || url.includes('auth_type=oauth');
+  private isOAuthServer(serverConfig: any): boolean {
+    // Check explicit auth_type in config first
+    if (serverConfig.config?.auth_type === 'oauth') {
+      return true;
+    }
+    
+    // Check if OAuth token/session exists in database
+    if (serverConfig.oauth_token || serverConfig.session_id) {
+      return true;
+    }
+    
+    // Fall back to URL pattern detection for legacy support
+    const url = serverConfig.url;
+    if (url) {
+      return url.includes('/oauth/') || url.includes('oauth=true') || url.includes('auth_type=oauth');
+    }
+    
+    return false;
   }
 
   /**
@@ -212,25 +227,49 @@ export class MCPClientManager {
   }
 
   /**
-   * Builds API key-based URL for non-OAuth servers
+   * Builds URL for non-OAuth servers
    */
   private buildApiKeyUrl(qualifiedName: string, serverConfig: any): string {
+    // If server has a URL configured, use it
     if (serverConfig.url) {
       return serverConfig.url;
     }
 
-    // For Smithery servers, use profile-based authentication
+    // Check if this is a Smithery server and we have an API key
     const apiKey = process.env.SMITHERY_API_KEY;
-    if (!apiKey) {
-      console.warn(`No OAuth session and no Smithery API key configured for ${qualifiedName}`);
-      return serverConfig.url || '';
+    if (apiKey && this.isSmitheryServer(qualifiedName, serverConfig)) {
+      // Extract profile ID from config (set by user in UI)
+      const profileId = serverConfig.config?.smitheryProfileId || serverConfig.config?.profileId || "eligible-bug-FblvFg";
+      const fallbackUrl = `https://server.smithery.ai/${qualifiedName}/mcp?api_key=${apiKey}&profile=${profileId}`;
+      console.log(`🏗️  Built Smithery API key URL: ${fallbackUrl.replace(apiKey, 'HIDDEN_API_KEY')}`);
+      return fallbackUrl;
     }
 
-    // Extract profile ID from config (set by user in UI)
-    const profileId = serverConfig.config?.smitheryProfileId || serverConfig.config?.profileId || "eligible-bug-FblvFg";
-    const fallbackUrl = `https://server.smithery.ai/${qualifiedName}/mcp?api_key=${apiKey}&profile=${profileId}`;
-    console.log(`🏗️  Built fallback API key URL: ${fallbackUrl.replace(apiKey, 'HIDDEN_API_KEY')}`);
-    return fallbackUrl;
+    // For non-Smithery servers without URLs, this is an error
+    console.error(`❌ Server ${qualifiedName} has no URL configured and is not a Smithery server`);
+    throw new Error(`Server ${qualifiedName} requires a URL to be configured`);
+  }
+
+  /**
+   * Checks if a server is a Smithery-hosted server
+   */
+  private isSmitheryServer(qualifiedName: string, serverConfig: any): boolean {
+    // Check if explicitly marked as Smithery server
+    if (serverConfig.config?.provider === 'smithery') {
+      return true;
+    }
+    
+    // Check if URL is a Smithery URL
+    if (serverConfig.url?.includes('server.smithery.ai')) {
+      return true;
+    }
+    
+    // For legacy support, assume servers without URLs but with Smithery config are Smithery servers
+    if (!serverConfig.url && (serverConfig.config?.smitheryProfileId || serverConfig.config?.profileId)) {
+      return true;
+    }
+    
+    return false;
   }
 
   /**

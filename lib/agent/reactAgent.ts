@@ -15,7 +15,7 @@ import {
 import { MultiServerMCPClient } from "@langchain/mcp-adapters";
 import { RunnableConfig } from "@langchain/core/runnables";
 import { AgentConfiguration } from "@/types/agent";
-import { retrieveRelevantDocuments } from "@/lib/retrieval";
+import { retrieveRelevantDocuments, retrieveAllRelevantContent } from "@/lib/retrieval";
 import fs from "fs";
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from "uuid";
@@ -218,8 +218,8 @@ async function retrieveMemories(
 }
 
 export async function retrieveKb(state: AgentState, config: RunnableConfig) {
-  const configurable = (config.configurable as { agentId?: string }) || {};
-  const { agentId } = configurable;
+  const configurable = (config.configurable as { agentId?: string; threadId?: string }) || {};
+  const { agentId, threadId } = configurable;
 
   let lastUserMsgContent = state.messages.at(-1)?.content ?? "";
 
@@ -245,40 +245,90 @@ export async function retrieveKb(state: AgentState, config: RunnableConfig) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
-  const docs = await retrieveRelevantDocuments(
+  // Get both knowledgebase documents AND thread attachments
+  const allContent = await retrieveAllRelevantContent(
     lastUserMsgContent,
     supabase,
-    6, // topK
-    agentId
+    agentId,
+    threadId,
+    8 // topK
   );
 
+  // Debug logging
+  console.log(`[retrieveKb] Query: "${lastUserMsgContent}"`);
+  console.log(`[retrieveKb] AgentId: ${agentId}, ThreadId: ${threadId}`);
+  console.log(`[retrieveKb] Found ${allContent.knowledgebase.length} knowledgebase docs`);
+  console.log(`[retrieveKb] Found ${allContent.threadAttachments.length} thread attachments`);
+  if (allContent.threadAttachments.length > 0) {
+    console.log('[retrieveKb] Attachment details:', allContent.threadAttachments.map(a => ({
+      fileName: a.metadata.file_name,
+      type: a.metadata.attachment_type,
+      contentLength: a.pageContent?.length || 0
+    })));
+  }
+
+  const systemMessages = [];
+  
+  // Add knowledgebase context if available
+  if (allContent.knowledgebase.length > 0) {
+    systemMessages.push({
+      type: "system",
+      content:
+        "You have access to the following information from your long-term knowledge base (available across all conversations):\n\n" +
+        allContent.knowledgebase
+          .map(
+            (d, i) =>
+              `Knowledge Source ${i + 1} (from file: ${
+                d.metadata.filename || "unknown"
+              }):\n"""\n${d.pageContent}\n"""`
+          )
+          .join("\n\n---\n\n") +
+        "\n\n",
+    });
+  }
+
+  // Add thread attachment context if available
+  if (allContent.threadAttachments.length > 0) {
+    systemMessages.push({
+      type: "system",
+      content:
+        "🔥 UPLOADED FILES IN THIS CONVERSATION - CONTENT PROVIDED BELOW:\n\n" +
+        "The user has uploaded files to this conversation. Their content is extracted and provided here for your analysis. DO NOT use external tools to access these files - the content is available below:\n\n" +
+        allContent.threadAttachments
+          .map(
+            (d, i) =>
+              `📎 UPLOADED FILE ${i + 1}: "${d.metadata.file_name || "unknown"}" (${d.metadata.attachment_type})\n` +
+              `EXTRACTED CONTENT:\n"""\n${d.pageContent}\n"""`
+          )
+          .join("\n\n---\n\n") +
+        "\n\n✅ All uploaded file content is provided above. Use this content directly to answer questions about the uploaded files.",
+    });
+  }
+
   return {
-    messages: docs.length
-      ? [
-          {
-            type: "system",
-            content:
-              "You have access to the following information from relevant documents in your knowledge base. Use this information to answer the user's query:\n\n" +
-              docs
-                .map(
-                  (d, i) =>
-                    `Source Document Chunk ${i + 1} (from file: ${
-                      d.metadata.filename || "unknown"
-                    }):\n"""\n${d.pageContent}\n"""`
-                )
-                .join("\n\n---\n\n") +
-              "\n\nBased on the above, and your general knowledge, please respond to the user.",
-          },
-        ]
-      : [],
+    messages: systemMessages,
   };
 }
 
-const DEFAULT_SYSTEM_PROMPT = `You are a helpful AI assistant that can use tools to find information. 
+const DEFAULT_SYSTEM_PROMPT = `You are a helpful AI assistant with access to provided context and tools.
 
-IMPORTANT: You have access to various tools and should actively use them when they would be helpful to answer the user's questions. Don't hesitate to call tools when appropriate - they are there to help you provide better, more accurate responses.
+CONTEXT PRIORITY RULES:
+1. **ALWAYS check provided context FIRST** - If information is available in your knowledge base or thread attachments, use that content directly
+2. **For uploaded files/documents** - The content will be provided in your context. DO NOT use web search tools to access files that users have uploaded
+3. **For uploaded images** - Image metadata and descriptions will be provided. You can analyze this information and ask users for more specific details about what they see
+4. **Only use tools when** the information is NOT available in your provided context
 
-When you receive a question that could benefit from using a tool (like searching for information, getting data, or performing calculations), please use the available tools.`;
+IMPORTANT HIERARCHY:
+- **FIRST**: Use provided knowledge base and thread attachment content 
+- **SECOND**: Use your general knowledge
+- **LAST**: Use tools only when information is missing from context
+
+MULTIMODAL CAPABILITIES:
+- **Documents**: Full text content is extracted and provided
+- **Images**: Metadata and basic analysis is provided - ask users to describe visual content for deeper analysis
+- **Files**: All uploaded content is processed and made available in your context
+
+When analyzing uploaded documents, images, or files, their content will be directly provided to you in the context - there is no need to search for or fetch these files using tools.`;
 
 // --- MAIN ENTRY POINT ---
 
