@@ -4,8 +4,9 @@ import { Client } from "@langchain/langgraph-sdk";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string; threadId: string } }
+  props: { params: Promise<{ id: string; threadId: string }> }
 ) {
+  const params = await props.params;
   const { id, threadId } = params;
   const client = new Client({
     apiUrl: process.env.LANGGRAPH_URL,
@@ -60,8 +61,9 @@ export async function GET(
 // POST - Create a new run/message in a thread
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string; threadId: string } }
+  props: { params: Promise<{ id: string; threadId: string }> }
 ) {
+  const params = await props.params;
   const { id, threadId } = params;
   const client = new Client({
     apiUrl: process.env.LANGGRAPH_URL,

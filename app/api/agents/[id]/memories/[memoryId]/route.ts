@@ -4,8 +4,9 @@ import { createClient } from "@/supabase/client";
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string; memoryId: string } }
+  props: { params: Promise<{ id: string; memoryId: string }> }
 ) {
+  const params = await props.params;
   try {
     // Create a Supabase client
     const supabase = await createClient();

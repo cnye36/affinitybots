@@ -17,85 +17,52 @@ import { RunnableConfig } from "@langchain/core/runnables";
 import { AgentConfiguration } from "@/types/agent";
 import { retrieveRelevantDocuments } from "@/lib/retrieval";
 import fs from "fs";
-import { createClient } from "@/supabase/client";
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from "uuid";
-import { getUserMcpServers } from "./getUserMcpServers";
+import { mcpClientFactory, MCPFactoryResult } from "../mcp/mcpClientFactory";
 
 // Initialize the memory store
 export const store = new InMemoryStore();
 
-// Cache for MCP clients and tools to avoid recreating them on every call
-const mcpClientCache = new Map<string, { client: MultiServerMCPClient; tools: any[] }>();
+// Cache for MCP factory results to avoid recreating them on every call
+const mcpFactoryCache = new Map<string, MCPFactoryResult>();
 
-// Function to create MCP client and get tools
-async function createMcpClientAndTools(userId: string, enabledServers: string[]) {
-  const cacheKey = `${userId}:${enabledServers.sort().join(",")}`;
+// Function to create MCP client and get tools using the new factory
+async function createMcpClientAndTools(userId: string, agentConfig: AgentConfiguration): Promise<{ client: MultiServerMCPClient | null; tools: any[] }> {
+  const enabledServers = agentConfig.enabled_mcp_servers || [];
+  const forceRefresh = agentConfig.force_mcp_refresh || false;
+  const cacheKey = `${userId}:${enabledServers.sort().join(",")}:${forceRefresh}`;
   
-  // Check cache first
-  if (mcpClientCache.has(cacheKey)) {
-    return mcpClientCache.get(cacheKey)!;
+  // Check cache first (unless forcing refresh)
+  if (!forceRefresh && mcpFactoryCache.has(cacheKey)) {
+    const cached = mcpFactoryCache.get(cacheKey)!;
+    console.log(`Using cached MCP factory result for ${userId}`);
+    return { client: cached.client, tools: cached.tools };
   }
 
   try {
-    const allServers = await getUserMcpServers(userId);
-    
-    // Check if SMITHERY_API_KEY is set
-    const smitheryApiKey = process.env.SMITHERY_API_KEY;
-    if (!smitheryApiKey) {
-      console.warn("SMITHERY_API_KEY environment variable is not set - MCP servers may not work");
-    } else {
-      console.log("SMITHERY_API_KEY is configured");
-    }
-    
-    const mcpServers: Record<string, any> = {};
+    console.log(`createMcpClientAndTools: userId=${userId}, enabledServers=${JSON.stringify(enabledServers)}`);
+    console.log(`OAuth sessions configured: ${(agentConfig.mcp_oauth_sessions || []).length}`);
+    console.log(`Force refresh: ${forceRefresh}`);
 
-    // Build server configuration for MultiServerMCPClient
-    for (const qualifiedName of enabledServers) {
-      if (allServers[qualifiedName]) {
-        const serverConfig = allServers[qualifiedName];
-        
-        // Convert to MultiServerMCPClient format - use the server config directly
-        mcpServers[qualifiedName] = {
-          transport: "streamable_http",
-          url: serverConfig.url,
-          headers: {
-            ...(serverConfig.apiKey && { "Authorization": `Bearer ${serverConfig.apiKey}` }),
-            "Content-Type": "application/json"
-          },
-          // Pass config directly to MultiServerMCPClient
-          ...(serverConfig.config && Object.keys(serverConfig.config).length > 0 && {
-            config: serverConfig.config
-          })
-        };
-      }
+    // Check for expired sessions and refresh if needed
+    const validation = await mcpClientFactory.validateAndRefresh(userId, agentConfig);
+    if (validation.needsRefresh && validation.result) {
+      console.log(`MCP sessions were refreshed due to expired sessions: ${validation.expiredSessions.join(", ")}`);
+      const result = validation.result;
+      mcpFactoryCache.set(cacheKey, result);
+      return { client: result.client, tools: result.tools };
     }
 
-    if (Object.keys(mcpServers).length === 0) {
-      return { client: null, tools: [] };
-    }
-
-    // Create MultiServerMCPClient
-    console.log(`Creating MultiServerMCPClient with servers:`, Object.keys(mcpServers));
-    console.log(`MCP Server configs:`, mcpServers);
+    // Create new MCP clients
+    const result = await mcpClientFactory.createForAgent(userId, agentConfig);
+    mcpFactoryCache.set(cacheKey, result);
     
-    const client = new MultiServerMCPClient({
-      mcpServers,
-      useStandardContentBlocks: true,
-      throwOnLoadError: false, // Don't throw on individual tool load errors
-    });
-
-    // Get all tools from all servers
-    console.log(`Getting tools from MCP client...`);
-    const tools = await client.getTools();
-    console.log(`MCP client returned ${tools.length} tools`);
-    
-    const result = { client, tools };
-    mcpClientCache.set(cacheKey, result);
-    
-    console.log(`Loaded ${tools.length} tools from ${Object.keys(mcpServers).length} MCP servers`);
-    if (tools.length > 0) {
-      console.log(`Tool names: ${tools.map(t => t.name).join(", ")}`);
-      console.log(`Tool details:`, tools.map(t => ({
+    console.log(`Loaded ${result.tools.length} tools from ${result.serverCount} MCP servers`);
+    console.log(`OAuth sessions active: ${result.oauthSessions.size}`);
+    if (result.tools.length > 0) {
+      console.log(`Tool names: ${result.tools.map(t => t.name).join(", ")}`);
+      console.log(`Tool details:`, result.tools.map(t => ({
         name: t.name,
         description: t.description,
         schema: t.schema || 'No schema',
@@ -104,7 +71,7 @@ async function createMcpClientAndTools(userId: string, enabledServers: string[])
       })));
     }
     
-    return result;
+    return { client: result.client, tools: result.tools };
   } catch (error) {
     console.error("Error creating MCP client and tools:", error);
     console.error("Error details:", error instanceof Error ? error.message : String(error));
@@ -273,7 +240,11 @@ export async function retrieveKb(state: AgentState, config: RunnableConfig) {
     lastUserMsgContent = String(lastUserMsgContent);
   }
 
-  const supabase = await createClient();
+  // Use service role client for LangGraph Studio (no cookies needed)
+  const supabase = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
   const docs = await retrieveRelevantDocuments(
     lastUserMsgContent,
     supabase,
@@ -325,7 +296,9 @@ async function callModel(
   }
   
   const agentConfig = config.configurable as AgentConfiguration;
-  const userId = config.configurable.agentId as string;
+  // Use the actual user ID from metadata, fallback to agentId if not available
+  const userId = (config.metadata?.user_id as string) || (config.configurable.agentId as string);
+  console.log(`🔍 Agent execution - metadata user_id: ${config.metadata?.user_id}, agentId: ${config.configurable.agentId}, using userId: ${userId}`);
   const systemPrompt = agentConfig.prompt_template || DEFAULT_SYSTEM_PROMPT;
   const memoryEnabled = agentConfig.memory?.enabled ?? true;
   
@@ -355,12 +328,11 @@ async function callModel(
     }
   }
 
-  // Load MCP tools
-  const enabledServers = agentConfig.enabled_mcp_servers || [];
-  const { tools } = await createMcpClientAndTools(userId, enabledServers);
+  // Load MCP tools using the new factory
+  const { tools } = await createMcpClientAndTools(userId, agentConfig);
   
   console.log(`Agent ${userId}: Binding ${tools.length} tools to model`);
-  console.log(`Enabled servers: ${enabledServers.join(", ")}`);
+  console.log(`Enabled servers: ${agentConfig.enabled_mcp_servers?.join(", ") || "none"}`);
   
   // Create a model and give it access to the tools
   const baseModel = new ChatOpenAI({
@@ -415,32 +387,70 @@ function shouldContinue({ messages }: typeof MessagesAnnotation.State) {
 // Create a dynamic tool node that loads tools at runtime
 async function createToolNode(state: any, config: any): Promise<any> {
   const agentConfig = config.configurable as AgentConfiguration;
-  const userId = config.configurable.agentId as string;
+  // Use the same user ID logic as callModel to ensure consistent tool loading
+  const userId = (config.metadata?.user_id as string) || (config.configurable.agentId as string);
   const enabledServers = agentConfig.enabled_mcp_servers || [];
   
+  console.log(`🔍 Tool node execution - metadata user_id: ${config.metadata?.user_id}, agentId: ${config.configurable.agentId}, using userId: ${userId}`);
   console.log(`Tool node for agent ${userId}: Loading ${enabledServers.length} servers`);
   
   // Get the same tools that were used in callModel
-  const { tools } = await createMcpClientAndTools(userId, enabledServers);
+  const { tools } = await createMcpClientAndTools(userId, agentConfig);
   
-  console.log(`Tool node: Executing with ${tools.length} available tools`);
+  console.log(`Tool node for agent ${userId}: Executing with ${tools.length} available tools`);
+  console.log(`Enabled servers for tool node: ${enabledServers.join(", ")}`);
+  console.log(`OAuth sessions active: ${(agentConfig.mcp_oauth_sessions || []).length}`);
+  if (tools.length > 0) {
+    console.log(`Available tool names: ${tools.map(t => t.name).join(", ")}`);
+  }
   
   // Create a standard ToolNode with the loaded tools
   const toolNode = new ToolNode(tools);
   
   // Debug the incoming state for tool execution
   const lastMessage = state.messages?.[state.messages.length - 1];
-  console.log(`Tool node executing. Last message type: ${lastMessage?.constructor?.name}`);
-  console.log(`Last message tool_calls:`, lastMessage?.tool_calls?.map((tc: any) => tc.name) || []);
+  const toolCalls = lastMessage?.tool_calls || [];
+  console.log(`Tool node executing. Tool calls requested: ${toolCalls.length}`);
+  if (toolCalls.length > 0) {
+    console.log(`Requested tools:`, toolCalls.map((tc: any) => `${tc.name}(${Object.keys(tc.args || {}).join(", ")})`));
+  }
   
   // Invoke the tool node
   console.log(`About to invoke ToolNode with ${tools.length} tools...`);
-  const result = await toolNode.invoke(state, config);
+  let result = await toolNode.invoke(state, config);
+  
+  // Check for session expiration errors and retry once with fresh client
+  if (result.messages && result.messages.length > 0) {
+    const hasSessionError = result.messages.some((msg: any) => {
+      const content = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
+      return content.includes('Session not found') || 
+             content.includes('expired') || 
+             content.includes('Transport is closed');
+    });
+    
+    if (hasSessionError) {
+      console.log(`🔄 Session expired detected, refreshing MCP client and retrying...`);
+      
+      // Force refresh the MCP client
+      const { tools: freshTools } = await createMcpClientAndTools(userId, {
+        ...agentConfig,
+        force_mcp_refresh: true
+      });
+      
+      if (freshTools.length > 0) {
+        console.log(`✅ Refreshed MCP client with ${freshTools.length} tools, retrying tool calls...`);
+        const freshToolNode = new ToolNode(freshTools);
+        result = await freshToolNode.invoke(state, config);
+        console.log(`🔄 Retry completed with ${result.messages?.length || 0} result messages`);
+      }
+    }
+  }
   
   console.log(`ToolNode execution completed. Result messages: ${result.messages?.length || 0}`);
   if (result.messages && result.messages.length > 0) {
     result.messages.forEach((msg: any, i: number) => {
-      console.log(`Result message ${i}: ${msg.constructor.name}, content preview: ${typeof msg.content === 'string' ? msg.content.substring(0, 100) : JSON.stringify(msg.content).substring(0, 100)}...`);
+      const contentPreview = typeof msg.content === 'string' ? msg.content.substring(0, 200) : JSON.stringify(msg.content).substring(0, 200);
+      console.log(`Result message ${i}: ${msg.constructor.name}, content: ${contentPreview}...`);
     });
   }
   

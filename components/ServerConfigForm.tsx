@@ -27,6 +27,7 @@ interface ServerConfigFormProps {
   onSave?: (config: any) => void;
   onDelete?: () => void;
   className?: string;
+  serverDetails?: any; // Add server details to check if it's Smithery
 }
 
 export function ServerConfigForm({ 
@@ -34,16 +35,23 @@ export function ServerConfigForm({
   configSchema, 
   onSave, 
   onDelete,
-  className = "" 
+  className = "",
+  serverDetails
 }: ServerConfigFormProps) {
   const [config, setConfig] = useState<Record<string, any>>({});
   const [isEnabled, setIsEnabled] = useState(true);
   const [loading, setLoading] = useState(false);
   const [testing, setTesting] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [testResult, setTestResult] = useState<{ success: boolean; message: string; details?: any } | null>(null);
+  const [testResult, setTestResult] = useState<{ success: boolean; message?: string; error?: string; details?: any } | null>(null);
   const [saveResult, setSaveResult] = useState<{ success: boolean; message: string } | null>(null);
   const [hasExistingConfig, setHasExistingConfig] = useState(false);
+
+  // Check if this is a Smithery server
+  const isSmitheryServer = serverDetails?.deploymentUrl?.includes('server.smithery.ai') || 
+                          serverDetails?.connections?.some((conn: any) => 
+                            conn.deploymentUrl?.includes('server.smithery.ai')
+                          );
 
   // Parse the config schema to extract fields
   const configFields: ConfigField[] = [];
@@ -116,6 +124,7 @@ export function ServerConfigForm({
       });
 
       const result = await response.json();
+      console.log('Frontend received response:', { status: response.status, result });
       setTestResult(result);
     } catch (error) {
       setTestResult({
@@ -288,34 +297,70 @@ export function ServerConfigForm({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {configFields.length === 0 ? (
-          <Alert>
-            <AlertDescription>
-              This server doesn't require any configuration. You can test the connection directly.
-            </AlertDescription>
-          </Alert>
-        ) : (
+        {isSmitheryServer ? (
           <div className="space-y-4">
-            {configFields.map((field) => (
-              <div key={field.name} className="space-y-2">
-                <Label htmlFor={field.name} className="flex items-center gap-2">
-                  {field.name}
-                  {field.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
-                </Label>
-                {renderField(field)}
-                {field.description && (
-                  <p className="text-sm text-muted-foreground">{field.description}</p>
-                )}
-              </div>
-            ))}
+            <Alert>
+              <AlertDescription>
+                This server is hosted on Smithery. You need to set up a profile on Smithery to store your API keys securely.
+              </AlertDescription>
+            </Alert>
+            
+            <div className="space-y-2">
+              <Label htmlFor="smitheryProfileId" className="flex items-center gap-2">
+                Smithery Profile ID
+                <Badge variant="destructive" className="text-xs">Required</Badge>
+              </Label>
+              <Input
+                id="smitheryProfileId"
+                value={config.smitheryProfileId || ''}
+                onChange={(e) => handleFieldChange('smitheryProfileId', e.target.value)}
+                placeholder="e.g., eligible-bug-FblvFg"
+              />
+              <p className="text-sm text-muted-foreground">
+                Your Smithery profile ID. If you don't have one, 
+                <a 
+                  href="https://smithery.ai/profiles" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-500 hover:underline ml-1"
+                >
+                  create a profile on Smithery
+                </a> first.
+              </p>
+            </div>
           </div>
+        ) : (
+          <>
+            {configFields.length === 0 ? (
+              <Alert>
+                <AlertDescription>
+                  This server doesn't require any configuration. You can test the connection directly.
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <div className="space-y-4">
+                {configFields.map((field) => (
+                  <div key={field.name} className="space-y-2">
+                    <Label htmlFor={field.name} className="flex items-center gap-2">
+                      {field.name}
+                      {field.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
+                    </Label>
+                    {renderField(field)}
+                    {field.description && (
+                      <p className="text-sm text-muted-foreground">{field.description}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
         )}
 
         {/* Test Connection */}
         <div className="space-y-2">
           <Button
             onClick={handleTestConnection}
-            disabled={testing || (hasRequiredFields && !requiredFieldsFilled)}
+            disabled={testing || (isSmitheryServer ? !config.smitheryProfileId : (hasRequiredFields && !requiredFieldsFilled))}
             className="w-full"
             variant="outline"
           >
@@ -340,7 +385,9 @@ export function ServerConfigForm({
                 ) : (
                   <XCircle className="w-4 h-4 text-red-500" />
                 )}
-                <AlertDescription>{testResult.message}</AlertDescription>
+                <AlertDescription>
+                  {testResult.success ? testResult.message : (testResult.error || testResult.message || 'Test failed')}
+                </AlertDescription>
               </div>
             </Alert>
           )}
@@ -350,7 +397,7 @@ export function ServerConfigForm({
         <div className="flex gap-2">
           <Button
             onClick={handleSave}
-            disabled={saving || (hasRequiredFields && !requiredFieldsFilled)}
+            disabled={saving || (isSmitheryServer ? !config.smitheryProfileId : (hasRequiredFields && !requiredFieldsFilled))}
             className="flex-1"
           >
             {saving ? (

@@ -8,7 +8,11 @@ const isCacheValid = (timestamp: number): boolean => {
   return Date.now() - timestamp < CACHE_DURATION;
 };
 
-export async function GET(request: NextRequest, { params }: { params: { qualifiedName: string } }) {
+export async function GET(
+  request: NextRequest,
+  props: { params: Promise<{ qualifiedName: string }> }
+) {
+  const params = await props.params;
   const apiKey = process.env.SMITHERY_API_KEY;
   const { qualifiedName } = params;
 
@@ -42,7 +46,7 @@ export async function GET(request: NextRequest, { params }: { params: { qualifie
   }
 
   const data = await response.json();
-  
+
   // Cache the result
   serverCache.set(qualifiedName, {
     data: data,

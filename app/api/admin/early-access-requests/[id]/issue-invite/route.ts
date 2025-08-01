@@ -3,10 +3,8 @@ import { createClient } from "@/supabase/server";
 import crypto from "crypto";
 import { sendInviteEmail } from "@/lib/sendInviteEmail";
 
-export async function POST(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   // TODO: Implement robust admin authentication/authorization here
   // const { user } = await validateUser(request); // Hypothetical auth function
   // if (!user || user.role !== 'admin') {

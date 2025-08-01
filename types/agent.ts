@@ -10,6 +10,13 @@ export interface Agent {
   updated_at: string;
 }
 
+export interface MCPServerSession {
+  server_name: string;
+  session_id: string;
+  expires_at?: string;
+  auth_type: 'oauth' | 'api_key';
+}
+
 export interface AgentConfiguration {
   model: ModelType;
   temperature: number;
@@ -28,6 +35,10 @@ export interface AgentConfiguration {
   };
   // Array of qualified names from Smithery registry (e.g., "@tavily/tavily", "@supabase/supabase-mcp")
   enabled_mcp_servers: string[];
+  // OAuth sessions for MCP servers that require OAuth authentication
+  mcp_oauth_sessions?: MCPServerSession[];
+  // Force refresh MCP clients (useful for testing or token refresh)
+  force_mcp_refresh?: boolean;
   agentId?: string;
 }
 

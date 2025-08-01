@@ -3,10 +3,11 @@ import { createClient } from "@/supabase/server";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { qualifiedName: string } }
+  props: { params: Promise<{ qualifiedName: string }> }
 ) {
+  const params = await props.params;
   const { qualifiedName } = params;
-  
+
   try {
     const supabase = await createClient();
     
@@ -43,10 +44,11 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { qualifiedName: string } }
+  props: { params: Promise<{ qualifiedName: string }> }
 ) {
+  const params = await props.params;
   const { qualifiedName } = params;
-  
+
   try {
     const body = await request.json();
     const { config, isEnabled = true } = body;
@@ -93,10 +95,11 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { qualifiedName: string } }
+  props: { params: Promise<{ qualifiedName: string }> }
 ) {
+  const params = await props.params;
   const { qualifiedName } = params;
-  
+
   try {
     const supabase = await createClient();
     

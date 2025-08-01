@@ -3,10 +3,8 @@ import { createClient } from "@/supabase/server";
 import { Client } from "@langchain/langgraph-sdk";
 
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const { id } = params;
   const client = new Client({
     apiUrl: process.env.LANGGRAPH_URL,
@@ -73,10 +71,8 @@ export async function POST(
 
 // GET - List all threads for an agent
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const { id } = params;
   const client = new Client({
     apiUrl: process.env.LANGGRAPH_URL,

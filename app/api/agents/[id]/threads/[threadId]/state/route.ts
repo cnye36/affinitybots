@@ -5,8 +5,9 @@ import { Client } from "@langchain/langgraph-sdk";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string; threadId: string } }
+  props: { params: Promise<{ id: string; threadId: string }> }
 ) {
+  const params = await props.params;
   const { threadId } = params;
   const client = new Client({
     apiUrl: process.env.LANGGRAPH_URL,

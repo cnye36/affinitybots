@@ -2,10 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { store } from "@/lib/agent/reactAgent";
 import { createClient } from "@/supabase/client";
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     // Create a Supabase client
     const supabase = await createClient();

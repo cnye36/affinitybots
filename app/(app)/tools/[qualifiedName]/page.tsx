@@ -268,51 +268,13 @@ export default function ServerDetailPage() {
         </Card>
       )}
 
-      {/* Tools Section */}
-      {server.tools && server.tools.length > 0 && (
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="w-5 h-5" />
-              Available Tools ({server.tools.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {server.tools.map((tool, index) => (
-              <div key={index} className="border rounded-lg p-4">
-                <div className="flex items-start justify-between mb-2">
-                  <h3 className="font-semibold text-lg">{tool.name}</h3>
-                  <Badge variant="outline" className="text-xs">
-                    Tool
-                  </Badge>
-                </div>
-                {tool.description && (
-                  <p className="text-muted-foreground mb-3">
-                    {tool.description}
-                  </p>
-                )}
-                {tool.inputSchema && (
-                  <details className="mt-2">
-                    <summary className="cursor-pointer text-sm font-medium text-muted-foreground hover:text-foreground">
-                      View Input Schema
-                    </summary>
-                    <pre className="mt-2 p-3 bg-muted rounded text-xs overflow-x-auto">
-                      {JSON.stringify(tool.inputSchema, null, 2)}
-                    </pre>
-                  </details>
-                )}
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
-
       {/* Configuration Section */}
       {server.connections && server.connections.length > 0 && (
         <div className="mb-8">
           <ServerConfigForm
             qualifiedName={server.qualifiedName}
             configSchema={server.connections[0]?.configSchema}
+            serverDetails={server}
             onSave={() => {
               // Optionally refresh data or show success message
             }}
@@ -357,6 +319,45 @@ export default function ServerDetailPage() {
             </CardContent>
           </Card>
         </div>
+      )}
+      
+      {/* Tools Section */}
+      {server.tools && server.tools.length > 0 && (
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              Available Tools ({server.tools.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {server.tools.map((tool, index) => (
+              <div key={index} className="border rounded-lg p-4">
+                <div className="flex items-start justify-between mb-2">
+                  <h3 className="font-semibold text-lg">{tool.name}</h3>
+                  <Badge variant="outline" className="text-xs">
+                    Tool
+                  </Badge>
+                </div>
+                {tool.description && (
+                  <p className="text-muted-foreground mb-3">
+                    {tool.description}
+                  </p>
+                )}
+                {tool.inputSchema && (
+                  <details className="mt-2">
+                    <summary className="cursor-pointer text-sm font-medium text-muted-foreground hover:text-foreground">
+                      View Input Schema
+                    </summary>
+                    <pre className="mt-2 p-3 bg-muted rounded text-xs overflow-x-auto">
+                      {JSON.stringify(tool.inputSchema, null, 2)}
+                    </pre>
+                  </details>
+                )}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       )}
 
       {/* Action Buttons */}
