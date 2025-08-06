@@ -83,10 +83,10 @@ async function createMcpClientAndTools(userId: string, agentConfig: AgentConfigu
 async function writeMemory(state: AgentState, config: LangGraphRunnableConfig) {
   const configurable =
     (config.configurable as {
-      agentId?: string;
+      user_id?: string;
       memory?: { enabled: boolean };
     }) || {};
-  const userId = configurable.agentId; // Using agentId as userId for now
+  const userId = configurable.user_id; // Using user_id instead of agentId
   const memoryEnabled = configurable.memory?.enabled ?? true; // Default to enabled if not specified
 
   // Skip memory writing if memory is disabled or no userId
@@ -218,8 +218,16 @@ async function retrieveMemories(
 }
 
 export async function retrieveKb(state: AgentState, config: RunnableConfig) {
-  const configurable = (config.configurable as { agentId?: string; threadId?: string }) || {};
-  const { agentId, threadId } = configurable;
+  const configurable = (config.configurable as { 
+    user_id?: string; 
+    thread_id?: string;
+    assistant_id?: string; // Primary identifier for assistants
+    agent_id?: string; // Optional for backward compatibility
+  }) || {};
+  const { user_id, thread_id, assistant_id, agent_id } = configurable;
+  
+  // Use user_id as the primary identifier, fallback to assistant_id, then agent_id for backward compatibility
+  const effectiveAssistantId = user_id || assistant_id || agent_id;
 
   let lastUserMsgContent = state.messages.at(-1)?.content ?? "";
 
@@ -249,14 +257,14 @@ export async function retrieveKb(state: AgentState, config: RunnableConfig) {
   const allContent = await retrieveAllRelevantContent(
     lastUserMsgContent,
     supabase,
-    agentId,
-    threadId,
+    effectiveAssistantId,
+    thread_id,
     8 // topK
   );
 
   // Debug logging
   console.log(`[retrieveKb] Query: "${lastUserMsgContent}"`);
-  console.log(`[retrieveKb] AgentId: ${agentId}, ThreadId: ${threadId}`);
+  console.log(`[retrieveKb] UserId: ${user_id}, AssistantId: ${effectiveAssistantId}, ThreadId: ${thread_id}`);
   console.log(`[retrieveKb] Found ${allContent.knowledgebase.length} knowledgebase docs`);
   console.log(`[retrieveKb] Found ${allContent.threadAttachments.length} thread attachments`);
   if (allContent.threadAttachments.length > 0) {
@@ -341,16 +349,26 @@ async function callModel(
   if (!store) {
     throw new Error("store is required when compiling the graph");
   }
-  if (!config.configurable?.agentId) {
-    throw new Error("agentId is required in the config");
-  }
   
-  const agentConfig = config.configurable as AgentConfiguration;
-  // Use the actual user ID from metadata, fallback to agentId if not available
-  const userId = (config.metadata?.user_id as string) || (config.configurable.agentId as string);
-  console.log(`🔍 Agent execution - metadata user_id: ${config.metadata?.user_id}, agentId: ${config.configurable.agentId}, using userId: ${userId}`);
-  const systemPrompt = agentConfig.prompt_template || DEFAULT_SYSTEM_PROMPT;
-  const memoryEnabled = agentConfig.memory?.enabled ?? true;
+  // Get configuration from configurable object
+  const configurable = config.configurable as AgentConfiguration & {
+    user_id?: string;
+    thread_id?: string;
+    assistant_id?: string; // Primary identifier for assistants
+    agent_id?: string; // For backward compatibility
+  } || {};
+  
+  // Use metadata.user_id first, then configurable.user_id, then configurable.assistant_id as fallback
+  const userId = (config.metadata?.user_id as string) || 
+                 configurable.user_id || 
+                 configurable.assistant_id;
+  
+  const assistantId = configurable.assistant_id || configurable.agent_id; // Use assistant_id, fallback to agent_id
+  
+  console.log(`🔍 Assistant execution - metadata user_id: ${config.metadata?.user_id}, configurable user_id: ${configurable.user_id}, assistant_id: ${configurable.assistant_id}, agent_id: ${configurable.agent_id}, using userId: ${userId}, assistantId: ${assistantId}`);
+  
+  const systemPrompt = configurable.prompt_template || DEFAULT_SYSTEM_PROMPT;
+  const memoryEnabled = configurable.memory?.enabled ?? true;
   
   // Retrieve user memories
   const memories = await retrieveMemories(userId, memoryEnabled);
@@ -379,15 +397,15 @@ async function callModel(
   }
 
   // Load MCP tools using the new factory
-  const { tools } = await createMcpClientAndTools(userId, agentConfig);
+  const { tools } = await createMcpClientAndTools(userId || assistantId || "default", configurable);
   
-  console.log(`Agent ${userId}: Binding ${tools.length} tools to model`);
-  console.log(`Enabled servers: ${agentConfig.enabled_mcp_servers?.join(", ") || "none"}`);
+  console.log(`Assistant ${userId || assistantId}: Binding ${tools.length} tools to model`);
+  console.log(`Enabled servers: ${configurable.enabled_mcp_servers?.join(", ") || "none"}`);
   
   // Create a model and give it access to the tools
   const baseModel = new ChatOpenAI({
-    model: agentConfig.model || "gpt-4.1-mini",
-    temperature: agentConfig.temperature || 0.5,
+    model: configurable.model || "gpt-4.1-mini",
+    temperature: configurable.temperature || 0.5,
   });
   
   console.log(`Binding ${tools.length} tools to ${baseModel.modelName} model...`);
@@ -426,6 +444,7 @@ function shouldContinue({ messages }: typeof MessagesAnnotation.State) {
   console.log(`Tool calls found: ${lastMessage.tool_calls?.length || 0}`);
   
   // If the LLM makes a tool call, then we route to the "tools" node
+  // The interruptBefore: ["tools"] will automatically pause before tool execution
   if (lastMessage.tool_calls?.length) {
     console.log(`Routing to tools node. Tool calls:`, lastMessage.tool_calls.map(tc => tc.name));
     return "tools";
@@ -436,20 +455,29 @@ function shouldContinue({ messages }: typeof MessagesAnnotation.State) {
 
 // Create a dynamic tool node that loads tools at runtime
 async function createToolNode(state: any, config: any): Promise<any> {
-  const agentConfig = config.configurable as AgentConfiguration;
-  // Use the same user ID logic as callModel to ensure consistent tool loading
-  const userId = (config.metadata?.user_id as string) || (config.configurable.agentId as string);
-  const enabledServers = agentConfig.enabled_mcp_servers || [];
+  const configurable = config.configurable as AgentConfiguration & {
+    user_id?: string;
+    assistant_id?: string; // Primary identifier for assistants
+    agent_id?: string; // For backward compatibility
+  };
   
-  console.log(`🔍 Tool node execution - metadata user_id: ${config.metadata?.user_id}, agentId: ${config.configurable.agentId}, using userId: ${userId}`);
-  console.log(`Tool node for agent ${userId}: Loading ${enabledServers.length} servers`);
+  // Use the same user ID logic as callModel to ensure consistent tool loading
+  const userId = (config.metadata?.user_id as string) || 
+                 configurable.user_id || 
+                 configurable.assistant_id;
+  
+  const assistantId = configurable.assistant_id || configurable.agent_id; // Use assistant_id, fallback to agent_id
+  const enabledServers = configurable.enabled_mcp_servers || [];
+  
+  console.log(`🔍 Tool node execution - metadata user_id: ${config.metadata?.user_id}, configurable user_id: ${configurable.user_id}, assistant_id: ${configurable.assistant_id}, agent_id: ${configurable.agent_id}, using userId: ${userId}, assistantId: ${assistantId}`);
+  console.log(`Tool node for assistant ${userId || assistantId}: Loading ${enabledServers.length} servers`);
   
   // Get the same tools that were used in callModel
-  const { tools } = await createMcpClientAndTools(userId, agentConfig);
+  const { tools } = await createMcpClientAndTools(userId || assistantId || "default", configurable);
   
-  console.log(`Tool node for agent ${userId}: Executing with ${tools.length} available tools`);
+  console.log(`Tool node for assistant ${userId || assistantId}: Executing with ${tools.length} available tools`);
   console.log(`Enabled servers for tool node: ${enabledServers.join(", ")}`);
-  console.log(`OAuth sessions active: ${(agentConfig.mcp_oauth_sessions || []).length}`);
+  console.log(`OAuth sessions active: ${(configurable.mcp_oauth_sessions || []).length}`);
   if (tools.length > 0) {
     console.log(`Available tool names: ${tools.map(t => t.name).join(", ")}`);
   }
@@ -481,11 +509,11 @@ async function createToolNode(state: any, config: any): Promise<any> {
     if (hasSessionError) {
       console.log(`🔄 Session expired detected, refreshing MCP client and retrying...`);
       
-      // Force refresh the MCP client
-      const { tools: freshTools } = await createMcpClientAndTools(userId, {
-        ...agentConfig,
-        force_mcp_refresh: true
-      });
+              // Force refresh the MCP client
+        const { tools: freshTools } = await createMcpClientAndTools(userId || "default", {
+          ...configurable,
+          force_mcp_refresh: true
+        });
       
       if (freshTools.length > 0) {
         console.log(`✅ Refreshed MCP client with ${freshTools.length} tools, retrying tool calls...`);
@@ -551,4 +579,8 @@ const workflow = new StateGraph(MessagesAnnotation)
 // ✅ Efficient - One deployment, multiple use cases
 // ============================================================================
 
-export const graph = workflow.compile();
+export const graph = workflow.compile(
+  { 
+    store: new InMemoryStore(),
+  }
+);

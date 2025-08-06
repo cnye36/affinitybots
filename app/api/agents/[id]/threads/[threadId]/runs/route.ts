@@ -80,41 +80,41 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Validate agent ownership from the database
-    const { data: userAgent, error: userAgentError } = await supabase
-      .from("user_agents")
-      .select("agent_id")
+    // Validate assistant ownership from the database
+    const { data: userAssistant, error: userAssistantError } = await supabase
+      .from("user_assistants")
+      .select("assistant_id")
       .eq("user_id", user.id)
-      .eq("agent_id", id)
+      .eq("assistant_id", id)
       .single();
 
-    if (userAgentError || !userAgent) {
+    if (userAssistantError || !userAssistant) {
       return NextResponse.json(
-        { error: "Agent not found or access denied" },
+        { error: "Assistant not found or access denied" },
         { status: 404 }
       );
     }
 
-    // Get the thread to verify it belongs to this agent
+    // Get the thread to verify it belongs to this assistant
     const thread = await client.threads.get(threadId);
 
-    if (!thread || thread.metadata?.agent_id !== id) {
+    if (!thread || thread.metadata?.assistant_id !== id) {
       return NextResponse.json(
-        { error: "Thread not found or doesn't belong to this agent" },
+        { error: "Thread not found or doesn't belong to this assistant" },
         { status: 404 }
       );
     }
 
-    // Get agent configuration from the database
-    const { data: agent, error: agentError } = await supabase
-      .from("agent")
+    // Get assistant configuration from the database
+    const { data: assistant, error: assistantError } = await supabase
+      .from("assistant")
       .select("*")
-      .eq("id", id)
+      .eq("assistant_id", id)
       .single();
 
-    if (agentError || !agent) {
+    if (assistantError || !assistant) {
       return NextResponse.json(
-        { error: "Failed to fetch agent configuration" },
+        { error: "Failed to fetch assistant configuration" },
         { status: 500 }
       );
     }
@@ -140,12 +140,17 @@ export async function POST(
 
         const eventStream = client.runs.stream(threadId, graphId, {
           input: { messages: [{ role: "user", content }] },
+          metadata: {
+            user_id: user.id,
           config: {
             tags: ["chat"],
+            
+            },
             configurable: {
-              ...(agent.config || {}),
-              agentId: id,
-              threadId: threadId, // Pass threadId for attachment retrieval
+              ...(assistant.config || {}),
+              user_id: user.id,
+              assistant_id: id,
+              thread_id: threadId, // Pass threadId for attachment retrieval
             },
             recursion_limit: 100,
           },
@@ -153,9 +158,15 @@ export async function POST(
         });
 
         for await (const event of eventStream) {
+          console.log('Stream event:', JSON.stringify(event, null, 2));
+          
+          // Only send events that contain actual message content (not tool calls)
           if (
             Array.isArray(event.data) &&
-            event.data[0]?.content !== undefined
+            event.data[0]?.content !== undefined &&
+            event.data[0]?.content !== "" &&
+            !(event.data[0] as any)?.tool_calls?.length &&
+            !(event.data[0] as any)?.additional_kwargs?.tool_calls?.length
           ) {
             const chunk = `data: ${JSON.stringify(event.data)}\n\n`;
             await writer.write(encoder.encode(chunk));

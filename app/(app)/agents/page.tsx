@@ -4,36 +4,59 @@ import { useState, useEffect } from "react";
 import { AgentHeader } from "@/components/agents/AgentHeader";
 import { AgentCard } from "@/components/agents/AgentCard";
 import { EmptyAgents } from "@/components/agents/EmptyAgents";
-import { Agent } from "@/types/agent";
+import { Assistant } from "@/types/assistant";
 
 export default function AgentsPage() {
-  const [agents, setAgents] = useState<Agent[] | null>(null);
+  const [agents, setAgents] = useState<Assistant[] | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    const abortController = new AbortController();
+
     const fetchAgents = async () => {
       try {
-        const response = await fetch("/api/agents");
+        setIsLoading(true);
+        console.log("Fetching agents...");
+        const response = await fetch("/api/assistants", {
+          signal: abortController.signal,
+        });
+        
+        console.log("Response received:", response.status);
+        
         if (!response.ok) {
           throw new Error("Failed to fetch agents");
         }
+        
         const data = await response.json();
-        setAgents(data);
+        console.log("Agents data:", data);
+        setAgents(data.assistants || []);
       } catch (error) {
-        console.error("Error fetching agents:", error);
+        // Only log error if it's not an abort error
+        if (error instanceof Error && error.name !== 'AbortError') {
+          console.error("Error fetching agents:", error);
+        }
         setAgents([]); // Set empty array on error to show empty state
+      } finally {
+        setIsLoading(false);
       }
     };
 
     fetchAgents();
+
+    // Cleanup function to abort the request if component unmounts
+    return () => {
+      console.log("Aborting fetch request");
+      abortController.abort();
+    };
   }, []);
 
   const handleAgentDelete = (deletedAgentId: string) => {
     if (agents) {
-      setAgents(agents.filter((agent) => agent.id !== deletedAgentId));
+      setAgents(agents.filter((agent) => agent.assistant_id !== deletedAgentId));
     }
   };
 
-  if (!agents) {
+  if (isLoading || !agents) {
     return (
       <div className="container mx-auto px-4 py-8">
         <AgentHeader />
@@ -52,29 +75,29 @@ export default function AgentsPage() {
         <EmptyAgents />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {agents.map((agent) => {
+          {agents.map((assistant) => {
             // Transform tools array into required object format
             const toolsObj: Record<string, { isEnabled: boolean }> = {};
-            if (Array.isArray(agent.config?.tools)) {
-              agent.config.tools.forEach((tool) => {
+            if (Array.isArray(assistant.config?.configurable?.tools)) {
+              assistant.config.configurable.tools.forEach((tool: any) => {
                 toolsObj[tool] = { isEnabled: true };
               });
             }
 
             return (
               <AgentCard
-                key={agent.id}
+                key={assistant.assistant_id}
                 agent={{
-                  id: agent.id,
-                  name: agent.name,
-                  agent_avatar: agent.agent_avatar,
-                  description: agent.description,
+                  id: assistant.assistant_id,
+                  name: assistant.name,
+                  agent_avatar: assistant.metadata?.agent_avatar || "",
+                  description: assistant.metadata?.description || "",
                   config: {
-                    model: agent.config?.model,
-                    temperature: agent.config?.temperature,
+                    model: assistant.config?.configurable?.model || "gpt-4.1-mini",
+                    temperature: assistant.config?.configurable?.temperature || 0.5,
                     tools: toolsObj,
-                    memory: agent.config?.memory,
-                    knowledge_base: agent.config?.knowledge_base,
+                    memory: assistant.config?.configurable?.memory || { enabled: true },
+                    knowledge_base: assistant.config?.configurable?.knowledge_base || { isEnabled: false },
                   },
                 }}
                 onDelete={handleAgentDelete}

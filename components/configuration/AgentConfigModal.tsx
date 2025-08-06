@@ -38,7 +38,7 @@ export function AgentConfigModal({
   agent,
 }: AgentConfigModalProps) {
   const [config, setConfig] = useState({
-    agent_id: agent.id,
+    agent_id: agent.assistant_id,
     description: agent.description,
     agent_avatar: agent.agent_avatar,
     graph_id: agent.graph_id,
@@ -69,35 +69,7 @@ export function AgentConfigModal({
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
-  useEffect(() => {
-    setConfig({
-      agent_id: agent.id,
-      description: agent.description,
-      agent_avatar: agent.agent_avatar,
-      graph_id: agent.graph_id,
-      created_at: agent.created_at,
-      updated_at: agent.updated_at,
-      name: agent.name,
-      metadata: {
-        owner_id: String(agent.metadata.owner_id),
-      } as AgentMetadata,
-      config: {
-        model: (agent.config.model || "gpt-4o") as ModelType,
-        temperature: Number(agent.config.temperature || 0.7),
-        enabled_mcp_servers: agent.config.enabled_mcp_servers || [],
-        memory: {
-          enabled: Boolean(
-            (agent.config.memory as { enabled?: boolean })?.enabled ?? true
-          ),
-        },
-        prompt_template: String(agent.config.prompt_template || ""),
-        knowledge_base: agent.config.knowledge_base || {
-          isEnabled: false,
-          config: { sources: [] },
-        },
-      } as AgentConfiguration,
-    });
-  }, [agent]);
+
 
   const handleChange = (field: string, value: unknown) => {
     setConfig((prev) => ({
@@ -107,16 +79,22 @@ export function AgentConfigModal({
   };
 
   const handleConfigurableChange = (field: string, value: unknown) => {
-    setConfig((prev) => ({
-      ...prev,
-      config: {
-        ...prev.config,
-        [field]: value,
-      },
-    }));
+    console.log("handleConfigurableChange called with:", field, value);
+    setConfig((prev) => {
+      const newConfig = {
+        ...prev,
+        config: {
+          ...prev.config,
+          [field]: value,
+        },
+      };
+      console.log("New config state:", newConfig.config);
+      return newConfig;
+    });
   };
 
   const handleMCPServersChange = (servers: string[]) => {
+    console.log("🔧 MCP Servers changed:", servers);
     setConfig((prev) => ({
       ...prev,
       config: {
@@ -130,7 +108,13 @@ export function AgentConfigModal({
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/agents/${agent.id}`, {
+      console.log("💾 Saving agent configuration:", {
+        name: config.name,
+        enabled_mcp_servers: config.config.enabled_mcp_servers,
+        full_config: config.config
+      });
+      
+      const response = await fetch(`/api/assistants/${agent.assistant_id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -144,12 +128,16 @@ export function AgentConfigModal({
       });
 
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error("❌ Save failed:", response.status, errorText);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const updatedAgent = await response.json();
-      await mutate(`/api/agents/${agent.id}`, updatedAgent, false);
-      await mutate("/api/agents");
+      console.log("✅ Agent updated successfully:", updatedAgent);
+      
+      await mutate(`/api/assistants/${agent.assistant_id}`, updatedAgent, false);
+      await mutate("/api/assistants");
       onOpenChange(false);
       router.refresh();
     } catch (err) {
@@ -182,7 +170,7 @@ export function AgentConfigModal({
           <TabsContent value="general">
             <GeneralConfig
               config={{
-                id: agent.id,
+                id: agent.assistant_id,
                 name: agent.name,
                 description: agent.description,
                 metadata: agent.metadata,
@@ -196,7 +184,7 @@ export function AgentConfigModal({
 
           <TabsContent value="prompts">
             <PromptsConfig
-              config={agent.config}
+              config={config.config}
               onChange={handleConfigurableChange}
             />
           </TabsContent>
@@ -214,7 +202,7 @@ export function AgentConfigModal({
             <KnowledgeConfig
               config={config.config}
               onChange={handleConfigurableChange}
-              agent_id={agent.id}
+              agent_id={agent.assistant_id}
             />
           </TabsContent>
 
@@ -222,7 +210,7 @@ export function AgentConfigModal({
             <MemoryConfig
               config={config.config}
               onChange={handleConfigurableChange}
-              agentId={agent.id}
+              agentId={agent.assistant_id}
             />
           </TabsContent>
         </Tabs>

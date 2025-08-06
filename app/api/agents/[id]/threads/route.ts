@@ -20,42 +20,42 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Validate agent ownership from the database
-    const { data: userAgent, error: userAgentError } = await supabase
-      .from("user_agents")
-      .select("agent_id")
+    // Validate assistant ownership from the database
+    const { data: userAssistant, error: userAssistantError } = await supabase
+      .from("user_assistants")
+      .select("assistant_id")
       .eq("user_id", user.id)
-      .eq("agent_id", id)
+      .eq("assistant_id", id)
       .single();
 
-    if (userAgentError || !userAgent) {
+    if (userAssistantError || !userAssistant) {
       return NextResponse.json(
-        { error: "Agent not found or access denied" },
+        { error: "Assistant not found or access denied" },
         { status: 404 }
       );
     }
 
-    // Get the agent configuration from the database
-    const { data: agent, error: agentError } = await supabase
-      .from("agent")
+    // Get the assistant configuration from the database
+    const { data: assistant, error: assistantError } = await supabase
+      .from("assistant")
       .select("*")
-      .eq("id", id)
+      .eq("assistant_id", id)
       .single();
 
-    if (agentError || !agent) {
+    if (assistantError || !assistant) {
       return NextResponse.json(
-        { error: "Failed to fetch agent configuration" },
+        { error: "Failed to fetch assistant configuration" },
         { status: 500 }
       );
     }
 
-    // Create a thread using LangGraph API with agent data
+    // Create a thread using LangGraph API with assistant data
     const thread = await client.threads.create({
       metadata: {
         user_id: user.id,
-        agent_id: id,
-        agent_name: agent.name,
-        agent_config: JSON.stringify(agent.config),
+        assistant_id: id,
+        assistant_name: assistant.name,
+        assistant_config: JSON.stringify(assistant.config),
       },
     });
 

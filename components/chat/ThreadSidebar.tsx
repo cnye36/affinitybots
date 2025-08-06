@@ -22,19 +22,10 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-
-interface Thread {
-  thread_id: string;
-  created_at: string;
-  metadata: {
-    user_id: string;
-    agent_id: string;
-    title?: string;
-  };
-}
+import { Thread } from "@langchain/langgraph-sdk";
 
 interface ThreadSidebarProps {
-  agentId: string;
+  assistantId: string;
   currentThreadId?: string;
   onThreadSelect: (threadId: string) => void;
   onNewThread: () => void;
@@ -46,7 +37,7 @@ export interface ThreadSidebarRef {
 }
 
 const ThreadSidebar = forwardRef<ThreadSidebarRef, ThreadSidebarProps>(({
-  agentId,
+  assistantId,
   currentThreadId,
   onThreadSelect,
   onNewThread,
@@ -54,6 +45,7 @@ const ThreadSidebar = forwardRef<ThreadSidebarRef, ThreadSidebarProps>(({
 }, ref) => {
   const [threads, setThreads] = useState<Thread[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [isRenaming, setIsRenaming] = useState(false);
   const [threadToRename, setThreadToRename] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState("");
@@ -61,24 +53,31 @@ const ThreadSidebar = forwardRef<ThreadSidebarRef, ThreadSidebarProps>(({
   const fetchThreads = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/agents/${agentId}/threads`);
-      if (!response.ok) throw new Error("Failed to fetch threads");
+      const response = await fetch(`/api/assistants/${assistantId}/threads`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Thread fetch failed:", response.status, errorText);
+        throw new Error(`Failed to fetch threads: ${response.status}`);
+      }
       const data = await response.json();
       const validThreads = Array.isArray(data.threads)
         ? data.threads.filter(
             (thread: Thread) =>
               thread &&
               thread.thread_id &&
-              thread.metadata?.agent_id === agentId
+              thread.metadata?.assistant_id === assistantId
           )
         : [];
       setThreads(validThreads);
     } catch (error) {
       console.error("Error fetching threads:", error);
+      setError(error instanceof Error ? error.message : "Failed to fetch threads");
+      // Keep existing threads if available, don't clear them on error
+      // This prevents the UI from showing "No chats yet" when there's a network error
     } finally {
       setIsLoading(false);
     }
-  }, [agentId]);
+  }, [assistantId]);
 
   // Expose the refresh method to parent component
   useImperativeHandle(ref, () => ({
@@ -121,7 +120,7 @@ const ThreadSidebar = forwardRef<ThreadSidebarRef, ThreadSidebarProps>(({
   const handleRename = async (threadId: string) => {
     const thread = threads.find((t) => t.thread_id === threadId);
     setThreadToRename(threadId);
-    setNewTitle(thread?.metadata?.title || "");
+    setNewTitle(thread?.metadata?.title as string || "");
     setIsRenaming(true);
   };
 
@@ -130,7 +129,7 @@ const ThreadSidebar = forwardRef<ThreadSidebarRef, ThreadSidebarProps>(({
 
     try {
       const response = await fetch(
-        `/api/agents/${agentId}/threads/${threadToRename}/rename`,
+        `/api/assistants/${assistantId}/threads/${threadToRename}/rename`,
         {
           method: "PUT",
           headers: {
@@ -169,7 +168,7 @@ const ThreadSidebar = forwardRef<ThreadSidebarRef, ThreadSidebarProps>(({
 
     try {
       const response = await fetch(
-        `/api/agents/${agentId}/threads/${threadId}`,
+        `/api/assistants/${assistantId}/threads/${threadId}`,
         {
           method: "DELETE",
         }
@@ -206,6 +205,24 @@ const ThreadSidebar = forwardRef<ThreadSidebarRef, ThreadSidebarProps>(({
             <Loader2 className="h-4 w-4 animate-spin mr-2" />
             <span>Loading chats...</span>
           </div>
+        ) : error ? (
+          <div className="text-center py-6 px-2">
+            <MessageSquare className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
+            <p className="text-muted-foreground text-sm">Connection error</p>
+            <p className="text-xs text-muted-foreground/70 mb-2">
+              {error}
+            </p>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => {
+                setError(null);
+                fetchThreads();
+              }}
+            >
+              Retry
+            </Button>
+          </div>
         ) : threads.length === 0 ? (
           <div className="text-center py-6 px-2">
             <MessageSquare className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
@@ -232,7 +249,7 @@ const ThreadSidebar = forwardRef<ThreadSidebarRef, ThreadSidebarProps>(({
                   <div className="flex items-center gap-1.5 min-w-0">
                     <MessageSquare className="h-3.5 w-3.5 flex-shrink-0" />
                     <span className="truncate text-sm">
-                      {thread.metadata?.title ||
+                      {(thread.metadata?.title as string) ||
                         `Chat ${formatDate(thread.created_at)}`}
                     </span>
                   </div>

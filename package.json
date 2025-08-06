@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --turbopack",
+    "dev:monitor": "./scripts/dev-monitor.sh",
     "build": "next build --no-lint",
     "start": "next start",
     "lint": "next lint",
@@ -20,7 +21,7 @@
     "@edge-runtime/cookies": "^6.0.0",
     "@langchain/community": "^0.3.48",
     "@langchain/core": "^0.3.62",
-    "@langchain/langgraph": "^0.3.6",
+    "@langchain/langgraph": "^0.4.2",
     "@langchain/langgraph-checkpoint": "^0.0.18",
     "@langchain/langgraph-sdk": "^0.0.89",
     "@langchain/mcp-adapters": "^0.5.3",

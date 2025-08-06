@@ -14,6 +14,13 @@ const DEFAULT_CONFIG: ImageGenerationConfig = {
   bucketName: "agent-avatars",
 };
 
+// Helper function to create a timeout promise
+function createTimeoutPromise(timeoutMs: number): Promise<never> {
+  return new Promise((_, reject) => {
+    setTimeout(() => reject(new Error(`Operation timed out after ${timeoutMs}ms`)), timeoutMs);
+  });
+}
+
 async function uploadImageToSupabase(
   imageUrl: string,
   fileName: string,
@@ -38,14 +45,19 @@ async function uploadImageToSupabase(
     const user = data.user;
     console.log(`Authenticated as user: ${user.id.substring(0, 8)}...`);
 
-    // Fetch the image from the URL
-    const response = await fetch(imageUrl);
+    // Fetch the image from the URL with timeout
+    const response = await Promise.race([
+      fetch(imageUrl),
+      createTimeoutPromise(30000) // 30 second timeout
+    ]);
+    
     if (!response.ok) {
       console.error(
         `Failed to fetch image: ${response.status} ${response.statusText}`
       );
       throw new Error("Failed to fetch image");
     }
+    
     const imageBlob = await response.blob();
     console.log(`Image fetched successfully: ${imageBlob.size} bytes`);
 
@@ -94,14 +106,19 @@ async function uploadWithoutUser(
     // Use a default folder for images without a user
     const defaultPath = `public/${fileName}.png`;
 
-    // Fetch the image from the URL
-    const response = await fetch(imageUrl);
+    // Fetch the image from the URL with timeout
+    const response = await Promise.race([
+      fetch(imageUrl),
+      createTimeoutPromise(30000) // 30 second timeout
+    ]);
+    
     if (!response.ok) {
       console.error(
         `Failed to fetch image from URL: ${response.status} ${response.statusText}`
       );
       throw new Error("Failed to fetch image");
     }
+    
     const imageBlob = await response.blob();
     console.log(`Successfully fetched image: ${imageBlob.size} bytes`);
 
@@ -174,24 +191,27 @@ export async function generateImage(
       `Generating image with DALL-E 3: ${prompt.substring(0, 50)}...`
     );
 
-    // Make a direct call to OpenAI's image generation API
-    const response = await fetch(
-      "https://api.openai.com/v1/images/generations",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: "dall-e-3",
-          prompt,
-          n: 1,
-          size: `${finalConfig.width}x${finalConfig.height}`,
-          response_format: "url",
-        }),
-      }
-    );
+    // Make a direct call to OpenAI's image generation API with timeout
+    const response = await Promise.race([
+      fetch(
+        "https://api.openai.com/v1/images/generations",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: "dall-e-3",
+            prompt,
+            n: 1,
+            size: `${finalConfig.width}x${finalConfig.height}`,
+            response_format: "url",
+          }),
+        }
+      ),
+      createTimeoutPromise(60000) // 60 second timeout
+    ]);
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -215,12 +235,15 @@ export async function generateImage(
       `Successfully retrieved image URL: ${imageUrl.substring(0, 50)}...`
     );
 
-    // Upload to Supabase and get public URL
-    const publicUrl = await uploadImageToSupabaseWithRetry(
-      imageUrl,
-      fileName,
-      finalConfig.bucketName!
-    );
+    // Upload to Supabase and get public URL with timeout
+    const publicUrl = await Promise.race([
+      uploadImageToSupabaseWithRetry(
+        imageUrl,
+        fileName,
+        finalConfig.bucketName!
+      ),
+      createTimeoutPromise(45000) // 45 second timeout for upload
+    ]);
 
     console.log(
       `Successfully uploaded image to Supabase: ${publicUrl.substring(
@@ -242,8 +265,13 @@ export async function generateAgentAvatar(
   // Create a unique filename using name and type
   const fileName = `${name.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`;
 
-  return generateImage(
-    `A professional, stylized avatar icon for a ${agentType} named ${name}. Create a minimalist design with soft, adaptive gradients that transition beautifully between light and dark themes. Use clean geometric shapes and a color palette that reflects the agent's purpose, with subtle depth and a modern, elegant aesthetic. The icon should be simple yet distinctive, capturing the essence of ${name}'s role as a ${agentType}.`,
-    fileName
-  );
+  try {
+    return await generateImage(
+      `A professional, stylized avatar icon for a ${agentType} named ${name}. Create a minimalist design with soft, adaptive gradients that transition beautifully between light and dark themes. Use clean geometric shapes and a color palette that reflects the agent's purpose, with subtle depth and a modern, elegant aesthetic. The icon should be simple yet distinctive, capturing the essence of ${name}'s role as a ${agentType}.`,
+      fileName
+    );
+  } catch (error) {
+    console.error("Error generating agent avatar:", error);
+    return "/images/default-avatar.png";
+  }
 }

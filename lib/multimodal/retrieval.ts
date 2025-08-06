@@ -44,14 +44,21 @@ export class MultimodalRetrieval {
    */
   async retrieveRelevantContent(context: RetrievalContext): Promise<MultimodalContent[]> {
     try {
-      const supabase = await createClient();
+      let supabase;
+      try {
+        supabase = await createClient();
+      } catch (error) {
+        console.warn('Could not create Supabase client for multimodal retrieval:', error);
+        return [];
+      }
+      
       const results: MultimodalContent[] = [];
 
       // Generate embedding for the query
       const queryEmbedding = await this.embeddings.embedQuery(context.query);
       
       // Search in document vectors (only include attachment-related vectors)
-      if (context.includeDocuments !== false) {
+      if (context.includeDocuments !== false && supabase) {
         const vectorResults = await this.searchDocumentVectors(
           supabase,
           queryEmbedding,
@@ -61,7 +68,7 @@ export class MultimodalRetrieval {
       }
 
       // Search in attachment metadata (for files without text content)
-      if (context.includeAttachments !== false) {
+      if (context.includeAttachments !== false && supabase) {
         const attachmentResults = await this.searchAttachmentMetadata(
           supabase,
           context

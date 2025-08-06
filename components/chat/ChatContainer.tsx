@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { AgentState } from "@/types/langgraph";
 import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
 import ThreadSidebar, { ThreadSidebarRef } from "./ThreadSidebar";
@@ -9,386 +8,248 @@ import { HumanMessage, AIMessage } from "@langchain/core/messages";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Agent } from "@/types/agent";
+import { Assistant } from "@/types/assistant";
 import { createClient } from "@/supabase/client";
+import ToolCallApproval from "./ToolCallApproval";
+import { useStream } from "@langchain/langgraph-sdk/react";
+import type { Message } from "@langchain/langgraph-sdk";
 
 interface ChatContainerProps {
-  agent: Agent;
+  assistant: Assistant;
   threadId?: string;
 }
 
 export default function ChatContainer({
-  agent,
-  threadId: initialThreadId,
+  assistant,
+  threadId: propThreadId,
 }: ChatContainerProps) {
-  const [messages, setMessages] = useState<AgentState["messages"]>([]);
-  const [currentThreadId, setCurrentThreadId] = useState<string | undefined>(
-    initialThreadId
-  );
-  const [isLoading, setIsLoading] = useState(false);
-  const [hasAssistantMessage, setHasAssistantMessage] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [userAvatar, setUserAvatar] = useState<string | undefined>(undefined);
-  const [userInitials, setUserInitials] = useState<string>("U");
-  const threadSidebarRef = useRef<ThreadSidebarRef>(null);
+  const [currentThreadId, setCurrentThreadId] = useState<string | undefined>(propThreadId);
+  const [userAvatar, setUserAvatar] = useState<string | null>(null);
+  const [userInitials, setUserInitials] = useState("U");
+  const [pendingToolCalls, setPendingToolCalls] = useState<any[]>([]);
+  const [isWaitingForApproval, setIsWaitingForApproval] = useState(false);
+  const sidebarRef = useRef<ThreadSidebarRef>(null);
 
-  // Initialize chat if no thread exists
+  // Simple useStream hook following the official pattern
+  const thread = useStream<{ messages: Message[] }>({
+    apiUrl: process.env.NEXT_PUBLIC_LANGGRAPH_URL || process.env.LANGGRAPH_URL,
+    apiKey: process.env.NEXT_PUBLIC_LANGSMITH_API_KEY || process.env.LANGSMITH_API_KEY,
+    assistantId: assistant.assistant_id,
+    messagesKey: "messages",
+    threadId: currentThreadId,
+  });
+
+  // Debug what we're getting from the stream
   useEffect(() => {
-    if (!currentThreadId) {
-      setMessages([]);
+    console.log("Thread state:", {
+      messages: thread.messages,
+      isLoading: thread.isLoading,
+      error: thread.error,
+      threadId: currentThreadId,
+    });
+  }, [thread.messages, thread.isLoading, thread.error, currentThreadId]);
+
+  // Convert LangGraph messages to LangChain format for display
+  const displayMessages = thread.messages.map((msg: Message, index: number) => {
+    if (msg.type === "human") {
+      return new HumanMessage(msg.content as string);
+    } else if (msg.type === "ai") {
+      return new AIMessage(msg.content as string);
     }
-    setHasAssistantMessage(false);
-  }, [currentThreadId]);
+    return new AIMessage(msg.content as string); // fallback
+  });
 
-  // Fetch thread state when switching threads
+  // Fetch user data
   useEffect(() => {
-    const fetchThreadState = async () => {
-      if (!currentThreadId) {
-        setMessages([]);
-        return;
-      }
-
-      try {
-        const response = await fetch(
-          `/api/agents/${agent.id}/threads/${currentThreadId}/state`
+    const fetchUserData = async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        setUserAvatar(user.user_metadata?.avatar_url || null);
+        setUserInitials(
+          user.user_metadata?.full_name 
+            ? user.user_metadata.full_name.substring(0, 2).toUpperCase()
+            : user.email?.substring(0, 2).toUpperCase() || "U"
         );
-        if (!response.ok) throw new Error("Failed to get thread state");
-
-        const data = await response.json();
-        if (data.values?.messages) {
-          setMessages(
-            data.values.messages.map((msg: { type: string; content: string }) =>
-              msg.type === "human"
-                ? new HumanMessage(msg.content)
-                : new AIMessage(msg.content)
-            )
-          );
-        }
-      } catch (error) {
-        console.error("Error fetching thread state:", error);
-        setMessages([]);
       }
     };
 
-    fetchThreadState();
-  }, [currentThreadId, agent.id]);
-
-  // Fetch user profile for avatar/initials
-  useEffect(() => {
-    async function loadUserProfile() {
-      try {
-        const supabase = createClient();
-        const {
-          data: { user: authUser },
-        } = await supabase.auth.getUser();
-        if (authUser) {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("name, email, avatar_url")
-            .eq("id", authUser.id)
-            .single();
-          const authMetadata = authUser.user_metadata || {};
-          const name =
-            profile?.name ||
-            authMetadata.full_name ||
-            authMetadata.name ||
-            authUser.email?.split("@")[0] ||
-            "User";
-          setUserInitials(name.substring(0, 2).toUpperCase());
-          setUserAvatar(
-            profile?.avatar_url ||
-              authMetadata.avatar_url ||
-              authMetadata.picture
-          );
-        }
-      } catch (err) {
-        // fallback to default
-        setUserInitials("U");
-        setUserAvatar(undefined);
-      }
-    }
-    loadUserProfile();
+    fetchUserData();
   }, []);
 
-  const handleThreadSelect = (threadId: string) => {
-    if (threadId !== currentThreadId) {
-      setCurrentThreadId(threadId);
+  // Update thread ID when prop changes
+  useEffect(() => {
+    if (propThreadId !== currentThreadId) {
+      setCurrentThreadId(propThreadId);
     }
-  };
-
-  const handleNewThread = async () => {
-    try {
-      const response = await fetch(`/api/agents/${agent.id}/threads`, {
-        method: "POST",
-      });
-      if (!response.ok) throw new Error("Failed to create thread");
-      const data = await response.json();
-      setCurrentThreadId(data.thread_id);
-      setMessages([]);
-
-      // Generate title immediately after creating a new thread
-      try {
-        const titleResponse = await fetch(
-          `/api/agents/${agent.id}/threads/${data.thread_id}/rename`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              conversation: `New Chat`,
-            }),
-          }
-        );
-        if (!titleResponse.ok) {
-          console.error("Failed to generate title");
-        }
-        // Refresh sidebar to show the new thread with title
-        threadSidebarRef.current?.refreshThreads();
-      } catch (error) {
-        console.error("Error generating title:", error);
-      }
-    } catch (error) {
-      console.error("Error creating new thread:", error);
-    }
-  };
+  }, [propThreadId, currentThreadId]);
 
   const sendChatMessage = async (content: string) => {
-    setIsLoading(true);
-    setHasAssistantMessage(false);
-    let threadId = currentThreadId;
     try {
-      if (!threadId) {
-        const response = await fetch(`/api/agents/${agent.id}/threads`, {
-          method: "POST",
-        });
-        if (!response.ok) throw new Error("Failed to create thread");
-        const data = await response.json();
-        threadId = data.thread_id;
-        setCurrentThreadId(threadId);
-
-        // Generate title immediately after creating a new thread
-        try {
-          const titleResponse = await fetch(
-            `/api/agents/${agent.id}/threads/${threadId}/rename`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({ conversation: `User: ${content}` }),
-            }
-          );
-          if (!titleResponse.ok) {
-            console.error("Failed to generate title");
-          }
-          // Refresh sidebar to show the new thread with title
-          threadSidebarRef.current?.refreshThreads();
-        } catch (error) {
-          console.error("Error generating title:", error);
-        }
-      } else if (messages.length === 0) {
-        // If this is the first message in an existing thread, also generate title
-        try {
-          const titleResponse = await fetch(
-            `/api/agents/${agent.id}/threads/${threadId}/rename`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({ conversation: `User: ${content}` }),
-            }
-          );
-          if (!titleResponse.ok) {
-            console.error("Failed to generate title");
-          }
-          // Refresh sidebar to show the updated title
-          threadSidebarRef.current?.refreshThreads();
-        } catch (error) {
-          console.error("Error generating title:", error);
-        }
-      }
-      // Optimistically add user message
-      const userMessage = new HumanMessage(content);
-      setMessages((prev) => [...prev, userMessage]);
-      // Show 'Thinking...' indicator
-      setIsLoading(true);
-      // Stream the response
-      const response = await fetch(
-        `/api/agents/${agent.id}/threads/${threadId}/runs`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content }),
-        }
-      );
-      if (!response.ok || !response.body) {
-        throw new Error("No response stream received");
-      }
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let fullResponse = "";
-      let agentMessageAdded = false;
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        const chunk = decoder.decode(value);
-        const lines = chunk.split("\n").filter(Boolean);
-        for (const line of lines) {
-          try {
-            if (line.startsWith("data: ")) {
-              const jsonString = line.slice(6).trim();
-              
-              // Skip empty data lines
-              if (!jsonString) continue;
-              
-              const jsonData = JSON.parse(jsonString);
-              
-              // Handle different event formats
-              if (Array.isArray(jsonData)) {
-                // Handle array format (normal messages)
-                if (jsonData.length > 0) {
-                  const messageData = jsonData[0];
-                  
-                  // Check for error events
-                  if (messageData?.event === "error") {
-                    console.error("Stream error:", messageData.data);
-                    continue;
-                  }
-                  
-                  // Check for message content
-                  if (
-                    typeof messageData?.content === "string" &&
-                    messageData.content.trim() !== ""
-                  ) {
-                    fullResponse = messageData.content;
-                    setHasAssistantMessage(true);
-                    setMessages((prev) => {
-                      // Only add the agent message once, or update it if already present
-                      const newMessages = [...prev];
-                      if (
-                        agentMessageAdded &&
-                        newMessages[newMessages.length - 1] instanceof AIMessage
-                      ) {
-                        newMessages[newMessages.length - 1] = new AIMessage(
-                          messageData.content
-                        );
-                      } else {
-                        newMessages.push(new AIMessage(messageData.content));
-                        agentMessageAdded = true;
-                      }
-                      return newMessages;
-                    });
-                  }
-                }
-              } else if (
-                typeof jsonData?.content === "string" &&
-                jsonData.content.trim() !== ""
-              ) {
-                // Handle direct object format (fallback)
-                fullResponse = jsonData.content;
-                setHasAssistantMessage(true);
-                setMessages((prev) => {
-                  const newMessages = [...prev];
-                  if (
-                    agentMessageAdded &&
-                    newMessages[newMessages.length - 1] instanceof AIMessage
-                  ) {
-                    newMessages[newMessages.length - 1] = new AIMessage(
-                      jsonData.content
-                    );
-                  } else {
-                    newMessages.push(new AIMessage(jsonData.content));
-                    agentMessageAdded = true;
-                  }
-                  return newMessages;
-                });
-              }
-            }
-          } catch (e) {
-            // Only log if it's not an empty line or common non-JSON line
-            if (line.trim() && !line.match(/^(event:|id:|retry:)/)) {
-              console.warn("Skipping unparseable chunk:", { error: e, line });
-            }
-          }
-        }
-      }
-      // We no longer need to generate a title here as we do it immediately after thread creation
+      console.log("Sending message:", content);
+      
+      // Submit message using the simple thread.submit pattern
+      thread.submit({ 
+        messages: [{ type: "human", content }] 
+      });
+      
+      // If we don't have a thread ID yet, the hook will create one automatically
+      // We need to watch for when the threadId becomes available
+      
     } catch (error) {
       console.error("Error sending message:", error);
-      setMessages((prev) => [
-        ...prev,
-        new AIMessage(
-          "I apologize, but I encountered an error. Please try again."
-        ),
-      ]);
-    } finally {
-      setIsLoading(false);
     }
+  };
+
+  // Note: The useStream hook doesn't expose threadId directly
+  // We'll manage thread creation differently
+  // For now, we'll rely on the currentThreadId state management
+
+  const handleNewThread = () => {
+    setCurrentThreadId(undefined);
+    setIsWaitingForApproval(false);
+    setPendingToolCalls([]);
+  };
+
+  const handleThreadSelect = (threadId: string) => {
+    setCurrentThreadId(threadId);
+    setIsWaitingForApproval(false);
+    setPendingToolCalls([]);
+  };
+
+  const handleApproveToolCall = async (toolCallId: string) => {
+    // Tool call approval logic would go here
+    setIsWaitingForApproval(false);
+    setPendingToolCalls([]);
+  };
+
+  const handleDenyToolCall = async (toolCallId: string) => {
+    // Tool call denial logic would go here  
+    setIsWaitingForApproval(false);
+    setPendingToolCalls([]);
   };
 
   return (
-    <div className="flex h-[calc(100vh-5rem)] mx-2 mb-2 rounded-lg border bg-background shadow-sm relative">
-      {/* Mobile Sidebar Toggle */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="absolute top-2 left-2 md:hidden z-50"
-        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-      >
-        {isSidebarOpen ? (
-          <X className="h-5 w-5" />
-        ) : (
-          <Menu className="h-5 w-5" />
-        )}
-      </Button>
-
+    <div className="flex h-full bg-background">
       {/* Sidebar */}
       <div
         className={cn(
-          "fixed md:relative inset-y-0 left-0 z-40 w-80 transform transition-transform duration-200 ease-in-out bg-background md:transform-none",
-          isSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+          "border-r transition-all duration-300 flex-shrink-0",
+          isSidebarOpen ? "w-64 sm:w-80" : "w-0",
+          "lg:w-64 lg:block"
         )}
       >
-        <ThreadSidebar
-          ref={threadSidebarRef}
-          agentId={agent.id}
-          currentThreadId={currentThreadId}
-          onThreadSelect={(threadId) => {
-            handleThreadSelect(threadId);
-            setIsSidebarOpen(false);
-          }}
-          onNewThread={() => {
-            handleNewThread();
-            setIsSidebarOpen(false);
-          }}
-        />
+        <div
+          className={cn(
+            "h-full",
+            isSidebarOpen ? "block" : "hidden lg:block"
+          )}
+        >
+          <ThreadSidebar
+            ref={sidebarRef}
+            assistantId={assistant.assistant_id}
+            currentThreadId={currentThreadId}
+            onThreadSelect={handleThreadSelect}
+            onNewThread={handleNewThread}
+          />
+        </div>
+      </div>
+
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header */}
+        <div className="border-b p-4 flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="lg:hidden"
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          >
+            {isSidebarOpen ? (
+              <X className="h-5 w-5" />
+            ) : (
+              <Menu className="h-5 w-5" />
+            )}
+          </Button>
+          
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-medium">
+              {assistant.metadata.agent_avatar ? (
+                <img
+                  src={assistant.metadata.agent_avatar}
+                  alt={assistant.name}
+                  className="w-8 h-8 rounded-full"
+                />
+              ) : (
+                assistant.name ? assistant.name.substring(0, 2).toUpperCase() : "A"
+              )}
+            </div>
+            <div>
+              <h2 className="font-semibold">{assistant.name}</h2>
+              <p className="text-sm text-muted-foreground">
+                {assistant.metadata.description || "AI Assistant"}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Messages */}
+        <div className="flex-1 overflow-hidden">
+          <MessageList
+            messages={displayMessages}
+            agentAvatar={assistant.metadata.agent_avatar}
+            agentInitials={
+              assistant.name ? assistant.name.substring(0, 2).toUpperCase() : "A"
+            }
+            userAvatar={userAvatar || undefined}
+            userInitials={userInitials}
+            isThinking={thread.isLoading}
+            threadId={currentThreadId}
+          />
+        </div>
+
+        {/* Tool Call Approval */}
+        {isWaitingForApproval && pendingToolCalls.length > 0 && (
+          <ToolCallApproval
+            toolCalls={pendingToolCalls}
+            onApprove={handleApproveToolCall}
+            onDeny={handleDenyToolCall}
+            onApproveAll={() => {}}
+            onDenyAll={() => {}}
+          />
+        )}
+
+        {/* Input */}
+        <div className="border-t p-4">
+          <MessageInput
+            onSend={sendChatMessage}
+            disabled={thread.isLoading || isWaitingForApproval}
+          />
+        </div>
+
+        {/* Stop Button */}
+        {thread.isLoading && (
+          <div className="border-t p-4">
+            <Button
+              variant="outline"
+              onClick={() => thread.stop()}
+              className="w-full"
+            >
+              Stop Generation
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Mobile Overlay */}
       {isSidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-30 md:hidden"
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
-
-      {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col min-h-0 bg-background overflow-hidden border-l border-border">
-        <MessageList
-          messages={messages}
-          agentAvatar={agent.agent_avatar}
-          agentInitials={
-            agent.name ? agent.name.substring(0, 2).toUpperCase() : "A"
-          }
-          userAvatar={userAvatar}
-          userInitials={userInitials}
-          isThinking={isLoading && !hasAssistantMessage}
-          threadId={currentThreadId}
-        />
-        <MessageInput onSend={sendChatMessage} disabled={isLoading} />
-      </div>
     </div>
   );
 }

@@ -27,7 +27,7 @@ export default function NewAgentPage() {
     setShowCreationDialog(true);
 
     try {
-      const response = await fetch("/api/agents", {
+      const response = await fetch("/api/assistants", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

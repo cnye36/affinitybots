@@ -16,40 +16,40 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // First verify the agent exists and user has access
-    const { data: userAgent, error: userAgentError } = await supabase
-      .from("user_agents")
-      .select("agent_id")
+    // First verify the assistant exists and user has access
+    const { data: userAssistant, error: userAssistantError } = await supabase
+      .from("user_assistants")
+      .select("assistant_id")
       .eq("user_id", user.id)
-      .eq("agent_id", params.id)
+      .eq("assistant_id", params.id)
       .single();
 
-    if (userAgentError || !userAgent) {
+    if (userAssistantError || !userAssistant) {
       return NextResponse.json(
-        { error: "Agent not found or access denied" },
+        { error: "Assistant not found or access denied" },
         { status: 404 }
       );
     }
 
-    // Then fetch the full agent details
-    const { data: agent, error: agentError } = await supabase
-      .from("agent")
+    // Then fetch the full assistant details
+    const { data: assistant, error: assistantError } = await supabase
+      .from("assistant")
       .select("*")
-      .eq("id", params.id)
+      .eq("assistant_id", params.id)
       .single();
 
-    if (agentError || !agent) {
+    if (assistantError || !assistant) {
       return NextResponse.json(
-        { error: "Failed to fetch agent details" },
+        { error: "Failed to fetch assistant details" },
         { status: 500 }
       );
     }
 
-    return NextResponse.json(agent);
+    return NextResponse.json(assistant);
   } catch (error) {
-    console.error("Error fetching agent:", error);
+    console.error("Error fetching assistant:", error);
     return NextResponse.json(
-      { error: "Failed to fetch agent" },
+      { error: "Failed to fetch assistant" },
       { status: 500 }
     );
   }
@@ -70,50 +70,49 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // First verify the agent exists and user has access
-    const { data: userAgent, error: userAgentError } = await supabase
-      .from("user_agents")
-      .select("agent_id")
+    // First verify the assistant exists and user has access
+    const { data: userAssistant, error: userAssistantError } = await supabase
+      .from("user_assistants")
+      .select("assistant_id")
       .eq("user_id", user.id)
-      .eq("agent_id", params.id)
+      .eq("assistant_id", params.id)
       .single();
 
-    if (userAgentError || !userAgent) {
+    if (userAssistantError || !userAssistant) {
       return NextResponse.json(
-        { error: "Agent not found or access denied" },
+        { error: "Assistant not found or access denied" },
         { status: 404 }
       );
     }
 
     const body = await request.json();
 
-    // Update the agent
-    const { data: updatedAgent, error: updateError } = await supabase
-      .from("agent")
+    // Update the assistant
+    const { data: updatedAssistant, error: updateError } = await supabase
+      .from("assistant")
       .update({
         name: body.name,
         description: body.description,
-        agent_avatar: body.agent_avatar,
         metadata: body.metadata,
         config: body.config,
       })
-      .eq("id", params.id)
+      .eq("assistant_id", params.id)
       .select()
       .single();
 
     if (updateError) {
-      console.error("Error updating agent:", updateError);
+      console.error("Error updating assistant:", updateError);
       return NextResponse.json(
-        { error: "Failed to update agent" },
+        { error: "Failed to update assistant" },
         { status: 500 }
       );
     }
 
-    return NextResponse.json(updatedAgent);
+    return NextResponse.json(updatedAssistant);
   } catch (error) {
-    console.error("Error updating agent:", error);
+    console.error("Error updating assistant:", error);
     return NextResponse.json(
-      { error: "Failed to update agent" },
+      { error: "Failed to update assistant" },
       { status: 500 }
     );
   }
@@ -133,40 +132,40 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // First verify the agent exists and user has access
-    const { data: userAgent, error: userAgentError } = await supabase
-      .from("user_agents")
-      .select("agent_id")
+    // First verify the assistant exists and user has access
+    const { data: userAssistant, error: userAssistantError } = await supabase
+      .from("user_assistants")
+      .select("assistant_id")
       .eq("user_id", user.id)
-      .eq("agent_id", params.id)
+      .eq("assistant_id", params.id)
       .single();
 
-    if (userAgentError || !userAgent) {
+    if (userAssistantError || !userAssistant) {
       return NextResponse.json(
-        { error: "Agent not found or access denied" },
+        { error: "Assistant not found or access denied" },
         { status: 404 }
       );
     }
 
-    // Delete the agent
+    // Delete the assistant
     const { error: deleteError } = await supabase
-      .from("agent")
+      .from("assistant")
       .delete()
-      .eq("id", params.id);
+      .eq("assistant_id", params.id);
 
     if (deleteError) {
-      console.error("Error deleting agent:", deleteError);
+      console.error("Error deleting assistant:", deleteError);
       return NextResponse.json(
-        { error: "Failed to delete agent" },
+        { error: "Failed to delete assistant" },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ message: "Agent deleted successfully" });
+    return NextResponse.json({ message: "Assistant deleted successfully" });
   } catch (error) {
-    console.error("Error deleting agent:", error);
+    console.error("Error deleting assistant:", error);
     return NextResponse.json(
-      { error: "Failed to delete agent" },
+      { error: "Failed to delete assistant" },
       { status: 500 }
     );
   }

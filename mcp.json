@@ -1,8 +1,0 @@
-{
-  "servers": {
-    "agenthub-test-server": {
-      "transport": "sse",
-      "url": "https://3134-174-174-117-152.ngrok-free.app/sse"
-    }
-  }
-}

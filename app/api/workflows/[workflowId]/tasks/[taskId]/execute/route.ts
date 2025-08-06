@@ -45,11 +45,11 @@ export async function POST(
 
     if (task.task_type === "ai_task") {
       try {
-        // Check for agent_id first, then fallback to config.assigned_agent if needed
-        const agentId = task.agent_id || task.config?.assigned_agent?.id;
-        if (!agentId) {
+        // Check for assistant_id first, then fallback to config.assigned_assistant if needed
+        const assistantId = task.assistant_id || task.config?.assigned_assistant?.id;
+        if (!assistantId) {
           return NextResponse.json(
-            { error: "Task has no associated agent" },
+            { error: "Task has no associated assistant" },
             { status: 400 }
           );
         }
@@ -63,7 +63,7 @@ export async function POST(
               // 1. Directly create and stream the execution
               const runStream = await client.runs.stream(
                 null, // Stateless runs use null thread ID
-                agentId,
+                assistantId,
                 {
                   input: {
                     messages: [
@@ -82,7 +82,8 @@ export async function POST(
                   config: {
                     configurable: {
                       ...(task.config || {}),
-                      agentId,
+                      user_id: user.id,
+                      assistant_id: assistantId,
                     },
                   },
                   streamMode: "messages",

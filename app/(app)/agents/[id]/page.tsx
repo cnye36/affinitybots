@@ -3,6 +3,13 @@ import ChatContainer from "@/components/chat/ChatContainer";
 import { AgentPageHeader } from "@/components/agents/AgentPageHeader";
 import { redirect } from "next/navigation";
 
+// Helper function to create a timeout promise
+function createTimeoutPromise(timeoutMs: number): Promise<never> {
+  return new Promise((_, reject) => {
+    setTimeout(() => reject(new Error(`Operation timed out after ${timeoutMs}ms`)), timeoutMs);
+  });
+}
+
 interface AgentPageProps {
   params: Promise<{
     id: string;
@@ -10,53 +17,84 @@ interface AgentPageProps {
 }
 
 export default async function AgentPage(props: AgentPageProps) {
-  const params = await props.params;
-  const supabase = await createClient();
+  try {
+    // Add timeout protection for the entire request
+    const result = await Promise.race([
+      (async () => {
+        const params = await props.params;
+        const supabase = await createClient();
 
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
 
-  if (userError || !user) {
-    redirect("/signin");
+        if (userError || !user) {
+          redirect("/signin");
+        }
+
+        // Check if user has access to this assistant
+        const { data: userAssistant, error: userAssistantError } = await supabase
+          .from("user_assistants")
+          .select("assistant_id")
+          .eq("user_id", user.id)
+          .eq("assistant_id", params.id)
+          .single();
+
+        if (userAssistantError || !userAssistant) {
+          // Fallback: check if assistant exists and user is owner
+          const { data: assistant, error: assistantError } = await supabase
+            .from("assistant")
+            .select("*")
+            .eq("assistant_id", params.id)
+            .eq("metadata->>owner_id", user.id)
+            .single();
+
+          if (assistantError || !assistant) {
+            throw new Error("Agent not found or access denied");
+          }
+        }
+
+        const { data: assistant, error: assistantError } = await supabase
+          .from("assistant")
+          .select("*")
+          .eq("assistant_id", params.id)
+          .single();
+
+        if (assistantError || !assistant) {
+          throw new Error("Failed to fetch agent details");
+        }
+
+        // Ensure metadata and config match our Assistant type
+        const typedAssistant = {
+          ...assistant,
+          metadata: assistant.metadata || {},
+          config: assistant.config,
+          owner_id: assistant.metadata?.owner_id as string,
+        };
+
+        return (
+          <div className="flex flex-col h-screen">
+            <AgentPageHeader agent={typedAssistant} />
+            <main className="flex-1 overflow-hidden relative">
+              <ChatContainer assistant={typedAssistant} />
+            </main>
+          </div>
+        );
+      })(),
+      createTimeoutPromise(30000) // 30 second timeout
+    ]);
+
+    return result;
+  } catch (error) {
+    console.error("Error in AgentPage:", error);
+    
+    // Check if it's a timeout error
+    if (error instanceof Error && error.message.includes('timed out')) {
+      throw new Error("Request timed out. Please try again.");
+    }
+    
+    // Re-throw the error to be handled by Next.js error boundary
+    throw error;
   }
-
-  const { data: userAgent, error: userAgentError } = await supabase
-    .from("user_agents")
-    .select("agent_id")
-    .eq("user_id", user.id)
-    .eq("agent_id", params.id)
-    .single();
-
-  if (userAgentError || !userAgent) {
-    throw new Error("Agent not found or access denied");
-  }
-
-  const { data: agent, error: agentError } = await supabase
-    .from("agent")
-    .select("*")
-    .eq("id", params.id)
-    .single();
-
-  if (agentError || !agent) {
-    throw new Error("Failed to fetch agent details");
-  }
-
-  // Ensure metadata and config match our Agent type
-  const typedAgent = {
-    ...agent,
-    metadata: agent.metadata || {},
-    config: agent.config,
-    owner_id: agent.metadata?.owner_id as string,
-  };
-
-  return (
-    <div className="flex flex-col h-screen">
-      <AgentPageHeader agent={typedAgent} />
-      <main className="flex-1 overflow-hidden relative">
-        <ChatContainer agent={typedAgent} />
-      </main>
-    </div>
-  );
 }

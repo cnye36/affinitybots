@@ -1,5 +1,5 @@
 export interface Agent {
-  id: string;
+  assistant_id: string;
   graph_id: string;
   name: string;
   description: string;

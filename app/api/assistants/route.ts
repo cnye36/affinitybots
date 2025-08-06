@@ -1,0 +1,215 @@
+import { NextResponse } from "next/server";
+import { createClient } from "@/supabase/server";
+import { generateAgentConfiguration } from "@/lib/agent/agent-generation";
+import { Client } from "@langchain/langgraph-sdk";
+
+// Helper function to create a timeout promise
+function createTimeoutPromise(timeoutMs: number): Promise<never> {
+  return new Promise((_, reject) => {
+    setTimeout(() => reject(new Error(`Operation timed out after ${timeoutMs}ms`)), timeoutMs);
+  });
+}
+
+export async function POST(request: Request) {
+  try {
+    // Add overall timeout protection for the entire request
+    const result = await Promise.race([
+      (async () => {
+        const supabase = await createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!user) {
+          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        const { prompt, agentType } = await request.json();
+
+        if (!prompt || !agentType) {
+          return NextResponse.json(
+            { error: "Missing required fields" },
+            { status: 400 }
+          );
+        }
+
+        // Generate the agent configuration with avatar generation
+        const generatedConfig = await generateAgentConfiguration(
+          prompt,
+          agentType,
+          user.id // Pass user ID for avatar generation
+        );
+
+        // Create LangGraph Platform assistant
+        const langgraphClient = new Client({
+          apiUrl: process.env.LANGGRAPH_URL!,
+          apiKey: process.env.LANGSMITH_API_KEY!,
+        });
+
+        // Create assistant with proper configuration
+        const assistant = await langgraphClient.assistants.create({
+          graphId: "reactAgent", // Use the same graph for all assistants
+          name: generatedConfig.name,
+          config: {
+            configurable: {
+              user_id: user.id,
+              assistant_id: user.id, // Use user ID as assistantId
+              model: generatedConfig.model,
+              temperature: generatedConfig.temperature,
+              tools: generatedConfig.tools,
+              memory: generatedConfig.memory,
+              prompt_template: generatedConfig.instructions,
+              knowledge_base: {
+                isEnabled: generatedConfig.knowledge.enabled,
+                config: { sources: [] },
+              },
+              enabled_mcp_servers: [], // Start with no tools enabled
+            },
+          },
+          metadata: {
+            owner_id: user.id,
+            description: generatedConfig.description,
+            agent_avatar: generatedConfig.agent_avatar,
+          },
+        });
+
+        // Create user-assistant mapping for access control
+        const { error: mappingError } = await supabase
+          .from("user_assistants")
+          .upsert({
+            user_id: user.id,
+            assistant_id: assistant.assistant_id,
+          }, {
+            onConflict: 'user_id,assistant_id',
+            ignoreDuplicates: true
+          });
+
+        if (mappingError) {
+          console.error("Error creating user-assistant mapping:", mappingError);
+          // Note: Assistant is already created in DB via LangGraph platform
+        }
+
+        return NextResponse.json({
+          success: true,
+          assistant: assistant,
+        });
+      })(),
+      createTimeoutPromise(120000) // 2 minute timeout for entire request
+    ]);
+
+    return result;
+  } catch (error) {
+    console.error("Error creating assistant:", error);
+    
+    // Check if it's a timeout error
+    if (error instanceof Error && error.message.includes('timed out')) {
+      return NextResponse.json(
+        { error: "Request timed out. Please try again." },
+        { status: 408 }
+      );
+    }
+    
+    return NextResponse.json(
+      { error: "Failed to create assistant" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function GET() {
+  const requestId = Math.random().toString(36).substring(7);
+  console.log(`[${requestId}] GET /api/assistants - Request started`);
+  
+  try {
+    // Add timeout protection for GET request
+    const result = await Promise.race([
+      (async () => {
+        console.log(`[${requestId}] GET /api/assistants - Authenticating user`);
+        const supabase = await createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!user) {
+          console.log(`[${requestId}] GET /api/assistants - Unauthorized`);
+          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        console.log(`[${requestId}] GET /api/assistants - User authenticated: ${user.id}`);
+
+        // Get user's assistants directly from LangGraph platform (which uses same database)
+        const langgraphClient = new Client({
+          apiUrl: process.env.LANGGRAPH_URL!,
+          apiKey: process.env.LANGSMITH_API_KEY!,
+        });
+
+        try {
+          console.log(`[${requestId}] GET /api/assistants - Fetching from LangGraph API`);
+          // Get assistants owned by this user
+          const assistants = await langgraphClient.assistants.search({
+            metadata: { owner_id: user.id },
+            limit: 100,
+          });
+
+          console.log(`[${requestId}] GET /api/assistants - Successfully fetched ${assistants?.length || 0} assistants`);
+          return NextResponse.json({
+            assistants: assistants || [],
+          });
+        } catch (langgraphError) {
+          console.error(`[${requestId}] LangGraph API error, falling back to direct database query:`, langgraphError);
+          
+          // Fallback: direct database query if LangGraph API is temporarily unavailable
+          try {
+            console.log(`[${requestId}] GET /api/assistants - Using fallback database query`);
+            const { data, error: queryError } = await supabase
+              .from("assistant")
+              .select(`
+                *,
+                user_assistants!inner(user_id)
+              `)
+              .eq("user_assistants.user_id", user.id)
+              .order("created_at", { ascending: false });
+            
+            if (queryError) {
+              console.error(`[${requestId}] Error fetching assistants from database:`, queryError);
+              return NextResponse.json(
+                { error: "Failed to fetch assistants" },
+                { status: 500 }
+              );
+            }
+
+            console.log(`[${requestId}] GET /api/assistants - Fallback query successful: ${data?.length || 0} assistants`);
+            return NextResponse.json({
+              assistants: data || [],
+            });
+          } catch (fallbackError) {
+            console.error(`[${requestId}] Fallback query failed:`, fallbackError);
+            return NextResponse.json(
+              { error: "Failed to fetch assistants" },
+              { status: 500 }
+            );
+          }
+        }
+      })(),
+      createTimeoutPromise(30000) // 30 second timeout for GET request
+    ]);
+
+    console.log(`[${requestId}] GET /api/assistants - Request completed successfully`);
+    return result;
+  } catch (error) {
+    console.error(`[${requestId}] Error in GET /api/assistants:`, error);
+    
+    // Check if it's a timeout error
+    if (error instanceof Error && error.message.includes('timed out')) {
+      return NextResponse.json(
+        { error: "Request timed out. Please try again." },
+        { status: 408 }
+      );
+    }
+    
+    return NextResponse.json(
+      { error: "Failed to fetch assistants" },
+      { status: 500 }
+    );
+  }
+} 

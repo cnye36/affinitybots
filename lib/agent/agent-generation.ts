@@ -246,6 +246,13 @@ You are [name], a specialized {agentType} focused on {focus}. You embody a {pers
 - For complex projects, break them into manageable phases and checkpoints
 `);
 
+// Helper function to create a timeout promise
+function createTimeoutPromise(timeoutMs: number): Promise<never> {
+  return new Promise((_, reject) => {
+    setTimeout(() => reject(new Error(`Operation timed out after ${timeoutMs}ms`)), timeoutMs);
+  });
+}
+
 export async function generateAgentName(
   description: string,
   agentType: string,
@@ -254,6 +261,8 @@ export async function generateAgentName(
   const model = new ChatOpenAI({
     modelName: "gpt-4o",
     temperature: 1.0,
+    maxRetries: 2,
+    timeout: 30000, // 30 second timeout
   });
 
   const previousNames = userGeneratedNames.get(ownerId).join(", ");
@@ -264,12 +273,21 @@ export async function generateAgentName(
     previousNames: previousNames || "None yet",
   });
 
-  const response = await model.invoke(formattedPrompt);
-  const generatedName = response.content.toString().trim();
-
-  userGeneratedNames.add(ownerId, generatedName);
-
-  return generatedName;
+  try {
+    // Add timeout protection
+    const response = await Promise.race([
+      model.invoke(formattedPrompt),
+      createTimeoutPromise(30000) // 30 second timeout
+    ]);
+    
+    const generatedName = response.content.toString().trim();
+    userGeneratedNames.add(ownerId, generatedName);
+    return generatedName;
+  } catch (error) {
+    console.error("Error generating agent name:", error);
+    // Fallback to a simple name
+    return `${agentType.charAt(0).toUpperCase() + agentType.slice(1)} Agent`;
+  }
 }
 
 export interface GeneratedConfig {
@@ -303,6 +321,8 @@ export async function generateAgentConfiguration(
   const llm = new ChatOpenAI({
     model: "gpt-4.1",
     temperature: 0.3,
+    maxRetries: 2,
+    timeout: 45000, // 45 second timeout
   });
 
   const prompt = await configurationPrompt.format({
@@ -316,7 +336,12 @@ export async function generateAgentConfiguration(
   });
 
   try {
-    const response = await llm.invoke(prompt);
+    // Add timeout protection
+    const response = await Promise.race([
+      llm.invoke(prompt),
+      createTimeoutPromise(45000) // 45 second timeout
+    ]);
+    
     const content = response.content as string;
 
     // Parse JSON response
@@ -327,11 +352,14 @@ export async function generateAgentConfiguration(
 
     const parsedData = JSON.parse(jsonMatch[0]);
 
-    // Generate avatar if ownerId is provided
+    // Generate avatar if ownerId is provided, with timeout protection
     let avatarUrl = "/images/default-avatar.png";
     if (ownerId) {
       try {
-        avatarUrl = await generateAgentAvatar(parsedData.name, agentType);
+        avatarUrl = await Promise.race([
+          generateAgentAvatar(parsedData.name, agentType),
+          createTimeoutPromise(60000) // 60 second timeout for avatar generation
+        ]);
       } catch (error) {
         console.error("Error generating avatar:", error);
         // Fallback to default avatar
@@ -361,7 +389,10 @@ export async function generateAgentConfiguration(
     let avatarUrl = "/images/default-avatar.png";
     if (ownerId) {
       try {
-        avatarUrl = await generateAgentAvatar(`${agentType} Agent`, agentType);
+        avatarUrl = await Promise.race([
+          generateAgentAvatar(`${agentType} Agent`, agentType),
+          createTimeoutPromise(60000) // 60 second timeout for avatar generation
+        ]);
       } catch (avatarError) {
         console.error("Error generating fallback avatar:", avatarError);
       }
