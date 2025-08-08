@@ -24,9 +24,13 @@ export async function GET(
     });
 
     try {
-      // Get threads for this assistant
+      // Get threads for this assistant owned by this user
       const threads = await client.threads.search({
         limit: 50,
+        metadata: {
+          assistant_id: assistantId,
+          user_id: user.id,
+        },
       });
 
       return NextResponse.json({

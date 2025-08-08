@@ -12,24 +12,25 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Assistant } from "@/types/assistant";
 
 interface AgentPageHeaderProps {
-  agent: Agent;
+  assistant: Assistant;
 }
 
-export function AgentPageHeader({ agent }: AgentPageHeaderProps) {
+export function AgentPageHeader({ assistant }: AgentPageHeaderProps) {
   const router = useRouter();
   // Get first letter of agent name for avatar fallback
-  const avatarFallback = agent.name.charAt(0).toUpperCase();
+  const avatarFallback = assistant.name.charAt(0).toUpperCase();
 
-  const avatarUrl = agent.agent_avatar;
+  const avatarUrl = assistant.metadata.agent_avatar;
 
   // Get configuration states
-  const hasMemory = agent.config?.memory?.enabled;
-  const hasKnowledge = agent.config?.knowledge_base?.isEnabled;
+  const hasMemory = assistant.config.configurable.memory?.enabled;
+  const hasKnowledge = assistant.config.configurable.knowledge_base?.isEnabled;
 
   // Count active tools
-  const activeToolsCount = Object.values(agent.config?.tools || {}).filter(
+  const activeToolsCount = Object.values(assistant.config.configurable.tools || {}).filter(
     (tool) => (tool as { isEnabled?: boolean })?.isEnabled
   ).length;
 
@@ -48,13 +49,13 @@ export function AgentPageHeader({ agent }: AgentPageHeaderProps) {
         <div className="flex items-center gap-4 ml-8">
           <Avatar className="h-12 w-12">
             {avatarUrl ? (
-              <AvatarImage src={avatarUrl} alt={agent.name} />
+              <AvatarImage src={avatarUrl} alt={assistant.name} />
             ) : (
               <AvatarFallback
                 className="bg-primary/10"
                 style={{
                   backgroundColor: `hsl(${
-                    (agent.name.length * 30) % 360
+                    (assistant.name.length * 30) % 360
                   }, 70%, 50%)`,
                 }}
               >
@@ -63,7 +64,7 @@ export function AgentPageHeader({ agent }: AgentPageHeaderProps) {
             )}
           </Avatar>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">{agent.name}</h1>
+            <h1 className="text-2xl font-bold tracking-tight">{assistant.name}</h1>
           </div>
         </div>
 
@@ -115,7 +116,7 @@ export function AgentPageHeader({ agent }: AgentPageHeaderProps) {
             )}
           </div>
 
-          <AgentConfigButton agent={agent} />
+          <AgentConfigButton assistant={assistant} />
         </div>
       </div>
     </div>

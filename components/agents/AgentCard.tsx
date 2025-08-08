@@ -16,25 +16,15 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { mutate } from "swr";
+import { Assistant } from "@/types/assistant";
 
 interface AgentCardProps {
-  agent: {
-    id: string;
-    name: string;
-    description: string;
-    agent_avatar: string;
-    config: {
-      model: string;
-      temperature: number;
-      tools: Record<string, { isEnabled: boolean }>;
-      memory: { enabled: boolean };
-      knowledge_base: { isEnabled: boolean };
-    };
-  };
-  onDelete: (agentId: string) => void;
+  assistant: Assistant;
+
+  onDelete: (assistantId: string) => void;
 }
 
-export function AgentCard({ agent, onDelete }: AgentCardProps) {
+export function AgentCard({ assistant, onDelete }: AgentCardProps) {
   const router = useRouter();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
@@ -45,20 +35,20 @@ export function AgentCard({ agent, onDelete }: AgentCardProps) {
       return;
     }
 
-    if (!agent.id || agent.id === "undefined") {
+    if (!assistant.assistant_id || assistant.assistant_id === "undefined") {
       console.error("Invalid agent ID");
       return;
     }
 
     // Ensure the ID is properly formatted before navigation
-    const agentId = encodeURIComponent(agent.id.trim());
-    router.push(`/agents/${agentId}`);
+    const assistantId = encodeURIComponent(assistant.assistant_id.trim());
+    router.push(`/assistants/${assistantId}`);
   };
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      const response = await fetch(`/api/assistants/${agent.id}`, {
+      const response = await fetch(`/api/assistants/${assistant.assistant_id}`, {
         method: "DELETE",
       });
 
@@ -67,7 +57,7 @@ export function AgentCard({ agent, onDelete }: AgentCardProps) {
       }
 
       await mutate("/api/assistants");
-      onDelete(agent.id);
+      onDelete(assistant.assistant_id);
       setIsDeleteDialogOpen(false);
       toast({
         title: "Agent deleted successfully",
@@ -82,7 +72,7 @@ export function AgentCard({ agent, onDelete }: AgentCardProps) {
   };
 
   // Get the avatar URL from the config
-  const avatarUrl = agent.agent_avatar;
+  const avatarUrl = assistant.metadata.agent_avatar;
 
   return (
     <>
@@ -106,29 +96,29 @@ export function AgentCard({ agent, onDelete }: AgentCardProps) {
               backgroundSize: "cover",
               backgroundPosition: "center",
               backgroundColor: !avatarUrl
-                ? `hsl(${(agent.name.length * 30) % 360}, 70%, 50%)`
+                ? `hsl(${(assistant.name.length * 30) % 360}, 70%, 50%)`
                 : undefined,
             }}
           >
-            {!avatarUrl && agent.name.slice(0, 2).toUpperCase()}
+            {!avatarUrl && assistant.name.slice(0, 2).toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="text-base sm:text-lg font-semibold mb-1 truncate">
-              {agent.name}
+              {assistant.name}
             </h3>
             <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">
-              {agent.description || "No description provided"}
+              {assistant.metadata.description || "No description provided"}
             </p>
           </div>
         </div>
         <div className="flex flex-wrap gap-2 items-center text-xs sm:text-sm text-muted-foreground mt-3 sm:mt-4">
           <span className="flex items-center">
-            Model: {agent.config.model || "Not specified"}
+            Model: {assistant.config.configurable.model || "Not specified"}
           </span>
           <span className="hidden sm:inline">•</span>
           <span>
-            {agent.config.tools
-              ? Object.values(agent.config.tools).filter(
+            {assistant.config.configurable.tools
+              ? Object.values(assistant.config.configurable.tools).filter(
                   (tool) => tool.isEnabled
                 ).length
               : 0}{" "}

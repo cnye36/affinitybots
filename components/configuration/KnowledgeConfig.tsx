@@ -10,10 +10,10 @@ import { useToast } from "@/hooks/use-toast";
 interface KnowledgeConfigProps {
   config: AgentConfiguration;
   onChange: (field: keyof AgentConfiguration, value: unknown) => void;
-  agent_id: string;
+  assistant_id: string;
 }
 
-export function KnowledgeConfig({ config, onChange, agent_id }: KnowledgeConfigProps) {
+export function KnowledgeConfig({ config, onChange, assistant_id }: KnowledgeConfigProps) {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const { toast } = useToast();
@@ -91,7 +91,7 @@ export function KnowledgeConfig({ config, onChange, agent_id }: KnowledgeConfigP
         // Create FormData for file upload
         const formData = new FormData();
         formData.append("file", file);
-        formData.append("agentId", agent_id);
+        formData.append("assistantId", assistant_id);
 
         // Upload and process file
         const response = await fetch("/api/knowledge", {
@@ -142,7 +142,7 @@ export function KnowledgeConfig({ config, onChange, agent_id }: KnowledgeConfigP
     try {
       // Delete document embeddings from the database
       const response = await fetch(
-        `/api/knowledge?agentId=${agent_id}&filename=${encodeURIComponent(
+        `/api/knowledge?assistantId=${assistant_id}&filename=${encodeURIComponent(
           sourceToRemove
         )}`,
         {

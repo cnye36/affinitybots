@@ -75,7 +75,7 @@ export default async function AgentPage(props: AgentPageProps) {
 
         return (
           <div className="flex flex-col h-screen">
-            <AgentPageHeader agent={typedAssistant} />
+            <AgentPageHeader assistant={typedAssistant} />
             <main className="flex-1 overflow-hidden relative">
               <ChatContainer assistant={typedAssistant} />
             </main>

@@ -25,40 +25,41 @@ import {
 } from "@/types/agent";
 import { useRouter } from "next/navigation";
 import { mutate } from "swr";
+import { Assistant } from "@/types/assistant";
 
 interface AgentConfigModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  agent: Agent;
+  assistant: Assistant;
 }
 
 export function AgentConfigModal({
   open,
   onOpenChange,
-  agent,
+  assistant,
 }: AgentConfigModalProps) {
   const [config, setConfig] = useState({
-    agent_id: agent.assistant_id,
-    description: agent.description,
-    agent_avatar: agent.agent_avatar,
-    graph_id: agent.graph_id,
-    created_at: agent.created_at,
-    updated_at: agent.updated_at,
-    name: agent.name,
+    agent_id: assistant.assistant_id,
+    description: assistant.metadata.description,
+    agent_avatar: assistant.metadata.agent_avatar,
+    graph_id: assistant.graph_id,
+    created_at: assistant.created_at,
+    updated_at: assistant.updated_at,
+    name: assistant.name,
     metadata: {
-      owner_id: String(agent.metadata.owner_id),
+      owner_id: String(assistant.metadata.owner_id),
     } as AgentMetadata,
     config: {
-      model: (agent.config.model || "gpt-4o") as ModelType,
-      temperature: Number(agent.config.temperature || 0.7),
-      enabled_mcp_servers: agent.config.enabled_mcp_servers || [],
+      model: (assistant.config.configurable.model || "gpt-4o") as ModelType,
+      temperature: Number(assistant.config.configurable.temperature || 0.7),
+      enabled_mcp_servers: assistant.config.configurable.enabled_mcp_servers || [],
       memory: {
         enabled: Boolean(
-          (agent.config.memory as { enabled?: boolean })?.enabled ?? true
+          (assistant.config.configurable.memory as { enabled?: boolean })?.enabled ?? true
         ),
       },
-      prompt_template: String(agent.config.prompt_template || ""),
-      knowledge_base: agent.config.knowledge_base || {
+      prompt_template: String(assistant.config.configurable.prompt_template || ""),
+      knowledge_base: assistant.config.configurable.knowledge_base || {
         isEnabled: false,
         config: { sources: [] },
       },
@@ -114,7 +115,7 @@ export function AgentConfigModal({
         full_config: config.config
       });
       
-      const response = await fetch(`/api/assistants/${agent.assistant_id}`, {
+      const response = await fetch(`/api/assistants/${assistant.assistant_id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -136,7 +137,7 @@ export function AgentConfigModal({
       const updatedAgent = await response.json();
       console.log("✅ Agent updated successfully:", updatedAgent);
       
-      await mutate(`/api/assistants/${agent.assistant_id}`, updatedAgent, false);
+      await mutate(`/api/assistants/${assistant.assistant_id}`, updatedAgent, false);
       await mutate("/api/assistants");
       onOpenChange(false);
       router.refresh();
@@ -170,12 +171,12 @@ export function AgentConfigModal({
           <TabsContent value="general">
             <GeneralConfig
               config={{
-                id: agent.assistant_id,
-                name: agent.name,
-                description: agent.description,
-                metadata: agent.metadata,
-                config: agent.config,
-                agent_avatar: agent.agent_avatar,
+                id: assistant.assistant_id,
+                name: assistant.name,
+                description: assistant.metadata.description || "",
+                metadata: assistant.metadata,
+                config: assistant.config.configurable as AgentConfiguration,
+                agent_avatar: assistant.metadata.agent_avatar,
               }}
               onChange={handleChange}
               onConfigurableChange={handleConfigurableChange}
@@ -202,7 +203,7 @@ export function AgentConfigModal({
             <KnowledgeConfig
               config={config.config}
               onChange={handleConfigurableChange}
-              agent_id={agent.assistant_id}
+              assistant_id={assistant.assistant_id}
             />
           </TabsContent>
 
@@ -210,7 +211,7 @@ export function AgentConfigModal({
             <MemoryConfig
               config={config.config}
               onChange={handleConfigurableChange}
-              agentId={agent.assistant_id}
+              assistantId={assistant.assistant_id}
             />
           </TabsContent>
         </Tabs>

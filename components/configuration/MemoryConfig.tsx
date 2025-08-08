@@ -10,10 +10,10 @@ import { useRouter } from "next/navigation";
 interface MemoryConfigProps {
   config: AgentConfiguration;
   onChange: (field: keyof AgentConfiguration, value: unknown) => void;
-  agentId?: string;
+  assistantId?: string;
 }
 
-export function MemoryConfig({ config, onChange, agentId }: MemoryConfigProps) {
+export function MemoryConfig({ config, onChange, assistantId }: MemoryConfigProps) {
   const router = useRouter();
 
   const handleMemoryToggle = (enabled: boolean) => {
@@ -24,8 +24,8 @@ export function MemoryConfig({ config, onChange, agentId }: MemoryConfigProps) {
   };
 
   const navigateToMemoryManager = () => {
-    if (agentId) {
-      router.push(`/agents/${agentId}/memories`);
+    if (assistantId) {
+      router.push(`/assistants/${assistantId}/memories`);
     }
   };
 
@@ -50,7 +50,7 @@ export function MemoryConfig({ config, onChange, agentId }: MemoryConfigProps) {
             <Button
               variant="outline"
               onClick={navigateToMemoryManager}
-              disabled={!agentId}
+              disabled={!assistantId}
             >
               Manage Memories
             </Button>
