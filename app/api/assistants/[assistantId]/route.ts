@@ -29,7 +29,7 @@ export async function PUT(
 
     // Update assistant via LangGraph platform (will update the database directly)
     const langgraphClient = new Client({
-      apiUrl: process.env.LANGGRAPH_URL!,
+      apiUrl: process.env.LANGGRAPH_API_URL!,
       apiKey: process.env.LANGSMITH_API_KEY!,
     });
 
@@ -206,7 +206,7 @@ export async function DELETE(
 
     // Delete assistant via LangGraph Platform (will delete from database directly)
     const langgraphClient = new Client({
-      apiUrl: process.env.LANGGRAPH_URL!,
+      apiUrl: process.env.LANGGRAPH_API_URL!,
       apiKey: process.env.LANGSMITH_API_KEY!,
     });
 

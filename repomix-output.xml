@@ -4183,7 +4183,7 @@ export async function POST(
   const params = await props.params;
   const { id, threadId } = params;
   const client = new Client({
-    apiUrl: process.env.LANGGRAPH_URL,
+    apiUrl: process.env.LANGGRAPH_API_URL,
     apiKey: process.env.LANGSMITH_API_KEY,
   });
 
@@ -4329,7 +4329,7 @@ export async function POST(
   const params = await props.params;
   const { threadId } = params;
   const client = new Client({
-    apiUrl: process.env.LANGGRAPH_URL,
+    apiUrl: process.env.LANGGRAPH_API_URL,
     apiKey: process.env.LANGSMITH_API_KEY,
   });
 
@@ -4386,7 +4386,7 @@ export async function PUT(
   const params = await props.params;
   const { threadId } = params;
   const client = new Client({
-    apiUrl: process.env.LANGGRAPH_URL,
+    apiUrl: process.env.LANGGRAPH_API_URL,
     apiKey: process.env.LANGSMITH_API_KEY,
   });
 
@@ -4442,7 +4442,7 @@ export async function GET(
   const params = await props.params;
   const { id, threadId } = params;
   const client = new Client({
-    apiUrl: process.env.LANGGRAPH_URL,
+    apiUrl: process.env.LANGGRAPH_API_URL,
     apiKey: process.env.LANGSMITH_API_KEY,
   });
   try {
@@ -4499,7 +4499,7 @@ export async function POST(
   const params = await props.params;
   const { id, threadId } = params;
   const client = new Client({
-    apiUrl: process.env.LANGGRAPH_URL,
+    apiUrl: process.env.LANGGRAPH_API_URL,
     apiKey: process.env.LANGSMITH_API_KEY,
   });
 
@@ -4649,7 +4649,7 @@ export async function GET(
   const params = await props.params;
   const { threadId } = params;
   const client = new Client({
-    apiUrl: process.env.LANGGRAPH_URL,
+    apiUrl: process.env.LANGGRAPH_API_URL,
     apiKey: process.env.LANGSMITH_API_KEY,
   });
 
@@ -4688,7 +4688,7 @@ export async function GET(
 ) {
   const { threadId } = await props.params;
   const client = new Client({
-    apiUrl: process.env.LANGGRAPH_URL,
+    apiUrl: process.env.LANGGRAPH_API_URL,
     apiKey: process.env.LANGSMITH_API_KEY,
   });
   try {
@@ -4731,7 +4731,7 @@ export async function DELETE(
 ) {
   const { threadId } = await props.params;
   const client = new Client({
-    apiUrl: process.env.LANGGRAPH_URL,
+    apiUrl: process.env.LANGGRAPH_API_URL,
     apiKey: process.env.LANGSMITH_API_KEY,
   });
   try {
@@ -4780,7 +4780,7 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
   const params = await props.params;
   const { id } = params;
   const client = new Client({
-    apiUrl: process.env.LANGGRAPH_URL,
+    apiUrl: process.env.LANGGRAPH_API_URL,
     apiKey: process.env.LANGSMITH_API_KEY,
   });
 
@@ -4848,7 +4848,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
   const params = await props.params;
   const { id } = params;
   const client = new Client({
-    apiUrl: process.env.LANGGRAPH_URL,
+    apiUrl: process.env.LANGGRAPH_API_URL,
     apiKey: process.env.LANGSMITH_API_KEY,
   });
   try {
@@ -6132,7 +6132,7 @@ export async function PUT(
 
     // Create LangGraph client
     const client = new Client({
-      apiUrl: process.env.LANGGRAPH_URL!,
+      apiUrl: process.env.LANGGRAPH_API_URL!,
       apiKey: process.env.LANGSMITH_API_KEY!,
     });
 
@@ -6189,7 +6189,7 @@ export async function DELETE(
 
     // Create LangGraph client
     const client = new Client({
-      apiUrl: process.env.LANGGRAPH_URL!,
+      apiUrl: process.env.LANGGRAPH_API_URL!,
       apiKey: process.env.LANGSMITH_API_KEY!,
     });
 
@@ -6250,7 +6250,7 @@ export async function PUT(
 
     // Update assistant via LangGraph platform (will update the database directly)
     const langgraphClient = new Client({
-      apiUrl: process.env.LANGGRAPH_URL!,
+      apiUrl: process.env.LANGGRAPH_API_URL!,
       apiKey: process.env.LANGSMITH_API_KEY!,
     });
 
@@ -6427,7 +6427,7 @@ export async function DELETE(
 
     // Delete assistant via LangGraph Platform (will delete from database directly)
     const langgraphClient = new Client({
-      apiUrl: process.env.LANGGRAPH_URL!,
+      apiUrl: process.env.LANGGRAPH_API_URL!,
       apiKey: process.env.LANGSMITH_API_KEY!,
     });
 
@@ -17002,7 +17002,7 @@ export async function GET(
 
     // Create LangGraph client
     const client = new Client({
-      apiUrl: process.env.LANGGRAPH_URL!,
+      apiUrl: process.env.LANGGRAPH_API_URL!,
       apiKey: process.env.LANGSMITH_API_KEY!,
     });
 
@@ -17054,7 +17054,7 @@ export async function POST(
 
     // Create LangGraph client
     const client = new Client({
-      apiUrl: process.env.LANGGRAPH_URL!,
+      apiUrl: process.env.LANGGRAPH_API_URL!,
       apiKey: process.env.LANGSMITH_API_KEY!,
     });
 
@@ -25277,7 +25277,7 @@ export async function GET(
 ) {
   const { workflowId } = await props.params;
   const client = new Client({
-    apiUrl: process.env.LANGGRAPH_URL,
+    apiUrl: process.env.LANGGRAPH_API_URL,
     apiKey: process.env.LANGSMITH_API_KEY,
   });
   try {
@@ -25324,7 +25324,7 @@ export async function POST(
 ) {
   const { workflowId } = await props.params;
   const client = new Client({
-    apiUrl: process.env.LANGGRAPH_URL,
+    apiUrl: process.env.LANGGRAPH_API_URL,
     apiKey: process.env.LANGSMITH_API_KEY,
   });
   try {
@@ -27745,7 +27745,7 @@ export async function POST(request: Request) {
 
         // Create LangGraph Platform assistant
         const langgraphClient = new Client({
-          apiUrl: process.env.LANGGRAPH_URL!,
+          apiUrl: process.env.LANGGRAPH_API_URL!,
           apiKey: process.env.LANGSMITH_API_KEY!,
         });
 
@@ -27842,7 +27842,7 @@ export async function GET() {
 
         // Get user's assistants directly from LangGraph platform (which uses same database)
         const langgraphClient = new Client({
-          apiUrl: process.env.LANGGRAPH_URL!,
+          apiUrl: process.env.LANGGRAPH_API_URL!,
           apiKey: process.env.LANGSMITH_API_KEY!,
         });
 
@@ -28521,7 +28521,7 @@ export async function POST(
 
   try {
     const client = new Client({
-      apiUrl: process.env.LANGGRAPH_URL,
+      apiUrl: process.env.LANGGRAPH_API_URL,
       apiKey: process.env.LANGSMITH_API_KEY,
     });
 

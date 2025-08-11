@@ -12,7 +12,7 @@ export async function POST(
   const params = await props.params;
   const { threadId } = params;
   const client = new Client({
-    apiUrl: process.env.LANGGRAPH_URL,
+    apiUrl: process.env.LANGGRAPH_API_URL,
     apiKey: process.env.LANGSMITH_API_KEY,
   });
 
@@ -69,7 +69,7 @@ export async function PUT(
   const params = await props.params;
   const { threadId } = params;
   const client = new Client({
-    apiUrl: process.env.LANGGRAPH_URL,
+    apiUrl: process.env.LANGGRAPH_API_URL,
     apiKey: process.env.LANGSMITH_API_KEY,
   });
 

@@ -42,7 +42,7 @@ export async function POST(request: Request) {
 
         // Create LangGraph Platform assistant
         const langgraphClient = new Client({
-          apiUrl: process.env.LANGGRAPH_URL!,
+          apiUrl: process.env.LANGGRAPH_API_URL!,
           apiKey: process.env.LANGSMITH_API_KEY!,
         });
 
@@ -139,7 +139,7 @@ export async function GET() {
 
         // Get user's assistants directly from LangGraph platform (which uses same database)
         const langgraphClient = new Client({
-          apiUrl: process.env.LANGGRAPH_URL!,
+          apiUrl: process.env.LANGGRAPH_API_URL!,
           apiKey: process.env.LANGSMITH_API_KEY!,
         });
 

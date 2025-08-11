@@ -10,7 +10,7 @@ export async function GET(
 ) {
   const { threadId } = await props.params;
   const client = new Client({
-    apiUrl: process.env.LANGGRAPH_URL,
+    apiUrl: process.env.LANGGRAPH_API_URL,
     apiKey: process.env.LANGSMITH_API_KEY,
   });
   try {
@@ -53,7 +53,7 @@ export async function DELETE(
 ) {
   const { threadId } = await props.params;
   const client = new Client({
-    apiUrl: process.env.LANGGRAPH_URL,
+    apiUrl: process.env.LANGGRAPH_API_URL,
     apiKey: process.env.LANGSMITH_API_KEY,
   });
   try {

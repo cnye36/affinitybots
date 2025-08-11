@@ -36,7 +36,7 @@ export async function POST(
     }
 
     const client = new Client({
-      apiUrl: process.env.LANGGRAPH_URL!,
+      apiUrl: process.env.LANGGRAPH_API_URL!,
       apiKey: process.env.LANGSMITH_API_KEY!,
     });
 
@@ -98,7 +98,7 @@ export async function PUT(
 
     // Create LangGraph client
     const client = new Client({
-      apiUrl: process.env.LANGGRAPH_URL!,
+      apiUrl: process.env.LANGGRAPH_API_URL!,
       apiKey: process.env.LANGSMITH_API_KEY!,
     });
 

@@ -7,7 +7,7 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
   const params = await props.params;
   const { id } = params;
   const client = new Client({
-    apiUrl: process.env.LANGGRAPH_URL,
+    apiUrl: process.env.LANGGRAPH_API_URL,
     apiKey: process.env.LANGSMITH_API_KEY,
   });
 
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
   const params = await props.params;
   const { id } = params;
   const client = new Client({
-    apiUrl: process.env.LANGGRAPH_URL,
+    apiUrl: process.env.LANGGRAPH_API_URL,
     apiKey: process.env.LANGSMITH_API_KEY,
   });
   try {
