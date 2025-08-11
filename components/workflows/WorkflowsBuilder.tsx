@@ -18,7 +18,7 @@ import { WorkflowHeader } from "./WorkflowHeader";
 import { executeWorkflow } from "./WorkflowExecutionManager";
 import { toast } from "@/hooks/use-toast";
 import { TaskSidebar } from "./tasks/TaskSidebar";
-import { Agent } from "@/types/agent";
+
 import { Assistant } from "@/types/assistant";
 
 interface WorkflowsBuilderProps {
