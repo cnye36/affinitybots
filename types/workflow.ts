@@ -23,7 +23,7 @@ export interface TaskNodeData {
   description?: string;
   task_type: TaskType;
   workflow_id: string;
-  assignedAgent?: {
+  assignedAssistant?: {
     id: string;
     name: string;
     avatar?: string;
@@ -41,7 +41,7 @@ export interface TaskNodeData {
   owner_id: string;
   position?: number;
   status: TaskStatus;
-  onAssignAgent: (taskId: string) => void;
+  onAssignAssistant: (taskId: string) => void;
   onConfigureTask: (taskId: string) => void;
   isConfigOpen: boolean;
   onConfigClose?: () => void;
@@ -70,7 +70,7 @@ export type WorkflowNode = {
 );
 
 export interface NodeHandlers {
-  onAssignAgent: (taskId: string) => void;
+  onAssignAssistant: (taskId: string) => void;
   onConfigureTask: (taskId: string) => void;
   onConfigureTrigger: (triggerId: string) => void;
 }
@@ -108,7 +108,7 @@ export interface Task {
   description?: string;
   task_type?: TaskType;
   position?: number;
-  assignedAgent?: {
+  assignedAssistant?: {
     id: string;
     name: string;
     avatar?: string;

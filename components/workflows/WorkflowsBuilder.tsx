@@ -19,6 +19,7 @@ import { executeWorkflow } from "./WorkflowExecutionManager";
 import { toast } from "@/hooks/use-toast";
 import { TaskSidebar } from "./tasks/TaskSidebar";
 import { Agent } from "@/types/agent";
+import { Assistant } from "@/types/assistant";
 
 interface WorkflowsBuilderProps {
   initialWorkflowId?: string;
@@ -60,7 +61,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
   const supabase = createClient();
 
   const [workflowName, setWorkflowName] = useState("Undefined Workflow");
-  const [agents, setAgents] = useState<Agent[]>([]);
+  const [assistants, setAssistants] = useState<Assistant[]>([]);
   const [loadingAgents, setLoadingAgents] = useState(true);
   const [nodes, setNodes] = useState<WorkflowNode[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
@@ -391,14 +392,14 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
         }
 
         interface UserAgent {
-          agent: Agent;
+          assistant: Assistant;
         }
 
         const { data: agentsData, error } = await supabase
-          .from("user_agents")
+          .from("user_assistants")
           .select(
             `
-            agent:agent (*)
+            assistant:assistant (*)
           `
           )
           .eq("user_id", user.id);
@@ -406,7 +407,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
         if (error) throw error;
 
         // Extract just the agent data from the joined results
-        setAgents(agentsData?.map((ua: UserAgent) => ua.agent) || []);
+        setAssistants(agentsData?.map((ua: UserAgent) => ua.assistant) || []);
       } catch (err) {
         console.error("Error loading agents:", err);
         toast({
@@ -547,7 +548,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
     });
   };
 
-  const handleAgentSelect = async (agent: Agent) => {
+  const handleAgentSelect = async (assistant: Assistant) => {
     if (!workflowId) {
       toast({
         title: "Cannot assign agent",
@@ -568,9 +569,9 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
           name: pendingTask.name,
           description: pendingTask.description,
           task_type: pendingTask.task_type,
-          agent_id: agent.id,
-          agent_name: agent.name,
-          agent_avatar: agent.agent_avatar,
+          agent_id: assistant.assistant_id,
+          agent_name: assistant.name,
+          agent_avatar: assistant.metadata.agent_avatar,
         };
 
         const response = await fetch(`/api/workflows/${workflowId}/tasks`, {
@@ -599,9 +600,9 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
             task_type: newTask.task_type,
             workflow_id: workflowId,
             assigned_agent: newTask.config?.assigned_agent || {
-              id: agent.id,
-              name: agent.name,
-              avatar: agent.agent_avatar,
+              id: assistant.assistant_id,
+              name: assistant.name,
+              avatar: assistant.metadata.agent_avatar,
             },
             config: {
               input: {
@@ -705,7 +706,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
         .from("workflow_tasks")
         .update({
           // Store agent ID in agent_id field for database queries
-          agent_id: agent.id,
+          agent_id: assistant.assistant_id,
           // Store full agent details in config for UI
           config: {
             ...(await supabase
@@ -718,9 +719,9 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
                   result.data?.config || {}
               )),
             assigned_agent: {
-              id: agent.id,
-              name: agent.name,
-              avatar: agent.agent_avatar,
+              id: assistant.assistant_id,
+              name: assistant.name,
+              avatar: assistant.metadata.agent_avatar,
             },
           },
         })
@@ -740,9 +741,9 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
               data: {
                 ...node.data,
                 assigned_agent: {
-                  id: agent.id,
-                  name: agent.name,
-                  avatar: agent.agent_avatar,
+                  id: assistant.assistant_id,
+                  name: assistant.name,
+                  avatar: assistant.metadata.agent_avatar,
                 },
               },
             };
@@ -756,7 +757,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
 
       toast({
         title: "Agent assigned to task",
-        description: `${agent.name} has been assigned to this task`,
+        description: `${assistant.name} has been assigned to this task`,
         variant: "default",
       });
     } catch (error) {
@@ -854,7 +855,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
           setSelectedTaskForAgent(null);
         }}
         onSelect={handleAgentSelect}
-        agents={agents}
+        assistants={assistants}
         loading={loadingAgents || isAgentSelectionLoading}
       />
     </div>

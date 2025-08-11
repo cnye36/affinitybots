@@ -13,13 +13,13 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { TaskConfigModal } from "./TaskConfigModal";
 import { TaskNodeData, Task } from "@/types/workflow";
-import { Agent } from "@/types/agent";
+import { Assistant } from "@/types/assistant";
 
 interface TaskNodeProps {
   data: TaskNodeData & {
-    onAssignAgent?: (taskId: string) => void;
+    onAssignAssistant?: (taskId: string) => void;
     onConfigureTask?: (taskId: string) => void;
-    assignedAgent?: {
+    assignedAssistant?: {
       id: string;
       name: string;
       avatar?: string;
@@ -47,16 +47,16 @@ export const MemoizedTaskNode = memo(
       }
     };
 
-    const handleAssignAgent = (e: React.MouseEvent) => {
+    const handleAssignAssistant = (e: React.MouseEvent) => {
       e.stopPropagation();
-      if (props.data.onAssignAgent && props.data.workflow_task_id) {
-        props.data.onAssignAgent(props.data.workflow_task_id);
+      if (props.data.onAssignAssistant && props.data.workflow_task_id) {
+        props.data.onAssignAssistant(props.data.workflow_task_id);
       }
     };
 
     const handleTaskUpdate = (
       updatedTask: Task,
-      updatedAgent: Agent | null
+      updatedAssistant: Assistant | null
     ) => {
       // Dispatch update event with all necessary fields
       const event = new CustomEvent("updateTaskNode", {
@@ -66,13 +66,13 @@ export const MemoizedTaskNode = memo(
             name: updatedTask.name,
             description: updatedTask.description,
             type: updatedTask.task_type,
-            assignedAgent: updatedAgent
+            assignedAssistant: updatedAssistant
               ? {
-                  id: updatedAgent.id,
-                  name: updatedAgent.name,
-                  avatar: updatedAgent.agent_avatar,
+                  id: updatedAssistant.assistant_id,
+                  name: updatedAssistant.name,
+                  avatar: updatedAssistant.metadata.agent_avatar,
                 }
-              : props.data.assignedAgent,
+              : props.data.assignedAssistant,
             config: updatedTask.config,
           },
         },
@@ -220,30 +220,30 @@ export const MemoizedTaskNode = memo(
 
             {/* Agent Assignment Section */}
             <div className="mt-3 pt-3 border-t">
-              {props.data.assignedAgent ? (
+              {props.data.assignedAssistant ? (
                 <div className="flex items-center gap-2">
                   <Avatar className="h-6 w-6">
-                    {props.data.assignedAgent.avatar ? (
+                    {props.data.assignedAssistant.avatar ? (
                       <AvatarImage
-                        src={props.data.assignedAgent.avatar}
-                        alt={props.data.assignedAgent.name}
+                        src={props.data.assignedAssistant.avatar}
+                        alt={props.data.assignedAssistant.name}
                       />
                     ) : (
                       <AvatarFallback>
-                        {props.data.assignedAgent.name
+                        {props.data.assignedAssistant.name
                           .slice(0, 2)
                           .toUpperCase()}
                       </AvatarFallback>
                     )}
                   </Avatar>
                   <span className="text-xs">
-                    {props.data.assignedAgent.name}
+                    {props.data.assignedAssistant.name}
                   </span>
                   <Button
                     variant="ghost"
                     size="sm"
                     className="ml-auto"
-                    onClick={handleAssignAgent}
+                    onClick={handleAssignAssistant}
                   >
                     Change
                   </Button>
@@ -253,7 +253,7 @@ export const MemoizedTaskNode = memo(
                   variant="outline"
                   size="sm"
                   className="w-full"
-                  onClick={handleAssignAgent}
+                  onClick={handleAssignAssistant}
                 >
                   <UserPlus className="h-4 w-4 mr-2" />
                   Assign Agent
@@ -304,7 +304,7 @@ export const MemoizedTaskNode = memo(
             name: props.data.name,
             description: props.data.description || "",
             task_type: props.data.task_type,
-            assignedAgent: props.data.assignedAgent,
+            assignedAssistant: props.data.assignedAssistant,
             status: props.data.status,
             config: {
               input: {
@@ -338,8 +338,8 @@ export const MemoizedTaskNode = memo(
     prevProps.data.isActive === nextProps.data.isActive &&
     JSON.stringify(prevProps.data.config) ===
       JSON.stringify(nextProps.data.config) &&
-    JSON.stringify(prevProps.data.assignedAgent) ===
-      JSON.stringify(nextProps.data.assignedAgent)
+    JSON.stringify(prevProps.data.assignedAssistant) ===
+      JSON.stringify(nextProps.data.assignedAssistant)
 );
 
 MemoizedTaskNode.displayName = "MemoizedTaskNode";

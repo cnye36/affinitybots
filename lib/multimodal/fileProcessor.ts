@@ -5,10 +5,10 @@
  */
 
 import { createClient } from '@/supabase/server';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import sharp from 'sharp';
 import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
 import { DocxLoader } from "@langchain/community/document_loaders/fs/docx";
-import mammoth from 'mammoth';
 import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
 import { OpenAIEmbeddings } from '@langchain/openai';
 
@@ -32,7 +32,7 @@ export interface FileMetadata {
 }
 
 export class MultimodalFileProcessor {
-  private supabase;
+  private supabase!: SupabaseClient;
   private embeddings: OpenAIEmbeddings;
   private textSplitter: RecursiveCharacterTextSplitter;
 

@@ -64,9 +64,15 @@ export const Thread: FC = () => {
 };
 
 // Hides inline document text that comes from text attachments
+// Also filters out stray placeholder fragments like "{}" or "[]" that can
+// appear briefly during initial LangGraph streaming/tool-call setup.
 const AttachmentAwareText: FC = () => {
   const { text } = useMessagePartText();
-  if (typeof text === "string" && text.startsWith("<attachment ")) return null;
+  if (typeof text === "string") {
+    if (text.startsWith("<attachment ")) return null;
+    const trimmed = text.trim();
+    if (trimmed === "{}" || trimmed === "[]" || trimmed === "null") return null;
+  }
   return <MarkdownText />;
 };
 

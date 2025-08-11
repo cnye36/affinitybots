@@ -25,7 +25,7 @@ export async function POST(
     // Get task with workflow ownership check
     const { data: task } = await supabase
       .from("workflow_tasks")
-      .select("*, workflow:workflows(owner_id), agent_id")
+      .select("*, workflow:workflows(owner_id), assistant_id")
       .eq("workflow_task_id", taskId)
       .single();
 
@@ -36,8 +36,8 @@ export async function POST(
       );
     }
     console.log("Task retrieved:", task);
-    console.log("Task agent_id:", task.agent_id);
-    console.log("Task config.assigned_agent:", task.config?.assigned_agent);
+    console.log("Task assistant_id:", task.assistant_id);
+    console.log("Task config.assigned_assistant:", task.config?.assigned_assistant);
     console.log("Task type:", task.task_type);
 
     const { input } = await request.json();

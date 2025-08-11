@@ -110,17 +110,17 @@ export async function PUT(
           ? {
               ...taskData.config,
               // Store assigned agent information in the config
-              assigned_agent: taskData.assignedAgent
+              assigned_assistant: taskData.assignedAssistant
                 ? {
-                    id: taskData.assignedAgent.id,
-                    name: taskData.assignedAgent.name || "Agent",
-                    avatar: taskData.assignedAgent.avatar,
+                    id: taskData.assignedAssistant.id,
+                    name: taskData.assignedAssistant.name || "Agent",
+                    avatar: taskData.assignedAssistant.avatar,
                   }
                 : null,
             }
           : null,
         integration: taskData.integration,
-        agent_id: taskData.assignedAgent?.id,
+        assistant_id: taskData.assignedAssistant?.id,
         updated_at: new Date().toISOString(),
       })
       .eq("workflow_task_id", taskId)
