@@ -21,10 +21,7 @@ export async function PUT(
     
     console.log("🔍 Received update data:", {
       name: updateData.name,
-      config: updateData.config,
       configurable: updateData.config?.configurable,
-      enabled_mcp_servers: updateData.config?.enabled_mcp_servers,
-      configurable_enabled_mcp_servers: updateData.config?.configurable?.enabled_mcp_servers
     });
 
     // Update assistant via LangGraph platform (will update the database directly)
@@ -61,22 +58,45 @@ export async function PUT(
       const updateConfig = updateData.config || {};
       const updateConfigurable = updateConfig.configurable || {};
 
+      // Back-compat: convert any top-level config keys into configurable
+      const topLevelToConfigurable: Record<string, any> = {};
+      const possibleKeys = [
+        "model",
+        "temperature",
+        "tools",
+        "memory",
+        "prompt_template",
+        "knowledge_base",
+      ] as const;
+      for (const key of possibleKeys) {
+        if (Object.prototype.hasOwnProperty.call(updateConfig, key)) {
+          topLevelToConfigurable[key] = (updateConfig as any)[key];
+        }
+      }
+
       console.log("🔄 Merging configurations:", {
         update_enabled_mcp_servers: updateConfig.enabled_mcp_servers,
         current_configurable: currentConfigurable,
         update_configurable: updateConfigurable
       });
 
-      // Merge the existing configurable properties with the new ones
+      // Merge the existing configurable properties with incoming updates (nested-only contract)
+      const mergedConfigurable: Record<string, any> = {
+        ...currentConfigurable,
+        ...updateConfigurable,
+        ...topLevelToConfigurable,
+      };
+      // Ensure arrays/objects exist and normalize types
+      mergedConfigurable.enabled_mcp_servers = Array.isArray(updateConfigurable.enabled_mcp_servers)
+        ? updateConfigurable.enabled_mcp_servers
+        : Array.isArray(updateConfig.enabled_mcp_servers)
+          ? updateConfig.enabled_mcp_servers
+          : Array.isArray(currentConfigurable.enabled_mcp_servers)
+            ? currentConfigurable.enabled_mcp_servers
+            : [];
+
       const mergedConfig = {
-        configurable: {
-          // Preserve existing configurable properties
-          ...currentConfigurable,
-          // Override with new properties, but preserve any not explicitly updated
-          ...updateConfigurable,
-          // Handle enabled_mcp_servers if it's at the top level of config
-          enabled_mcp_servers: updateConfig.enabled_mcp_servers || currentConfigurable.enabled_mcp_servers || []
-        },
+        configurable: mergedConfigurable,
       };
 
       console.log("✅ Merged config result:", {
@@ -133,15 +153,11 @@ export async function PUT(
 
         // Merge configurations
         const mergedConfig = {
-          ...currentConfig,
-          ...updateConfig,
           configurable: {
             ...currentConfigurable,
             ...updateConfigurable,
-            // Handle enabled_mcp_servers if it's at the top level of config
-            enabled_mcp_servers: updateConfig.enabled_mcp_servers || currentConfigurable.enabled_mcp_servers || []
           },
-        };
+        } as const;
 
         // Merge metadata
         const currentMetadata = currentAssistant.metadata || {};

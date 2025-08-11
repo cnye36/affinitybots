@@ -314,12 +314,12 @@ export function ServerConfigForm({
                 id="smitheryProfileId"
                 value={config.smitheryProfileId || ''}
                 onChange={(e) => handleFieldChange('smitheryProfileId', e.target.value)}
-                placeholder="e.g., eligible-bug-FblvFg"
+                placeholder="e.g., eligible-bug-bgLHFe"
               />
               <p className="text-sm text-muted-foreground">
                 Your Smithery profile ID. If you don't have one, 
                 <a 
-                  href="https://smithery.ai/profiles" 
+                  href="https://smithery.ai" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="text-blue-500 hover:underline ml-1"

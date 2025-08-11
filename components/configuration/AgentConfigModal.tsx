@@ -17,12 +17,7 @@ import { PromptsConfig } from "./PromptsConfig";
 import { ToolSelector } from "@/components/configuration/ToolSelector";
 import { MemoryConfig } from "./MemoryConfig";
 import { KnowledgeConfig } from "./KnowledgeConfig";
-import {
-  Agent,
-  AgentMetadata,
-  AgentConfiguration,
-  ModelType,
-} from "@/types/agent";
+import { AssistantConfiguration, AssistantMetadata, ModelType } from "@/types/assistant";
 import { useRouter } from "next/navigation";
 import { mutate } from "swr";
 import { Assistant } from "@/types/assistant";
@@ -48,22 +43,8 @@ export function AgentConfigModal({
     name: assistant.name,
     metadata: {
       owner_id: String(assistant.metadata.owner_id),
-    } as AgentMetadata,
-    config: {
-      model: (assistant.config.configurable.model || "gpt-4o") as ModelType,
-      temperature: Number(assistant.config.configurable.temperature || 0.7),
-      enabled_mcp_servers: assistant.config.configurable.enabled_mcp_servers || [],
-      memory: {
-        enabled: Boolean(
-          (assistant.config.configurable.memory as { enabled?: boolean })?.enabled ?? true
-        ),
-      },
-      prompt_template: String(assistant.config.configurable.prompt_template || ""),
-      knowledge_base: assistant.config.configurable.knowledge_base || {
-        isEnabled: false,
-        config: { sources: [] },
-      },
-    } as AgentConfiguration,
+    } as AssistantMetadata,
+    config: (assistant.config.configurable as AssistantConfiguration),
   });
 
   const [loading, setLoading] = useState<boolean>(false);
@@ -80,7 +61,7 @@ export function AgentConfigModal({
   };
 
   const handleConfigurableChange = (field: string, value: unknown) => {
-    console.log("handleConfigurableChange called with:", field, value);
+    
     setConfig((prev) => {
       const newConfig = {
         ...prev,
@@ -89,7 +70,7 @@ export function AgentConfigModal({
           [field]: value,
         },
       };
-      console.log("New config state:", newConfig.config);
+      
       return newConfig;
     });
   };
@@ -112,9 +93,9 @@ export function AgentConfigModal({
       console.log("💾 Saving agent configuration:", {
         name: config.name,
         enabled_mcp_servers: config.config.enabled_mcp_servers,
-        full_config: config.config
+        configurable: config.config,
       });
-      
+
       const response = await fetch(`/api/assistants/${assistant.assistant_id}`, {
         method: "PUT",
         headers: {
@@ -124,7 +105,7 @@ export function AgentConfigModal({
           name: config.name,
           description: config.description,
           metadata: config.metadata,
-          config: config.config,
+          config: { configurable: config.config },
         }),
       });
 
@@ -175,7 +156,7 @@ export function AgentConfigModal({
                 name: assistant.name,
                 description: assistant.metadata.description || "",
                 metadata: assistant.metadata,
-                config: assistant.config.configurable as AgentConfiguration,
+              config: assistant.config.configurable as AssistantConfiguration,
                 agent_avatar: assistant.metadata.agent_avatar,
               }}
               onChange={handleChange}
@@ -185,7 +166,7 @@ export function AgentConfigModal({
 
           <TabsContent value="prompts">
             <PromptsConfig
-              config={config.config}
+              config={config.config as AssistantConfiguration}
               onChange={handleConfigurableChange}
             />
           </TabsContent>
@@ -201,7 +182,7 @@ export function AgentConfigModal({
 
           <TabsContent value="knowledge">
             <KnowledgeConfig
-              config={config.config}
+              config={config.config as AssistantConfiguration}
               onChange={handleConfigurableChange}
               assistant_id={assistant.assistant_id}
             />
@@ -209,7 +190,7 @@ export function AgentConfigModal({
 
           <TabsContent value="memory">
             <MemoryConfig
-              config={config.config}
+              config={config.config as AssistantConfiguration}
               onChange={handleConfigurableChange}
               assistantId={assistant.assistant_id}
             />

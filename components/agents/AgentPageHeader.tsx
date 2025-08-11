@@ -1,6 +1,5 @@
 "use client";
 
-import { Agent } from "@/types/agent";
 import { AgentConfigButton } from "@/components/configuration/AgentConfigButton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ArrowLeftIcon, Database, Brain, Wrench } from "lucide-react";
@@ -29,10 +28,20 @@ export function AgentPageHeader({ assistant }: AgentPageHeaderProps) {
   const hasMemory = assistant.config.configurable.memory?.enabled;
   const hasKnowledge = assistant.config.configurable.knowledge_base?.isEnabled;
 
-  // Count active tools
-  const activeToolsCount = Object.values(assistant.config.configurable.tools || {}).filter(
-    (tool) => (tool as { isEnabled?: boolean })?.isEnabled
-  ).length;
+  // Compute enabled MCP servers and display their names as pills
+  const enabledQualifiedNames: string[] = Array.isArray(assistant.config.configurable.enabled_mcp_servers)
+    ? assistant.config.configurable.enabled_mcp_servers
+      : assistant.config.configurable.enabled_mcp_servers && typeof assistant.config.configurable.enabled_mcp_servers === 'object'
+        ? Object.entries(assistant.config.configurable.enabled_mcp_servers)
+            .filter(([, v]) => (v as { isEnabled?: boolean })?.isEnabled)
+            .map(([k]) => k)
+        : [];
+
+  const formatToolLabel = (qualified: string) => {
+    // e.g. "@exa/exa" -> "Exa"; "@supabase-community/supabase-mcp" -> "Supabase-mcp"
+    const base = qualified.split('/').pop() || qualified;
+    return base.charAt(0).toUpperCase() + base.slice(1);
+  };
 
   return (
     <div className="flex-none border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -97,24 +106,19 @@ export function AgentPageHeader({ assistant }: AgentPageHeaderProps) {
                 </TooltipContent>
               </Tooltip>
             )}
-
-            {activeToolsCount > 0 && (
-              <Tooltip>
-                <TooltipTrigger>
-                  <Badge variant="secondary" className="gap-1">
-                    <Wrench className="h-3 w-3" />
-                    {activeToolsCount}{" "}
-                    {activeToolsCount === 1 ? "Tool" : "Tools"}
-                  </Badge>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {`${activeToolsCount} ${
-                    activeToolsCount === 1 ? "tool is" : "tools are"
-                  } enabled`}
-                </TooltipContent>
-              </Tooltip>
-            )}
           </div>
+
+          {/* Enabled tool pills */}
+          {enabledQualifiedNames.length > 0 && (
+            <div className="flex flex-wrap gap-2 mr-4">
+              {enabledQualifiedNames.map((q) => (
+                <Badge key={q} variant="secondary" className="gap-1">
+                  <Wrench className="h-3 w-3" />
+                  {formatToolLabel(q)}
+                </Badge>
+              ))}
+            </div>
+          )}
 
           <AgentConfigButton assistant={assistant} />
         </div>

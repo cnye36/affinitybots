@@ -75,6 +75,24 @@ export function AgentCard({ assistant, onDelete }: AgentCardProps) {
   const avatarUrl = assistant.metadata?.agent_avatar || "";
   console.log(assistant);
   
+  const getEnabledMcpServers = (): string[] => {
+    const enabled_mcp_servers: any = assistant.config?.configurable?.enabled_mcp_servers;
+
+    if (Array.isArray(enabled_mcp_servers)) {
+      return enabled_mcp_servers as string[];
+    }
+    
+    if (
+      enabled_mcp_servers &&
+      typeof enabled_mcp_servers === "object"
+    ) {
+      return Object.entries(enabled_mcp_servers)
+        .filter(([, v]) => (v as { isEnabled?: boolean })?.isEnabled)
+        .map(([k]) => k);
+    }
+    return [];
+  };
+  
   return (
     <>
       <div
@@ -117,17 +135,7 @@ export function AgentCard({ assistant, onDelete }: AgentCardProps) {
             Model: {assistant.config?.configurable?.model || "Not specified"}
           </span>
           <span className="hidden sm:inline">•</span>
-          <span>
-            {(() => {
-              const tools = assistant.config?.configurable?.tools;
-              if (!tools) return 0;
-              if (Array.isArray(tools)) return tools.length;
-              return Object.values(tools).filter(
-                (tool: any) => (tool as { isEnabled?: boolean })?.isEnabled
-              ).length;
-            })()} {" "}
-            tools
-          </span>
+          <span>{getEnabledMcpServers().length} tools</span>
         </div>
       </div>
 

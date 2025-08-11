@@ -4,36 +4,16 @@ export interface Assistant {
   name: string;
   created_at: string;
   updated_at: string;
-  metadata: {
-    owner_id: string;
-    description?: string;
-    agent_avatar?: string;
-  };
+  metadata: AssistantMetadata;
   config: {
-    configurable: {
-      agentId: string;
-      model?: string;
-      temperature?: number;
-      tools?: any[];
-      memory?: {
-        enabled: boolean;
-      };
-      prompt_template?: string;
-      knowledge_base?: {
-        isEnabled: boolean;
-        config: { sources: any[] };
-      };
-      enabled_mcp_servers?: string[];
-    };
+    configurable: AssistantConfiguration;
   };
   version: number;
 }
 
 export interface AssistantConfiguration {
-  name: string;
-  description: string;
-  agent_avatar?: string;
-  model: string;
+  assistant_id: string;
+  model: ModelType;
   temperature: number;
   tools: any[];
   memory: {
@@ -46,3 +26,11 @@ export interface AssistantConfiguration {
   };
   enabled_mcp_servers: string[];
 } 
+
+export interface AssistantMetadata {
+  owner_id: string;
+  description?: string;
+  agent_avatar?: string;
+}
+
+export type ModelType = "gpt-4.1" | "gpt-5" 

@@ -3,13 +3,13 @@
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { X, Upload } from "lucide-react";
-import { AgentConfiguration } from "@/types/agent";
+import { AssistantConfiguration } from "@/types/assistant";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 interface KnowledgeConfigProps {
-  config: AgentConfiguration;
-  onChange: (field: keyof AgentConfiguration, value: unknown) => void;
+  config: AssistantConfiguration;
+  onChange: (field: keyof AssistantConfiguration, value: unknown) => void;
   assistant_id: string;
 }
 

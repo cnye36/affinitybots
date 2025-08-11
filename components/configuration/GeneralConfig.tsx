@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { AgentConfiguration, ModelType, AgentMetadata } from "@/types/agent";
+import { AssistantConfiguration, ModelType, AssistantMetadata } from "@/types/assistant";
 import { createClient } from "@/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Upload, Loader2 } from "lucide-react";
@@ -35,13 +35,13 @@ interface GeneralConfigProps {
     id: string;
     name: string;
     description: string;
-    metadata: AgentMetadata;
-    config: AgentConfiguration;
+    metadata: AssistantMetadata;
+    config: AssistantConfiguration;
     agent_avatar?: string | null;
   };
   onChange: (field: string, value: unknown) => void;
   onConfigurableChange: (
-    field: keyof AgentConfiguration,
+    field: keyof AssistantConfiguration,
     value: unknown
   ) => void;
 }
@@ -113,8 +113,14 @@ export function GeneralConfig({
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            ...config,
-            avatar: publicUrl,
+            name: config.name,
+            description: config.description,
+            metadata: {
+              ...config.metadata,
+              agent_avatar: publicUrl,
+            },
+            // No config change here, but the API expects a config object
+            config: { configurable: config.config },
           }),
         });
 

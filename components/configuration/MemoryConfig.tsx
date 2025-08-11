@@ -4,12 +4,12 @@ import React from "react";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { AgentConfiguration } from "@/types/agent";
+import { AssistantConfiguration } from "@/types/assistant";
 import { useRouter } from "next/navigation";
 
 interface MemoryConfigProps {
-  config: AgentConfiguration;
-  onChange: (field: keyof AgentConfiguration, value: unknown) => void;
+  config: AssistantConfiguration;
+  onChange: (field: keyof AssistantConfiguration, value: unknown) => void;
   assistantId?: string;
 }
 

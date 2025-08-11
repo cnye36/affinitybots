@@ -207,14 +207,7 @@ export default function ServerDetailPage() {
                   </a>
                 </Button>
               )}
-              {server.deploymentUrl && (
-                <Button variant="outline" size="sm" asChild>
-                  <a href={server.deploymentUrl} target="_blank" rel="noopener noreferrer">
-                    <Server className="w-4 h-4 mr-2" />
-                    Deployment
-                  </a>
-                </Button>
-              )}
+              
             </div>
           </div>
         </div>
