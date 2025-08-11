@@ -44,7 +44,7 @@ The integration provides a unified system for connecting to MCP (Model Context P
 The `AgentConfiguration` type now supports OAuth sessions:
 
 ```typescript
-interface AgentConfiguration {
+interface AssistantConfiguration {
   // ... existing fields ...
   
   // OAuth sessions for MCP servers

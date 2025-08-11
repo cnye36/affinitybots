@@ -14,7 +14,7 @@ import {
 } from "@langchain/langgraph";
 import { MultiServerMCPClient } from "@langchain/mcp-adapters";
 import { RunnableConfig } from "@langchain/core/runnables";
-import { AgentConfiguration } from "@/types/agent";
+import { AssistantConfiguration } from "@/types/assistant";
 import { retrieveRelevantDocuments, retrieveAllRelevantContent } from "@/lib/retrieval";
 import fs from "fs";
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
@@ -28,7 +28,7 @@ export const store = new InMemoryStore();
 const mcpFactoryCache = new Map<string, MCPFactoryResult>();
 
 // Function to create MCP client and get tools using the new factory
-async function createMcpClientAndTools(userId: string, agentConfig: AgentConfiguration): Promise<{ client: MultiServerMCPClient | null; tools: any[] }> {
+async function createMcpClientAndTools(userId: string, agentConfig: AssistantConfiguration): Promise<{ client: MultiServerMCPClient | null; tools: any[] }> {
   const enabledServers = agentConfig.enabled_mcp_servers || [];
   const forceRefresh = agentConfig.force_mcp_refresh || false;
   const cacheKey = `${userId}:${enabledServers.sort().join(",")}:${forceRefresh}`;
@@ -221,13 +221,12 @@ export async function retrieveKb(state: AgentState, config: RunnableConfig) {
   const configurable = (config.configurable as { 
     user_id?: string; 
     thread_id?: string;
-    assistant_id?: string; // Primary identifier for assistants
-    agent_id?: string; // Optional for backward compatibility
+    assistant_id?: string;
   }) || {};
-  const { user_id, thread_id, assistant_id, agent_id } = configurable;
+  const { user_id, thread_id, assistant_id } = configurable;
   
-  // Use user_id as the primary identifier, fallback to assistant_id, then agent_id for backward compatibility
-  const effectiveAssistantId = user_id || assistant_id || agent_id;
+  // Use user_id as the primary identifier, fallback to assistant_id
+  const effectiveAssistantId = user_id || assistant_id;
 
   let lastUserMsgContent = state.messages.at(-1)?.content ?? "";
 
@@ -351,11 +350,10 @@ async function callModel(
   }
   
   // Get configuration from configurable object
-  const configurable = config.configurable as AgentConfiguration & {
+  const configurable = config.configurable as AssistantConfiguration & {
     user_id?: string;
     thread_id?: string;
-    assistant_id?: string; // Primary identifier for assistants
-    agent_id?: string; // For backward compatibility
+    assistant_id?: string;
   } || {};
   
   // Use metadata.user_id first, then configurable.user_id, then configurable.assistant_id as fallback
@@ -363,9 +361,9 @@ async function callModel(
                  configurable.user_id || 
                  configurable.assistant_id;
   
-  const assistantId = configurable.assistant_id || configurable.agent_id; // Use assistant_id, fallback to agent_id
+  const assistantId = configurable.assistant_id;
   
-  console.log(`🔍 Assistant execution - metadata user_id: ${config.metadata?.user_id}, configurable user_id: ${configurable.user_id}, assistant_id: ${configurable.assistant_id}, agent_id: ${configurable.agent_id}, using userId: ${userId}, assistantId: ${assistantId}`);
+  console.log(`🔍 Assistant execution - metadata user_id: ${config.metadata?.user_id}, configurable user_id: ${configurable.user_id}, assistant_id: ${configurable.assistant_id}, using userId: ${userId}, assistantId: ${assistantId}`);
   
   const systemPrompt = configurable.prompt_template || DEFAULT_SYSTEM_PROMPT;
   const memoryEnabled = configurable.memory?.enabled ?? true;
@@ -455,10 +453,9 @@ function shouldContinue({ messages }: typeof MessagesAnnotation.State) {
 
 // Create a dynamic tool node that loads tools at runtime
 async function createToolNode(state: any, config: any): Promise<any> {
-  const configurable = config.configurable as AgentConfiguration & {
+  const configurable = config.configurable as AssistantConfiguration & {
     user_id?: string;
-    assistant_id?: string; // Primary identifier for assistants
-    agent_id?: string; // For backward compatibility
+    assistant_id?: string;
   };
   
   // Use the same user ID logic as callModel to ensure consistent tool loading
@@ -466,10 +463,10 @@ async function createToolNode(state: any, config: any): Promise<any> {
                  configurable.user_id || 
                  configurable.assistant_id;
   
-  const assistantId = configurable.assistant_id || configurable.agent_id; // Use assistant_id, fallback to agent_id
+  const assistantId = configurable.assistant_id;
   const enabledServers = configurable.enabled_mcp_servers || [];
   
-  console.log(`🔍 Tool node execution - metadata user_id: ${config.metadata?.user_id}, configurable user_id: ${configurable.user_id}, assistant_id: ${configurable.assistant_id}, agent_id: ${configurable.agent_id}, using userId: ${userId}, assistantId: ${assistantId}`);
+  console.log(`🔍 Tool node execution - metadata user_id: ${config.metadata?.user_id}, configurable user_id: ${configurable.user_id}, assistant_id: ${configurable.assistant_id}, using userId: ${userId}, assistantId: ${assistantId}`);
   console.log(`Tool node for assistant ${userId || assistantId}: Loading ${enabledServers.length} servers`);
   
   // Get the same tools that were used in callModel

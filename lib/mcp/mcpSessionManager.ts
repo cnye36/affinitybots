@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { mcpClientFactory } from './mcpClientFactory';
 import { sessionStore } from '@/lib/session-store';
-import { MCPServerSession, AgentConfiguration } from '@/types/agent';
+import { AssistantConfiguration } from '@/types/assistant';
 
 export interface SessionRefreshResult {
   refreshed: string[];
@@ -39,7 +39,7 @@ export class MCPSessionManager {
   /**
    * Refreshes expired OAuth sessions for a user
    */
-  async refreshExpiredSessions(userId: string, agentConfig: AgentConfiguration): Promise<SessionRefreshResult> {
+  async refreshExpiredSessions(userId: string, agentConfig: AssistantConfiguration): Promise<SessionRefreshResult> {
     const result: SessionRefreshResult = {
       refreshed: [],
       failed: [],
@@ -212,7 +212,7 @@ export class MCPSessionManager {
   /**
    * Validates that OAuth sessions are still valid
    */
-  async validateSessions(userId: string, agentConfig: AgentConfiguration): Promise<{
+  async validateSessions(userId: string, agentConfig: AssistantConfiguration): Promise<{
     valid: string[];
     invalid: string[];
     errors: { [serverName: string]: string };

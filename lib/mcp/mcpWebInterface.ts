@@ -1,7 +1,7 @@
 import { mcpClientFactory } from './mcpClientFactory';
 import { mcpSessionManager } from './mcpSessionManager';
 import { mcpDiagnostics } from './mcpDiagnostics';
-import { AgentConfiguration } from '@/types/agent';
+import { AssistantConfiguration } from '@/types/assistant';
 import { createClient } from '@supabase/supabase-js';
 
 export interface MCPServerConnectRequest {
@@ -21,7 +21,7 @@ export interface MCPServerConnectResponse {
 
 export interface MCPToolCallRequest {
   userId: string;
-  agentConfig: AgentConfiguration;
+  agentConfig: AssistantConfiguration;
   toolName: string;
   toolArgs: Record<string, unknown>;
 }
@@ -34,7 +34,7 @@ export interface MCPToolCallResponse {
 
 export interface MCPDiagnosticRequest {
   userId: string;
-  agentConfig: AgentConfiguration;
+  agentConfig: AssistantConfiguration;
   includeAutoFix?: boolean;
 }
 
@@ -168,7 +168,7 @@ export class MCPWebInterface {
   /**
    * Lists available tools for a user's agent configuration
    */
-  async listTools(userId: string, agentConfig: AgentConfiguration): Promise<{
+  async listTools(userId: string, agentConfig: AssistantConfiguration): Promise<{
     success: boolean;
     tools?: any[];
     serverCount?: number;
@@ -269,7 +269,7 @@ export class MCPWebInterface {
   /**
    * Gets the diagnostic report as a formatted string
    */
-  async getDiagnosticReport(userId: string, agentConfig: AgentConfiguration): Promise<{
+  async getDiagnosticReport(userId: string, agentConfig: AssistantConfiguration): Promise<{
     success: boolean;
     report?: string;
     error?: string;

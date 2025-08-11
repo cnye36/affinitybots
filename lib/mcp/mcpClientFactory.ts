@@ -1,4 +1,4 @@
-import { AgentConfiguration } from "@/types/agent";
+import { AssistantConfiguration } from "@/types/assistant";
 import { mcpClientManager, MCPClientResult } from "./mcpClientManager";
 import { MultiServerMCPClient } from "@langchain/mcp-adapters";
 
@@ -29,7 +29,7 @@ export class MCPClientFactory {
    */
   async createForAgent(
     userId: string, 
-    agentConfig: AgentConfiguration
+    agentConfig: AssistantConfiguration
   ): Promise<MCPFactoryResult> {
     try {
       const enabledServers = agentConfig.enabled_mcp_servers || [];
@@ -93,7 +93,7 @@ export class MCPClientFactory {
    */
   async validateAndRefresh(
     userId: string, 
-    agentConfig: AgentConfiguration
+    agentConfig: AssistantConfiguration
   ): Promise<{
     needsRefresh: boolean;
     expiredSessions: string[];
@@ -150,7 +150,7 @@ export class MCPClientFactory {
   /**
    * Gets diagnostic information about MCP clients
    */
-  async getDiagnostics(userId: string, agentConfig: AgentConfiguration): Promise<{
+  async getDiagnostics(userId: string, agentConfig: AssistantConfiguration): Promise<{
     serverCount: number;
     toolCount: number;
     oauthSessions: number;

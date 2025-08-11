@@ -1,7 +1,7 @@
 import { ChatOpenAI } from "@langchain/openai";
 import { PromptTemplate } from "@langchain/core/prompts";
 import { generateAgentAvatar } from "@/lib/avatar-generation";
-import type { AgentConfiguration, ModelType } from "@/types/agent";
+import type { AssistantConfiguration } from "@/types/assistant";
 
 // Store previously generated names per user with a maximum cache size
 const MAX_USERS_IN_CACHE = 1000; // Maximum number of users to store in cache
@@ -296,7 +296,7 @@ export interface GeneratedConfig {
   description: string;
   agent_avatar: string;
   agent_type: string;
-  config: AgentConfiguration;
+  config: AssistantConfiguration;
   metadata: Record<string, unknown>;
 }
 

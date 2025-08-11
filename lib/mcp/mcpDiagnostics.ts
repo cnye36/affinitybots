@@ -1,6 +1,6 @@
 import { mcpClientFactory } from './mcpClientFactory';
 import { mcpSessionManager } from './mcpSessionManager';
-import { AgentConfiguration } from '@/types/agent';
+import { AssistantConfiguration } from '@/types/assistant';
 import { getUserMcpServers } from '../agent/getUserMcpServers';
 
 export interface MCPDiagnosticResult {
@@ -48,7 +48,7 @@ export class MCPDiagnostics {
   /**
    * Runs a comprehensive diagnostic check for a user's MCP setup
    */
-  async runDiagnostics(userId: string, agentConfig: AgentConfiguration): Promise<MCPDiagnosticResult> {
+  async runDiagnostics(userId: string, agentConfig: AssistantConfiguration): Promise<MCPDiagnosticResult> {
     const result: MCPDiagnosticResult = {
       userId,
       timestamp: new Date().toISOString(),
@@ -92,7 +92,7 @@ export class MCPDiagnostics {
    */
   private async checkServerConfiguration(
     userId: string, 
-    agentConfig: AgentConfiguration, 
+    agentConfig: AssistantConfiguration, 
     result: MCPDiagnosticResult
   ): Promise<void> {
     try {
@@ -135,7 +135,7 @@ export class MCPDiagnostics {
    */
   private async checkOAuthSessions(
     userId: string, 
-    agentConfig: AgentConfiguration, 
+    agentConfig: AssistantConfiguration, 
     result: MCPDiagnosticResult
   ): Promise<void> {
     try {
@@ -180,7 +180,7 @@ export class MCPDiagnostics {
    */
   private async checkToolAvailability(
     userId: string, 
-    agentConfig: AgentConfiguration, 
+    agentConfig: AssistantConfiguration, 
     result: MCPDiagnosticResult
   ): Promise<void> {
     try {
@@ -302,7 +302,7 @@ export class MCPDiagnostics {
   /**
    * Attempts to fix common issues automatically
    */
-  async autoFix(userId: string, agentConfig: AgentConfiguration): Promise<{
+  async autoFix(userId: string, agentConfig: AssistantConfiguration): Promise<{
     fixed: string[];
     failed: string[];
     recommendations: string[];

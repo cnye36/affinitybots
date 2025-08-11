@@ -43,9 +43,8 @@ export type {
 
 // Re-export agent types
 export type {
-  MCPServerSession,
-  AgentConfiguration
-} from '../../types/agent';
+  AssistantConfiguration
+} from '../../types/assistant';
 
 /**
  * Quick start utilities
@@ -54,19 +53,19 @@ export type {
 import { mcpClientFactory } from './mcpClientFactory';
 import { mcpDiagnostics } from './mcpDiagnostics';
 import { mcpSessionManager } from './mcpSessionManager';
-import { AgentConfiguration } from '../../types/agent';
+import { AssistantConfiguration } from '../../types/assistant';
 
 /**
  * Creates MCP clients for an agent - primary entry point for agent usage
  */
-export async function createMCPClientsForAgent(userId: string, agentConfig: AgentConfiguration) {
+export async function createMCPClientsForAgent(userId: string, agentConfig: AssistantConfiguration) {
   return await mcpClientFactory.createForAgent(userId, agentConfig);
 }
 
 /**
  * Runs quick health check for user's MCP setup
  */
-export async function quickHealthCheck(userId: string, agentConfig: AgentConfiguration) {
+export async function quickHealthCheck(userId: string, agentConfig: AssistantConfiguration) {
   const diagnostics = await mcpDiagnostics.runDiagnostics(userId, agentConfig);
   return {
     status: diagnostics.health.status,
@@ -81,7 +80,7 @@ export async function quickHealthCheck(userId: string, agentConfig: AgentConfigu
 /**
  * Performs maintenance on user's MCP sessions
  */
-export async function performMaintenance(userId: string, agentConfig: AgentConfiguration) {
+export async function performMaintenance(userId: string, agentConfig: AssistantConfiguration) {
   // Clean up expired sessions globally
   const cleanup = await mcpSessionManager.cleanupExpiredSessions();
   

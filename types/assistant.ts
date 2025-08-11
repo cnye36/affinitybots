@@ -25,6 +25,12 @@ export interface AssistantConfiguration {
     config: { sources: any[] };
   };
   enabled_mcp_servers: string[];
+  force_mcp_refresh: boolean;
+  mcp_oauth_sessions: {
+    server_name: string;
+    session_id: string;
+    expires_at: string;
+  }[];
 } 
 
 export interface AssistantMetadata {
@@ -34,3 +40,9 @@ export interface AssistantMetadata {
 }
 
 export type ModelType = "gpt-4.1" | "gpt-5" 
+
+export interface MCPServerSession {
+  server_name: string;
+  session_id: string;
+  expires_at: string;
+}
