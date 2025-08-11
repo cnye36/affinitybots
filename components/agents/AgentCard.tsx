@@ -42,7 +42,7 @@ export function AgentCard({ assistant, onDelete }: AgentCardProps) {
 
     // Ensure the ID is properly formatted before navigation
     const assistantId = encodeURIComponent(assistant.assistant_id.trim());
-    router.push(`/assistants/${assistantId}`);
+    router.push(`/agents/${assistantId}`);
   };
 
   const handleDelete = async (e: React.MouseEvent) => {
@@ -71,9 +71,10 @@ export function AgentCard({ assistant, onDelete }: AgentCardProps) {
     }
   };
 
-  // Get the avatar URL from the config
-  const avatarUrl = assistant.metadata.agent_avatar;
-
+  // Get the avatar URL from the config (optional chaining for safety)
+  const avatarUrl = assistant.metadata?.agent_avatar || "";
+  console.log(assistant);
+  
   return (
     <>
       <div
@@ -107,21 +108,24 @@ export function AgentCard({ assistant, onDelete }: AgentCardProps) {
               {assistant.name}
             </h3>
             <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">
-              {assistant.metadata.description || "No description provided"}
+              {assistant.metadata?.description || "No description provided"}
             </p>
           </div>
         </div>
         <div className="flex flex-wrap gap-2 items-center text-xs sm:text-sm text-muted-foreground mt-3 sm:mt-4">
           <span className="flex items-center">
-            Model: {assistant.config.configurable.model || "Not specified"}
+            Model: {assistant.config?.configurable?.model || "Not specified"}
           </span>
           <span className="hidden sm:inline">•</span>
           <span>
-            {assistant.config.configurable.tools
-              ? Object.values(assistant.config.configurable.tools).filter(
-                  (tool) => tool.isEnabled
-                ).length
-              : 0}{" "}
+            {(() => {
+              const tools = assistant.config?.configurable?.tools;
+              if (!tools) return 0;
+              if (Array.isArray(tools)) return tools.length;
+              return Object.values(tools).filter(
+                (tool: any) => (tool as { isEnabled?: boolean })?.isEnabled
+              ).length;
+            })()} {" "}
             tools
           </span>
         </div>

@@ -75,35 +75,13 @@ export default function AgentsPage() {
         <EmptyAgents />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {agents.map((assistant) => {
-            // Transform tools array into required object format
-            const toolsObj: Record<string, { isEnabled: boolean }> = {};
-            if (Array.isArray(assistant.config?.configurable?.tools)) {
-              assistant.config.configurable.tools.forEach((tool: any) => {
-                toolsObj[tool] = { isEnabled: true };
-              });
-            }
-
-            return (
-              <AgentCard
-                key={assistant.assistant_id}
-                agent={{
-                  id: assistant.assistant_id,
-                  name: assistant.name,
-                  agent_avatar: assistant.metadata?.agent_avatar || "",
-                  description: assistant.metadata?.description || "",
-                  config: {
-                    model: assistant.config?.configurable?.model || "gpt-4.1-mini",
-                    temperature: assistant.config?.configurable?.temperature || 0.5,
-                    tools: toolsObj,
-                    memory: assistant.config?.configurable?.memory || { enabled: true },
-                    knowledge_base: assistant.config?.configurable?.knowledge_base || { isEnabled: false },
-                  },
-                }}
-                onDelete={handleAgentDelete}
-              />
-            );
-          })}
+          {agents.map((assistant) => (
+            <AgentCard
+              key={assistant.assistant_id}
+              assistant={assistant}
+              onDelete={handleAgentDelete}
+            />
+          ))}
         </div>
       )}
     </div>

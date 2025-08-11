@@ -21,10 +21,16 @@ import {
 } from "lucide-react";
 
 import { TooltipIconButton } from "@/components/assistant-ui/tooltip-icon-button";
+import {
+  ComposerAttachments,
+  ComposerAddAttachment,
+} from "@/components/assistant-ui/attachment";
+import { UserMessageAttachments } from "@/components/assistant-ui/attachment";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { MarkdownText } from "./markdown-text";
+import { useMessagePartText } from "@assistant-ui/react";
 import { ToolFallback } from "./tool-fallback";
 
 export const Thread: FC = () => {
@@ -42,7 +48,7 @@ export const Thread: FC = () => {
         <ThreadPrimitive.Messages
           components={{
             UserMessage,
-            EditComposer,
+            // EditComposer,
             AssistantMessage,
           }}
         />
@@ -55,6 +61,13 @@ export const Thread: FC = () => {
       <Composer />
     </ThreadPrimitive.Root>
   );
+};
+
+// Hides inline document text that comes from text attachments
+const AttachmentAwareText: FC = () => {
+  const { text } = useMessagePartText();
+  if (typeof text === "string" && text.startsWith("<attachment ")) return null;
+  return <MarkdownText />;
 };
 
 const ThreadScrollToBottom: FC = () => {
@@ -102,72 +115,73 @@ const ThreadWelcome: FC = () => {
   );
 };
 
-const ThreadWelcomeSuggestions: FC = () => {
-  return (
-    <div className="grid w-full gap-2 sm:grid-cols-2">
-      {[
-        {
-          title: "What are the advantages",
-          label: "of using Assistant Cloud?",
-          action: "What are the advantages of using Assistant Cloud?",
-        },
-        {
-          title: "Write code to",
-          label: `demonstrate topological sorting`,
-          action: `Write code to demonstrate topological sorting`,
-        },
-        {
-          title: "Help me write an essay",
-          label: `about AI chat applications`,
-          action: `Help me write an essay about AI chat applications`,
-        },
-        {
-          title: "What is the weather",
-          label: "in San Francisco?",
-          action: "What is the weather in San Francisco?",
-        },
-      ].map((suggestedAction, index) => (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 20 }}
-          transition={{ delay: 0.05 * index }}
-          key={`suggested-action-${suggestedAction.title}-${index}`}
-          className="[&:nth-child(n+3)]:hidden sm:[&:nth-child(n+3)]:block"
-        >
-          <ThreadPrimitive.Suggestion
-            prompt={suggestedAction.action}
-            method="replace"
-            autoSend
-            asChild
-          >
-            <Button
-              variant="ghost"
-              className="dark:hover:bg-accent/60 h-auto w-full flex-1 flex-wrap items-start justify-start gap-1 rounded-xl border px-4 py-3.5 text-left text-sm sm:flex-col"
-              aria-label={suggestedAction.action}
-            >
-              <span className="font-medium">
-                {suggestedAction.title}
-              </span>
-              <p className="text-muted-foreground">
-                {suggestedAction.label}
-              </p>
-            </Button>
-          </ThreadPrimitive.Suggestion>
-        </motion.div>
-      ))}
-    </div>
-  );
-};
+// const ThreadWelcomeSuggestions: FC = () => {
+//   return (
+//     <div className="grid w-full gap-2 sm:grid-cols-2">
+//       {[
+//         {
+//           title: "What are the advantages",
+//           label: "of using Assistant Cloud?",
+//           action: "What are the advantages of using Assistant Cloud?",
+//         },
+//         {
+//           title: "Write code to",
+//           label: `demonstrate topological sorting`,
+//           action: `Write code to demonstrate topological sorting`,
+//         },
+//         {
+//           title: "Help me write an essay",
+//           label: `about AI chat applications`,
+//           action: `Help me write an essay about AI chat applications`,
+//         },
+//         {
+//           title: "What is the weather",
+//           label: "in San Francisco?",
+//           action: "What is the weather in San Francisco?",
+//         },
+//       ].map((suggestedAction, index) => (
+//         <motion.div
+//           initial={{ opacity: 0, y: 20 }}
+//           animate={{ opacity: 1, y: 0 }}
+//           exit={{ opacity: 0, y: 20 }}
+//           transition={{ delay: 0.05 * index }}
+//           key={`suggested-action-${suggestedAction.title}-${index}`}
+//           className="[&:nth-child(n+3)]:hidden sm:[&:nth-child(n+3)]:block"
+//         >
+//           <ThreadPrimitive.Suggestion
+//             prompt={suggestedAction.action}
+//             method="replace"
+//             autoSend
+//             asChild
+//           >
+//             <Button
+//               variant="ghost"
+//               className="dark:hover:bg-accent/60 h-auto w-full flex-1 flex-wrap items-start justify-start gap-1 rounded-xl border px-4 py-3.5 text-left text-sm sm:flex-col"
+//               aria-label={suggestedAction.action}
+//             >
+//               <span className="font-medium">
+//                 {suggestedAction.title}
+//               </span>
+//               <p className="text-muted-foreground">
+//                 {suggestedAction.label}
+//               </p>
+//             </Button>
+//           </ThreadPrimitive.Suggestion>
+//         </motion.div>
+//       ))}
+//     </div>
+//   );
+// };
 
 const Composer: FC = () => {
   return (
     <div className="bg-background relative mx-auto flex w-full max-w-[var(--thread-max-width)] flex-col gap-4 px-[var(--thread-padding-x)] pb-4 md:pb-6">
       <ThreadScrollToBottom />
       <ThreadPrimitive.Empty>
-        <ThreadWelcomeSuggestions />
+        {/* <ThreadWelcomeSuggestions /> */}
       </ThreadPrimitive.Empty>
       <ComposerPrimitive.Root className="focus-within:ring-offset-2 relative flex w-full flex-col rounded-2xl focus-within:ring-2 focus-within:ring-black dark:focus-within:ring-white">
+        
         <ComposerPrimitive.Input
           placeholder="Send a message..."
           className="bg-muted border-border dark:border-muted-foreground/15 focus:outline-primary placeholder:text-muted-foreground max-h-[calc(50dvh)] min-h-16 w-full resize-none rounded-t-2xl border-x border-t px-4 pt-2 pb-3 text-base outline-none"
@@ -184,16 +198,9 @@ const Composer: FC = () => {
 const ComposerAction: FC = () => {
   return (
     <div className="bg-muted border-border dark:border-muted-foreground/15 relative flex items-center justify-between rounded-b-2xl border-x border-b p-2">
-      <TooltipIconButton
-        tooltip="Attach file"
-        variant="ghost"
-        className="hover:bg-foreground/15 dark:hover:bg-background/50 scale-115 p-3.5"
-        onClick={() => {
-          console.log("Attachment clicked - not implemented");
-        }}
-      >
-        <PlusIcon />
-      </TooltipIconButton>
+      <ComposerAttachments />
+      <ComposerAddAttachment />
+      
 
       <ThreadPrimitive.If running={false}>
         <ComposerPrimitive.Send asChild>
@@ -250,7 +257,7 @@ const AssistantMessage: FC = () => {
         <div className="text-foreground col-span-2 col-start-2 row-start-1 ml-4 leading-7 break-words">
           <MessagePrimitive.Content
             components={{
-              Text: MarkdownText,
+              Text: AttachmentAwareText,
               tools: { Fallback: ToolFallback },
             }}
           />
@@ -259,7 +266,7 @@ const AssistantMessage: FC = () => {
 
         <AssistantActionBar />
 
-        <BranchPicker className="col-start-2 row-start-2 mr-2 -ml-2" />
+        {/* <BranchPicker className="col-start-2 row-start-2 mr-2 -ml-2" /> */}
       </motion.div>
     </MessagePrimitive.Root>
   );
@@ -283,11 +290,11 @@ const AssistantActionBar: FC = () => {
           </MessagePrimitive.If>
         </TooltipIconButton>
       </ActionBarPrimitive.Copy>
-      <ActionBarPrimitive.Reload asChild>
+      {/* <ActionBarPrimitive.Reload asChild>
         <TooltipIconButton tooltip="Refresh">
           <RefreshCwIcon />
         </TooltipIconButton>
-      </ActionBarPrimitive.Reload>
+      </ActionBarPrimitive.Reload> */}
     </ActionBarPrimitive.Root>
   );
 };
@@ -301,13 +308,14 @@ const UserMessage: FC = () => {
         animate={{ y: 0, opacity: 1 }}
         data-role="user"
       >
+        <UserMessageAttachments />
         <UserActionBar />
 
         <div className="bg-muted text-foreground col-start-2 rounded-3xl px-5 py-2.5 break-words">
-          <MessagePrimitive.Content components={{ Text: MarkdownText }} />
+          <MessagePrimitive.Content components={{ Text: AttachmentAwareText }} />
         </div>
 
-        <BranchPicker className="col-span-full col-start-1 row-start-3 -mr-1 justify-end" />
+        {/* <BranchPicker className="col-span-full col-start-1 row-start-3 -mr-1 justify-end" /> */}
       </motion.div>
     </MessagePrimitive.Root>
   );
@@ -320,40 +328,40 @@ const UserActionBar: FC = () => {
       autohide="not-last"
       className="col-start-1 mt-2.5 mr-3 flex flex-col items-end"
     >
-      <ActionBarPrimitive.Edit asChild>
+      {/* <ActionBarPrimitive.Edit asChild>
         <TooltipIconButton tooltip="Edit">
           <PencilIcon />
         </TooltipIconButton>
-      </ActionBarPrimitive.Edit>
+      </ActionBarPrimitive.Edit> */}
     </ActionBarPrimitive.Root>
   );
 };
 
-const EditComposer: FC = () => {
-  return (
-    <div className="mx-auto flex w-full max-w-[var(--thread-max-width)] flex-col gap-4 px-[var(--thread-padding-x)]">
-      <ComposerPrimitive.Root className="bg-muted ml-auto flex w-full max-w-7/8 flex-col rounded-xl">
-        <ComposerPrimitive.Input
-          className="text-foreground flex min-h-[60px] w-full resize-none bg-transparent p-4 outline-none"
-          autoFocus
-        />
+// const EditComposer: FC = () => {
+//   return (
+//     <div className="mx-auto flex w-full max-w-[var(--thread-max-width)] flex-col gap-4 px-[var(--thread-padding-x)]">
+//       <ComposerPrimitive.Root className="bg-muted ml-auto flex w-full max-w-7/8 flex-col rounded-xl">
+//         <ComposerPrimitive.Input
+//           className="text-foreground flex min-h-[60px] w-full resize-none bg-transparent p-4 outline-none"
+//           autoFocus
+//         />
 
-        <div className="mx-3 mb-3 flex items-center justify-center gap-2 self-end">
-          <ComposerPrimitive.Cancel asChild>
-            <Button variant="ghost" size="sm" aria-label="Cancel edit">
-              Cancel
-            </Button>
-          </ComposerPrimitive.Cancel>
-          <ComposerPrimitive.Send asChild>
-            <Button size="sm" aria-label="Update message">
-              Update
-            </Button>
-          </ComposerPrimitive.Send>
-        </div>
-      </ComposerPrimitive.Root>
-    </div>
-  );
-};
+//         <div className="mx-3 mb-3 flex items-center justify-center gap-2 self-end">
+//           <ComposerPrimitive.Cancel asChild>
+//             <Button variant="ghost" size="sm" aria-label="Cancel edit">
+//               Cancel
+//             </Button>
+//           </ComposerPrimitive.Cancel>
+//           <ComposerPrimitive.Send asChild>
+//             <Button size="sm" aria-label="Update message">
+//               Update
+//             </Button>
+//           </ComposerPrimitive.Send>
+//         </div>
+//       </ComposerPrimitive.Root>
+//     </div>
+//   );
+// };
 
 const BranchPicker: FC<BranchPickerPrimitive.Root.Props> = ({
   className,

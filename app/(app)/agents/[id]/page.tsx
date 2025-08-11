@@ -70,7 +70,7 @@ export default async function AgentPage(props: AgentPageProps) {
           ...assistant,
           metadata: assistant.metadata || {},
           config: assistant.config,
-          owner_id: assistant.metadata?.owner_id as string,
+          userId: assistant.metadata?.user_id as string,
         };
 
         return (

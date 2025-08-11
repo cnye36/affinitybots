@@ -96,8 +96,7 @@ const ThreadSidebar = forwardRef<ThreadSidebarRef, ThreadSidebarProps>(({
     }
   }, [refreshTrigger, fetchThreads]);
 
-  // Remove the polling useEffect completely
-  // The old polling code has been removed for optimization
+  
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
