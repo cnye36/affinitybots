@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { TooltipProvider } from "@radix-ui/react-tooltip";
 import { AssistantRuntimeProvider, useAssistantRuntime } from "@assistant-ui/react";
-
 import { Assistant } from "@/types/assistant";
 import { useAppLangGraphRuntime } from "./runtime-provider";
 import ThreadSidebar from "./ThreadSidebar";

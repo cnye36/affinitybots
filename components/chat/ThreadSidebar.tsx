@@ -96,7 +96,18 @@ const ThreadSidebar = forwardRef<ThreadSidebarRef, ThreadSidebarProps>(({
     }
   }, [refreshTrigger, fetchThreads]);
 
-  
+  // Listen for global refresh events triggered after auto-title
+  useEffect(() => {
+    const handler = () => fetchThreads();
+    if (typeof window !== "undefined") {
+      window.addEventListener("threads:refresh", handler as EventListener);
+    }
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("threads:refresh", handler as EventListener);
+      }
+    };
+  }, [fetchThreads]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
