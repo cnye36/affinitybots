@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -18,33 +18,77 @@ export function TaskConfigurationPanel({
   setCurrentTask,
   assistant,
 }: TaskConfigurationPanelProps) {
-  // Debounced save function
-  const debouncedSave = useCallback(async (task: Task) => {
-    try {
-      const response = await fetch(
-        `/api/workflows/${task.workflow_id}/tasks/${task.workflow_task_id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(task),
-        }
-      );
+  // Track the current in-flight save so we can cancel if a newer change happens
+  const saveAbortControllerRef = useRef<AbortController | null>(null);
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to update task");
-      }
-    } catch (error) {
-      console.error("Error saving task:", error);
-      toast({
-        title: "Failed to save changes",
-        description: error instanceof Error ? error.message : "Unknown error",
-        variant: "destructive",
-      });
+  // Debounced save function with retry and minimal payload
+  const debouncedSave = useCallback(async (task: Task) => {
+    // Build minimal payload to avoid sending large objects
+    const payload = {
+      name: task.name,
+      description: task.description,
+      task_type: task.task_type,
+      config: task.config,
+      assignedAssistant: task.assignedAssistant,
+      integration: task.integration,
+    };
+
+    // Abort any previous in-flight request
+    if (saveAbortControllerRef.current) {
+      saveAbortControllerRef.current.abort();
     }
-  }, []);
+    const controller = new AbortController();
+    saveAbortControllerRef.current = controller;
+
+    const url = `/api/workflows/${task.workflow_id}/tasks/${task.workflow_task_id}`;
+
+    const saveWithRetry = async (attempt: number): Promise<void> => {
+      try {
+        const response = await fetch(url, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          // Try to extract an error message if possible, but still retry on 5xx
+          let message = "Failed to update task";
+          try {
+            const errJson = await response.json();
+            if (errJson?.error || errJson?.message) {
+              message = errJson.error || errJson.message;
+            }
+          } catch {}
+
+          // Retry for 5xx responses
+          if (response.status >= 500 && attempt < 3) {
+            await new Promise((r) => setTimeout(r, 200 * Math.pow(2, attempt)));
+            return saveWithRetry(attempt + 1);
+          }
+          throw new Error(message);
+        }
+      } catch (error) {
+        // If aborted due to a newer save, silently exit
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+        // Network errors (e.g., dev server recompiling) — retry a few times
+        if (attempt < 3) {
+          await new Promise((r) => setTimeout(r, 200 * Math.pow(2, attempt)));
+          return saveWithRetry(attempt + 1);
+        }
+        console.error("Error saving task:", error);
+        toast({
+          title: "Failed to save changes",
+          description: error instanceof Error ? error.message : "Unknown error",
+          variant: "destructive",
+        });
+      }
+    };
+
+    await saveWithRetry(0);
+  }, [toast]);
 
   // Save changes when task is updated
   useEffect(() => {

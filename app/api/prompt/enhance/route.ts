@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     }
 
     const model = new ChatOpenAI({
-      model: "gpt-5-mini-2025-08-07",
+      model: "gpt-5-nano-2025-08-07",
       maxRetries: 2,
       timeout: 30000,
     });
