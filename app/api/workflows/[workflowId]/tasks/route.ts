@@ -94,14 +94,14 @@ export async function POST(
 
     const position = lastTask ? lastTask.position + 1 : 0;
 
-    // Prepare task data with proper assigned_agent structure
+    // Prepare task data with proper assigned assistant structure
     const insertData = {
       workflow_id: workflowId,
       position,
       name: taskData.name,
       description: taskData.description,
       task_type: taskData.task_type,
-      agent_id: taskData.agent_id, // Keep for backward compatibility
+      assistant_id: taskData.assistant_id ?? taskData.agent_id,
       config: {
         input: {
           source: taskData.config?.input?.source || "previous_task",
@@ -111,9 +111,9 @@ export async function POST(
         output: {
           destination: taskData.config?.output?.destination || "next_task",
         },
-        // Store assigned agent information in the config so we can use it in the frontend
-        assigned_agent: {
-          id: taskData.agent_id,
+        // Store assigned assistant information in the config so we can use it in the frontend
+        assigned_assistant: {
+          id: taskData.assistant_id ?? taskData.agent_id,
           name: taskData.agent_name || "Agent",
           avatar: taskData.agent_avatar,
         },

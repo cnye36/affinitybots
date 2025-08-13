@@ -60,91 +60,12 @@ class UserNamesCache {
 
 const userGeneratedNames = new UserNamesCache();
 
-// Agent type specific configurations
-const AGENT_TYPE_CONFIGS = {
-  "market-research-analyst": {
-    personality: "analytical and data-driven",
-    expertise: "market research, competitive analysis, trend identification",
-    focus: "delivering actionable business insights through comprehensive market analysis",
-    tone: "professional and authoritative",
-    temperature: 0.3,
-  },
-  "content-strategist": {
-    personality: "creative and strategic",
-    expertise: "content strategy, editorial planning, content optimization",
-    focus: "developing compelling content strategies across multiple channels",
-    tone: "engaging and strategic",
-    temperature: 0.7,
-  },
-  "customer-service-rep": {
-    personality: "empathetic and solution-oriented",
-    expertise: "customer support, issue resolution, relationship management",
-    focus: "providing exceptional customer experiences with patience and professionalism",
-    tone: "friendly, helpful, and patient",
-    temperature: 0.4,
-  },
-  "business-analyst": {
-    personality: "logical and detail-oriented",
-    expertise: "business analysis, data interpretation, process optimization",
-    focus: "analyzing complex business data to drive informed decision-making",
-    tone: "analytical and objective",
-    temperature: 0.2,
-  },
-  "product-manager": {
-    personality: "strategic and collaborative",
-    expertise: "product management, roadmap planning, stakeholder coordination",
-    focus: "driving product success through strategic planning and execution",
-    tone: "strategic and collaborative",
-    temperature: 0.5,
-  },
-  "virtual-assistant": {
-    personality: "organized and proactive",
-    expertise: "administrative support, task management, organization",
-    focus: "efficiently managing administrative tasks and schedules",
-    tone: "professional and organized",
-    temperature: 0.3,
-  },
-  "social-media-manager": {
-    personality: "creative and community-focused",
-    expertise: "social media strategy, content creation, community engagement",
-    focus: "building engaging online communities through strategic content",
-    tone: "engaging and creative",
-    temperature: 0.8,
-  },
-  "financial-analyst": {
-    personality: "meticulous and analytical",
-    expertise: "financial analysis, modeling, investment research",
-    focus: "providing accurate financial insights and investment recommendations",
-    tone: "precise and professional",
-    temperature: 0.2,
-  },
-  "innovation-consultant": {
-    personality: "visionary and creative",
-    expertise: "innovation strategy, creative problem-solving, strategic thinking",
-    focus: "generating breakthrough solutions and fostering innovation",
-    tone: "inspiring and creative",
-    temperature: 0.9,
-  },
-  "technical-writer": {
-    personality: "precise and clear",
-    expertise: "technical documentation, user guides, API documentation",
-    focus: "creating clear and comprehensive technical documentation",
-    tone: "clear and instructional",
-    temperature: 0.3,
-  },
-  "general": {
-    personality: "adaptable and helpful",
-    expertise: "general assistance and problem-solving",
-    focus: "providing versatile support across various tasks and domains",
-    tone: "helpful and professional",
-    temperature: 0.6,
-  },
-};
+// Agent profile is derived purely from the user's description now, so we
+// no longer maintain a static set of type configs.
 
 const nameGeneratorPrompt = PromptTemplate.fromTemplate(`
-Generate a creative, memorable, and unique name for an AI agent based on the following description and type.
+Generate a creative, memorable, and unique name for an AI agent based on the description.
 
-Agent Type: {agentType}
 Description: {description}
 Previously Generated Names: {previousNames}
 
@@ -165,35 +86,38 @@ Style options (choose one that fits best):
 Return only the name, nothing else.
 `);
 
+// We no longer perform explicit type classification.
+
 const configurationPrompt = PromptTemplate.fromTemplate(`
-Create a comprehensive AI agent configuration that excels at {agentType} tasks.
+Create a comprehensive AI agent configuration based solely on the user's description.
 
 User's Description: {description}
-Agent Type: {agentType}
-Agent Personality: {personality}
-Agent Expertise: {expertise}
 
-Create a configuration that works seamlessly with ANY tools or integrations the user might enable later. The agent should be adaptable and tool-agnostic.
+Infer the agent's domain/specialization, personality, and appropriate tone. The agent must be tool-agnostic and work with any integrations the user may enable later.
+
+If the user has selected specific tools, incorporate them into the prompt design so the agent proactively leverages them where appropriate.
+
+Selected Tools (qualified names, may be empty): {toolsList}
 
 Return your response as a valid JSON object with exactly this structure:
 {{
   "name": "Creative agent name (1-3 words, no AI/Bot/Assistant)",
   "description": "Concise 1-2 sentence summary of capabilities",
+  "domain": "1-3 word specialization, e.g., Market Research, Content Strategy",
   "instructions": "Comprehensive system prompt following the specified format below",
-  "model": "gpt-4.1",
-  "temperature": {temperature}
+  "model": "gpt-5-2025-08-07",
 }}
 
 For the instructions field, create a detailed system prompt with this exact structure:
 
 ## Identity
-You are [name], a specialized {agentType} focused on {focus}. You embody a {personality} approach to your work, bringing deep expertise in {expertise}.
+You are [name], a specialized agent focused on [domain]. You embody a [personality] approach to your work with deep expertise in [expertise].
 
 ## Scope
 **In Scope:**
 - [List 4-5 specific tasks/topics this agent excels at]
 - Tool utilization and integration management
-- Adaptive problem-solving within your domain
+- Adaptive problem-solving within the domain
 
 **Out of Scope:**
 - [List 2-3 things the agent should avoid or defer]
@@ -208,13 +132,13 @@ You are [name], a specialized {agentType} focused on {focus}. You embody a {pers
 - Utilize available tools and integrations intelligently based on user preferences
 - Maintain high standards of accuracy and thoroughness
 - Provide clear, actionable recommendations and deliverables
-- Adapt your methodology based on available resources and tools
+- Adapt methodology based on available resources and tools
 
 ## Response Style
-- Tone: {tone}
+- Tone: [tone]
 - Format: Clear, structured responses with actionable insights
 - Communication: Direct and professional while maintaining engagement
-- Always explain your reasoning and methodology when relevant
+- Explain reasoning and methodology when relevant
 
 ## Ability
 - Leverage any available tools and integrations dynamically
@@ -229,6 +153,7 @@ You are [name], a specialized {agentType} focused on {focus}. You embody a {pers
 - Gracefully handle scenarios where preferred tools aren't available
 - Suggest tool configurations that would enhance your capabilities
 - Optimize workflows based on available integrations
+{toolSpecificGuidance}
 
 ## Guardrails
 - Maintain data privacy and security in all operations
@@ -253,14 +178,33 @@ function createTimeoutPromise(timeoutMs: number): Promise<never> {
   });
 }
 
+// Ensure the final chosen name is reflected inside the instructions text
+function applyNameToInstructions(originalInstructions: string | undefined, finalName: string): string {
+  const instructions = (originalInstructions || '').trim();
+  if (!instructions) {
+    return `## Identity\nYou are ${finalName}, a specialized assistant.\n`;
+  }
+
+  // Replace explicit placeholder first
+  let updated = instructions.replace(/You are \[name\]/i, `You are ${finalName}`);
+
+  // Replace the first occurrence of "You are <something>" with the final name
+  updated = updated.replace(/(^|\n)You are\s+[^,\n]+/i, (_m, p1) => `${p1}You are ${finalName}`);
+
+  // If no identity line exists, prepend one
+  if (!/You are\s+[^,\n]+/i.test(updated)) {
+    updated = `## Identity\nYou are ${finalName}, a specialized assistant.\n\n` + updated;
+  }
+
+  return updated;
+}
+
 export async function generateAgentName(
   description: string,
-  agentType: string,
   ownerId: string
 ): Promise<string> {
   const model = new ChatOpenAI({
-    modelName: "gpt-4o",
-    temperature: 1.0,
+    modelName: "gpt-5-mini-2025-08-07",
     maxRetries: 2,
     timeout: 30000, // 30 second timeout
   });
@@ -269,7 +213,6 @@ export async function generateAgentName(
 
   const formattedPrompt = await nameGeneratorPrompt.format({
     description,
-    agentType,
     previousNames: previousNames || "None yet",
   });
 
@@ -286,53 +229,53 @@ export async function generateAgentName(
   } catch (error) {
     console.error("Error generating agent name:", error);
     // Fallback to a simple name
-    return `${agentType.charAt(0).toUpperCase() + agentType.slice(1)} Agent`;
+    return `Custom Agent`;
   }
 }
+
 
 export interface GeneratedConfig {
   owner_id: string;
   name: string;
   description: string;
   agent_avatar: string;
-  agent_type: string;
   config: AssistantConfiguration;
   metadata: Record<string, unknown>;
 }
 
 export async function generateAgentConfiguration(
   description: string,
-  agentType: string = "general",
-  ownerId?: string
+  ownerId?: string,
+  options?: { preferredName?: string; selectedTools?: string[] }
 ): Promise<{
   name: string;
   description: string;
+  domain?: string;
   instructions: string;
   tools: string[];
   model: string;
-  temperature: number;
   memory: { enabled: boolean; max_entries: number };
   knowledge: { enabled: boolean };
   agent_avatar: string;
 }> {
-  // Get agent type configuration
-  const typeConfig = AGENT_TYPE_CONFIGS[agentType as keyof typeof AGENT_TYPE_CONFIGS] || AGENT_TYPE_CONFIGS.general;
+  
 
   const llm = new ChatOpenAI({
-    model: "gpt-4.1",
-    temperature: 0.3,
+    model: "gpt-5-mini-2025-08-07",
     maxRetries: 2,
     timeout: 45000, // 45 second timeout
   });
 
+  const tools = options?.selectedTools || [];
+  const toolsList = tools.join(", ");
+  const toolSpecificGuidance = tools.length
+    ? `\nWhen appropriate, prefer using these tools if they fit the task: ${toolsList}. Always state which tool you plan to use and why before invoking it.`
+    : "";
+
   const prompt = await configurationPrompt.format({
     description,
-    agentType,
-    personality: typeConfig.personality,
-    expertise: typeConfig.expertise,
-    focus: typeConfig.focus,
-    tone: typeConfig.tone,
-    temperature: typeConfig.temperature,
+    toolsList: toolsList || "None",
+    toolSpecificGuidance,
   });
 
   try {
@@ -352,12 +295,24 @@ export async function generateAgentConfiguration(
 
     const parsedData = JSON.parse(jsonMatch[0]);
 
+    // Always generate or override with a stronger, unique name
+    let finalName = options?.preferredName?.trim();
+    if (!finalName) {
+      try {
+        if (!ownerId) throw new Error("ownerId required for strong naming");
+        finalName = await generateAgentName(description, ownerId);
+      } catch (e) {
+        // fall back to model-provided name
+        finalName = parsedData.name;
+      }
+    }
+
     // Generate avatar if ownerId is provided, with timeout protection
     let avatarUrl = "/images/default-avatar.png";
     if (ownerId) {
       try {
         avatarUrl = await Promise.race([
-          generateAgentAvatar(parsedData.name, agentType),
+          generateAgentAvatar(finalName || parsedData.name, parsedData.domain || "assistant"),
           createTimeoutPromise(60000) // 60 second timeout for avatar generation
         ]);
       } catch (error) {
@@ -366,13 +321,18 @@ export async function generateAgentConfiguration(
       }
     }
 
+    const finalInstructions = applyNameToInstructions(
+      parsedData.instructions || `You are a helpful assistant.`,
+      finalName || parsedData.name || "Assistant"
+    );
+
     return {
-      name: parsedData.name || "Unnamed Agent",
+      name: finalName || parsedData.name || "Unnamed Agent",
       description: parsedData.description || "A helpful AI assistant",
-      instructions: parsedData.instructions || `You are a helpful ${agentType} assistant.`,
-      tools: [], // No tools enabled by default - user configures these later
-      model: parsedData.model || "gpt-4.1",
-      temperature: parsedData.temperature || typeConfig.temperature,
+      domain: parsedData.domain,
+      instructions: finalInstructions,
+      tools, // Save selected tools
+      model: parsedData.model || "gpt-5-mini-2025-08-07",
       memory: {
         enabled: true,
         max_entries: 20,
@@ -390,7 +350,7 @@ export async function generateAgentConfiguration(
     if (ownerId) {
       try {
         avatarUrl = await Promise.race([
-          generateAgentAvatar(`${agentType} Agent`, agentType),
+          generateAgentAvatar(`Assistant`, "assistant"),
           createTimeoutPromise(60000) // 60 second timeout for avatar generation
         ]);
       } catch (avatarError) {
@@ -399,12 +359,11 @@ export async function generateAgentConfiguration(
     }
 
     return {
-      name: `${agentType.charAt(0).toUpperCase() + agentType.slice(1)} Agent`,
-      description: description || `A helpful ${agentType} assistant`,
-      instructions: `You are a specialized ${agentType} assistant. ${typeConfig.focus}. You work with any tools and integrations the user enables to provide the best possible assistance.`,
+      name: `Custom Agent`,
+      description: description || `A helpful assistant`,
+      instructions: `You are a specialized assistant. Work with any tools and integrations the user enables to provide the best possible assistance.`,
       tools: [],
       model: "gpt-4.1",
-      temperature: typeConfig.temperature,
       memory: { enabled: true, max_entries: 20 },
       knowledge: { enabled: false },
       agent_avatar: avatarUrl,

@@ -24,21 +24,20 @@ export async function POST(request: Request) {
           return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const { prompt, agentType } = await request.json();
+        const { prompt, preferredName, enabledMCPServers } = await request.json();
 
-        if (!prompt || !agentType) {
+        if (!prompt) {
           return NextResponse.json(
-            { error: "Missing required fields" },
+            { error: "Missing required field: prompt" },
             { status: 400 }
           );
         }
 
         // Generate the agent configuration with avatar generation
-        const generatedConfig = await generateAgentConfiguration(
-          prompt,
-          agentType,
-          user.id // Pass user ID for avatar generation
-        );
+        const generatedConfig = await generateAgentConfiguration(prompt, user.id, {
+          preferredName,
+          selectedTools: Array.isArray(enabledMCPServers) ? enabledMCPServers : [],
+        });
 
         // Create LangGraph Platform assistant
         const langgraphClient = new Client({
@@ -55,7 +54,6 @@ export async function POST(request: Request) {
               user_id: user.id,
               assistant_id: user.id, // Use user ID as assistantId
               model: generatedConfig.model,
-              temperature: generatedConfig.temperature,
               tools: generatedConfig.tools,
               memory: generatedConfig.memory,
               prompt_template: generatedConfig.instructions,
@@ -63,7 +61,9 @@ export async function POST(request: Request) {
                 isEnabled: generatedConfig.knowledge.enabled,
                 config: { sources: [] },
               },
-              enabled_mcp_servers: [], // Start with no tools enabled
+              enabled_mcp_servers: Array.isArray(enabledMCPServers)
+                ? enabledMCPServers
+                : [],
             },
           },
           metadata: {

@@ -255,7 +255,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
           .from("workflows")
           .insert({
             name: workflowName,
-            user_id: user.id,
+            owner_id: user.id,
             nodes: [],
             edges: [],
             status: "draft",
@@ -350,10 +350,9 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
                   description: node.data.description,
                   task_type: node.data.task_type,
                   config: node.data.config,
-                  onAssignAgent: handleAssignAgent,
+                  onAssignAssistant: handleAssignAgent,
                   onConfigureTask: handleConfigureTask,
                   isConfigOpen: false,
-                  user_id: "",
                   status: "idle",
                 } as unknown as TaskNodeData,
               })
@@ -471,7 +470,6 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
         name: workflowName.trim(),
         nodes,
         edges,
-        user_id: undefined,
       };
 
       if (workflowId) {
@@ -569,7 +567,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
           name: pendingTask.name,
           description: pendingTask.description,
           task_type: pendingTask.task_type,
-          agent_id: assistant.assistant_id,
+          assistant_id: assistant.assistant_id,
           agent_name: assistant.name,
           agent_avatar: assistant.metadata.agent_avatar,
         };
@@ -599,11 +597,12 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
             description: newTask.description || "",
             task_type: newTask.task_type,
             workflow_id: workflowId,
-            assigned_agent: newTask.config?.assigned_agent || {
-              id: assistant.assistant_id,
-              name: assistant.name,
-              avatar: assistant.metadata.agent_avatar,
-            },
+            assignedAssistant:
+              newTask.config?.assigned_assistant || {
+                id: assistant.assistant_id,
+                name: assistant.name,
+                avatar: assistant.metadata.agent_avatar,
+              },
             config: {
               input: {
                 source: "previous_node",
@@ -615,7 +614,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
               },
             },
             status: "idle",
-            onAssignAgent: handleAssignAgent,
+            onAssignAssistant: handleAssignAgent,
             onConfigureTask: handleConfigureTask,
             isConfigOpen: false,
             onConfigClose: () => {
@@ -705,8 +704,8 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
       const { error: updateError } = await supabase
         .from("workflow_tasks")
         .update({
-          // Store agent ID in agent_id field for database queries
-          agent_id: assistant.assistant_id,
+          // Store agent ID in assistant_id field for database queries
+          assistant_id: assistant.assistant_id,
           // Store full agent details in config for UI
           config: {
             ...(await supabase
@@ -718,7 +717,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
                 (result: { data: { config: Record<string, unknown> } }) =>
                   result.data?.config || {}
               )),
-            assigned_agent: {
+            assigned_assistant: {
               id: assistant.assistant_id,
               name: assistant.name,
               avatar: assistant.metadata.agent_avatar,
@@ -740,7 +739,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
               ...node,
               data: {
                 ...node.data,
-                assigned_agent: {
+                assignedAssistant: {
                   id: assistant.assistant_id,
                   name: assistant.name,
                   avatar: assistant.metadata.agent_avatar,

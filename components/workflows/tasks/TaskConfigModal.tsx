@@ -66,7 +66,8 @@ export function TaskConfigModal({
         if (!response.ok) throw new Error("Failed to load assistants");
         const data = await response.json();
         if (isMounted) {
-          setAssistants(data);
+          // API returns { assistants: Assistant[] }
+          setAssistants(Array.isArray(data) ? (data as Assistant[]) : (data.assistants || []));
           setLoadingAssistants(false);
         }
       } catch (error) {
@@ -178,7 +179,11 @@ export function TaskConfigModal({
           },
           body: JSON.stringify({
             ...currentTask,
-            agent_id: selectedAssistant.assistant_id,
+            assignedAssistant: {
+              id: selectedAssistant.assistant_id,
+              name: selectedAssistant.name,
+              avatar: selectedAssistant.metadata.agent_avatar,
+            },
           }),
         }
       );
@@ -189,8 +194,12 @@ export function TaskConfigModal({
 
       const updatedTask = {
         ...currentTask,
-        agent_id: selectedAssistant.assistant_id,
-      };
+        assignedAssistant: {
+          id: selectedAssistant.assistant_id,
+          name: selectedAssistant.name,
+          avatar: selectedAssistant.metadata.agent_avatar,
+        },
+      } as Task;
       setCurrentTask(updatedTask);
       setAssistants([selectedAssistant]);
       setIsAssistantSelectOpen(false);

@@ -52,8 +52,11 @@ const ThreadSidebar = forwardRef<ThreadSidebarRef, ThreadSidebarProps>(({
 
   const fetchThreads = useCallback(async () => {
     setIsLoading(true);
+    let timeout: any;
     try {
-      const response = await fetch(`/api/assistants/${assistantId}/threads`);
+      const controller = new AbortController();
+      timeout = setTimeout(() => controller.abort("timeout"), 15000);
+      const response = await fetch(`/api/assistants/${assistantId}/threads`, { signal: controller.signal });
       if (!response.ok) {
         const errorText = await response.text();
         console.error("Thread fetch failed:", response.status, errorText);
@@ -75,6 +78,7 @@ const ThreadSidebar = forwardRef<ThreadSidebarRef, ThreadSidebarProps>(({
       // Keep existing threads if available, don't clear them on error
       // This prevents the UI from showing "No chats yet" when there's a network error
     } finally {
+      clearTimeout(timeout);
       setIsLoading(false);
     }
   }, [assistantId]);
@@ -137,7 +141,10 @@ const ThreadSidebar = forwardRef<ThreadSidebarRef, ThreadSidebarProps>(({
   const handleSaveRename = async () => {
     if (!threadToRename || !newTitle.trim()) return;
 
+    let timeout: any;
     try {
+      const controller = new AbortController();
+      timeout = setTimeout(() => controller.abort("timeout"), 10000);
       const response = await fetch(
         `/api/assistants/${assistantId}/threads/${threadToRename}/rename`,
         {
@@ -146,6 +153,7 @@ const ThreadSidebar = forwardRef<ThreadSidebarRef, ThreadSidebarProps>(({
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ title: newTitle.trim() }),
+          signal: controller.signal,
         }
       );
 
@@ -167,6 +175,7 @@ const ThreadSidebar = forwardRef<ThreadSidebarRef, ThreadSidebarProps>(({
     } catch (error) {
       console.error("Error renaming thread:", error);
     } finally {
+      clearTimeout(timeout);
       setIsRenaming(false);
       setThreadToRename(null);
       setNewTitle("");
@@ -176,11 +185,15 @@ const ThreadSidebar = forwardRef<ThreadSidebarRef, ThreadSidebarProps>(({
   const handleDelete = async (threadId: string) => {
     if (!confirm("Are you sure you want to delete this thread?")) return;
 
+    let timeout: any;
     try {
+      const controller = new AbortController();
+      timeout = setTimeout(() => controller.abort("timeout"), 10000);
       const response = await fetch(
         `/api/assistants/${assistantId}/threads/${threadId}`,
         {
           method: "DELETE",
+          signal: controller.signal,
         }
       );
 
@@ -194,6 +207,8 @@ const ThreadSidebar = forwardRef<ThreadSidebarRef, ThreadSidebarProps>(({
       }
     } catch (error) {
       console.error("Error deleting thread:", error);
+    } finally {
+      clearTimeout(timeout);
     }
   };
 

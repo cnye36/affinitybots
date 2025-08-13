@@ -22,14 +22,18 @@ export const createAssistant = async (graphId: string) => {
  */
 export const createThread = async (assistantId?: string): Promise<{ thread_id: string }> => {
   if (assistantId) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort("timeout"), 15000);
     const res = await fetch(`/api/assistants/${assistantId}/threads`, {
       method: "POST",
+      signal: controller.signal,
     });
     if (!res.ok) {
       const text = await res.text();
       throw new Error(`Failed to create thread: ${res.status} ${text}`);
     }
     const json = await res.json();
+    clearTimeout(timeout);
     return { thread_id: json.thread_id };
   }
 
@@ -66,7 +70,7 @@ export const sendMessage = async (params: {
 }) => {
   const client = createClient();
   const assistantId = params.assistantId || process.env["NEXT_PUBLIC_LANGGRAPH_ASSISTANT_ID"]!;
-  
+  // Ensure callers can cancel previous streams if needed by returning the stream directly.
   return client.runs.stream(
     params.threadId,
     assistantId,

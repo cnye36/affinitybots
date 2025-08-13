@@ -109,8 +109,8 @@ async function writeMemory(state: AgentState, config: LangGraphRunnableConfig) {
   try {
     // Use the LLM to extract memories from the message
     const memoryExtractor = new ChatOpenAI({
-      model: "gpt-4.1-mini",
-      temperature: 0,
+      model: "gpt-5-mini-2025-08-07",
+      
     });
 
     const extractionPrompt = [
@@ -402,8 +402,7 @@ async function callModel(
   
   // Create a model and give it access to the tools
   const baseModel = new ChatOpenAI({
-    model: configurable.model || "gpt-4.1-mini",
-    temperature: configurable.temperature || 0.5,
+    model: configurable.model || "gpt-5-2025-08-07",
   });
   
   console.log(`Binding ${tools.length} tools to ${baseModel.modelName} model...`);

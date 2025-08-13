@@ -5,7 +5,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Play, Settings2, UserPlus } from "lucide-react";
+import { Play, Settings2, UserPlus, Wrench } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Task } from "@/types/workflow";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +34,26 @@ export function TaskModalHeader({
   onChangeAssistant,
 }: TaskModalHeaderProps) {
   const [isAgentConfigOpen, setIsAgentConfigOpen] = useState(false);
+  // Compute enabled MCP servers and display their names as pills
+  const enabledQualifiedNames: string[] = (() => {
+    const enabledMcp = assistant?.config?.configurable?.enabled_mcp_servers as
+      | string[]
+      | Record<string, { isEnabled?: boolean }>
+      | undefined;
+    if (Array.isArray(enabledMcp)) return enabledMcp;
+    if (enabledMcp && typeof enabledMcp === "object") {
+      return Object.entries(enabledMcp)
+        .filter(([, v]) => (v as { isEnabled?: boolean })?.isEnabled)
+        .map(([k]) => k);
+    }
+    return [];
+  })();
+
+  const formatToolLabel = (qualified: string) => {
+    // e.g. "@exa/exa" -> "Exa"; "@supabase-community/supabase-mcp" -> "Supabase-mcp"
+    const base = qualified.split('/').pop() || qualified;
+    return base.charAt(0).toUpperCase() + base.slice(1);
+  };
 
   return (
     <>
@@ -131,15 +151,16 @@ export function TaskModalHeader({
                   </Badge>
                 </div>
               )}
-              {assistant.config?.configurable?.tools && (
+              {enabledQualifiedNames.length > 0 && (
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-medium text-muted-foreground">
                     Tools:
                   </span>
                   <div className="flex flex-wrap gap-1">
-                    {Object.keys(assistant.config.configurable.tools).map((tool) => (
-                      <Badge key={tool} variant="secondary" className="text-xs">
-                        {tool}
+                    {enabledQualifiedNames.map((qualified) => (
+                      <Badge key={qualified} variant="secondary" className="gap-1 text-xs">
+                        <Wrench className="h-3 w-3" />
+                        {formatToolLabel(qualified)}
                       </Badge>
                     ))}
                   </div>

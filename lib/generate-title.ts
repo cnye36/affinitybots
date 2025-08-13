@@ -14,9 +14,7 @@ Return only the title, nothing else. Do not include quotes or special characters
 export async function generateChatName(conversation: string): Promise<string> {
   try {
     const model = new ChatOpenAI({
-      modelName: "gpt-4o-mini",
-      temperature: 0.7,
-      maxTokens: 20,
+      modelName: "gpt-5-mini-2025-08-07",
       openAIApiKey: process.env.OPENAI_API_KEY,
     });
 

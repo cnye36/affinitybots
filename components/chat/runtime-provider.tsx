@@ -13,6 +13,8 @@ import { createThread, getThreadState, sendMessage } from "@/lib/chatApi";
 
 export const useAppLangGraphRuntime = (assistantId: string) => {
   const threadIdRef = useRef<string | undefined>(undefined);
+  // Track the in-flight auto-title request so we can abort if a new one starts
+  const renameAbortRef = useRef<AbortController | null>(null);
 
   // Custom lightweight image adapter to downscale/compress before sending to reduce payload size
   class CompressedImageAttachmentAdapter extends SimpleImageAttachmentAdapter {
@@ -119,25 +121,50 @@ export const useAppLangGraphRuntime = (assistantId: string) => {
             assistantId,
           });
         }
-        // Best effort; do not block streaming.
-        fetch(
+        // Best effort; do not block streaming. Ensure only one rename request is in-flight
+        // and add a timeout so the request cannot hang indefinitely.
+        (() => {
+          try {
+            // Abort any previous rename request
+            if (renameAbortRef.current) {
+              renameAbortRef.current.abort("superseded");
+            }
+            const controller = new AbortController();
+            renameAbortRef.current = controller;
+            const timeout = setTimeout(() => controller.abort("timeout"), 10000);
+
+            return fetch(
           `/api/assistants/${assistantId}/threads/${threadIdRef.current}/rename`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ conversation: firstUserText }),
+            signal: controller.signal,
           },
         )
-          .then(() => {
-            if (typeof window !== "undefined") {
-              setTimeout(() => {
-                window.dispatchEvent(new CustomEvent("threads:refresh"));
-              }, 400);
-            }
-          })
-          .catch((err) => {
-            console.error("Auto-title generation failed:", err);
-          });
+            .then(() => {
+              if (typeof window !== "undefined") {
+                setTimeout(() => {
+                  window.dispatchEvent(new CustomEvent("threads:refresh"));
+                }, 400);
+              }
+            })
+            .catch((err) => {
+              if (err?.name !== "AbortError") {
+                console.error("Auto-title generation failed:", err);
+              }
+            })
+            .finally(() => {
+              clearTimeout(timeout);
+              if (renameAbortRef.current === controller) {
+                renameAbortRef.current = null;
+              }
+            });
+          } catch (err) {
+            console.error("Auto-title scheduling failed:", err);
+            return Promise.resolve();
+          }
+        })();
       }
 
       return sendMessage({

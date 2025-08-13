@@ -22,7 +22,7 @@ export const AGENT_TEMPLATES = [
     defaultModel: "gpt-4o",
     tools: ["web_search", "document_analysis", "data_extraction"],
     basePrompt:
-      "You are a professional market research analyst focused on delivering actionable insights. You excel at analyzing market trends, competitor analysis, and providing data-driven recommendations...",
+      "Act as a market research analyst. Synthesize industry trends, competitor moves, and market size; deliver concise insights with sources and prioritized recommendations.",
     keywords: [
       "market research",
       "competitor analysis",
@@ -41,7 +41,7 @@ export const AGENT_TEMPLATES = [
     defaultModel: "gpt-4o",
     tools: ["text_generation", "image_analysis", "content_optimization"],
     basePrompt:
-      "You are an experienced content strategist who excels at developing content strategies, creating compelling narratives, and optimizing content for different platforms...",
+      "Act as a content strategist. Turn goals and audience data into channel plans, editorial calendars, and briefs; propose topics and CTAs with measurable KPIs.",
     keywords: [
       "content strategy",
       "editorial",
@@ -59,7 +59,7 @@ export const AGENT_TEMPLATES = [
     defaultModel: "gpt-4o",
     tools: ["conversation", "knowledge_base", "task_management"],
     basePrompt:
-      "You are a professional customer service representative focused on delivering excellent customer experiences. You handle inquiries with patience and empathy...",
+      "Act as a customer support representative. Resolve inquiries empathetically, ask clarifying questions, reference knowledge when needed, and escalate edge cases with clear summaries.",
     keywords: [
       "customer service",
       "support",
@@ -77,7 +77,7 @@ export const AGENT_TEMPLATES = [
     defaultModel: "gpt-4o",
     tools: ["data_analysis", "visualization", "reporting"],
     basePrompt:
-      "You are a skilled business analyst who excels at analyzing complex business data and providing actionable insights for business improvement...",
+      "Act as a business analyst. Analyze datasets and processes, surface key metrics and anomalies, and recommend improvements with impact estimates.",
     keywords: [
       "business analysis",
       "reporting",
@@ -86,24 +86,7 @@ export const AGENT_TEMPLATES = [
       "process improvement",
     ],
   },
-  {
-    id: "product-manager",
-    name: "Product Manager",
-    description:
-      "Manages product lifecycle, creates roadmaps, and coordinates between stakeholders to drive product success",
-    icon: BriefcaseIcon,
-    defaultModel: "gpt-4o",
-    tools: ["task_management", "document_analysis", "project_planning"],
-    basePrompt:
-      "You are an experienced product manager who excels at strategic planning, stakeholder management, and driving product success...",
-    keywords: [
-      "product management",
-      "roadmap",
-      "strategy",
-      "stakeholder management",
-      "product development",
-    ],
-  },
+  
   {
     id: "virtual-assistant",
     name: "Virtual Assistant",
@@ -113,7 +96,7 @@ export const AGENT_TEMPLATES = [
     defaultModel: "gpt-4o",
     tools: ["task_management", "email_handling", "scheduling"],
     basePrompt:
-      "You are a highly organized virtual assistant focused on managing administrative tasks efficiently and professionally...",
+      "Act as an executive virtual assistant. Manage schedules, email drafts, meeting notes, and task follow‑ups; always confirm details and propose next actions.",
     keywords: [
       "administrative",
       "scheduling",
@@ -131,7 +114,7 @@ export const AGENT_TEMPLATES = [
     defaultModel: "gpt-4o",
     tools: ["content_creation", "social_media_tools", "analytics"],
     basePrompt:
-      "You are a creative social media manager skilled in developing engaging content and building online communities...",
+      "Act as a social media manager. Create platform‑specific posts, hooks, and calendars; suggest visuals and measure engagement with clear experiments.",
     keywords: [
       "social media",
       "content creation",
@@ -149,31 +132,13 @@ export const AGENT_TEMPLATES = [
     defaultModel: "gpt-4o",
     tools: ["financial_analysis", "data_modeling", "reporting"],
     basePrompt:
-      "You are a detail-oriented financial analyst skilled in financial modeling, data analysis, and providing investment insights...",
+      "Act as a financial analyst. Build concise variance analyses and models, highlight drivers, and produce investor‑ready summaries with assumptions.",
     keywords: [
       "financial analysis",
       "investment",
       "modeling",
       "finance",
       "forecasting",
-    ],
-  },
-  {
-    id: "innovation-consultant",
-    name: "Innovation Consultant",
-    description:
-      "Generates creative solutions, facilitates brainstorming sessions, and develops innovation strategies",
-    icon: Lightbulb,
-    defaultModel: "gpt-4o",
-    tools: ["ideation", "strategy_development", "research"],
-    basePrompt:
-      "You are an innovative consultant who excels at generating creative solutions and developing strategic innovation frameworks...",
-    keywords: [
-      "innovation",
-      "creativity",
-      "strategy",
-      "problem-solving",
-      "ideation",
     ],
   },
   {
@@ -185,7 +150,7 @@ export const AGENT_TEMPLATES = [
     defaultModel: "gpt-4o",
     tools: ["document_creation", "technical_analysis", "content_optimization"],
     basePrompt:
-      "You are a skilled technical writer who excels at creating clear, concise technical documentation and user guides...",
+      "Act as a technical writer. Turn specs and APIs into clear docs, quickstarts, and FAQs; use consistent structure and runnable examples.",
     keywords: [
       "technical writing",
       "documentation",

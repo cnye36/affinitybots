@@ -2,6 +2,43 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
 import { Client } from "@langchain/langgraph-sdk";
 
+export async function GET(
+  request: NextRequest,
+  props: { params: Promise<{ assistantId: string }> }
+) {
+  try {
+    const { assistantId } = await props.params;
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Try direct DB lookup first (fast and avoids external dependency)
+    const { data: assistant, error } = await supabase
+      .from("assistant")
+      .select("*")
+      .eq("assistant_id", assistantId)
+      .eq("metadata->>owner_id", user.id)
+      .single();
+
+    if (!assistant || error) {
+      return NextResponse.json({ error: "Assistant not found" }, { status: 404 });
+    }
+
+    return NextResponse.json(assistant);
+  } catch (error) {
+    console.error("Error in GET /api/assistants/[assistantId]:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch assistant" },
+      { status: 500 }
+    );
+  }
+}
+
 export async function PUT(
   request: NextRequest,
   props: { params: Promise<{ assistantId: string }> }
@@ -62,7 +99,6 @@ export async function PUT(
       const topLevelToConfigurable: Record<string, any> = {};
       const possibleKeys = [
         "model",
-        "temperature",
         "tools",
         "memory",
         "prompt_template",

@@ -264,26 +264,12 @@ export function GeneralConfig({
             <SelectValue placeholder="Select a model" />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value="gpt-5-mini-2025-08-07">GPT-5 Mini</SelectItem>
             <SelectItem value="gpt-4o">GPT-4o</SelectItem>
-            <SelectItem value="gpt-4o-mini">GPT-4o Mini</SelectItem>
-            <SelectItem value="gpt-o1">GPT-O1</SelectItem>
-            <SelectItem value="gpt-o1-mini">GPT-O1 Mini</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
-      <div className="space-y-2">
-        <Label>Temperature: {config.config.temperature}</Label>
-        <Slider
-          value={[config.config.temperature]}
-          min={0}
-          max={1}
-          step={0.1}
-          onValueChange={([value]) =>
-            onConfigurableChange("temperature", value)
-          }
-        />
-      </div>
       <div className="border-t pt-4">
         <h3 className="text-lg font-medium mb-2">Danger Zone</h3>
         <p className="text-sm text-muted-foreground mb-4">
