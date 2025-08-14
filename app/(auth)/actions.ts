@@ -3,6 +3,7 @@
 import { createClient } from "@/supabase/server";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 
 export async function signIn(formData: FormData) {
   const supabase = await createClient();
@@ -110,4 +111,84 @@ export async function signOut() {
   await supabase.auth.signOut();
   revalidatePath("/", "layout");
   redirect("/signin");
+}
+
+async function getSiteUrl() {
+  const hdrs = await headers();
+  const origin = hdrs.get("origin");
+  return process.env.NEXT_PUBLIC_URL ?? origin ?? "";
+}
+
+export async function signInWithGoogle() {
+  const supabase = await createClient();
+  const redirectTo = `${await getSiteUrl()}/dashboard`;
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: { redirectTo },
+  });
+  if (error) {
+    redirect(`/signin?error=${encodeURIComponent(error.message)}`);
+  }
+  if (data?.url) {
+    redirect(data.url);
+  }
+}
+
+export async function signInWithGitHub() {
+  const supabase = await createClient();
+  const redirectTo = `${await getSiteUrl()}/dashboard`;
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "github",
+    options: { redirectTo },
+  });
+  if (error) {
+    redirect(`/signin?error=${encodeURIComponent(error.message)}`);
+  }
+  if (data?.url) {
+    redirect(data.url);
+  }
+}
+
+export async function signUpWithGoogle(formData: FormData) {
+  const supabase = await createClient();
+  const inviteCode = (formData.get("inviteCode") as string) || "";
+  
+  if (!inviteCode) {
+    redirect(`/signup?error=${encodeURIComponent("Invite code is required.")}`);
+  }
+  
+  // Store invite code in session storage for validation after OAuth
+  const redirectTo = `${await getSiteUrl()}/auth/validate-invite?inviteCode=${encodeURIComponent(inviteCode)}`;
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: { redirectTo },
+  });
+  if (error) {
+    redirect(`/signup?error=${encodeURIComponent(error.message)}`);
+  }
+  if (data?.url) {
+    redirect(data.url);
+  }
+}
+
+export async function signUpWithGitHub(formData: FormData) {
+  const supabase = await createClient();
+  const inviteCode = (formData.get("inviteCode") as string) || "";
+  
+  if (!inviteCode) {
+    redirect(`/signup?error=${encodeURIComponent("Invite code is required.")}`);
+  }
+  
+  // Store invite code in session storage for validation after OAuth
+  const redirectTo = `${await getSiteUrl()}/auth/validate-invite?inviteCode=${encodeURIComponent(inviteCode)}`;
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "github",
+    options: { redirectTo },
+  });
+  if (error) {
+    redirect(`/signup?error=${encodeURIComponent(error.message)}`);
+  }
+  if (data?.url) {
+    redirect(data.url);
+  }
 }

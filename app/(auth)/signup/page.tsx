@@ -1,17 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { signUp } from "../actions";
+import { signUp, signUpWithGitHub, signUpWithGoogle } from "../actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 
 export default function SignUpPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const queryError = searchParams.get("error");
+  const inviteRef = useRef<HTMLInputElement | null>(null);
 
   async function handleSignUp(formData: FormData) {
     const password = formData.get("password") as string;
@@ -39,9 +43,9 @@ export default function SignUpPage() {
       <div className="w-full max-w-md">
         <h2 className="text-3xl font-bold text-center mb-6">Sign Up</h2>
         <form className="space-y-4">
-          {error && (
+          {(error || queryError) && (
             <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription>{error ?? queryError}</AlertDescription>
             </Alert>
           )}
           <div>
@@ -79,10 +83,42 @@ export default function SignUpPage() {
           </div>
           <div>
             <Label htmlFor="inviteCode">Invite Code</Label>
-            <Input id="inviteCode" name="inviteCode" type="text" required />
+            <Input id="inviteCode" name="inviteCode" type="text" required ref={inviteRef} />
           </div>
           <Button formAction={handleSignUp} className="w-full">
             Sign Up
+          </Button>
+          <div className="relative my-2 text-center text-sm text-muted-foreground">
+            <span className="px-2 bg-background relative z-10">or</span>
+            <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-px bg-border" />
+          </div>
+          <Button
+            variant="outline"
+            formAction={signUpWithGoogle}
+            className="w-full"
+            onClick={(e) => {
+              const value = inviteRef.current?.value?.trim();
+              if (!value) {
+                e.preventDefault();
+                setError("Invite code is required.");
+              }
+            }}
+          >
+            Continue with Google
+          </Button>
+          <Button
+            variant="outline"
+            formAction={signUpWithGitHub}
+            className="w-full"
+            onClick={(e) => {
+              const value = inviteRef.current?.value?.trim();
+              if (!value) {
+                e.preventDefault();
+                setError("Invite code is required.");
+              }
+            }}
+          >
+            Continue with GitHub
           </Button>
         </form>
         <p className="mt-4 text-center">

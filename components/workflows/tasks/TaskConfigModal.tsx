@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { UserPlus } from "lucide-react";
 import { AgentSelectModal } from "../AgentSelectModal";
 import { Assistant } from "@/types/assistant";
+import { useAgent } from "@/hooks/useAgent";
 
 interface TaskOutput {
   result: unknown;
@@ -48,7 +49,10 @@ export function TaskConfigModal({
   const [isLoading, setIsLoading] = useState(false);
   const [testOutput, setTestOutput] = useState<TestOutput | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [assistant, setAssistant] = useState<Assistant | null>(null);
+  const { assistant, isLoading: isAssistantLoading } = useAgent(
+    currentTask.assignedAssistant?.id,
+    { enabled: isOpen }
+  );
   const [isAssistantSelectOpen, setIsAssistantSelectOpen] = useState(false);
   const [assistants, setAssistants] = useState<Assistant[]>([]);
   const [loadingAssistants, setLoadingAssistants] = useState(true);
@@ -88,42 +92,8 @@ export function TaskConfigModal({
   }, [isOpen]);
 
   useEffect(() => {
-    let isMounted = true;
-
-    const loadAssistant = async () => {
-      if (!currentTask.assignedAssistant?.id) return;
-
-      try {
-        setLoadingAssistants(true);
-        const response = await fetch(
-          `/api/assistants/${currentTask.assignedAssistant?.id}`
-        );
-        if (!response.ok) throw new Error("Failed to load agent");
-        const data = await response.json();
-        if (isMounted) {
-          setAssistant(data);
-        }
-      } catch (error) {
-        console.error("Error loading agent:", error);
-        toast({
-          title: "Failed to load assigned agent",
-          variant: "destructive",
-        });
-      } finally {
-        if (isMounted) {
-          setLoadingAssistants(false);
-        }
-      }
-    };
-
-    if (isOpen) {
-      loadAssistant();
-    }
-
-    return () => {
-      isMounted = false;
-    };
-  }, [isOpen, currentTask.assignedAssistant?.id]);
+    setLoadingAssistants(isAssistantLoading);
+  }, [isAssistantLoading]);
 
   useEffect(() => {
     if (currentTask && assistant) {

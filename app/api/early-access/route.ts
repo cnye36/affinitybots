@@ -75,10 +75,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Send email notification
-    const apiKey = process.env.SENDGRID_API_KEY;
-    if (!apiKey) {
-      console.error("SendGrid API key is not configured");
+    // Send email notification via Resend
+    const resendApiKey = process.env.RESEND_API_KEY;
+    if (!resendApiKey) {
+      console.error("Resend API key is not configured");
       return NextResponse.json(
         { error: "Email service not configured" },
         { status: 500 }
@@ -96,11 +96,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Format email content
-    const emailData = {
-      to: notificationEmail,
-      from: process.env.FROM_EMAIL || notificationEmail, // Use FROM_EMAIL env var or fall back to notification email
-      subject: "New Early Access Request - AgentHub",
-      text: `
+    const fromEmail = process.env.FROM_EMAIL || "cnye@ai-automated-mailroom.com";
+    const subject = "New Early Access Request - AgentHub";
+    const text = `
 New early access request from ${body.name} (${body.email})
 
 Details:
@@ -108,28 +106,36 @@ Details:
 - Organization: ${body.organization || "Not specified"}
 - Purpose: ${body.purpose}
 - Features interested in: ${body.expectations || "Not specified"}
-      `,
-      html: `
+    `;
+    const html = `
 <h2>New Early Access Request</h2>
 <p><strong>From:</strong> ${body.name} (${body.email})</p>
 <h3>Details:</h3>
 <ul>
   <li><strong>Experience:</strong> ${body.experience}</li>
-  <li><strong>Organization:</strong> ${
-    body.organization || "Not specified"
-  }</li>
+  <li><strong>Organization:</strong> ${body.organization || "Not specified"}</li>
   <li><strong>Purpose:</strong> ${body.purpose}</li>
-  <li><strong>Features interested in:</strong> ${
-    body.expectations || "Not specified"
-  }</li>
+  <li><strong>Features interested in:</strong> ${body.expectations || "Not specified"}</li>
 </ul>
-      `,
-    };
+    `;
 
-    // Send the email with SendGrid
-    const sgMail = await import("@sendgrid/mail");
-    sgMail.default.setApiKey(apiKey);
-    await sgMail.default.send(emailData);
+    const { Resend } = await import("resend");
+    const resend = new Resend(resendApiKey);
+    const { error: resendError } = await resend.emails.send({
+      from: `AgentHub <${fromEmail}>`,
+      to: [notificationEmail],
+      subject,
+      text,
+      html,
+    });
+
+    if (resendError) {
+      console.error("Error sending email via Resend:", resendError);
+      return NextResponse.json(
+        { error: "Failed to send notification email" },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,

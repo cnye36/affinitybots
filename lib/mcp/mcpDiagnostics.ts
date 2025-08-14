@@ -1,7 +1,7 @@
 import { mcpClientFactory } from './mcpClientFactory';
 import { mcpSessionManager } from './mcpSessionManager';
 import { AssistantConfiguration } from '@/types/assistant';
-import { getUserMcpServers } from '../agent/getUserMcpServers';
+import { getAvailableMcpServers } from '../agent/getAvailableMcpServers';
 
 export interface MCPDiagnosticResult {
   userId: string;
@@ -96,7 +96,7 @@ export class MCPDiagnostics {
     result: MCPDiagnosticResult
   ): Promise<void> {
     try {
-      const allServers = await getUserMcpServers(userId);
+      const allServers = await getAvailableMcpServers(userId);
       const enabledServers = agentConfig.enabled_mcp_servers || [];
 
       result.servers.total = Object.keys(allServers).length;

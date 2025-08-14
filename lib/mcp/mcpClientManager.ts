@@ -1,7 +1,7 @@
 import { MultiServerMCPClient } from "@langchain/mcp-adapters";
 import { MCPOAuthClient } from "@/lib/oauth-client";
 import { sessionStore } from "@/lib/session-store";
-import { getUserMcpServers } from "../agent/getUserMcpServers";
+import { getAvailableMcpServers } from "../agent/getAvailableMcpServers";
 
 export interface MCPServerInfo {
   qualified_name: string;
@@ -75,7 +75,7 @@ export class MCPClientManager {
     }
 
     try {
-      const allServers = await getUserMcpServers(userId);
+      const allServers = await getAvailableMcpServers(userId);
       console.log(`MCPClientManager: Creating client for userId=${userId}, enabledServers=${JSON.stringify(enabledServers)}`);
       console.log(`Available servers from database:`, Object.keys(allServers));
       

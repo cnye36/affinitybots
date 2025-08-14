@@ -1,15 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { signIn } from "../actions";
+import { signIn, signInWithGitHub, signInWithGoogle } from "../actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 export default function SignInPage() {
   const [error, setError] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const queryError = searchParams.get("error");
 
   async function handleSignIn(formData: FormData) {
     const result = await signIn(formData);
@@ -23,9 +26,9 @@ export default function SignInPage() {
       <div className="w-full max-w-md">
         <h2 className="text-3xl font-bold text-center mb-6">Sign In</h2>
         <form className="space-y-4">
-          {error && (
+          {(error || queryError) && (
             <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription>{error ?? queryError}</AlertDescription>
             </Alert>
           )}
           <div>
@@ -39,6 +42,16 @@ export default function SignInPage() {
           <div className="space-y-2">
             <Button formAction={handleSignIn} className="w-full">
               Sign In
+            </Button>
+            <div className="relative my-2 text-center text-sm text-muted-foreground">
+              <span className="px-2 bg-background relative z-10">or</span>
+              <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-px bg-border" />
+            </div>
+            <Button variant="outline" formAction={signInWithGoogle} className="w-full">
+              Continue with Google
+            </Button>
+            <Button variant="outline" formAction={signInWithGitHub} className="w-full">
+              Continue with GitHub
             </Button>
           </div>
         </form>

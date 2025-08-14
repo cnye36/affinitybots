@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { MCPOAuthClient } from "@/lib/oauth-client";
-import { sessionStore } from "@/lib/session-store";
+import { mcpWebInterface } from "@/lib/mcp/mcpWebInterface";
+import { createClient } from "@/supabase/server";
 
 interface ConnectRequestBody {
   serverUrl: string;
   callbackUrl: string;
+  serverName?: string; // qualified_name if known
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body: ConnectRequestBody = await request.json();
-    const { serverUrl, callbackUrl } = body;
+    const { serverUrl, callbackUrl, serverName } = body;
 
     if (!serverUrl || !callbackUrl) {
       return NextResponse.json(
@@ -19,39 +20,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const sessionId = sessionStore.generateSessionId();
-    let authUrl: string | null = null;
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-    const client = new MCPOAuthClient(
+    const result = await mcpWebInterface.connectServer({
       serverUrl,
       callbackUrl,
-      (redirectUrl: string) => {
-        authUrl = redirectUrl;
-      }
-    );
+      userId: user.id,
+      serverName,
+    });
 
-    try {
-      await client.connect();
-      // If we get here, connection succeeded without OAuth
-      sessionStore.setClient(sessionId, client);
-      return NextResponse.json({ success: true, sessionId });
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        if (error.message === "OAuth authorization required" && authUrl) {
-          // Store client for later use
-          sessionStore.setClient(sessionId, client);
-          return NextResponse.json(
-            { requiresAuth: true, authUrl, sessionId },
-            { status: 401 }
-          );
-        } else {
-          return NextResponse.json(
-            { error: error.message || "Unknown error" },
-            { status: 500 }
-          );
-        }
-      }
-    }
+    return NextResponse.json(result, { status: result.success ? 200 : (result.requiresAuth ? 401 : 500) });
   } catch (error: unknown) {
     if (error instanceof Error) {
       return NextResponse.json({ error: error.message }, { status: 500 });

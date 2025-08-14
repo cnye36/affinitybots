@@ -119,18 +119,7 @@ export function EarlyAccessForm() {
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="purpose">
-              What do you plan to use AgentHub for? *
-            </Label>
-            <Textarea
-              id="purpose"
-              placeholder="Describe how you plan to use our platform..."
-              required
-              value={formData.purpose}
-              onChange={handleChange}
-            />
-          </div>
+          
 
           <div className="space-y-2">
             <Label htmlFor="experience">Experience Level *</Label>

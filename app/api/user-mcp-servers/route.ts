@@ -31,13 +31,13 @@ export async function POST(request: NextRequest) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const { qualified_name, config } = await request.json();
-  if (!qualified_name || !config) {
-    return NextResponse.json({ error: "Missing qualified_name or config" }, { status: 400 });
+  const { qualified_name, config, url, is_enabled = true } = await request.json();
+  if (!qualified_name) {
+    return NextResponse.json({ error: "Missing qualified_name" }, { status: 400 });
   }
   const { data, error } = await supabase
     .from("user_mcp_servers")
-    .insert([{ user_id: user.id, qualified_name, config }])
+    .insert([{ user_id: user.id, qualified_name, config: config || {}, url: url || null, is_enabled }])
     .select()
     .single();
 

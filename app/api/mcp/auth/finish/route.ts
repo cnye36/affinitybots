@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sessionStore } from "@/lib/session-store";
+import { mcpWebInterface } from "@/lib/mcp/mcpWebInterface";
+import { createClient } from "@/supabase/server";
 
 interface FinishAuthRequestBody {
   authCode: string;
@@ -18,18 +19,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const client = sessionStore.getClient(sessionId);
-
-    if (!client) {
-      return NextResponse.json(
-        { error: "No active OAuth session found" },
-        { status: 400 }
-      );
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    await client.finishAuth(authCode);
-
-    return NextResponse.json({ success: true });
+    const result = await mcpWebInterface.finishAuth(sessionId, authCode, user.id);
+    return NextResponse.json(result, { status: result.success ? 200 : 500 });
   } catch (error: unknown) {
     if (error instanceof Error) {
       return NextResponse.json({ error: error.message }, { status: 500 });

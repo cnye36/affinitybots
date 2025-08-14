@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Plus } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -46,11 +46,15 @@ const isCacheValid = (timestamp: number): boolean => {
   return Date.now() - timestamp < CACHE_DURATION;
 };
 
+import { AddMCPServerModal } from "@/components/tools/AddMCPServerModal";
+
 export default function ToolsPage() {
   const [servers, setServers] = useState<any[]>([]);
   const [logos, setLogos] = useState<Record<string, string>>({});
   const [userServers, setUserServers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [addOpen, setAddOpen] = useState(false);
+  const [configuredServers, setConfiguredServers] = useState<any[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -118,14 +122,16 @@ export default function ToolsPage() {
         fetchServers(page, debouncedSearch),
         fetch("/api/user-mcp-servers").then((r) => r.json()),
       ]);
-      setUserServers(userRes.servers || []);
+      const userList = userRes.servers || [];
+      setUserServers(userList);
+      setConfiguredServers(userList);
       setLoading(false);
 
       // Load cached logos immediately for current servers
       loadLogosForServers(serverList);
     }
     fetchData();
-  }, []); // Only fetch once when component mounts for user servers
+  }, []);
 
   // Fetch servers when page or search changes
   useEffect(() => {
@@ -242,7 +248,13 @@ export default function ToolsPage() {
 
   return (
     <div className="max-w-5xl mx-auto py-10 px-4">
-      <h1 className="text-4xl font-bold mb-8 text-center">Tools</h1>
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-4xl font-bold">Tools</h1>
+        <Button onClick={() => setAddOpen(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Server
+        </Button>
+      </div>
       
       {/* Search Bar */}
       <div className="mb-8 max-w-md mx-auto">
@@ -438,6 +450,39 @@ export default function ToolsPage() {
           Showing {Math.min((page - 1) * PAGE_SIZE + 1, total)} to {Math.min(page * PAGE_SIZE, total)} of {total} servers
         </div>
       )}
+
+      {/* Configured Servers section - move to top priority */}
+      <div className="mt-6">
+        <h2 className="text-2xl font-semibold mb-4">Configured Servers</h2>
+        {configuredServers.length === 0 ? (
+          <div className="text-sm text-muted-foreground">No servers configured yet. Click "Add Server" to connect one.</div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+            {configuredServers.map((s: any) => (
+              <Link key={s.qualified_name} href={`/tools/${encodeURIComponent(s.qualified_name)}`} className="block">
+                <Card className="hover:shadow-md transition-shadow relative">
+                  <div className="absolute left-3 top-3">
+                    <span className="inline-flex items-center rounded bg-muted px-2 py-0.5 text-xs">{s.config?.provider === 'smithery' || (s.url || '').includes('server.smithery.ai') ? 'Smithery' : 'User'}</span>
+                  </div>
+                  <CardHeader>
+                    <CardTitle className="text-base">{s.qualified_name}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-sm text-muted-foreground">{s.url || (s.config?.provider === 'smithery' ? 'Smithery (derived)' : 'Configured')}</div>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <AddMCPServerModal open={addOpen} onOpenChange={setAddOpen} onAdded={async () => {
+        const userRes = await fetch("/api/user-mcp-servers").then((r) => r.json());
+        const userList = userRes.servers || [];
+        setUserServers(userList);
+        setConfiguredServers(userList);
+      }} />
     </div>
   );
 } 

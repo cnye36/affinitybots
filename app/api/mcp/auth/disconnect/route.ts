@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sessionStore } from "@/lib/session-store";
+import { mcpWebInterface } from "@/lib/mcp/mcpWebInterface";
+import { createClient } from "@/supabase/server";
 
 interface DisconnectRequestBody {
   sessionId: string;
@@ -17,9 +18,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    sessionStore.removeClient(sessionId);
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-    return NextResponse.json({ success: true });
+    const result = await mcpWebInterface.disconnectServer(sessionId, user.id);
+    return NextResponse.json(result, { status: result.success ? 200 : 500 });
   } catch (error: unknown) {
     if (error instanceof Error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
