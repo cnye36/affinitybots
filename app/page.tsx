@@ -13,9 +13,7 @@ export default function Home() {
       <Header />
       <main className="pt-24">
         <Hero />
-        <div className="container mx-auto px-4 py-20">
-          <Features />
-        </div>
+        <Features />
         <Integrations />
         <HowItWorks />
         <Benefits />

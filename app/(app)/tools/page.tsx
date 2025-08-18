@@ -7,6 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Plus } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { OFFICIAL_MCP_SERVERS } from "@/lib/officialMcpServers";
+import { OfficialServerCard } from "@/components/tools/OfficialServerCard";
+import { SmitheryServerCard } from "@/components/tools/SmitheryServerCard";
+import { CustomServerCard } from "@/components/tools/CustomServerCard";
 
 const PAGE_SIZE = 12;
 
@@ -52,6 +56,7 @@ export default function ToolsPage() {
   const [servers, setServers] = useState<any[]>([]);
   const [logos, setLogos] = useState<Record<string, string>>({});
   const [userServers, setUserServers] = useState<any[]>([]);
+  const [userAddedServers, setUserAddedServers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
   const [configuredServers, setConfiguredServers] = useState<any[]>([]);
@@ -61,6 +66,7 @@ export default function ToolsPage() {
   const [total, setTotal] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [serverFilter, setServerFilter] = useState<"all" | "official" | "smithery">("all");
 
   // Debounce search term
   useEffect(() => {
@@ -118,12 +124,15 @@ export default function ToolsPage() {
   useEffect(() => {
     async function fetchData() {
       setLoading(true);
-      const [serverList, userRes] = await Promise.all([
+      const [serverList, userRes, userAddedRes] = await Promise.all([
         fetchServers(page, debouncedSearch),
         fetch("/api/user-mcp-servers").then((r) => r.json()),
+        fetch("/api/user-added-servers").then((r) => r.json()),
       ]);
       const userList = userRes.servers || [];
+      const userAddedList = userAddedRes.servers || [];
       setUserServers(userList);
+      setUserAddedServers(userAddedList);
       setConfiguredServers(userList);
       setLoading(false);
 
@@ -234,6 +243,15 @@ export default function ToolsPage() {
   const isConfigured = (qualifiedName: string) =>
     userServers.some((s: any) => s.qualified_name === qualifiedName);
 
+  // Helper to check if a server is a user-added server
+  const isUserAddedServer = (qualifiedName: string) =>
+    userAddedServers.some((s: any) => s.qualified_name === qualifiedName);
+
+  // Filter Smithery servers to exclude user-added servers
+  const filteredSmitheryServers = servers.filter((server: any) => 
+    !isUserAddedServer(server.qualifiedName)
+  );
+
   // Helper to truncate description to 30 words
   const truncateDescription = (description: string, maxWords: number = 30): string => {
     if (!description) return "No description provided.";
@@ -256,77 +274,105 @@ export default function ToolsPage() {
         </Button>
       </div>
       
-      {/* Search Bar */}
-      <div className="mb-8 max-w-md mx-auto">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <Input
-            type="text"
-            placeholder="Search for MCP servers..."
-            value={searchTerm}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            className="pl-10 pr-4 py-2"
-          />
-          {searchLoading && (
-            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-              <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
+      {/* Search and Filter Bar */}
+      <div className="mb-8 space-y-4">
+        {/* Search Bar */}
+        <div className="max-w-md mx-auto">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              type="text"
+              placeholder="Search for MCP servers..."
+              value={searchTerm}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              className="pl-10 pr-4 py-2"
+            />
+            {searchLoading && (
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
+              </div>
+            )}
+          </div>
+          {searchTerm && (
+            <div className="mt-2 text-sm text-muted-foreground text-center">
+              {searchLoading ? 'Searching...' : `Found ${total} servers`}
             </div>
           )}
         </div>
-        {searchTerm && (
-          <div className="mt-2 text-sm text-muted-foreground text-center">
-            {searchLoading ? 'Searching...' : `Found ${total} servers`}
-          </div>
-        )}
+
+        {/* Filter Buttons */}
+        <div className="flex justify-center gap-2">
+          <Button
+            variant={serverFilter === "all" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setServerFilter("all")}
+          >
+            All Servers
+          </Button>
+          <Button
+            variant={serverFilter === "official" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setServerFilter("official")}
+          >
+            Official
+          </Button>
+          <Button
+            variant={serverFilter === "smithery" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setServerFilter("smithery")}
+          >
+            Smithery
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
-        {servers.map((server: any) => (
-          <Link 
-            key={server.qualifiedName || server.id} 
-            href={`/tools/${encodeURIComponent(server.qualifiedName)}`}
-            className="block transition-transform hover:scale-105"
-          >
-            <Card className="flex flex-col h-full shadow-lg border border-muted hover:shadow-xl cursor-pointer">
-              <CardHeader className="flex flex-col items-center pb-2">
-                {logos[server.qualifiedName] ? (
-                  <div className="mb-2">
-                    <Image
-                      src={logos[server.qualifiedName]}
-                      alt={server.displayName || server.qualifiedName}
-                      width={48}
-                      height={48}
-                      className="rounded-full bg-white border"
-                    />
-                  </div>
-                ) : (
-                  <div className="mb-2 w-12 h-12 rounded-full bg-muted flex items-center justify-center text-2xl">
-                    🛠️
-                  </div>
-                )}
-                <CardTitle className="text-center text-lg font-semibold">
-                  {server.displayName || server.qualifiedName}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col flex-1 justify-between">
-                <div className="mb-4 text-sm text-muted-foreground min-h-[48px]">
-                  {truncateDescription(server.description)}
-                </div>
-                <div className="mt-auto flex justify-center">
-                  {isConfigured(server.qualifiedName) ? (
-                    <Button variant="secondary" onClick={(e) => e.preventDefault()}>
-                      View & Configure
-                    </Button>
-                  ) : (
-                    <Button onClick={(e) => e.preventDefault()}>
-                      Configure & Connect
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
+        {/* User-added servers - always on top */}
+        {userAddedServers.length > 0 && (
+          <>
+            {userAddedServers.map((server: any) => (
+              <CustomServerCard
+                key={server.id}
+                server={server}
+                isConfigured={true}
+              />
+            ))}
+          </>
+        )}
+
+        {/* Official servers */}
+        {(serverFilter === "all" || serverFilter === "official") && 
+          OFFICIAL_MCP_SERVERS.map((server) => (
+            <OfficialServerCard
+              key={`official-${server.qualifiedName}`}
+              server={server}
+              isConfigured={isConfigured(server.qualifiedName)}
+              onConnected={async () => {
+                const [userRes, userAddedRes] = await Promise.all([
+                  fetch("/api/user-mcp-servers").then((r) => r.json()),
+                  fetch("/api/user-added-servers").then((r) => r.json())
+                ]);
+                const userList = userRes.servers || [];
+                const userAddedList = userAddedRes.servers || [];
+                setUserServers(userList);
+                setUserAddedServers(userAddedList);
+                setConfiguredServers(userList);
+              }}
+            />
+          ))
+        }
+
+        {/* Smithery registry servers */}
+        {(serverFilter === "all" || serverFilter === "smithery") && 
+          filteredSmitheryServers.map((server: any) => (
+            <SmitheryServerCard
+              key={server.qualifiedName || server.id}
+              server={server}
+              logoUrl={logos[server.qualifiedName]}
+              isConfigured={isConfigured(server.qualifiedName)}
+            />
+          ))
+        }
       </div>
       
       {/* Enhanced Pagination */}
@@ -451,36 +497,15 @@ export default function ToolsPage() {
         </div>
       )}
 
-      {/* Configured Servers section - move to top priority */}
-      <div className="mt-6">
-        <h2 className="text-2xl font-semibold mb-4">Configured Servers</h2>
-        {configuredServers.length === 0 ? (
-          <div className="text-sm text-muted-foreground">No servers configured yet. Click "Add Server" to connect one.</div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-            {configuredServers.map((s: any) => (
-              <Link key={s.qualified_name} href={`/tools/${encodeURIComponent(s.qualified_name)}`} className="block">
-                <Card className="hover:shadow-md transition-shadow relative">
-                  <div className="absolute left-3 top-3">
-                    <span className="inline-flex items-center rounded bg-muted px-2 py-0.5 text-xs">{s.config?.provider === 'smithery' || (s.url || '').includes('server.smithery.ai') ? 'Smithery' : 'User'}</span>
-                  </div>
-                  <CardHeader>
-                    <CardTitle className="text-base">{s.qualified_name}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-sm text-muted-foreground">{s.url || (s.config?.provider === 'smithery' ? 'Smithery (derived)' : 'Configured')}</div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
-
       <AddMCPServerModal open={addOpen} onOpenChange={setAddOpen} onAdded={async () => {
-        const userRes = await fetch("/api/user-mcp-servers").then((r) => r.json());
+        const [userRes, userAddedRes] = await Promise.all([
+          fetch("/api/user-mcp-servers").then((r) => r.json()),
+          fetch("/api/user-added-servers").then((r) => r.json())
+        ]);
         const userList = userRes.servers || [];
+        const userAddedList = userAddedRes.servers || [];
         setUserServers(userList);
+        setUserAddedServers(userAddedList);
         setConfiguredServers(userList);
       }} />
     </div>

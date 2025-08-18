@@ -10,6 +10,7 @@ import { Settings, CheckCircle, XCircle, Globe, Server, Loader2 } from "lucide-r
 import Image from "next/image";
 import Link from "next/link";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { OFFICIAL_MCP_SERVERS } from "@/lib/officialMcpServers";
 
 interface SmitheryServer {
   qualifiedName: string;
@@ -38,6 +39,19 @@ interface UserMCPServer {
   updated_at: string;
 }
 
+interface UserAddedServer {
+  id: string;
+  qualified_name: string;
+  display_name: string;
+  description: string;
+  url: string;
+  auth_type: string;
+  config: any;
+  is_enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 interface ToolSelectorProps {
   enabledMCPServers: string[];
   onMCPServersChange: (servers: string[]) => void;
@@ -49,6 +63,7 @@ export function ToolSelector({
 }: ToolSelectorProps) {
   const [smitheryServers, setSmitheryServers] = useState<SmitheryServer[]>([]);
   const [userServers, setUserServers] = useState<UserMCPServer[]>([]);
+  const [userAddedServers, setUserAddedServers] = useState<UserAddedServer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [logos, setLogos] = useState<Record<string, string>>({});
@@ -63,11 +78,11 @@ export function ToolSelector({
     setError(null);
     
     try {
-      // Fetch both Smithery servers and user configurations in parallel
-      // Use a large page size to get all servers for the tool selector
-      const [smitheryRes, userRes] = await Promise.all([
+      // Fetch Smithery servers, user configurations, and user-added servers in parallel
+      const [smitheryRes, userRes, userAddedRes] = await Promise.all([
         fetch('/api/smithery?pageSize=100').then(r => r.json()),
-        fetch('/api/user-mcp-servers').then(r => r.json())
+        fetch('/api/user-mcp-servers').then(r => r.json()),
+        fetch('/api/user-added-servers').then(r => r.json())
       ]);
 
       if (smitheryRes.error) {
@@ -78,9 +93,14 @@ export function ToolSelector({
         throw new Error(userRes.error);
       }
 
+      if (userAddedRes.error) {
+        throw new Error(userAddedRes.error);
+      }
+
       const servers = smitheryRes.servers?.servers || [];
       setSmitheryServers(servers);
       setUserServers(userRes.servers || []);
+      setUserAddedServers(userAddedRes.servers || []);
 
       // Fetch logos for servers that have them
       const serversWithLogos = servers.filter((s: SmitheryServer) => s.iconUrl || s.logo);
@@ -119,7 +139,8 @@ export function ToolSelector({
 
   const isConfigured = (qualifiedName: string) => {
     const userServer = userServers.find(s => s.qualified_name === qualifiedName);
-    return userServer?.is_enabled || false;
+    const userAddedServer = userAddedServers.find(s => s.qualified_name === qualifiedName);
+    return userServer?.is_enabled || userAddedServer?.is_enabled || false;
   };
 
   const isEnabledForAgent = (qualifiedName: string) => {
@@ -159,34 +180,81 @@ export function ToolSelector({
     );
   }
 
-  // Separate configured and unconfigured servers
-  const configuredServers = smitheryServers.filter(server => isConfigured(server.qualifiedName));
-  const unconfiguredServers = smitheryServers.filter(server => !isConfigured(server.qualifiedName));
+  // Combine all server types
+  const allServers = [
+    // User-added servers first
+    ...userAddedServers.map(server => ({
+      ...server,
+      qualifiedName: server.qualified_name,
+      displayName: server.display_name,
+      description: server.description,
+      serverType: 'custom' as const,
+      isLocal: false
+    })),
+    // Official servers
+    ...OFFICIAL_MCP_SERVERS.map(server => ({
+      ...server,
+      serverType: 'official' as const,
+      isLocal: false
+    })),
+    // Smithery servers
+    ...smitheryServers.map(server => ({
+      ...server,
+      serverType: 'smithery' as const
+    }))
+  ];
 
-  const ServerCard = ({ server, isConfiguredSection }: { server: SmitheryServer; isConfiguredSection: boolean }) => {
+  // Separate configured and unconfigured servers
+  const configuredServers = allServers.filter(server => isConfigured(server.qualifiedName));
+  const unconfiguredServers = allServers.filter(server => !isConfigured(server.qualifiedName));
+
+  const ServerCard = ({ server, isConfiguredSection }: { server: any; isConfiguredSection: boolean }) => {
     const configured = isConfigured(server.qualifiedName);
     const enabled = isEnabledForAgent(server.qualifiedName);
-    const requiresConfig = needsConfiguration(server);
+    const requiresConfig = server.serverType === 'smithery' ? needsConfiguration(server) : false;
     
-    return (
-      <Card className="p-4">
-        <div className="flex items-start gap-3">
-          {/* Icon */}
-          <div className="flex-shrink-0 mt-1">
-            {logos[server.qualifiedName] ? (
-              <Image
-                src={logos[server.qualifiedName]}
-                alt={server.displayName || server.qualifiedName}
-                width={32}
-                height={32}
-                className="rounded-full bg-white border"
-              />
-            ) : (
-              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-lg">
-                🛠️
-              </div>
-            )}
-          </div>
+    const getServerTypeBadge = () => {
+      const variants = {
+        official: "default",
+        smithery: "secondary", 
+        custom: "outline"
+      } as const;
+
+      const labels = {
+        official: "Official",
+        smithery: "Smithery",
+        custom: "Custom"
+      };
+
+      const serverType = server.serverType as keyof typeof variants;
+
+      return (
+        <Badge variant={variants[serverType]} className="text-xs">
+          {labels[serverType]}
+        </Badge>
+      );
+    };
+    
+          return (
+        <Card className="p-4">
+          <div className="flex items-start gap-3">
+            {/* Icon */}
+            <div className="flex-shrink-0 mt-1">
+              {server.logoUrl || logos[server.qualifiedName] ? (
+                <Image
+                  src={server.logoUrl || logos[server.qualifiedName]}
+                  alt={server.displayName || server.qualifiedName}
+                  width={32}
+                  height={32}
+                  className="rounded-full bg-white border"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-lg">
+                  {server.qualifiedName === 'github' ? '🐙' : 
+                   server.qualifiedName === 'notion' ? '📝' : '🛠️'}
+                </div>
+              )}
+            </div>
 
           {/* Content */}
           <div className="flex-1 min-w-0">
@@ -213,6 +281,8 @@ export function ToolSelector({
 
             {/* Status badges */}
             <div className="flex flex-wrap gap-1 mt-2">
+              {getServerTypeBadge()}
+              
               {configured ? (
                 <Badge variant="default" className="text-xs">
                   <CheckCircle className="w-3 h-3 mr-1" />
@@ -313,7 +383,7 @@ export function ToolSelector({
       )}
 
       {/* Empty state */}
-      {smitheryServers.length === 0 && (
+      {allServers.length === 0 && (
         <div className="text-center py-8 text-muted-foreground">
           <p>No tools available at the moment.</p>
           <Button 

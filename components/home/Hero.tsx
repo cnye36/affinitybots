@@ -44,7 +44,7 @@ export function Hero() {
                   Request Early Access
                 </Button>
               </Link>
-              <Link href="#how-it-works" className="w-full sm:w-auto">
+              <Link href="/#how-it-works" className="w-full sm:w-auto">
                 <Button
                   size="lg"
                   variant="outline"

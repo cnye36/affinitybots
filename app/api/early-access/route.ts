@@ -1,14 +1,16 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createClient } from "@/supabase/server";
+import { Resend } from "resend";
 
 interface EarlyAccessRequest {
   email: string;
   name: string;
-  purpose: string;
-  experience: string;
+  purpose?: string;
+  experience?: string;
   organization: string;
   expectations: string;
+  newsletter: boolean;
 }
 
 export async function POST(request: NextRequest) {
@@ -16,7 +18,7 @@ export async function POST(request: NextRequest) {
     const body = (await request.json()) as EarlyAccessRequest;
 
     // Validate required fields
-    if (!body.email || !body.name || !body.purpose || !body.experience) {
+    if (!body.email || !body.name) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -54,8 +56,10 @@ export async function POST(request: NextRequest) {
         {
           email: body.email,
           name: body.name,
+          organization: body.organization || null,
+          expectations: body.expectations || null,
+          newsletter: body.newsletter,
           // status will default to 'requested'
-          // You can add other fields from EarlyAccessRequest here if you add them to your table
         },
       ]);
 
@@ -95,46 +99,115 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Format email content
-    const fromEmail = process.env.FROM_EMAIL || "cnye@ai-automated-mailroom.com";
-    const subject = "New Early Access Request - AgentHub";
-    const text = `
-New early access request from ${body.name} (${body.email})
-
-Details:
-- Experience: ${body.experience}
-- Organization: ${body.organization || "Not specified"}
-- Purpose: ${body.purpose}
-- Features interested in: ${body.expectations || "Not specified"}
-    `;
-    const html = `
-<h2>New Early Access Request</h2>
-<p><strong>From:</strong> ${body.name} (${body.email})</p>
-<h3>Details:</h3>
-<ul>
-  <li><strong>Experience:</strong> ${body.experience}</li>
-  <li><strong>Organization:</strong> ${body.organization || "Not specified"}</li>
-  <li><strong>Purpose:</strong> ${body.purpose}</li>
-  <li><strong>Features interested in:</strong> ${body.expectations || "Not specified"}</li>
-</ul>
-    `;
-
-    const { Resend } = await import("resend");
+    // Initialize Resend client
     const resend = new Resend(resendApiKey);
-    const { error: resendError } = await resend.emails.send({
-      from: `AgentHub <${fromEmail}>`,
+    
+    // Send email using HTML content
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h1 style="color: #333; border-bottom: 2px solid #007bff; padding-bottom: 10px;">
+          New Early Access Request - AgentHub
+        </h1>
+        
+        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h2 style="color: #007bff; margin-top: 0;">Applicant Details</h2>
+          <p><strong>Name:</strong> ${body.name}</p>
+          <p><strong>Email:</strong> ${body.email}</p>
+          ${body.organization ? `<p><strong>Organization:</strong> ${body.organization}</p>` : ''}
+          <p><strong>Newsletter Opt-in:</strong> ${body.newsletter ? 'Yes' : 'No'}</p>
+        </div>
+
+        <div style="background-color: #e9ecef; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="color: #495057; margin-top: 0;">Purpose & Expectations</h3>
+          ${body.purpose ? `<p><strong>Purpose:</strong> ${body.purpose}</p>` : ''}
+          ${body.expectations ? `
+            <div>
+              <p><strong>Features of Interest:</strong></p>
+              <p style="background-color: white; padding: 15px; border-radius: 4px; border-left: 4px solid #007bff;">
+                ${body.expectations}
+              </p>
+            </div>
+          ` : ''}
+        </div>
+
+        <div style="text-align: center; margin-top: 30px; padding: 20px; background-color: #f8f9fa; border-radius: 8px;">
+          <p style="margin: 0; color: #6c757d;">
+            This request was submitted through the AgentHub early access form.
+          </p>
+          <p style="margin: 10px 0 0 0; color: #6c757d; font-size: 14px;">
+            Timestamp: ${new Date().toLocaleString()}
+          </p>
+        </div>
+      </div>
+    `;
+
+    // Send notification email to admin
+    const { error: notificationError } = await resend.emails.send({
+      from: "AgentHub <noreply@ai-automated-mailroom.com>",
       to: [notificationEmail],
-      subject,
-      text,
+      subject: "New Early Access Request - AgentHub",
       html,
     });
 
-    if (resendError) {
-      console.error("Error sending email via Resend:", resendError);
+    if (notificationError) {
+      console.error("Error sending notification email via Resend:", notificationError);
       return NextResponse.json(
         { error: "Failed to send notification email" },
         { status: 500 }
       );
+    }
+
+    // Send confirmation email to the applicant
+    const confirmationHtml = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h1 style="color: #333; border-bottom: 2px solid #007bff; padding-bottom: 10px;">
+          Early Access Request Received - AgentHub
+        </h1>
+        
+        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h2 style="color: #007bff; margin-top: 0;">Thank you for your interest!</h2>
+          <p>Hi ${body.name},</p>
+          <p>We've received your early access request for <strong>AgentHub</strong>. Here's what we received:</p>
+          <ul>
+            <li><strong>Name:</strong> ${body.name}</li>
+            <li><strong>Email:</strong> ${body.email}</li>
+            ${body.organization ? `<li><strong>Organization:</strong> ${body.organization}</li>` : ''}
+            <li><strong>Newsletter Opt-in:</strong> ${body.newsletter ? 'Yes' : 'No'}</li>
+          </ul>
+        </div>
+
+        <div style="background-color: #e9ecef; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="color: #495057; margin-top: 0;">What happens next?</h3>
+          <p>Our team will review your application and get back to you within 2-3 business days. We'll send you an email with:</p>
+          <ul>
+            <li>Your early access status</li>
+            <li>Next steps to get started</li>
+            <li>Any additional information we might need</li>
+          </ul>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px; padding: 20px; background-color: #f8f9fa; border-radius: 8px;">
+          <p style="margin: 0; color: #6c757d;">
+            If you have any questions, feel free to reply to this email.
+          </p>
+          <p style="margin: 10px 0 0 0; color: #6c757d; font-size: 14px;">
+            Submitted on: ${new Date().toLocaleString()}
+          </p>
+        </div>
+      </div>
+    `;
+
+    const { error: confirmationError } = await resend.emails.send({
+      from: "AgentHub <noreply@ai-automated-mailroom.com>",
+      to: [body.email],
+      subject: "Early Access Request Received - AgentHub",
+      html: confirmationHtml,
+    });
+
+    if (confirmationError) {
+      console.error("Error sending confirmation email via Resend:", confirmationError);
+      // Don't fail the request if confirmation email fails, just log it
+      console.warn("Failed to send confirmation email, but request was saved successfully");
     }
 
     return NextResponse.json({

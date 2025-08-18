@@ -1,5 +1,5 @@
 /**
- * Send an early access invite email to a user using SendGrid.
+ * Send an early access invite email to a user using Resend.
  * @param to Recipient email address
  * @param name Recipient name (optional)
  * @param inviteCode The invite code to include
@@ -16,12 +16,8 @@ export async function sendInviteEmail({
   inviteCode: string;
   expiresAt: string | Date;
 }) {
-  const apiKey = process.env.SENDGRID_API_KEY;
-  if (!apiKey) throw new Error("SendGrid API key is not configured");
-
-  const from = process.env.FROM_EMAIL || process.env.NOTIFICATION_EMAIL;
-  if (!from)
-    throw new Error("FROM_EMAIL or NOTIFICATION_EMAIL is not configured");
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) throw new Error("Resend API key is not configured");
 
   const signupUrl = `${
     process.env.NEXT_PUBLIC_BASE_URL || "https://agenthub.click"
@@ -43,15 +39,20 @@ export async function sendInviteEmail({
       </div>
     `;
 
-  const sgMail = await import("@sendgrid/mail");
-  sgMail.default.setApiKey(apiKey);
-  await sgMail.default.send({
-    to,
-    from,
+  const { Resend } = await import("resend");
+  const resend = new Resend(apiKey);
+  
+  const { error } = await resend.emails.send({
+    from: "AgentHub <noreply@ai-automated-mailroom.com>",
+    to: [to],
     subject: "You're Invited to AgentHub!",
     html,
     text: `You're invited to join AgentHub!\nInvite code: ${inviteCode}\nExpires: ${new Date(
       expiresAt
     ).toLocaleString()}\nSign up: ${signupUrl}`,
   });
+
+  if (error) {
+    throw new Error(`Failed to send email: ${error.message}`);
+  }
 }

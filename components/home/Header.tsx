@@ -65,24 +65,24 @@ export function Header() {
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center space-x-6">
-          <a
-            href="#features"
+          <Link
+            href="/#features"
             className="text-md font-medium hover:text-primary"
           >
             Features
-          </a>
-          <a
-            href="#how-it-works"
+          </Link>
+          <Link
+            href="/#how-it-works"
             className="text-md font-medium hover:text-primary"
           >
             How It Works
-          </a>
-          <a
-            href="#benefits"
+          </Link>
+          <Link
+            href="/#benefits"
             className="text-md font-medium hover:text-primary"
           >
             Benefits
-          </a>
+          </Link>
         </nav>
 
         <div className="flex items-center space-x-4">
@@ -114,43 +114,43 @@ export function Header() {
         </div>
       </div>
 
-      {/* Mobile Menu */}
-      {mobileMenuOpen && (
-        <div className="md:hidden absolute top-full left-0 right-0 bg-background shadow-lg border-b border-border">
-          <nav className="container mx-auto px-4 py-4 flex flex-col space-y-4">
-            <a
-              href="#features"
-              className="text-md font-medium hover:text-primary py-2"
-              onClick={handleNavClick}
-            >
-              Features
-            </a>
-            <a
-              href="#how-it-works"
-              className="text-md font-medium hover:text-primary py-2"
-              onClick={handleNavClick}
-            >
-              How It Works
-            </a>
-            <a
-              href="#benefits"
-              className="text-md font-medium hover:text-primary py-2"
-              onClick={handleNavClick}
-            >
-              Benefits
-            </a>
-            <Link
-              href="/early-access"
-              className="mt-2"
-              onClick={handleNavClick}
-            >
-              <Button variant="default" className="w-full">
-                Request Access
-              </Button>
-            </Link>
-          </nav>
-        </div>
-      )}
+              {/* Mobile Menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden absolute top-full left-0 right-0 bg-background shadow-lg border-b border-border">
+            <nav className="container mx-auto px-4 py-4 flex flex-col space-y-4">
+              <Link
+                href="/#features"
+                className="text-md font-medium hover:text-primary py-2"
+                onClick={handleNavClick}
+              >
+                Features
+              </Link>
+              <Link
+                href="/#how-it-works"
+                className="text-md font-medium hover:text-primary py-2"
+                onClick={handleNavClick}
+              >
+                How It Works
+              </Link>
+              <Link
+                href="/#benefits"
+                className="text-md font-medium hover:text-primary py-2"
+                onClick={handleNavClick}
+              >
+                Benefits
+              </Link>
+              <Link
+                href="/early-access"
+                className="mt-2"
+                onClick={handleNavClick}
+              >
+                <Button variant="default" className="w-full">
+                  Request Access
+                </Button>
+              </Link>
+            </nav>
+          </div>
+        )}
     </header>
   );
 }

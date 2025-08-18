@@ -4,14 +4,8 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+
 import {
   Card,
   CardContent,
@@ -29,10 +23,9 @@ export function EarlyAccessForm() {
   const [formData, setFormData] = useState({
     email: "",
     name: "",
-    purpose: "",
-    experience: "",
     organization: "",
     expectations: "",
+    newsletter: false,
   });
 
   const handleChange = (
@@ -65,10 +58,9 @@ export function EarlyAccessForm() {
         setFormData({
           email: "",
           name: "",
-          purpose: "",
-          experience: "",
           organization: "",
           expectations: "",
+          newsletter: false,
         });
       } else {
         throw new Error("Submission failed");
@@ -87,10 +79,10 @@ export function EarlyAccessForm() {
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardHeader>
-        <CardTitle>Request Early Access</CardTitle>
-        <CardDescription>
+    <Card className="w-full max-w-md mx-auto shadow-lg border-0 bg-background/50-white dark:bg-background/50 backdrop-blur-sm">
+      <CardHeader className="text-center pb-6">
+        <CardTitle className="text-2xl">Request Early Access</CardTitle>
+        <CardDescription className="text-base">
           Fill out this form to request early access to AgentHub.
         </CardDescription>
       </CardHeader>
@@ -109,7 +101,7 @@ export function EarlyAccessForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="name">Full Name *</Label>
+            <Label htmlFor="name">Name *</Label>
             <Input
               id="name"
               placeholder="Your name"
@@ -117,32 +109,6 @@ export function EarlyAccessForm() {
               value={formData.name}
               onChange={handleChange}
             />
-          </div>
-
-          
-
-          <div className="space-y-2">
-            <Label htmlFor="experience">Experience Level *</Label>
-            <Select
-              onValueChange={handleSelectChange}
-              value={formData.experience}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select your experience level" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="beginner">Beginner - New to AI</SelectItem>
-                <SelectItem value="intermediate">
-                  Intermediate - Some AI experience
-                </SelectItem>
-                <SelectItem value="advanced">
-                  Advanced - Experienced AI developer
-                </SelectItem>
-                <SelectItem value="expert">
-                  Expert - Professional AI engineer
-                </SelectItem>
-              </SelectContent>
-            </Select>
           </div>
 
           <div className="space-y-2">
@@ -166,9 +132,26 @@ export function EarlyAccessForm() {
               onChange={handleChange}
             />
           </div>
+
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="newsletter"
+              checked={formData.newsletter}
+              onChange={(e) => setFormData(prev => ({ ...prev, newsletter: e.target.checked }))}
+              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            <Label htmlFor="newsletter" className="text-sm text-muted-foreground">
+              Stay updated on AgentHub&apos;s progress with our monthly newsletter
+            </Label>
+          </div>
         </CardContent>
-        <CardFooter>
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
+        <CardFooter className="pt-6">
+          <Button 
+            type="submit" 
+            className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-semibold py-3" 
+            disabled={isSubmitting}
+          >
             {isSubmitting ? "Submitting..." : "Submit Request"}
           </Button>
         </CardFooter>

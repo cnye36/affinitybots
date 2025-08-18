@@ -8,9 +8,20 @@ export async function GET(request: NextRequest) {
   try {
     const url = new URL(request.url);
     const authCode = url.searchParams.get('code');
-    const sessionId = url.searchParams.get('sessionId');
+    const state = url.searchParams.get('state');
+    
+    // Check for error from OAuth provider
+    const error = url.searchParams.get('error');
+    if (error) {
+      console.error('OAuth error:', error, url.searchParams.get('error_description'));
+      return NextResponse.redirect(new URL('/tools?error=oauth_denied', url.origin));
+    }
+
+    // sessionId can come from either 'sessionId' param or 'state' param
+    let sessionId = url.searchParams.get('sessionId') || url.searchParams.get('state');
 
     if (!authCode || !sessionId) {
+      console.error('Missing required parameters:', { authCode: !!authCode, sessionId: !!sessionId, url: request.url });
       return NextResponse.json({ error: 'Missing code or sessionId' }, { status: 400 });
     }
 

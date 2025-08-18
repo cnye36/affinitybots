@@ -21,7 +21,7 @@ export function AddMCPServerModal({ open, onOpenChange, onAdded }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const callbackUrl = "/api/mcp/auth/callback";
+  const callbackUrl = `${window.location.origin}/api/mcp/auth/callback`;
 
   async function discover() {
     setError(null);
@@ -77,10 +77,17 @@ export function AddMCPServerModal({ open, onOpenChange, onAdded }: Props) {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch("/api/user-mcp-servers", {
+      const res = await fetch("/api/user-added-servers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ qualified_name: qualifiedName, url: serverUrl, is_enabled: true, config: {} }),
+        body: JSON.stringify({ 
+          qualified_name: qualifiedName, 
+          display_name: qualifiedName,
+          description: `Custom MCP server: ${qualifiedName}`,
+          url: serverUrl, 
+          auth_type: authType === "oauth" ? "oauth" : "none",
+          config: {} 
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to save server");

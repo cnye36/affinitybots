@@ -1,5 +1,6 @@
 import { MultiServerMCPClient } from "@langchain/mcp-adapters";
 import { MCPOAuthClient } from "@/lib/oauth-client";
+import { GitHubOAuthClient } from "@/lib/github-oauth-client";
 import { sessionStore } from "@/lib/session-store";
 import { getAvailableMcpServers } from "../agent/getAvailableMcpServers";
 
@@ -22,13 +23,13 @@ export interface MCPClientConfig {
 export interface MCPClientResult {
   client: MultiServerMCPClient | null;
   tools: any[];
-  oauthClients: Map<string, MCPOAuthClient>;
+  oauthClients: Map<string, MCPOAuthClient | GitHubOAuthClient>;
   sessions: Map<string, string>; // serverName -> sessionId
 }
 
 // Cache for MCP clients and tools to avoid recreating them on every call
 const mcpClientCache = new Map<string, { result: MCPClientResult; timestamp: number }>();
-const oauthClientCache = new Map<string, MCPOAuthClient>();
+const oauthClientCache = new Map<string, MCPOAuthClient | GitHubOAuthClient>();
 const CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes for HTTP sessions
 
 export class MCPClientManager {
@@ -87,8 +88,9 @@ export class MCPClientManager {
       }
       
       const mcpServers: Record<string, any> = {};
-      const oauthClients = new Map<string, MCPOAuthClient>();
+      const oauthClients = new Map<string, MCPOAuthClient | GitHubOAuthClient>();
       const sessions = new Map<string, string>();
+      let allTools: any[] = [];
 
       // Build server configuration, handling both OAuth and API key methods
       for (const qualifiedName of serversToLoad) {
@@ -110,6 +112,16 @@ export class MCPClientManager {
             finalUrl = oauthResult.url;
             if (oauthResult.client) {
               oauthClients.set(qualifiedName, oauthResult.client);
+              
+              // Try to get tools directly from the OAuth client
+              try {
+                console.log(`Getting tools from OAuth client for ${qualifiedName}...`);
+                const oauthTools = await this.getToolsFromOAuthClient(oauthResult.client, qualifiedName);
+                allTools.push(...oauthTools);
+                console.log(`Got ${oauthTools.length} tools from OAuth client for ${qualifiedName}`);
+              } catch (error) {
+                console.warn(`Failed to get tools from OAuth client for ${qualifiedName}:`, error);
+              }
             }
             if (oauthResult.sessionId) {
               sessions.set(qualifiedName, oauthResult.sessionId);
@@ -123,40 +135,42 @@ export class MCPClientManager {
           finalUrl = this.buildApiKeyUrl(qualifiedName, serverConfig);
         }
         
-        mcpServers[qualifiedName] = {
-          url: finalUrl,
-          automaticSSEFallback: false
-        };
+        // Only add to mcpServers if it's not an OAuth server (since we handle OAuth servers separately)
+        if (!this.isOAuthServer(serverConfig)) {
+          mcpServers[qualifiedName] = {
+            url: finalUrl,
+            automaticSSEFallback: false
+          };
+          console.log(`✅ Added server ${qualifiedName} to mcpServers`);
+        }
+      }
+
+      // Create MultiServerMCPClient only for non-OAuth servers
+      let client: MultiServerMCPClient | null = null;
+      if (Object.keys(mcpServers).length > 0) {
+        console.log(`Creating MultiServerMCPClient with servers:`, Object.keys(mcpServers));
         
-        console.log(`✅ Added server ${qualifiedName} to mcpServers`);
+        client = new MultiServerMCPClient({
+          mcpServers,
+          useStandardContentBlocks: true,
+          throwOnLoadError: false,
+          prefixToolNameWithServerName: false,
+          additionalToolNamePrefix: "",
+        });
+
+        // Get all tools from non-OAuth servers
+        console.log(`Getting tools from MCP client...`);
+        const mcpTools = await client.getTools();
+        allTools.push(...mcpTools);
+        console.log(`MCP client returned ${mcpTools.length} tools`);
       }
-
-      if (Object.keys(mcpServers).length === 0) {
-        return { client: null, tools: [], oauthClients, sessions };
-      }
-
-      // Create MultiServerMCPClient
-      console.log(`Creating MultiServerMCPClient with servers:`, Object.keys(mcpServers));
       
-      const client = new MultiServerMCPClient({
-        mcpServers,
-        useStandardContentBlocks: true,
-        throwOnLoadError: false,
-        prefixToolNameWithServerName: false,
-        additionalToolNamePrefix: "",
-      });
-
-      // Get all tools from all servers
-      console.log(`Getting tools from MCP client...`);
-      const tools = await client.getTools();
-      console.log(`MCP client returned ${tools.length} tools`);
-      
-      const result: MCPClientResult = { client, tools, oauthClients, sessions };
+      const result: MCPClientResult = { client, tools: allTools, oauthClients, sessions };
       mcpClientCache.set(cacheKey, { result, timestamp: Date.now() });
       
-      console.log(`Loaded ${tools.length} tools from ${Object.keys(mcpServers).length} MCP servers`);
-      if (tools.length > 0) {
-        console.log(`Tool names: ${tools.map(t => t.name).join(", ")}`);
+      console.log(`Loaded ${allTools.length} total tools from ${Object.keys(mcpServers).length} MCP servers + ${oauthClients.size} OAuth servers`);
+      if (allTools.length > 0) {
+        console.log(`Tool names: ${allTools.map(t => t.name).join(", ")}`);
       }
       
       return result;
@@ -195,7 +209,7 @@ export class MCPClientManager {
    */
   private async handleOAuthServer(qualifiedName: string, serverConfig: any): Promise<{
     url: string;
-    client?: MCPOAuthClient;
+    client?: MCPOAuthClient | GitHubOAuthClient;
     sessionId?: string;
   } | null> {
     try {
@@ -212,7 +226,48 @@ export class MCPClientManager {
         }
       }
 
-      // For OAuth servers, we need to use the session-based approach
+      // Check if this is a GitHub server with OAuth credentials
+      const isGitHubServer = qualifiedName === 'github' || serverConfig.url?.includes('githubcopilot.com') || serverConfig.url?.includes('github.com');
+      
+      if (isGitHubServer && serverConfig.oauth_token) {
+        console.log(`Creating GitHub OAuth client for ${qualifiedName}`);
+        
+        // Create a GitHub OAuth client
+        const callbackUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/mcp/auth/callback`;
+        const githubClient = new GitHubOAuthClient(
+          serverConfig.url,
+          callbackUrl,
+          (redirectUrl: string) => {
+            console.log(`GitHub OAuth redirect: ${redirectUrl}`);
+          }
+        );
+
+        // Store the client in the session store if we have a session ID
+        if (serverConfig.session_id) {
+          sessionStore.setClient(serverConfig.session_id, githubClient);
+        }
+
+        // For GitHub servers, we need to append the OAuth token to the URL
+        // since MultiServerMCPClient doesn't support OAuth authentication directly
+        let finalUrl = serverConfig.url;
+        if (serverConfig.oauth_token && serverConfig.oauth_token !== 'present') {
+          // If we have the actual token, append it to the URL
+          const separator = finalUrl.includes('?') ? '&' : '?';
+          finalUrl = `${finalUrl}${separator}oauth_token=${encodeURIComponent(serverConfig.oauth_token)}`;
+        } else if (serverConfig.session_id) {
+          // If we have a session ID, append it to the URL
+          const separator = finalUrl.includes('?') ? '&' : '?';
+          finalUrl = `${finalUrl}${separator}session_id=${encodeURIComponent(serverConfig.session_id)}`;
+        }
+
+        return {
+          url: finalUrl,
+          client: githubClient,
+          sessionId: serverConfig.session_id
+        };
+      }
+
+      // For other OAuth servers, we need to use the session-based approach
       // In a production environment, you'd initiate OAuth flow here
       // For now, we'll assume OAuth sessions are managed externally
       console.log(`OAuth server ${qualifiedName} requires external OAuth setup`);
@@ -275,7 +330,7 @@ export class MCPClientManager {
   /**
    * Validates that OAuth sessions are still active
    */
-  private async validateOAuthSessions(oauthClients: Map<string, MCPOAuthClient>): Promise<boolean> {
+  private async validateOAuthSessions(oauthClients: Map<string, MCPOAuthClient | GitHubOAuthClient>): Promise<boolean> {
     try {
       // For each OAuth client, try to list tools to verify it's still active
       for (const [serverName, client] of oauthClients) {
@@ -320,7 +375,7 @@ export class MCPClientManager {
    * Creates an OAuth client for a specific server
    */
   async createOAuthClient(serverUrl: string, callbackUrl: string): Promise<{
-    client: MCPOAuthClient;
+    client: MCPOAuthClient | GitHubOAuthClient;
     sessionId: string;
     requiresAuth?: boolean;
     authUrl?: string;
@@ -328,13 +383,30 @@ export class MCPClientManager {
     const sessionId = sessionStore.generateSessionId();
     let authUrl: string | null = null;
 
-    const client = new MCPOAuthClient(
-      serverUrl,
-      callbackUrl,
-      (redirectUrl: string) => {
-        authUrl = redirectUrl;
-      }
-    );
+    // Use GitHub-specific OAuth client for GitHub MCP server
+    const isGitHubServer = serverUrl.includes('githubcopilot.com') || serverUrl.includes('github.com');
+    
+    let client: MCPOAuthClient | GitHubOAuthClient;
+    
+    if (isGitHubServer) {
+      client = new GitHubOAuthClient(
+        serverUrl,
+        callbackUrl,
+        (redirectUrl: string) => {
+          authUrl = redirectUrl;
+        }
+      );
+      // Store the session ID in the GitHub client for the OAuth flow
+      (client as any).sessionId = sessionId;
+    } else {
+      client = new MCPOAuthClient(
+        serverUrl,
+        callbackUrl,
+        (redirectUrl: string) => {
+          authUrl = redirectUrl;
+        }
+      );
+    }
 
     try {
       await client.connect();
@@ -344,6 +416,7 @@ export class MCPClientManager {
     } catch (error: any) {
       if (error.message === "OAuth authorization required" && authUrl) {
         // Store client for later use
+        console.log(`Storing OAuth client in session store for sessionId: ${sessionId}`);
         sessionStore.setClient(sessionId, client);
         return {
           client,
@@ -387,14 +460,54 @@ export class MCPClientManager {
   /**
    * Gets cached OAuth clients for debugging
    */
-  getCachedOAuthClients(): Map<string, MCPOAuthClient> {
-    const allClients = new Map<string, MCPOAuthClient>();
+  getCachedOAuthClients(): Map<string, MCPOAuthClient | GitHubOAuthClient> {
+    const allClients = new Map<string, MCPOAuthClient | GitHubOAuthClient>();
     for (const cachedEntry of mcpClientCache.values()) {
       for (const [name, client] of cachedEntry.result.oauthClients) {
         allClients.set(name, client);
       }
     }
     return allClients;
+  }
+
+  /**
+   * Gets tools from an OAuth client
+   */
+  private async getToolsFromOAuthClient(oauthClient: MCPOAuthClient | GitHubOAuthClient, serverName: string): Promise<any[]> {
+    try {
+      // Ensure the OAuth client is connected
+      if (!oauthClient) {
+        console.warn(`No OAuth client available for ${serverName}`);
+        return [];
+      }
+
+      // Try to connect the OAuth client if it's not already connected
+      try {
+        await oauthClient.connect();
+      } catch (error) {
+        console.warn(`Failed to connect OAuth client for ${serverName}:`, error);
+        // If connection fails, we might still be able to get tools if already connected
+      }
+
+      // Try to list tools from the OAuth client
+      const toolsResult = await oauthClient.listTools();
+      
+      // Convert the tools to the format expected by LangChain
+      const tools = toolsResult.tools.map((tool: any) => ({
+        name: tool.name,
+        description: tool.description,
+        schema: tool.inputSchema,
+        invoke: async (args: any) => {
+          const result = await oauthClient.callTool(tool.name, args);
+          return result.content;
+        }
+      }));
+      
+      return tools;
+    } catch (error) {
+      console.error(`Error getting tools from OAuth client for ${serverName}:`, error);
+      return [];
+    }
   }
 }
 

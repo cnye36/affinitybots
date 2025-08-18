@@ -80,6 +80,18 @@ const nextConfig = {
         port: "",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "github.githubassets.com",
+        port: "",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "www.notion.so",
+        port: "",
+        pathname: "/**",
+      },
     ],
   },
 };

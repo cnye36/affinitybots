@@ -1,0 +1,46 @@
+export interface OfficialMcpServerMeta {
+  qualifiedName: string;
+  displayName: string;
+  description?: string;
+  logoUrl?: string;
+  url: string; // HTTP MCP endpoint
+  docsUrl?: string;
+  authType: 'oauth' | 'pat' | 'api_key';
+  requiresSetup?: boolean;
+}
+
+// Curated list of official MCP servers maintained by source vendors.
+// Start with GitHub; more can be appended as we add first‑party options.
+export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
+  {
+    qualifiedName: "github",
+    displayName: "GitHub",
+    description:
+      "Official GitHub MCP server. Connect to browse repos, issues, pull requests, and more using your GitHub account via OAuth.",
+    // Public GitHub mark (light bg recommended) - using a more reliable URL
+    logoUrl:
+      "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
+    // GitHub remote MCP endpoint (per GitHub docs)
+    url: "https://api.githubcopilot.com/mcp/",
+    docsUrl: "https://github.com/github/github-mcp-server",
+    authType: "oauth",
+    requiresSetup: true,
+  },
+  {
+    qualifiedName: "notion",
+    displayName: "Notion",
+    description:
+      "Official Notion MCP server. Connect to access your Notion workspaces, pages, databases, and more using your Notion account via OAuth.",
+    logoUrl: "https://www.notion.so/images/favicon.ico",
+    url: "https://mcp.notion.com/mcp/",
+    docsUrl: "https://developers.notion.com/docs",
+    authType: "oauth",
+    requiresSetup: true,
+  },
+];
+
+export function findOfficialServer(qualifiedName: string): OfficialMcpServerMeta | undefined {
+  return OFFICIAL_MCP_SERVERS.find((s) => s.qualifiedName === qualifiedName);
+}
+
+

@@ -62,7 +62,7 @@ export function Footer() {
             <ul className="space-y-2">
               <li>
                 <Link
-                  href="#features"
+                  href="/#features"
                   className="text-muted-foreground hover:text-foreground"
                 >
                   Features
@@ -70,7 +70,7 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  href="#how-it-works"
+                  href="/#how-it-works"
                   className="text-muted-foreground hover:text-foreground"
                 >
                   How It Works
@@ -78,7 +78,7 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  href="#benefits"
+                  href="/#benefits"
                   className="text-muted-foreground hover:text-foreground"
                 >
                   Benefits

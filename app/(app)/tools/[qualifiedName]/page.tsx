@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import Image from "next/image";
 import { ArrowLeft, ExternalLink, Shield, CheckCircle, XCircle, Globe, Server, Calendar, GitBranch, Users, Activity, Settings } from "lucide-react";
 import { ServerConfigForm } from "@/components/ServerConfigForm";
+import { findOfficialServer } from "@/lib/officialMcpServers";
 
 interface Tool {
   name: string;
@@ -57,6 +58,20 @@ export default function ServerDetailPage() {
       try {
         // Decode the qualifiedName first in case it's already encoded from the URL
         const decodedName = decodeURIComponent(qualifiedName);
+        // If this is one of our curated official servers, populate details from our registry
+        const official = findOfficialServer(decodedName);
+        if (official) {
+          setServer({
+            qualifiedName: official.qualifiedName,
+            displayName: official.displayName,
+            description: official.description,
+            iconUrl: official.logoUrl,
+            logo: official.logoUrl,
+            homepage: official.docsUrl,
+            isLocal: false,
+          });
+          return;
+        }
         const encodedName = encodeURIComponent(decodedName);
         const response = await fetch(`/api/smithery/${encodedName}`);
         

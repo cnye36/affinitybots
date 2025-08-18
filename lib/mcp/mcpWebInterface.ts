@@ -84,7 +84,7 @@ export class MCPWebInterface {
         
         // Store the server connection attempt in database for later completion
         if (serverName) {
-          await this.storeOAuthAttempt(userId, serverName, result.sessionId, serverUrl);
+          await this.storeOAuthAttempt(userId, serverName, result.sessionId, serverUrl, callbackUrl);
         }
 
         return {
@@ -315,39 +315,54 @@ export class MCPWebInterface {
 
   // Private helper methods
 
-  private async storeOAuthAttempt(userId: string, serverName: string, sessionId: string, serverUrl: string): Promise<void> {
+  private async storeOAuthAttempt(userId: string, serverName: string, sessionId: string, serverUrl: string, callbackUrl: string): Promise<void> {
+    const insertData = {
+      user_id: userId,
+      qualified_name: serverName,
+      session_id: sessionId,
+      url: serverUrl,
+      // Persist callbackUrl so we can reconstruct the OAuth client on callback
+      config: { callbackUrl }, // satisfies not-null constraint
+      is_enabled: false, // Will be enabled after successful auth
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    
+    console.log('Storing OAuth attempt with data:', JSON.stringify(insertData, null, 2));
+    
     const { error } = await this.supabase
       .from('user_mcp_servers')
-      .upsert({
-        user_id: userId,
-        qualified_name: serverName,
-        session_id: sessionId,
-        url: serverUrl,
-        is_enabled: false, // Will be enabled after successful auth
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      });
+      .upsert(insertData);
 
     if (error) {
       console.error('Failed to store OAuth attempt:', error);
+    } else {
+      console.log('Successfully stored OAuth attempt');
     }
   }
 
   private async storeSuccessfulConnection(userId: string, serverName: string, sessionId: string, serverUrl: string): Promise<void> {
+    const insertData = {
+      user_id: userId,
+      qualified_name: serverName,
+      session_id: sessionId,
+      url: serverUrl,
+      config: {}, // Add empty config object to satisfy not-null constraint
+      is_enabled: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    
+    console.log('Storing successful connection with data:', JSON.stringify(insertData, null, 2));
+    
     const { error } = await this.supabase
       .from('user_mcp_servers')
-      .upsert({
-        user_id: userId,
-        qualified_name: serverName,
-        session_id: sessionId,
-        url: serverUrl,
-        is_enabled: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      });
+      .upsert(insertData);
 
     if (error) {
       console.error('Failed to store successful connection:', error);
+    } else {
+      console.log('Successfully stored successful connection');
     }
   }
 

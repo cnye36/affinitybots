@@ -48,9 +48,16 @@ export async function getAvailableMcpServers(userId: string) {
         continue;
       }
     }
+    
+    // Preserve the full server configuration including OAuth tokens and session IDs
     result[server.qualified_name] = {
       url: serverUrl,
-      automaticSSEFallback: false
+      automaticSSEFallback: false,
+      oauth_token: server.oauth_token,
+      session_id: server.session_id,
+      expires_at: server.expires_at,
+      refresh_token: server.refresh_token,
+      config: server.config
     };
   }
 
@@ -68,7 +75,8 @@ export async function getAvailableMcpServers(userId: string) {
         if (!server.url) continue;
         result[server.qualified_name] = {
           url: server.url,
-          automaticSSEFallback: false
+          automaticSSEFallback: false,
+          config: server.config
         };
       }
     }
