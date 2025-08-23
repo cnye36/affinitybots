@@ -6,8 +6,6 @@ import { Resend } from "resend";
 interface EarlyAccessRequest {
   email: string;
   name: string;
-  purpose?: string;
-  experience?: string;
   organization: string;
   expectations: string;
   newsletter: boolean;
@@ -118,8 +116,7 @@ export async function POST(request: NextRequest) {
         </div>
 
         <div style="background-color: #e9ecef; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="color: #495057; margin-top: 0;">Purpose & Expectations</h3>
-          ${body.purpose ? `<p><strong>Purpose:</strong> ${body.purpose}</p>` : ''}
+          <h3 style="color: #495057; margin-top: 0;">Expectations</h3>
           ${body.expectations ? `
             <div>
               <p><strong>Features of Interest:</strong></p>
@@ -178,18 +175,13 @@ export async function POST(request: NextRequest) {
 
         <div style="background-color: #e9ecef; padding: 20px; border-radius: 8px; margin: 20px 0;">
           <h3 style="color: #495057; margin-top: 0;">What happens next?</h3>
-          <p>Our team will review your application and get back to you within 2-3 business days. We'll send you an email with:</p>
-          <ul>
-            <li>Your early access status</li>
-            <li>Next steps to get started</li>
-            <li>Any additional information we might need</li>
-          </ul>
+          <p>We're currently rolling out early access to users gradually to ensure the best experience for everyone. Our team will review your request and you'll receive an invite code via email when it's your turn to join.</p>
+          <p><strong>Please note:</strong> Due to high demand, it may take a few weeks before you receive your invite. We appreciate your patience!</p>
+          <p>In the meantime, keep an eye on your inbox for updates from us.</p>
         </div>
 
         <div style="text-align: center; margin-top: 30px; padding: 20px; background-color: #f8f9fa; border-radius: 8px;">
-          <p style="margin: 0; color: #6c757d;">
-            If you have any questions, feel free to reply to this email.
-          </p>
+         
           <p style="margin: 10px 0 0 0; color: #6c757d; font-size: 14px;">
             Submitted on: ${new Date().toLocaleString()}
           </p>

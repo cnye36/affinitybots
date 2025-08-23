@@ -16,7 +16,6 @@ import { Button } from "@/components/ui/button";
 import { Upload, Loader2 } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { mutate } from "swr";
-import { Slider } from "@/components/ui/slider";
 import { useRouter } from "next/navigation";
 import {
   AlertDialog,
@@ -264,8 +263,12 @@ export function GeneralConfig({
             <SelectValue placeholder="Select a model" />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value="gpt-5-2025-08-07">GPT-5</SelectItem>
             <SelectItem value="gpt-5-mini-2025-08-07">GPT-5 Mini</SelectItem>
-            <SelectItem value="gpt-4o">GPT-4o</SelectItem>
+            <SelectItem value="gpt-5-nano-2025-08-07">GPT-5 Nano</SelectItem>
+            <SelectItem value="gpt-4.1">GPT-4.1</SelectItem>
+            <SelectItem value="gpt-4.1-mini">GPT-4.1-mini</SelectItem>
+            <SelectItem value="gpt-4.1-nano">GPT-4.1-nano</SelectItem>
           </SelectContent>
         </Select>
       </div>

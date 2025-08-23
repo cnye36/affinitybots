@@ -14,6 +14,7 @@ export interface Assistant {
 export interface AssistantConfiguration {
   assistant_id: string;
   model: ModelType;
+  model_config?: any;
   tools: any[];
   memory: {
     enabled: boolean;
@@ -38,7 +39,7 @@ export interface AssistantMetadata {
   agent_avatar?: string;
 }
 
-export type ModelType = "gpt-5-2025-08-07" | "gpt-5-mini-2025-08-07" | "gpt-5-nano-2025-08-07" | "gpt-4o";
+export type ModelType = "gpt-5-2025-08-07" | "gpt-5-mini-2025-08-07" | "gpt-5-nano-2025-08-07" | "gpt-4.1" | "gpt-4.1-mini" | "gpt-4.1-nano";
 
 export interface MCPServerSession {
   server_name: string;

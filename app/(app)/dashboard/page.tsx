@@ -1,29 +1,3 @@
-/*
- * A revamped dashboard page for AgentHub.
- *
- * This file implements a Next.js server component that improves upon the
- * original dashboard by surfacing more information about the user's agents
- * and configured tools.  In addition to the existing statistics,
- * quick‑actions, workflows and activity log, the new dashboard includes
- * two sections:
- *   – **My Tools**: lists a few of the most recently configured MCP
- *     servers for the current user and indicates whether each is
- *     enabled.  If the user hasn't configured any tools yet a helpful
- *     call‑to‑action links to the `/tools` page.
- *   – **My Agents**: shows up to three of the user's most recently
- *     created agents, summarising their names, descriptions and how many
- *     tools they have enabled.  A link is provided for quickly jumping
- *     to the full agents list.
- *
- * The component preserves the structure of the original dashboard by
- * keeping the overview header, stats overview, quick actions and the
- * recent activity/latest workflows split.  Data is fetched from
- * Supabase where possible (e.g. counts, workflows, activity, tools,
- * agents) and any errors encountered during the fetches are logged to
- * the console.  A timeout guard prevents the page from hanging
- * indefinitely if a request stalls.
- */
-
 import { redirect } from "next/navigation";
 import { createClient } from "@/supabase/server";
 import { Clock, BarChart3 } from "lucide-react";
@@ -215,61 +189,14 @@ export default async function Dashboard() {
 
               {/* Summary statistics */}
               <StatsOverview stats={stats} />
+              {/* Quick actions */}
+              <QuickActions />
 
               {/* Tools and Agents summary grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-                {/* Tools section */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">{/* Agents section */}
                 <Card>
                   <CardHeader>
-                    <CardTitle>My Tools</CardTitle>
-                    <CardDescription>
-                      Recently configured Smithery/MCP servers
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {tools.length > 0 ? (
-                      <div className="space-y-4">
-                        {tools.map((tool: any) => (
-                          <div
-                            key={tool.id}
-                            className="flex items-center justify-between p-3 border rounded-lg"
-                          >
-                            <div className="font-medium truncate">
-                              {tool.qualified_name}
-                            </div>
-                            <Badge
-                              variant={tool.is_enabled ? "default" : "secondary"}
-                            >
-                              {tool.is_enabled ? "Enabled" : "Disabled"}
-                            </Badge>
-                          </div>
-                        ))}
-                        {toolsData && toolsData.length > 3 && (
-                          <Link
-                            href="/tools"
-                            className="text-sm text-primary underline"
-                          >
-                            View all tools
-                          </Link>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8">
-                        <p className="text-muted-foreground mb-4">
-                          You haven’t configured any tools yet.
-                        </p>
-                        <Button variant="outline" asChild>
-                          <Link href="/tools">Configure Tools</Link>
-                        </Button>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Agents section */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>My Agents</CardTitle>
+                    <CardTitle>Agents</CardTitle>
                     <CardDescription>
                       Your most recently created agents
                     </CardDescription>
@@ -319,15 +246,61 @@ export default async function Dashboard() {
                     )}
                   </CardContent>
                 </Card>
+                {/* Tools section */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Tools</CardTitle>
+                    <CardDescription>
+                      Recently configured Tools
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {tools.length > 0 ? (
+                      <div className="space-y-4">
+                        {tools.map((tool: any) => (
+                          <div
+                            key={tool.id}
+                            className="flex items-center justify-between p-3 border rounded-lg"
+                          >
+                            <div className="font-medium truncate">
+                              {tool.qualified_name}
+                            </div>
+                            <Badge
+                              variant={tool.is_enabled ? "default" : "secondary"}
+                            >
+                              {tool.is_enabled ? "Enabled" : "Disabled"}
+                            </Badge>
+                          </div>
+                        ))}
+                        {toolsData && toolsData.length > 3 && (
+                          <Link
+                            href="/tools"
+                            className="text-sm text-primary underline"
+                          >
+                            View all tools
+                          </Link>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <p className="text-muted-foreground mb-4">
+                          You haven’t configured any tools yet.
+                        </p>
+                        <Button variant="outline" asChild>
+                          <Link href="/tools">Configure Tools</Link>
+                        </Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card> 
               </div>
 
-              {/* Quick actions */}
-              <QuickActions />
+              
 
               {/* Recent activity and workflows */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <RecentActivity activities={recentActivity} />
                 <LatestWorkflows workflows={workflows || []} />
+                <RecentActivity activities={recentActivity} />
               </div>
             </div>
           </div>

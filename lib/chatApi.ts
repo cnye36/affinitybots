@@ -68,23 +68,90 @@ export const sendMessage = async (params: {
   messages: LangChainMessage[];
   assistantId?: string;
 }) => {
-  const client = createClient();
-  const assistantId = params.assistantId || process.env["NEXT_PUBLIC_LANGGRAPH_ASSISTANT_ID"]!;
-  // Ensure callers can cancel previous streams if needed by returning the stream directly.
-  return client.runs.stream(
-    params.threadId,
-    assistantId,
-    {
-      input: {
-        messages: params.messages,
-      },
-      config: {
-        configurable: {
-          assistant_id: assistantId,
-          thread_id: params.threadId,
-        },
-      },
-      streamMode: "messages",
-    },
-  );
+  const assistantId = params.assistantId;
+  if (!assistantId) {
+    throw new Error("assistantId is required for sending messages");
+  }
+
+  // Call our authenticated server endpoint which streams Server-Sent Events.
+  // Convert the SSE stream into an AsyncGenerator that Assistant UI expects.
+  const response = await fetch(`/api/assistants/${assistantId}/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ threadId: params.threadId, messages: params.messages }),
+  });
+
+  if (!response.ok || !response.body) {
+    const errorText = await response.text().catch(() => "");
+    throw new Error(`Failed to send message: ${response.status} ${errorText}`);
+  }
+
+  const textDecoder = new TextDecoder();
+  const reader = response.body.getReader();
+
+  async function* sseToEvents() {
+    let buffer = "";
+    try {
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += textDecoder.decode(value, { stream: true });
+
+        // Split on SSE message boundary (blank line) and keep the tail in buffer
+        const parts = buffer.split("\n\n");
+        buffer = parts.pop() ?? "";
+
+        for (const part of parts) {
+          // Parse lines like: "event: messages/token" and "data: {...}"
+          const lines = part.split("\n");
+          let eventName = "";
+          const dataLines: string[] = [];
+          for (const line of lines) {
+            if (line.startsWith("event:")) {
+              eventName = line.slice(6).trim();
+            } else if (line.startsWith("data:")) {
+              dataLines.push(line.slice(5).trim());
+            }
+          }
+
+          const dataRaw = dataLines.join("\n");
+          let data: unknown = dataRaw;
+          try {
+            data = dataRaw ? JSON.parse(dataRaw) : null;
+          } catch {
+            // non-JSON payloads are unlikely but pass through raw string
+          }
+
+          // Yield the exact shape produced by the LangGraph SDK stream
+          // { event: string, data: any }
+          yield { event: eventName, data } as any;
+        }
+      }
+      // Flush any remaining buffered message (best effort)
+      if (buffer.trim().length > 0) {
+        const lines = buffer.split("\n");
+        let eventName = "";
+        const dataLines: string[] = [];
+        for (const line of lines) {
+          if (line.startsWith("event:")) {
+            eventName = line.slice(6).trim();
+          } else if (line.startsWith("data:")) {
+            dataLines.push(line.slice(5).trim());
+          }
+        }
+        const dataRaw = dataLines.join("\n");
+        let data: unknown = dataRaw;
+        try {
+          data = dataRaw ? JSON.parse(dataRaw) : null;
+        } catch {}
+        yield { event: eventName, data } as any;
+      }
+    } finally {
+      try {
+        await reader.cancel();
+      } catch {}
+    }
+  }
+
+  return sseToEvents();
 };

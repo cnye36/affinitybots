@@ -33,11 +33,11 @@ function SignInForm() {
           )}
           <div>
             <Label htmlFor="email">Email</Label>
-            <Input id="email" name="email" type="email" required />
+            <Input id="email" name="email" type="email" />
           </div>
           <div>
             <Label htmlFor="password">Password</Label>
-            <Input id="password" name="password" type="password" required />
+            <Input id="password" name="password" type="password" />
           </div>
           <div className="space-y-2">
             <Button formAction={handleSignIn} className="w-full">

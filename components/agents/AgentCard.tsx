@@ -73,7 +73,6 @@ export function AgentCard({ assistant, onDelete }: AgentCardProps) {
 
   // Get the avatar URL from the config (optional chaining for safety)
   const avatarUrl = assistant.metadata?.agent_avatar || "";
-  console.log(assistant);
   
   const getEnabledMcpServers = (): string[] => {
     const enabled_mcp_servers: any = assistant.config?.configurable?.enabled_mcp_servers;

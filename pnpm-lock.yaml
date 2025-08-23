@@ -34,7 +34,7 @@ importers:
         version: 6.0.0
       '@langchain/community':
         specifier: ^0.3.48
-        version: 0.3.49(@browserbasehq/sdk@2.6.0)(@browserbasehq/stagehand@1.14.0(@playwright/test@1.54.1)(deepmerge@4.3.1)(dotenv@16.6.1)(openai@5.10.2(ws@8.18.3)(zod@3.25.76))(zod@3.25.76))(@ibm-cloud/watsonx-ai@1.6.10)(@langchain/core@0.3.66(@opentelemetry/api@1.9.0)(openai@5.10.2(ws@8.18.3)(zod@3.25.76)))(@notionhq/client@2.3.0)(@opentelemetry/api@1.9.0)(@supabase/supabase-js@2.53.0)(axios@1.11.0)(cheerio@1.1.2)(google-auth-library@9.15.1)(googleapis@144.0.0)(ibm-cloud-sdk-core@5.4.2)(ignore@5.3.2)(jsdom@26.1.0)(jsonwebtoken@9.0.2)(lodash@4.17.21)(mammoth@1.10.0)(openai@5.10.2(ws@8.18.3)(zod@3.25.76))(pdf-parse@1.1.1)(pg@8.16.3)(playwright@1.54.1)(weaviate-client@3.8.0)(ws@8.18.3)
+        version: 0.3.49(@browserbasehq/sdk@2.6.0)(@browserbasehq/stagehand@1.14.0(@playwright/test@1.54.1)(deepmerge@4.3.1)(dotenv@16.6.1)(openai@5.10.2(ws@8.18.3)(zod@3.25.76))(zod@3.25.76))(@ibm-cloud/watsonx-ai@1.6.10)(@langchain/core@0.3.66(@opentelemetry/api@1.9.0)(openai@5.10.2(ws@8.18.3)(zod@3.25.76)))(@notionhq/client@2.3.0)(@opentelemetry/api@1.9.0)(@supabase/supabase-js@2.53.0)(axios@1.11.0)(cheerio@1.1.2)(google-auth-library@9.15.1)(googleapis@144.0.0)(ibm-cloud-sdk-core@5.4.2)(ignore@5.3.2)(ioredis@5.7.0)(jsdom@26.1.0)(jsonwebtoken@9.0.2)(lodash@4.17.21)(mammoth@1.10.0)(openai@5.10.2(ws@8.18.3)(zod@3.25.76))(pdf-parse@1.1.1)(pg@8.16.3)(playwright@1.54.1)(redis@5.8.1)(weaviate-client@3.8.0)(ws@8.18.3)
       '@langchain/core':
         specifier: ^0.3.62
         version: 0.3.66(@opentelemetry/api@1.9.0)(openai@5.10.2(ws@8.18.3)(zod@3.25.76))
@@ -161,6 +161,9 @@ importers:
       fs:
         specifier: 0.0.1-security
         version: 0.0.1-security
+      ioredis:
+        specifier: ^5.7.0
+        version: 5.7.0
       langchain:
         specifier: ^0.3.29
         version: 0.3.30(@langchain/core@0.3.66(@opentelemetry/api@1.9.0)(openai@5.10.2(ws@8.18.3)(zod@3.25.76)))(@opentelemetry/api@1.9.0)(axios@1.11.0)(cheerio@1.1.2)(openai@5.10.2(ws@8.18.3)(zod@3.25.76))(ws@8.18.3)
@@ -224,6 +227,9 @@ importers:
       reactflow:
         specifier: ^11.10.4
         version: 11.11.4(@types/react@19.1.8)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
+      redis:
+        specifier: ^5.8.1
+        version: 5.8.1
       rehype-highlight:
         specifier: ^7.0.1
         version: 7.0.2
@@ -1219,6 +1225,9 @@ packages:
     engines: {node: ^18.17.0 || ^20.3.0 || >=21.0.0}
     cpu: [x64]
     os: [win32]
+
+  '@ioredis/commands@1.3.0':
+    resolution: {integrity: sha512-M/T6Zewn7sDaBQEqIZ8Rb+i9y8qfGmq+5SDFSf9sA2lUZTmdDLVdOiQaeDp+Q4wElZ9HG1GAX5KhDaidp6LQsQ==}
 
   '@isaacs/cliui@8.0.2':
     resolution: {integrity: sha512-O8jcjabXaleOG9DQ0+ARXWZBTfnP4WNAqzuiJK7ll44AmxGKv/J2M4TPjxjY3znBCfvBXFzucm1twdyFybFqEA==}
@@ -2510,6 +2519,34 @@ packages:
       react: '>=17'
       react-dom: '>=17'
 
+  '@redis/bloom@5.8.1':
+    resolution: {integrity: sha512-hJOJr/yX6BttnyZ+nxD3Ddiu2lPig4XJjyAK1v7OSHOJNUTfn3RHBryB9wgnBMBdkg9glVh2AjItxIXmr600MA==}
+    engines: {node: '>= 18'}
+    peerDependencies:
+      '@redis/client': ^5.8.1
+
+  '@redis/client@5.8.1':
+    resolution: {integrity: sha512-hD5Tvv7G0t8b3w8ao3kQ4jEPUmUUC6pqA18c8ciYF5xZGfUGBg0olQHW46v6qSt4O5bxOuB3uV7pM6H5wEjBwA==}
+    engines: {node: '>= 18'}
+
+  '@redis/json@5.8.1':
+    resolution: {integrity: sha512-kyvM8Vn+WjJI++nRsIoI9TbdfCs1/TgD0Hp7Z7GiG6W4IEBzkXGQakli+R5BoJzUfgh7gED2fkncYy1NLprMNg==}
+    engines: {node: '>= 18'}
+    peerDependencies:
+      '@redis/client': ^5.8.1
+
+  '@redis/search@5.8.1':
+    resolution: {integrity: sha512-CzuKNTInTNQkxqehSn7QiYcM+th+fhjQn5ilTvksP1wPjpxqK0qWt92oYg3XZc3tO2WuXkqDvTujc4D7kb6r/A==}
+    engines: {node: '>= 18'}
+    peerDependencies:
+      '@redis/client': ^5.8.1
+
+  '@redis/time-series@5.8.1':
+    resolution: {integrity: sha512-klvdR96U9oSOyqvcectoAGhYlMOnMS3I5UWUOgdBn1buMODiwM/E4Eds7gxldKmtowe4rLJSF1CyIqyZTjy8Ow==}
+    engines: {node: '>= 18'}
+    peerDependencies:
+      '@redis/client': ^5.8.1
+
   '@rtsao/scc@1.1.0':
     resolution: {integrity: sha512-zt6OdqaDoOnJ1ZYsCYGt9YmWzDXl4vQdKTyJev62gFhRGKdx7mcT54V9KIjg+d2wi9EXsPvAPKe7i7WjfVWB8g==}
 
@@ -3583,6 +3620,10 @@ packages:
     resolution: {integrity: sha512-eYm0QWBtUrBWZWG0d386OGAw16Z995PiOVo2B7bjWSbHedGl5e0ZWaq65kOGgUSNesEIDkB9ISbTg/JK9dhCZA==}
     engines: {node: '>=6'}
 
+  cluster-key-slot@1.1.2:
+    resolution: {integrity: sha512-RMr0FhtfXemyinomL4hrWcYJxmX6deFdCxpJzhDttxgO1+bcCnkk+9drydLVDmAMG7NE6aN/fl4F7ucU/90gAA==}
+    engines: {node: '>=0.10.0'}
+
   co@4.6.0:
     resolution: {integrity: sha512-QVb0dM5HvG+uaxitm8wONl7jltx8dqhfU33DcqtOZcLSVIKSDDLDi7+0LbAKiyI8hD9u42m2YxXSkMGWThaecQ==}
     engines: {iojs: '>= 1.0.0', node: '>= 0.12.0'}
@@ -3855,6 +3896,10 @@ packages:
 
   delegates@1.0.0:
     resolution: {integrity: sha512-bd2L678uiWATM6m5Z1VzNCErI3jiGzt6HGY8OVICs40JQq/HALfbyNJmp0UDakEY4pMMaN0Ly5om/B1VI/+xfQ==}
+
+  denque@2.1.0:
+    resolution: {integrity: sha512-HVQE3AAb/pxF8fQAoiqpvg9i3evqug3hoiwakOyZAwJm+6vZehbkYXZ0l4JxS+I3QxM97v5aaRNhj8v5oBhekw==}
+    engines: {node: '>=0.10'}
 
   depd@2.0.0:
     resolution: {integrity: sha512-g7nH6P6dyDioJogAAGprGpCtVImJhpPk/roCzdb3fIh61/s/nPsfR6onyMwkCAR/OlC3yBC0lESvUoQEAssIrw==}
@@ -4766,6 +4811,10 @@ packages:
     resolution: {integrity: sha512-4gd7VpWNQNB4UKKCFFVcp1AVv+FMOgs9NKzjHKusc8jTMhd5eL1NqQqOpE0KzMds804/yHlglp3uxgluOqAPLw==}
     engines: {node: '>= 0.4'}
 
+  ioredis@5.7.0:
+    resolution: {integrity: sha512-NUcA93i1lukyXU+riqEyPtSEkyFq8tX90uL659J+qpCZ3rEdViB/APC58oAhIh3+bJln2hzdlZbBZsGNrlsR8g==}
+    engines: {node: '>=12.22.0'}
+
   ipaddr.js@1.9.1:
     resolution: {integrity: sha512-0KI/607xoxSToH7GjN1FfSbLoU0+btTicjsQSWQlh/hZykN8KpmMf7uYwPW3R+akZ6R/w18ZlXSHBYXiYUPO3g==}
     engines: {node: '>= 0.10'}
@@ -5439,8 +5488,14 @@ packages:
   lodash.castarray@4.4.0:
     resolution: {integrity: sha512-aVx8ztPv7/2ULbArGJ2Y42bG1mEQ5mGjpdvrbJcJFU3TbYybe+QlLS4pst9zV52ymy2in1KpFPiZnAOATxD4+Q==}
 
+  lodash.defaults@4.2.0:
+    resolution: {integrity: sha512-qjxPLHd3r5DnsdGacqOMU6pb/avJzdh9tFX2ymgoZE27BmjXrNy/y4LoaiTeAb+O3gL8AfpJGtqfX/ae2leYYQ==}
+
   lodash.includes@4.3.0:
     resolution: {integrity: sha512-W3Bx6mdkRTGtlJISOvVD/lbqjTlPPUDTMnlXZFnVwi9NKJ6tiAk6LVdlhZMm17VZisqhKcgzpO5Wz91PCt5b0w==}
+
+  lodash.isarguments@3.1.0:
+    resolution: {integrity: sha512-chi4NHZlZqZD18a0imDHnZPrDeBbTtVN7GXMwuGdRH9qotxAjYs3aVLKc7zNOG9eddR5Ksd8rvFEBc9SsggPpg==}
 
   lodash.isboolean@3.0.3:
     resolution: {integrity: sha512-Bz5mupy2SVbPHURB98VAcw+aHh4vRV5IPNhILUCsOzRmsTmSQ17jIuqopAentWoehktxGd9e/hbIXq980/1QJg==}
@@ -6521,6 +6576,18 @@ packages:
     resolution: {integrity: sha512-6tDA8g98We0zd0GvVeMT9arEOnTw9qM03L9cJXaCjrip1OO764RDBLBfrB4cwzNGDj5OA5ioymC9GkizgWJDUg==}
     engines: {node: '>=8'}
 
+  redis-errors@1.2.0:
+    resolution: {integrity: sha512-1qny3OExCf0UvUV/5wpYKf2YwPcOqXzkwKKSmKHiE6ZMQs5heeE/c8eXK+PNllPvmjgAbfnsbpkGZWy8cBpn9w==}
+    engines: {node: '>=4'}
+
+  redis-parser@3.0.0:
+    resolution: {integrity: sha512-DJnGAeenTdpMEH6uAJRK/uiyEIH9WVsUmoLwzudwGJUwZPp80PDBWPHXSAGNPwNvIXAbe7MSUB1zQFugFml66A==}
+    engines: {node: '>=4'}
+
+  redis@5.8.1:
+    resolution: {integrity: sha512-RZjBKYX/qFF809x6vDcE5VA6L3MmiuT+BkbXbIyyyeU0lPD47V4z8qTzN+Z/kKFwpojwCItOfaItYuAjNs8pTQ==}
+    engines: {node: '>= 18'}
+
   reflect.getprototypeof@1.0.10:
     resolution: {integrity: sha512-00o4I+DVrefhv+nX0ulyi3biSHCPDe+yLv5o/p6d/UVlirijB8E16FtfwSAi4g3tcqrQ4lRAqQSoFEZJehYEcw==}
     engines: {node: '>= 0.4'}
@@ -6831,6 +6898,9 @@ packages:
   stacktrace-parser@0.1.11:
     resolution: {integrity: sha512-WjlahMgHmCJpqzU8bIBy4qtsZdU9lRlcZE3Lvyej6t4tuOuv1vk57OW3MBrj6hXBFx/nNoC9MPMTcr5YA7NQbg==}
     engines: {node: '>=6'}
+
+  standard-as-callback@2.1.0:
+    resolution: {integrity: sha512-qoRRSyROncaz1z0mvYqIE4lCd9p2R90i6GxW3uZv5ucSu8tU7B5HXUP1gG8pVZsYNVaXjk8ClXHPttLyxAL48A==}
 
   statuses@2.0.1:
     resolution: {integrity: sha512-RwNA9Z/7PrK06rYLIzFMlaF+l73iwpzsqRIFgbMLbTcLD6cOao82TaWefPXQvB2fOC4AjuYSEndS7N/mTCbkdQ==}
@@ -8383,6 +8453,8 @@ snapshots:
   '@img/sharp-win32-x64@0.34.3':
     optional: true
 
+  '@ioredis/commands@1.3.0': {}
+
   '@isaacs/cliui@8.0.2':
     dependencies:
       string-width: 5.1.2
@@ -8629,7 +8701,7 @@ snapshots:
 
   '@js-sdsl/ordered-map@4.4.2': {}
 
-  '@langchain/community@0.3.49(@browserbasehq/sdk@2.6.0)(@browserbasehq/stagehand@1.14.0(@playwright/test@1.54.1)(deepmerge@4.3.1)(dotenv@16.6.1)(openai@5.10.2(ws@8.18.3)(zod@3.25.76))(zod@3.25.76))(@ibm-cloud/watsonx-ai@1.6.10)(@langchain/core@0.3.66(@opentelemetry/api@1.9.0)(openai@5.10.2(ws@8.18.3)(zod@3.25.76)))(@notionhq/client@2.3.0)(@opentelemetry/api@1.9.0)(@supabase/supabase-js@2.53.0)(axios@1.11.0)(cheerio@1.1.2)(google-auth-library@9.15.1)(googleapis@144.0.0)(ibm-cloud-sdk-core@5.4.2)(ignore@5.3.2)(jsdom@26.1.0)(jsonwebtoken@9.0.2)(lodash@4.17.21)(mammoth@1.10.0)(openai@5.10.2(ws@8.18.3)(zod@3.25.76))(pdf-parse@1.1.1)(pg@8.16.3)(playwright@1.54.1)(weaviate-client@3.8.0)(ws@8.18.3)':
+  '@langchain/community@0.3.49(@browserbasehq/sdk@2.6.0)(@browserbasehq/stagehand@1.14.0(@playwright/test@1.54.1)(deepmerge@4.3.1)(dotenv@16.6.1)(openai@5.10.2(ws@8.18.3)(zod@3.25.76))(zod@3.25.76))(@ibm-cloud/watsonx-ai@1.6.10)(@langchain/core@0.3.66(@opentelemetry/api@1.9.0)(openai@5.10.2(ws@8.18.3)(zod@3.25.76)))(@notionhq/client@2.3.0)(@opentelemetry/api@1.9.0)(@supabase/supabase-js@2.53.0)(axios@1.11.0)(cheerio@1.1.2)(google-auth-library@9.15.1)(googleapis@144.0.0)(ibm-cloud-sdk-core@5.4.2)(ignore@5.3.2)(ioredis@5.7.0)(jsdom@26.1.0)(jsonwebtoken@9.0.2)(lodash@4.17.21)(mammoth@1.10.0)(openai@5.10.2(ws@8.18.3)(zod@3.25.76))(pdf-parse@1.1.1)(pg@8.16.3)(playwright@1.54.1)(redis@5.8.1)(weaviate-client@3.8.0)(ws@8.18.3)':
     dependencies:
       '@browserbasehq/stagehand': 1.14.0(@playwright/test@1.54.1)(deepmerge@4.3.1)(dotenv@16.6.1)(openai@5.10.2(ws@8.18.3)(zod@3.25.76))(zod@3.25.76)
       '@ibm-cloud/watsonx-ai': 1.6.10
@@ -8654,6 +8726,7 @@ snapshots:
       google-auth-library: 9.15.1
       googleapis: 144.0.0
       ignore: 5.3.2
+      ioredis: 5.7.0
       jsdom: 26.1.0
       jsonwebtoken: 9.0.2
       lodash: 4.17.21
@@ -8661,6 +8734,7 @@ snapshots:
       pdf-parse: 1.1.1
       pg: 8.16.3
       playwright: 1.54.1
+      redis: 5.8.1
       weaviate-client: 3.8.0
       ws: 8.18.3
     transitivePeerDependencies:
@@ -9597,6 +9671,26 @@ snapshots:
     transitivePeerDependencies:
       - '@types/react'
       - immer
+
+  '@redis/bloom@5.8.1(@redis/client@5.8.1)':
+    dependencies:
+      '@redis/client': 5.8.1
+
+  '@redis/client@5.8.1':
+    dependencies:
+      cluster-key-slot: 1.1.2
+
+  '@redis/json@5.8.1(@redis/client@5.8.1)':
+    dependencies:
+      '@redis/client': 5.8.1
+
+  '@redis/search@5.8.1(@redis/client@5.8.1)':
+    dependencies:
+      '@redis/client': 5.8.1
+
+  '@redis/time-series@5.8.1(@redis/client@5.8.1)':
+    dependencies:
+      '@redis/client': 5.8.1
 
   '@rtsao/scc@1.1.0': {}
 
@@ -10816,6 +10910,8 @@ snapshots:
 
   clsx@2.1.1: {}
 
+  cluster-key-slot@1.1.2: {}
+
   co@4.6.0: {}
 
   codepage@1.15.0: {}
@@ -11055,6 +11151,8 @@ snapshots:
 
   delegates@1.0.0:
     optional: true
+
+  denque@2.1.0: {}
 
   depd@2.0.0: {}
 
@@ -12296,6 +12394,20 @@ snapshots:
       hasown: 2.0.2
       side-channel: 1.1.0
 
+  ioredis@5.7.0:
+    dependencies:
+      '@ioredis/commands': 1.3.0
+      cluster-key-slot: 1.1.2
+      debug: 4.4.1
+      denque: 2.1.0
+      lodash.defaults: 4.2.0
+      lodash.isarguments: 3.1.0
+      redis-errors: 1.2.0
+      redis-parser: 3.0.0
+      standard-as-callback: 2.1.0
+    transitivePeerDependencies:
+      - supports-color
+
   ipaddr.js@1.9.1: {}
 
   is-alphabetical@1.0.4: {}
@@ -13136,7 +13248,11 @@ snapshots:
 
   lodash.castarray@4.4.0: {}
 
+  lodash.defaults@4.2.0: {}
+
   lodash.includes@4.3.0: {}
+
+  lodash.isarguments@3.1.0: {}
 
   lodash.isboolean@3.0.3: {}
 
@@ -14477,6 +14593,20 @@ snapshots:
       indent-string: 4.0.0
       strip-indent: 3.0.0
 
+  redis-errors@1.2.0: {}
+
+  redis-parser@3.0.0:
+    dependencies:
+      redis-errors: 1.2.0
+
+  redis@5.8.1:
+    dependencies:
+      '@redis/bloom': 5.8.1(@redis/client@5.8.1)
+      '@redis/client': 5.8.1
+      '@redis/json': 5.8.1(@redis/client@5.8.1)
+      '@redis/search': 5.8.1(@redis/client@5.8.1)
+      '@redis/time-series': 5.8.1(@redis/client@5.8.1)
+
   reflect.getprototypeof@1.0.10:
     dependencies:
       call-bind: 1.0.8
@@ -14896,6 +15026,8 @@ snapshots:
   stacktrace-parser@0.1.11:
     dependencies:
       type-fest: 0.7.1
+
+  standard-as-callback@2.1.0: {}
 
   statuses@2.0.1: {}
 

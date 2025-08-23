@@ -1,6 +1,8 @@
 services:
     langgraph-redis:
         image: redis:alpine
+        ports:
+            - "6379:6379"  # Expose Redis port for rate limiting
         healthcheck:
             test: redis-cli ping
             interval: 5s

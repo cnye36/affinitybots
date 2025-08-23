@@ -16,10 +16,10 @@ import { MultiServerMCPClient } from "@langchain/mcp-adapters";
 import { RunnableConfig } from "@langchain/core/runnables";
 import { AssistantConfiguration } from "@/types/assistant";
 import { retrieveRelevantDocuments, retrieveAllRelevantContent } from "@/lib/retrieval";
-import fs from "fs";
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from "uuid";
 import { mcpClientFactory, MCPFactoryResult } from "../mcp/mcpClientFactory";
+import { rateLimiter, RateLimitError, TokenUsage } from "../rateLimiting";
 
 // Initialize the memory store
 export const store = new InMemoryStore();
@@ -110,7 +110,6 @@ async function writeMemory(state: AgentState, config: LangGraphRunnableConfig) {
     // Use the LLM to extract memories from the message
     const memoryExtractor = new ChatOpenAI({
       model: "gpt-5-mini-2025-08-07",
-      
     });
 
     const extractionPrompt = [
@@ -365,6 +364,48 @@ async function callModel(
   
   console.log(`🔍 Assistant execution - metadata user_id: ${config.metadata?.user_id}, configurable user_id: ${configurable.user_id}, assistant_id: ${configurable.assistant_id}, using userId: ${userId}, assistantId: ${assistantId}`);
   
+  // Rate limiting check
+  if (userId) {
+    try {
+      // Estimate tokens from the current conversation
+      const estimatedInputTokens = state.messages.reduce((total, msg) => {
+        const content = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
+        return total + Math.ceil(content.length / 4); // Rough estimate: 1 token ≈ 4 characters
+      }, 0);
+      
+      // Estimate output tokens (assume response will be similar length to input)
+      const estimatedOutputTokens = Math.ceil(estimatedInputTokens * 0.8);
+      
+      const rateLimitResult = await rateLimiter.checkRateLimit(userId, estimatedInputTokens, estimatedOutputTokens);
+      
+      if (!rateLimitResult.allowed) {
+        const errorMessage = `Rate limit exceeded. Your limit resets at ${new Date(rateLimitResult.resetTime).toISOString()}.`;
+        
+        console.log(`🚫 Rate limit exceeded for user ${userId}: ${errorMessage}`);
+        
+        // Return an error message instead of throwing
+        return {
+          messages: [
+            new AIMessage({
+              content: errorMessage,
+              additional_kwargs: {
+                rate_limit_exceeded: true,
+                remaining_budget: rateLimitResult.remainingBudget,
+                reset_time: rateLimitResult.resetTime,
+                daily_usage: rateLimitResult.dailyUsage,
+              },
+            }),
+          ],
+        };
+      }
+      
+      console.log(`✅ Rate limit check passed for user ${userId}. Remaining budget: $${rateLimitResult.remainingBudget.toFixed(2)}`);
+    } catch (error) {
+      console.error('Rate limiting error:', error);
+      // Continue execution if rate limiting fails
+    }
+  }
+  
   const systemPrompt = configurable.prompt_template || DEFAULT_SYSTEM_PROMPT;
   const memoryEnabled = configurable.memory?.enabled ?? true;
   
@@ -429,6 +470,55 @@ async function callModel(
     })));
   }
   console.log(`Response content preview: ${typeof response.content === 'string' ? response.content.substring(0, 200) : JSON.stringify(response.content).substring(0, 200)}...`);
+  
+  // Record usage after successful model invocation
+  if (userId && !response.additional_kwargs?.rate_limit_exceeded) {
+    try {
+      // Prefer provider-reported usage if available
+      const usageMeta: any = (response as any).usage_metadata ||
+        (response as any).response_metadata?.token_usage ||
+        (response as any).additional_kwargs?.token_usage ||
+        (response as any).additional_kwargs?.usage ||
+        null;
+
+      let actualInputTokens = 0;
+      let actualOutputTokens = 0;
+
+      if (usageMeta) {
+        actualInputTokens =
+          usageMeta.input_tokens ?? usageMeta.prompt_tokens ?? usageMeta.total_input_tokens ?? 0;
+        actualOutputTokens =
+          usageMeta.output_tokens ?? usageMeta.completion_tokens ?? usageMeta.total_output_tokens ?? 0;
+      }
+
+      // Fallback to rough estimation (1 token ≈ 4 characters)
+      if (!actualInputTokens || !actualOutputTokens) {
+        const inputContent = [
+          enhancedSystemPrompt,
+          ...state.messages.map(msg => {
+            const content = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
+            return content;
+          })
+        ].join('\n');
+        const outputContent = typeof response.content === 'string' ? response.content : JSON.stringify(response.content);
+        actualInputTokens = actualInputTokens || Math.ceil(inputContent.length / 4);
+        actualOutputTokens = actualOutputTokens || Math.ceil(outputContent.length / 4);
+      }
+
+      const usage: TokenUsage = {
+        userId,
+        inputTokens: actualInputTokens,
+        outputTokens: actualOutputTokens,
+        timestamp: Date.now(),
+        model: configurable.model || "gpt-5-2025-08-07",
+        sessionId: configurable.thread_id,
+      };
+      await rateLimiter.recordUsage(usage);
+      console.log(`📊 Usage recorded for user ${userId}: ${actualInputTokens} input tokens, ${actualOutputTokens} output tokens`);
+    } catch (error) {
+      console.error('Failed to record usage:', error);
+    }
+  }
   
   return { messages: [response] };
 }

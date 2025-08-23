@@ -59,7 +59,12 @@ export function filterMessagesForDisplay(messages: any[]): { type: string; conte
   
   return filtered.map(msg => ({
     type: msg.type || (msg instanceof HumanMessage ? 'human' : 'ai'),
-    content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)
+    content: typeof msg.content === 'string' ? msg.content : 
+             Array.isArray(msg.content) ? msg.content.map((part: any) => 
+               typeof part === 'string' ? part : 
+               part?.text || JSON.stringify(part)
+             ).join(' ') :
+             msg.content?.text || JSON.stringify(msg.content)
   }));
 }
 

@@ -50,7 +50,7 @@ function SignUpForm() {
           )}
           <div>
             <Label htmlFor="email">Email</Label>
-            <Input id="email" name="email" type="email" required />
+            <Input id="email" name="email" type="email" />
           </div>
           <div>
             <Label htmlFor="password">Password</Label>
@@ -59,7 +59,7 @@ function SignUpForm() {
                 id="password"
                 name="password"
                 type={showPassword ? "text" : "password"}
-                required
+                
                 className="pr-10"
                 minLength={6}
               />
@@ -78,12 +78,11 @@ function SignUpForm() {
               id="confirmPassword"
               name="confirmPassword"
               type="password"
-              required
             />
           </div>
           <div>
             <Label htmlFor="inviteCode">Invite Code</Label>
-            <Input id="inviteCode" name="inviteCode" type="text" required ref={inviteRef} />
+            <Input id="inviteCode" name="inviteCode" type="text" ref={inviteRef} />
           </div>
           <Button formAction={handleSignUp} className="w-full">
             Sign Up
