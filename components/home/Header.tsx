@@ -10,6 +10,7 @@ import { Menu, X } from "lucide-react";
 export function Header() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showAnnouncement, setShowAnnouncement] = useState(true);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -40,6 +41,22 @@ export function Header() {
         scrolled ? "py-2" : "py-4 md:py-6"
       }`}
     >
+      {showAnnouncement && (
+        <div className="w-full bg-primary/10 text-primary relative">
+          <div className="container mx-auto px-4 pr-8 py-1 text-center text-xs md:text-sm whitespace-nowrap overflow-hidden text-ellipsis">
+            <span className="font-semibold">AgentHub is now AffinityBots</span>
+            <span className="mx-2 opacity-60">•</span>
+            <span>Same Awesome Agents, New Name</span>
+          </div>
+          <button
+            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-primary/15 focus:outline-none focus:ring-2 focus:ring-primary/40"
+            onClick={() => setShowAnnouncement(false)}
+            aria-label="Dismiss announcement"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
       <div className="container mx-auto px-4 flex justify-between items-center">
         <Link href="/" className="flex items-center">
           <Image
