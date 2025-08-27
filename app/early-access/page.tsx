@@ -11,7 +11,7 @@ export default function EarlyAccessPage() {
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold mb-4">
-              Join AgentHub Early Access
+              Join AffinityBots Early Access
             </h1>
             <p className="text-muted-foreground text-lg">
               We&apos;re currently in closed beta. Fill out this form to request

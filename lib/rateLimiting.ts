@@ -133,23 +133,27 @@ class RateLimiter {
   }
 
   /**
-   * Get the current date in YYYY-MM-DD format
+   * Get the current date in YYYY-MM-DD format (UTC)
    */
   private getCurrentDate(): string {
-    return new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const y = now.getUTCFullYear();
+    const m = String(now.getUTCMonth() + 1).padStart(2, '0');
+    const d = String(now.getUTCDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
   }
 
   /**
-   * Get the next reset time (next day at midnight PST)
+   * Get the next reset time (next day at 00:00 UTC)
    */
   private getNextResetTime(): number {
     const now = new Date();
-    const tomorrow = new Date(now);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    
-    // Set to midnight PST (UTC-8, or UTC-7 during daylight saving)
-    // We'll use a simple approach: set to 8 AM UTC which is midnight PST
-    tomorrow.setUTCHours(8, 0, 0, 0);
+    const tomorrow = new Date(Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate() + 1,
+      0, 0, 0, 0
+    ));
     return tomorrow.getTime();
   }
 
@@ -432,15 +436,17 @@ export const calculateTokenCost = (inputTokens: number, outputTokens: number): n
 
 export const getDailySpendingLimit = (): number => RATE_LIMIT_CONFIG.DAILY_SPENDING_LIMIT;
 
-// Graceful shutdown
-process.on('SIGINT', async () => {
-  console.log('🔄 Shutting down rate limiter...');
-  await rateLimiter.close();
-  process.exit(0);
-});
+// Graceful shutdown - only in production to avoid dev noise
+if (process.env.NODE_ENV === 'production') {
+  process.on('SIGINT', async () => {
+    console.log('🔄 Shutting down rate limiter...');
+    await rateLimiter.close();
+    process.exit(0);
+  });
 
-process.on('SIGTERM', async () => {
-  console.log('🔄 Shutting down rate limiter...');
-  await rateLimiter.close();
-  process.exit(0);
-});
+  process.on('SIGTERM', async () => {
+    console.log('🔄 Shutting down rate limiter...');
+    await rateLimiter.close();
+    process.exit(0);
+  });
+}

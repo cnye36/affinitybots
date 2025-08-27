@@ -7,7 +7,7 @@ To use the GitHub MCP server with OAuth authentication, you need to configure yo
 1. Go to [GitHub Developer Settings](https://github.com/settings/developers)
 2. Click "New OAuth App"
 3. Fill in the details:
-   - **Application name**: `AgentHub MCP Client` (or your preferred name)
+   - **Application name**: `AffinityBots MCP Client` (or your preferred name)
    - **Homepage URL**: `http://localhost:3000` (for development)
    - **Authorization callback URL**: `http://localhost:3000/api/mcp/auth/callback`
 4. Click "Register application"

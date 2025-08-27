@@ -66,7 +66,7 @@ export default function CookiePolicy() {
               us at:
             </p>
             <p>
-              <a href="mailto:support@agenthub.click">support@agenthub.click</a>
+              <a href="mailto:support@AffinityBots.click">support@AffinityBots.click</a>
             </p>
           </div>
         </div>

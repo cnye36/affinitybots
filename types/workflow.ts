@@ -28,16 +28,7 @@ export interface TaskNodeData {
     name: string;
     avatar?: string;
   };
-  config: {
-    input: {
-      source: string;
-      parameters: Record<string, unknown>;
-      prompt: string;
-    };
-    output: {
-      destination: string;
-    };
-  };
+  config: TaskConfig;
   owner_id: string;
   position?: number;
   status: TaskStatus;
@@ -98,6 +89,16 @@ export interface TaskConfig {
     destination: string;
     format?: string;
   };
+  // Optional output configuration for model-structured responses
+  outputOptions?: {
+    structuredJson?: boolean;
+  };
+  // When persisted, some tasks store assistant metadata in config
+  assigned_assistant?: {
+    id: string;
+    name: string;
+    avatar?: string;
+  };
 }
 
 export interface Task {
@@ -108,6 +109,7 @@ export interface Task {
   description?: string;
   task_type?: TaskType;
   position?: number;
+  assistant_id?: string;
   assignedAssistant?: {
     id: string;
     name: string;

@@ -125,6 +125,13 @@ export const sendMessage = async (params: {
           // Yield the exact shape produced by the LangGraph SDK stream
           // { event: string, data: any }
           yield { event: eventName, data } as any;
+
+          // When server emits a rate-limit event, trigger a client-side refresh notification
+          if (eventName === "rate-limit") {
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(new Event("rate-limit:updated"));
+            }
+          }
         }
       }
       // Flush any remaining buffered message (best effort)

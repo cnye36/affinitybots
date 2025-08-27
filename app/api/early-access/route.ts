@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h1 style="color: #333; border-bottom: 2px solid #007bff; padding-bottom: 10px;">
-          New Early Access Request - AgentHub
+          New Early Access Request - AffinityBots
         </h1>
         
         <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
 
         <div style="text-align: center; margin-top: 30px; padding: 20px; background-color: #f8f9fa; border-radius: 8px;">
           <p style="margin: 0; color: #6c757d;">
-            This request was submitted through the AgentHub early access form.
+            This request was submitted through the AffinityBots early access form.
           </p>
           <p style="margin: 10px 0 0 0; color: #6c757d; font-size: 14px;">
             Timestamp: ${new Date().toLocaleString()}
@@ -140,9 +140,9 @@ export async function POST(request: NextRequest) {
 
     // Send notification email to admin
     const { error: notificationError } = await resend.emails.send({
-      from: "AgentHub <noreply@ai-automated-mailroom.com>",
+      from: "AffinityBots <noreply@ai-automated-mailroom.com>",
       to: [notificationEmail],
-      subject: "New Early Access Request - AgentHub",
+      subject: "New Early Access Request - AffinityBots",
       html,
     });
 
@@ -158,13 +158,13 @@ export async function POST(request: NextRequest) {
     const confirmationHtml = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h1 style="color: #333; border-bottom: 2px solid #007bff; padding-bottom: 10px;">
-          Early Access Request Received - AgentHub
+          Early Access Request Received - AffinityBots
         </h1>
         
         <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
           <h2 style="color: #007bff; margin-top: 0;">Thank you for your interest!</h2>
           <p>Hi ${body.name},</p>
-          <p>We've received your early access request for <strong>AgentHub</strong>. Here's what we received:</p>
+          <p>We've received your early access request for <strong>AffinityBots</strong>. Here's what we received:</p>
           <ul>
             <li><strong>Name:</strong> ${body.name}</li>
             <li><strong>Email:</strong> ${body.email}</li>
@@ -190,9 +190,9 @@ export async function POST(request: NextRequest) {
     `;
 
     const { error: confirmationError } = await resend.emails.send({
-      from: "AgentHub <noreply@ai-automated-mailroom.com>",
+      from: "AffinityBots <noreply@ai-automated-mailroom.com>",
       to: [body.email],
-      subject: "Early Access Request Received - AgentHub",
+      subject: "Early Access Request Received - AffinityBots",
       html: confirmationHtml,
     });
 

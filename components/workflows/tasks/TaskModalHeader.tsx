@@ -24,6 +24,7 @@ interface TaskModalHeaderProps {
   isLoading: boolean;
   onTest: () => Promise<void>;
   onChangeAssistant: () => void;
+  onSave?: () => Promise<void> | void;
 }
 
 export function TaskModalHeader({
@@ -32,6 +33,7 @@ export function TaskModalHeader({
   isLoading,
   onTest,
   onChangeAssistant,
+  onSave,
 }: TaskModalHeaderProps) {
   const [isAgentConfigOpen, setIsAgentConfigOpen] = useState(false);
   // Compute enabled MCP servers and display their names as pills
@@ -126,6 +128,15 @@ export function TaskModalHeader({
               </div>
             </div>
             <div className="flex space-x-2">
+              {onSave && (
+                <Button
+                  onClick={() => onSave?.()}
+                  disabled={isLoading || !assistant}
+                  variant="outline"
+                >
+                  Save
+                </Button>
+              )}
               <Button
                 onClick={onTest}
                 disabled={isLoading || !assistant}

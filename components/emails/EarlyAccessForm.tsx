@@ -83,7 +83,7 @@ export function EarlyAccessForm() {
       <CardHeader className="text-center pb-6">
         <CardTitle className="text-2xl">Request Early Access</CardTitle>
         <CardDescription className="text-base">
-          Fill out this form to request early access to AgentHub.
+          Fill out this form to request early access to AffinityBots.
         </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
@@ -142,7 +142,7 @@ export function EarlyAccessForm() {
               className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
             />
             <Label htmlFor="newsletter" className="text-sm text-muted-foreground">
-              Stay updated on AgentHub&apos;s progress with our monthly newsletter
+              Stay updated on AffinityBots&apos;s progress with our monthly newsletter
             </Label>
           </div>
         </CardContent>

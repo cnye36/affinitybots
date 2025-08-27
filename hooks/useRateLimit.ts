@@ -15,21 +15,21 @@ interface UseRateLimitOptions {
 
 export function useRateLimit({
   userId,
-  autoRefresh = true,
+  autoRefresh = false,
   refreshInterval = 30000, // 30 seconds
 }: UseRateLimitOptions = {}) {
   const [usage, setUsage] = useState<RateLimitUsage | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchUsage = useCallback(async () => {
+  const fetchUsage = useCallback(async (silent: boolean = false) => {
     if (!userId) {
       setUsage(null);
       setError(null);
       return;
     }
 
-    setLoading(true);
+    if (!silent) setLoading(true);
     setError(null);
 
     try {
@@ -50,7 +50,7 @@ export function useRateLimit({
       console.error('Rate limit usage fetch error:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [userId]);
 
@@ -59,13 +59,26 @@ export function useRateLimit({
     fetchUsage();
   }, [fetchUsage]);
 
-  // Auto-refresh
+  // Auto-refresh (optional)
   useEffect(() => {
     if (!autoRefresh || !userId) return;
 
     const interval = setInterval(fetchUsage, refreshInterval);
     return () => clearInterval(interval);
   }, [autoRefresh, userId, refreshInterval, fetchUsage]);
+
+  // Refresh on server-signaled updates (no loading flicker)
+  useEffect(() => {
+    const handler = () => fetchUsage(true);
+    if (typeof window !== 'undefined') {
+      window.addEventListener('rate-limit:updated', handler as EventListener);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('rate-limit:updated', handler as EventListener);
+      }
+    };
+  }, [fetchUsage]);
 
   // Check if user is approaching or has exceeded limit
   const isNearLimit = usage ? usage.remainingBudget < 0.50 : false; // Less than $0.50 remaining

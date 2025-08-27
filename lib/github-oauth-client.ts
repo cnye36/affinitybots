@@ -47,7 +47,7 @@ class GitHubOAuthClientProvider implements OAuthClientProvider {
 
   get clientMetadata(): OAuthClientMetadata {
     return {
-      client_name: "AgentHub GitHub MCP Client",
+      client_name: "AffinityBots GitHub MCP Client",
       redirect_uris: [this._redirectUrl.toString()],
       grant_types: ["authorization_code", "refresh_token"],
       response_types: ["code"],
@@ -130,7 +130,7 @@ export class GitHubOAuthClient {
 
     this.client = new Client(
       {
-        name: "agenthub-github-mcp-client",
+        name: "AffinityBots-github-mcp-client",
         version: "1.0.0",
       },
       { capabilities: {} }

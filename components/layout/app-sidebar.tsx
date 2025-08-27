@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Home, Bot, Sliders, Hammer } from "lucide-react";
+import { Home, Bot, Sliders, Hammer, Play } from "lucide-react";
 
 import { NavMain } from "@/components/layout/nav-main";
 import { NavUser } from "@/components/layout/nav-user";
@@ -67,6 +67,11 @@ const data = {
         },
       ],
     },
+    {
+      title: "Playground (Coming Soon)",
+      url: "/playground",
+      icon: Play,
+    },
   ],
 };
 
@@ -85,14 +90,14 @@ export function AppSidebar({
       <SidebarHeader className="border-b">
         <div className="flex h-[60px] items-center px-6">
           <Image
-            src="/logo.png"
-            alt="AgentHub Logo"
+            src="/images/AffinityBots-Icon-Dark-250px.png"
+            alt="AffinityBots Logo"
             width={64}
             height={64}
             className="mr-2 group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:w-8 group-data-[collapsible=icon]:h-8"
           />
           <span className="font-semibold group-data-[collapsible=icon]:hidden">
-            AgentHub
+            AffinityBots
           </span>
         </div>
       </SidebarHeader>

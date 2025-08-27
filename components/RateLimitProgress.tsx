@@ -24,7 +24,7 @@ export function RateLimitProgress({ userId, className = '' }: RateLimitProgressP
     isExceeded,
     usagePercentage,
     formatResetTime,
-  } = useRateLimit({ userId, autoRefresh: true, refreshInterval: 30000 });
+  } = useRateLimit({ userId, autoRefresh: false });
 
   // Debug logging to help identify issues
   useEffect(() => {

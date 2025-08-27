@@ -18,7 +18,7 @@ export default function PrivacyPolicy() {
 
             <h2>1. Introduction</h2>
             <p>
-              Welcome to AgentHub. We respect your privacy and are committed to
+              Welcome to AffinityBots. We respect your privacy and are committed to
               protecting your personal data. This privacy policy will inform you
               about how we look after your personal data when you visit our
               website and tell you about your privacy rights and how the law
@@ -80,7 +80,7 @@ export default function PrivacyPolicy() {
               contact us at:
             </p>
             <p>
-              <a href="mailto:support@agenthub.click">support@agenthub.click</a>
+              <a href="mailto:support@AffinityBots.click">support@AffinityBots.click</a>
             </p>
           </div>
         </div>

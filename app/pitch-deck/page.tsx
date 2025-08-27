@@ -18,7 +18,7 @@ export default function PitchDeckPage() {
     try {
       const link = document.createElement('a');
       link.href = '/pitch-deck.pdf';
-      link.download = 'AgentHub-Pitch-Deck.pdf';
+      link.download = 'AffinityBots-Pitch-Deck.pdf';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -57,11 +57,11 @@ export default function PitchDeckPage() {
               </div>
               
               <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600">
-                AgentHub Pitch Deck
+                AffinityBots Pitch Deck
               </h1>
               
               <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-                Discover how AgentHub is revolutionizing AI agent workflows and transforming the way businesses automate their processes.
+                Discover how AffinityBots is revolutionizing AI agent workflows and transforming the way businesses automate their processes.
               </p>
 
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
@@ -106,7 +106,7 @@ export default function PitchDeckPage() {
           <div className="container mx-auto px-4">
             <Card className="shadow-lg max-w-4xl mx-auto">
               <CardHeader className="text-center">
-                <CardTitle className="text-2xl">AgentHub Pitch Deck</CardTitle>
+                <CardTitle className="text-2xl">AffinityBots Pitch Deck</CardTitle>
                 <p className="text-muted-foreground">
                   Access our comprehensive pitch deck through multiple viewing options
                 </p>
@@ -116,7 +116,7 @@ export default function PitchDeckPage() {
                 <div className="aspect-[16/9] w-full rounded-lg bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border-2 border-dashed border-muted-foreground/20 flex items-center justify-center">
                   <div className="text-center p-8">
                     <FileText className="h-24 w-24 text-primary mx-auto mb-4" />
-                    <h3 className="text-2xl font-semibold mb-2">AgentHub Pitch Deck</h3>
+                    <h3 className="text-2xl font-semibold mb-2">AffinityBots Pitch Deck</h3>
                     <p className="text-muted-foreground mb-6">
                       7 slides • 5 min read • Updated 2025
                     </p>

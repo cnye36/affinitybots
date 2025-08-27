@@ -23,7 +23,7 @@ interface TaskConfigModalProps {
   onClose: () => void;
   task: Task;
   previousNodeOutput?: TaskOutput;
-  onTest: () => Promise<unknown>;
+  onTest: (overrideConfig?: Record<string, unknown>) => Promise<unknown>;
   onUpdate: (updatedTask: Task, updatedAssistant: Assistant | null) => void;
 }
 
@@ -101,6 +101,28 @@ export function TaskConfigModal({
     }
   }, [currentTask, assistant, onUpdate]);
 
+  const saveTask = async (taskToSave: Task) => {
+    const payload = {
+      name: taskToSave.name,
+      description: taskToSave.description,
+      task_type: taskToSave.task_type,
+      config: taskToSave.config,
+      assignedAssistant: taskToSave.assignedAssistant,
+      integration: taskToSave.integration,
+    };
+
+    const url = `/api/workflows/${taskToSave.workflow_id}/tasks/${taskToSave.workflow_task_id}`;
+    const response = await fetch(url, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err?.error || err?.message || "Failed to save task");
+    }
+  };
+
   const handleTest = async () => {
     try {
       if (!currentTask.assignedAssistant?.id) {
@@ -115,7 +137,10 @@ export function TaskConfigModal({
         throw new Error("Please provide a prompt before testing");
       }
 
-      const result = await onTest();
+      // Save first so state persists and next nodes can use it
+      await saveTask(currentTask);
+      // Pass current configuration so the server can honor latest toggles immediately
+      const result = await onTest((currentTask?.config as unknown as Record<string, unknown>) || {});
       setTestOutput(result as TestOutput);
     } catch (err) {
       console.error("Error testing task:", err);
@@ -196,6 +221,7 @@ export function TaskConfigModal({
             assistant={assistant}
             isLoading={isLoading || loadingAssistants}
             onTest={handleTest}
+            onSave={() => saveTask(currentTask)}
             onChangeAssistant={() => setIsAssistantSelectOpen(true)}
           />
 
@@ -230,8 +256,8 @@ export function TaskConfigModal({
 
             <TestOutputPanel
               testOutput={testOutput}
-              outputFormat={outputFormat}
-              setOutputFormat={setOutputFormat}
+              outputFormat={outputFormat === "markdown" ? "markdown" : "json"}
+              setOutputFormat={(fmt) => setOutputFormat(fmt)}
               isStreaming={isStreaming}
             />
           </div>

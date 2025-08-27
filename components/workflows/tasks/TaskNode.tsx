@@ -108,33 +108,70 @@ export const MemoizedTaskNode = memo(
 
         const reader = response.body?.getReader();
         const decoder = new TextDecoder();
-        let result = "";
-
         if (!reader) {
           throw new Error("No response body");
         }
+
+        // Proper SSE parsing with buffering across chunks
+        let buffer = "";
+        let accumulatedText = "";
+        let finalPayload: any = null;
 
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
 
-          const chunk = decoder.decode(value);
-          const lines = chunk.split("\n");
+          buffer += decoder.decode(value, { stream: true });
 
-          for (const line of lines) {
-            if (line.startsWith("data: ")) {
-              const data = line.slice(6);
-              try {
-                const parsedData = JSON.parse(data);
-                result = parsedData;
-              } catch (e) {
-                console.warn("Failed to parse SSE data:", e);
+          // Split complete events by double newline; keep remainder in buffer
+          const events = buffer.split("\n\n");
+          buffer = events.pop() || "";
+
+          for (const evt of events) {
+            const lines = evt.split("\n");
+            let eventType: string | null = null;
+            const dataLines: string[] = [];
+            for (const line of lines) {
+              if (line.startsWith("event:")) {
+                eventType = line.slice(6).trim();
+              } else if (line.startsWith("data:")) {
+                dataLines.push(line.slice(5).trimStart());
               }
+            }
+            const dataStr = dataLines.join("\n");
+            try {
+              const parsed = dataStr ? JSON.parse(dataStr) : null;
+              if (parsed) {
+                // Accumulate message content when available
+                if (
+                  parsed.event === "messages/partial" &&
+                  typeof parsed.data?.content === "string"
+                ) {
+                  accumulatedText += parsed.data.content;
+                }
+                if (parsed.event === "messages/complete") {
+                  // Prefer final output/content if available
+                  if (typeof parsed.data?.content === "string") {
+                    accumulatedText = parsed.data.content;
+                  }
+                  finalPayload = parsed;
+                }
+                // When backend signals rate-limit update, notify UI to refresh usage without polling
+                if (parsed?.event === "rate-limit") {
+                  window.dispatchEvent(new Event("rate-limit:updated"));
+                }
+              }
+            } catch {
+              // Ignore partial fragments; they will be completed in subsequent chunks
             }
           }
         }
 
-        return result;
+        return {
+          type: finalPayload?.event || "messages/complete",
+          content: accumulatedText,
+          result: finalPayload?.data || finalPayload || null,
+        } as unknown as Task;
       } catch (error) {
         console.error("Error testing task:", error);
         throw error;

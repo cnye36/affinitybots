@@ -5,7 +5,7 @@ test.describe('Home Page', () => {
     await page.goto('/')
     
     // Check that the page loads successfully
-    await expect(page).toHaveTitle(/AgentHub/)
+    await expect(page).toHaveTitle(/AffinityBots/)
     
     // Check for essential elements
     // Add specific checks based on your home page content
@@ -26,12 +26,12 @@ test.describe('Home Page', () => {
     await page.goto('/')
     
     // Check that the page is still functional on mobile
-    await expect(page).toHaveTitle(/AgentHub/)
+    await expect(page).toHaveTitle(/AffinityBots/)
     
     // Test desktop viewport
     await page.setViewportSize({ width: 1280, height: 720 })
     await page.goto('/')
     
-    await expect(page).toHaveTitle(/AgentHub/)
+    await expect(page).toHaveTitle(/AffinityBots/)
   })
 }) 

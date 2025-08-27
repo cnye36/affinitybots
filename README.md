@@ -1,6 +1,6 @@
-# AgentHub
+# AffinityBots
 
-AgentHub is a full-stack web application with Next.js TypeScript frontend and Langgraph backend.
+AffinityBots is a full-stack web application with Next.js TypeScript frontend and Langgraph backend.
 
 ## Quick Start
 
@@ -98,7 +98,7 @@ import { test, expect } from '@playwright/test'
 
 test('should load home page', async ({ page }) => {
   await page.goto('/')
-  await expect(page).toHaveTitle(/AgentHub/)
+  await expect(page).toHaveTitle(/AffinityBots/)
 })
 ```
 

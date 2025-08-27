@@ -31,7 +31,7 @@ export function Hero() {
               Don&apos;t Hire... Create!
             </h1>
             <p className="text-lg sm:text-xl md:text-2xl text-muted-foreground mb-6 md:mb-8">
-              AgentHub lets you spin up fully operational AI agents in minutes.
+              AffinityBots lets you spin up fully operational AI agents in minutes.
               Customize their skills, deploy them instantly, and let them handle
               the workload while you focus on growth.
             </p>
@@ -97,7 +97,7 @@ export function Hero() {
           >
             <div className="relative h-[400px] md:h-[500px] lg:h-[600px] w-full">
               <Image
-                src="/images/ai-agents-image-agenthub-website.png"
+                src="/images/ai-agents-image-AffinityBots-website.png"
                 alt="AI Bot Assistant"
                 fill
                 className="object-contain"

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
 import { Client } from "@langchain/langgraph-sdk";
+import { rateLimiter } from "@/lib/rateLimiting";
 
 export async function POST(
   request: Request,
@@ -40,7 +41,10 @@ export async function POST(
     console.log("Task config.assigned_assistant:", task.config?.assigned_assistant);
     console.log("Task type:", task.task_type);
 
-    const { input } = await request.json();
+    const body = await request.json();
+    const input = body?.input || {};
+    const overrideConfig = body?.overrideConfig || null;
+    let incomingThreadId: string | null = body?.thread_id || null;
     console.log("Input received:", input);
 
     if (task.task_type === "ai_task") {
@@ -60,37 +64,54 @@ export async function POST(
             let runId: string | null = null;
 
             try {
-              // 1. Directly create and stream the execution
-              const runStream = await client.runs.stream(
-                null, // Stateless runs use null thread ID
-                assistantId,
-                {
-                  input: {
-                    messages: [
-                      {
-                        role: "user",
-                        content:
-                          task.config?.input?.prompt || input?.prompt || "",
-                      },
-                    ],
-                  },
-                  metadata: {
-                    workflow_id: workflowId,
-                    workflow_task_id: taskId,
-                    user_id: user.id,
-                  },
-                  config: {
-                    configurable: {
-                      ...(task.config || {}),
-                      user_id: user.id,
-                      assistant_id: assistantId,
-                    },
-                  },
-                  streamMode: "messages",
-                }
+              // 1. Ensure a thread exists (use provided or create new)
+              if (!incomingThreadId) {
+                const thread = await client.threads.create();
+                incomingThreadId = thread.thread_id;
+              }
+
+              // Send metadata with thread for client to capture
+              controller.enqueue(
+                encoder.encode(
+                  `event: metadata\ndata: ${JSON.stringify({ thread_id: incomingThreadId })}\n\n`
+                )
               );
 
-              // 2. Get run ID from the first event
+              // 2. Stream the execution on that thread (assistants can be swapped per run)
+              const payload = {
+                input: {
+                  messages: [
+                    {
+                      role: "user",
+                      content:
+                        task.config?.input?.prompt || input?.prompt || "",
+                    },
+                  ],
+                },
+                metadata: {
+                  workflow_id: workflowId,
+                  workflow_task_id: taskId,
+                  user_id: user.id,
+                },
+                config: {
+                  configurable: {
+                    ...(task.config || {}),
+                    ...(overrideConfig || {}),
+                    user_id: user.id,
+                    assistant_id: assistantId,
+                    ...(((overrideConfig || task.config)?.outputOptions?.structuredJson)
+                      ? { response_format: { type: "json_object" } }
+                      : {}),
+                  },
+                },
+                streamMode: "messages" as const,
+              };
+
+              const runStream = incomingThreadId
+                ? await client.runs.stream(incomingThreadId, assistantId, payload)
+                : await client.runs.stream(null, assistantId, payload);
+
+              // 3. Get run ID from the first event
               const firstEvent = await runStream.next();
               runId = firstEvent.value?.data?.run_id;
               if (!runId) {
@@ -99,7 +120,7 @@ export async function POST(
                 );
               }
 
-              // 3. Create task run record with the obtained run ID
+              // 4. Create task run record with the obtained run ID
               const { error: insertError } = await supabase
                 .from("task_runs")
                 .insert({
@@ -111,7 +132,10 @@ export async function POST(
 
               if (insertError) throw insertError;
 
-              // 4. Process stream events
+              // 5. Process stream events
+              let inputTokens = 0;
+              let outputTokens = 0;
+              let lastCompleteData: any = null;
               for await (const event of runStream) {
                 if (event.event === "error") {
                   throw new Error(event.data.error);
@@ -119,6 +143,7 @@ export async function POST(
 
                 // Handle final output
                 if (event.event === "messages/complete") {
+                  lastCompleteData = event.data;
                   await supabase
                     .from("task_runs")
                     .update({
@@ -128,12 +153,58 @@ export async function POST(
                         "output" in event.data ? event.data.output : event.data,
                     })
                     .eq("run_id", runId);
+                  // Prefer usage from final message if present
+                  try {
+                    const msgArr: any[] = Array.isArray(event.data) ? (event.data as any[]) : [];
+                    const usage = (msgArr[0]?.response_metadata?.usage) || (msgArr[0]?.usage_metadata) || null;
+                    if (usage) {
+                      inputTokens = Number(
+                        usage.prompt_tokens ?? usage.input_tokens ?? usage.total_input_tokens ?? 0
+                      ) || inputTokens;
+                      outputTokens = Number(
+                        usage.completion_tokens ?? usage.output_tokens ?? usage.total_output_tokens ?? 0
+                      ) || outputTokens;
+                    }
+                  } catch {}
                 }
 
                 controller.enqueue(
                   encoder.encode(`data: ${JSON.stringify(event)}\n\n`)
                 );
               }
+
+              // 6. Record usage once at the end
+              try {
+                // Fallback estimation if no explicit usage seen
+                if (!inputTokens && !outputTokens) {
+                  const promptText =
+                    task.config?.input?.prompt || input?.prompt || "";
+                  const finalText = typeof (lastCompleteData?.content) === 'string'
+                    ? lastCompleteData.content
+                    : JSON.stringify(lastCompleteData ?? "");
+                  inputTokens = Math.ceil((promptText?.length || 0) / 4);
+                  outputTokens = Math.ceil((finalText?.length || 0) / 4);
+                }
+                await rateLimiter.recordUsage({
+                  userId: user.id,
+                  inputTokens,
+                  outputTokens,
+                  timestamp: Date.now(),
+                  model: "ai_task",
+                  sessionId: incomingThreadId,
+                });
+              } catch (e) {
+                console.error("Failed to record usage for task run:", e);
+              }
+
+              // 7. Notify clients to refresh rate limit UI without polling
+              try {
+                // Send a lightweight event that frontends can listen for to refetch silently
+                controller.enqueue(
+                  encoder.encode(`event: rate-limit\n` +
+                    `data: ${JSON.stringify({ type: "updated" })}\n\n`)
+                );
+              } catch {}
 
               controller.close();
             } catch (error) {

@@ -98,10 +98,16 @@ export async function POST(
 
     // Convert AsyncIterable to proper SSE
     const encoder = new TextEncoder();
+    const debugStream = process.env.RATE_LIMIT_DEBUG === "1";
+    const logFullResponse = process.env.LOG_FULL_RESPONSE === "1";
     const stream = new ReadableStream({
       async start(controller) {
         try {
+          const allChunks: any[] = [];
           for await (const chunk of runStream as any) {
+            if (logFullResponse) {
+              allChunks.push(chunk);
+            }
             const eventName = chunk?.event;
             const data = chunk?.data ?? chunk;
             if (eventName) controller.enqueue(encoder.encode(`event: ${eventName}\n`));
@@ -109,6 +115,40 @@ export async function POST(
 
             // Capture token usage if provided by the provider/SDK
             try {
+              if (debugStream && typeof eventName === "string") {
+                console.debug("[chat stream] event:", eventName, "data preview:", JSON.stringify(data).slice(0, 500));
+              }
+              
+              // Check for token usage in messages/complete event (where LangGraph provides final usage)
+              if (typeof eventName === "string" && eventName === "messages/complete") {
+                if (Array.isArray(data) && data.length > 0) {
+                  const message = data[0];
+                  const usage = 
+                    message?.response_metadata?.usage ||
+                    message?.usage_metadata ||
+                    null;
+                  
+                  if (usage) {
+                    const inTok = 
+                      usage.prompt_tokens ?? 
+                      usage.input_tokens ?? 
+                      0;
+                    const outTok = 
+                      usage.completion_tokens ?? 
+                      usage.output_tokens ?? 
+                      0;
+                    
+                    if (Number.isFinite(inTok) && Number.isFinite(outTok)) {
+                      inputTokensFromStream = Math.max(inputTokensFromStream, Number(inTok));
+                      outputTokensFromStream = Math.max(outputTokensFromStream, Number(outTok));
+                      sawUsageMetadata = true;
+                      console.log(`[chat stream] Found usage in complete event: input=${inTok}, output=${outTok}`);
+                    }
+                  }
+                }
+              }
+              
+              // Legacy metadata event parsing (fallback)
               if (typeof eventName === "string" && /metadata$/i.test(eventName)) {
                 const usage =
                   data?.usage ||
@@ -138,38 +178,36 @@ export async function POST(
                   }
                 }
               }
-              if (typeof eventName === "string" && /messages\/(delta|partial|token|chunk|complete)/i.test(eventName)) {
-                // Best-effort content length extraction for text deltas
-                const collectTextLength = (payload: unknown): number => {
-                  if (!payload) return 0;
-                  if (typeof payload === "string") return payload.length;
-                  if (Array.isArray(payload)) {
-                    return payload.reduce((sum: number, p: unknown) => sum + collectTextLength(p), 0);
-                  }
-                  if (typeof payload === "object") {
-                    // LangChain messages often shape: { content: [{ type: 'text', text: '...' }]} or nested
-                    const obj = payload as Record<string, unknown>;
-                    if (typeof obj.text === "string") return obj.text.length;
-                    if (Array.isArray(obj.content)) return collectTextLength(obj.content);
-                    if (Array.isArray(obj.parts)) return collectTextLength(obj.parts);
-                    if (typeof obj.delta === "string") return obj.delta.length;
-                    if (typeof obj.token === "string") return obj.token.length;
-                    if (typeof obj.value === "string") return obj.value.length;
-                    return Object.values(obj).reduce((sum: number, v: unknown) => sum + collectTextLength(v), 0);
-                  }
-                  return 0;
-                };
-                outputCharsEstimate += collectTextLength(data);
+              
+              // Only count small token/delta text pieces as a fallback
+              if (typeof eventName === "string" && /messages\/(delta|partial|token)/i.test(eventName)) {
+                const deltaText =
+                  typeof (data?.delta as unknown) === "string"
+                    ? (data.delta as string)
+                    : typeof (data?.token as unknown) === "string"
+                    ? (data.token as string)
+                    : typeof (data?.text as unknown) === "string"
+                    ? (data.text as string)
+                    : "";
+                outputCharsEstimate += deltaText.length;
               }
             } catch (e) {
               console.warn("Usage parse error:", e);
             }
           }
 
+          // Log the complete response for analysis
+          if (logFullResponse) {
+            console.log("=== FULL LANGGRAPH RESPONSE ===");
+            console.log(JSON.stringify(allChunks, null, 2));
+            console.log("=== END FULL RESPONSE ===");
+          }
+
           // Record usage best-effort after stream finishes
           try {
             const inputTokens = sawUsageMetadata ? inputTokensFromStream : estimatedInputTokens;
             const outputTokens = sawUsageMetadata ? outputTokensFromStream : Math.ceil(outputCharsEstimate / 4);
+            console.log(`[chat stream] Final usage - input: ${inputTokens}, output: ${outputTokens}, sawMetadata: ${sawUsageMetadata}`);
             if (user?.id) {
               await rateLimiter.recordUsage({
                 userId: user.id,
@@ -183,6 +221,12 @@ export async function POST(
           } catch (e) {
             console.error("Failed to record usage after stream:", e);
           }
+
+          // Emit a lightweight rate limit updated event for clients to refresh UI once
+          try {
+            controller.enqueue(encoder.encode(`event: rate-limit\n` +
+              `data: ${JSON.stringify({ type: "updated" })}\n\n`));
+          } catch {}
 
           controller.close();
         } catch (error) {

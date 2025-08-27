@@ -42,8 +42,8 @@ export async function updateSession(request: NextRequest) {
   const hostname = request.headers.get("host") || "";
 
   // Check if this is the marketing site or the app
-  const isAppDomain = hostname.includes("app.agenthub.click");
-  const isMarketingDomain = hostname.includes("agenthub.click") && !isAppDomain;
+  const isAppDomain = hostname.includes("app.AffinityBots.click");
+  const isMarketingDomain = hostname.includes("AffinityBots.click") && !isAppDomain;
 
   // Different rules for different domains
   if (isAppDomain) {

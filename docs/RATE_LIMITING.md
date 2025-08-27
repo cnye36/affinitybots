@@ -12,7 +12,7 @@ The rate limiting system uses Redis to track user token usage and enforces a dai
 - **Daily spending limit**: $2.00 per user
 - **Input token cost**: $1.25 per 1M tokens (GPT-5 pricing)
 - **Output token cost**: $10.00 per 1M tokens (GPT-5 pricing)
-- **Reset time**: Midnight PST daily
+- **Reset time**: 00:00 UTC daily (24-hour interval)
 
 ### Environment Variables
 ```bash
@@ -36,7 +36,7 @@ ADMIN_API_TOKEN=your_token        # Token for admin API access
 - `app/api/admin/rate-limit/route.ts` - Admin API for managing limits
 
 ### Frontend
-- `hooks/useRateLimit.ts` - React hook for rate limiting state
+- `hooks/useRateLimit.ts` - React hook for rate limiting state (listens for `rate-limit:updated` event to refresh without polling)
 - `components/RateLimitProgress.tsx` - Progress bar component
 - `components/layout/nav-user.tsx` - Integration in navigation
 

@@ -43,10 +43,10 @@ export function Header() {
       <div className="container mx-auto px-4 flex justify-between items-center">
         <Link href="/" className="flex items-center">
           <Image
-            src="/logo.png"
-            alt="AgentHub Logo"
-            width={48}
-            height={75}
+            src="/images/AffinityBots-Icon-Dark-250px.png"
+            alt="AffinityBots Logo"
+            width={96}
+            height={96}
             className={`transition-all duration-200 ${
               scrolled
                 ? "w-10 h-10 md:w-12 md:h-12"
@@ -59,7 +59,7 @@ export function Header() {
               scrolled ? "text-lg md:text-xl" : "text-xl md:text-2xl"
             }`}
           >
-            AgentHub
+            AffinityBots
           </span>
         </Link>
 

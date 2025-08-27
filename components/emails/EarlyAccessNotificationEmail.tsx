@@ -17,7 +17,7 @@ export const EarlyAccessNotificationEmail: React.FC<Readonly<EarlyAccessNotifica
 }) => (
   <div style={{ fontFamily: 'Arial, sans-serif', maxWidth: '600px', margin: '0 auto', padding: '20px' }}>
     <h1 style={{ color: '#333', borderBottom: '2px solid #007bff', paddingBottom: '10px' }}>
-      New Early Access Request - AgentHub
+      New Early Access Request - AffinityBots
     </h1>
     
     <div style={{ backgroundColor: '#f8f9fa', padding: '20px', borderRadius: '8px', margin: '20px 0' }}>
@@ -36,7 +36,7 @@ export const EarlyAccessNotificationEmail: React.FC<Readonly<EarlyAccessNotifica
 
     <div style={{ textAlign: 'center', marginTop: '30px', padding: '20px', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
       <p style={{ margin: '0', color: '#6c757d' }}>
-        This request was submitted through the AgentHub early access form.
+        This request was submitted through the AffinityBots early access form.
       </p>
       <p style={{ margin: '10px 0 0 0', color: '#6c757d', fontSize: '14px' }}>
         Timestamp: {new Date().toLocaleString()}

@@ -37,7 +37,7 @@ export function Integrations() {
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
             Instantly connect your agents to the world's most popular APIs and
             tools. From <b>Google</b> to <b>Slack</b>, <b>Notion</b>, and more,
-            AgentHub (beta) lets you automate workflows with the platforms you
+            AffinityBots (beta) lets you automate workflows with the platforms you
             already use. Powered by <b>MCP servers</b> for limitless
             extensibility and reliability.
           </p>

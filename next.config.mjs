@@ -59,7 +59,7 @@ const nextConfig = {
       {
         source: "/api/(.*)",
         headers: [
-          { key: "Access-Control-Allow-Origin", value: "https://api.agenthub.click" },
+          { key: "Access-Control-Allow-Origin", value: "https://api.AffinityBots.click" },
           { key: "Access-Control-Allow-Methods", value: "GET, POST, PUT, DELETE, OPTIONS" },
           { key: "Access-Control-Allow-Headers", value: "Content-Type, Authorization" },
         ],

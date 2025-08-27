@@ -1,6 +1,6 @@
 # Agent Contributer Guide
 
-AgentHub is a full-stack web application with Next.js TypeScript frontend and Langgraph backend.
+AffinityBots is a full-stack web application with Next.js TypeScript frontend and Langgraph backend.
 
 ## Build & Commands
 

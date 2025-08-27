@@ -16,15 +16,15 @@ export function Footer() {
           <div className="space-y-4">
             <Link href="/" className="flex items-center">
               <Image
-                src="/logo.png"
-                alt="AgentHub Logo"
+                src="/images/AffinityBots-Icon-Dark-250px.png"
+                alt="AffinityBots Logo"
                 width={32}
                 height={32}
                 className="transition-all duration-200"
               />
 
               <span className="font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600 transition-all duration-200">
-                AgentHub
+                AffinityBots
               </span>
             </Link>
             <p className="text-muted-foreground text-sm max-w-xs">
@@ -33,21 +33,21 @@ export function Footer() {
             </p>
             <div className="flex items-center space-x-4">
               <Link
-                href="https://x.com/agenthub2025"
+                href="https://x.com/Agenthub2025"
                 className="text-muted-foreground hover:text-foreground"
               >
                 <Twitter className="h-5 w-5" />
                 <span className="sr-only">Twitter</span>
               </Link>
               <Link
-                href="https://github.com/cnye/agenthub"
+                href="https://github.com/cnye/Agenthub"
                 className="text-muted-foreground hover:text-foreground"
               >
                 <Github className="h-5 w-5" />
                 <span className="sr-only">GitHub</span>
               </Link>
               <Link
-                href="https://linkedin.com/company/agenthub2025"
+                href="https://linkedin.com/company/Agenthub2025"
                 className="text-muted-foreground hover:text-foreground"
               >
                 <Linkedin className="h-5 w-5" />
@@ -101,11 +101,11 @@ export function Footer() {
             <ul className="space-y-2">
               <li>
                 <Link
-                  href="mailto:support@agenthub.click"
+                  href="mailto:support@AffinityBots.click"
                   className="flex items-center text-muted-foreground hover:text-foreground"
                 >
                   <Mail className="h-4 w-4 mr-2" />
-                  support@agenthub.click
+                  support@AffinityBots.click
                 </Link>
               </li>
             </ul>
@@ -115,7 +115,7 @@ export function Footer() {
         {/* Bottom section with legal links and copyright */}
         <div className="mt-12 pt-8 border-t border-border flex flex-col md:flex-row justify-between items-center">
           <div className="text-muted-foreground text-sm">
-            © {currentYear} AgentHub. All rights reserved.
+            © {currentYear} AffinityBots. All rights reserved.
           </div>
           <div className="flex space-x-6 mt-4 md:mt-0">
             <Link

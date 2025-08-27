@@ -8,7 +8,7 @@ import { Analytics } from "@vercel/analytics/next";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
-  title: "AgentHub",
+  title: "AffinityBots",
   description: "Build and manage AI agent workflows",
   icons: {
     icon: "/favicon.ico",

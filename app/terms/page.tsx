@@ -18,7 +18,7 @@ export default function TermsOfService() {
 
             <h2>1. Terms</h2>
             <p>
-              By accessing the website at AgentHub, you are agreeing to be bound
+              By accessing the website at AffinityBots, you are agreeing to be bound
               by these terms of service, all applicable laws and regulations,
               and agree that you are responsible for compliance with any
               applicable local laws. If you do not agree with any of these
@@ -28,7 +28,7 @@ export default function TermsOfService() {
             <h2>2. Use License</h2>
             <p>
               Permission is granted to temporarily access the materials on
-              AgentHub&apos;s website for personal, non-commercial transitory
+              AffinityBots&apos;s website for personal, non-commercial transitory
               viewing only. This is the grant of a license, not a transfer of
               title, and under this license you may not:
             </p>
@@ -40,7 +40,7 @@ export default function TermsOfService() {
               </li>
               <li>
                 Attempt to decompile or reverse engineer any software contained
-                on AgentHub&apos;s website
+                on AffinityBots&apos;s website
               </li>
               <li>
                 Remove any copyright or other proprietary notations from the
@@ -54,8 +54,8 @@ export default function TermsOfService() {
 
             <h2>3. Disclaimer</h2>
             <p>
-              The materials on AgentHub&apos;s website are provided on an
-              &apos;as is&apos; basis. AgentHub makes no warranties, expressed
+              The materials on AffinityBots&apos;s website are provided on an
+              &apos;as is&apos; basis. AffinityBots makes no warranties, expressed
               or implied, and hereby disclaims and negates all other warranties
               including, without limitation, implied warranties or conditions of
               merchantability, fitness for a particular purpose, or
@@ -65,11 +65,11 @@ export default function TermsOfService() {
 
             <h2>4. Limitations</h2>
             <p>
-              In no event shall AgentHub or its suppliers be liable for any
+              In no event shall AffinityBots or its suppliers be liable for any
               damages (including, without limitation, damages for loss of data
               or profit, or due to business interruption) arising out of the use
-              or inability to use the materials on AgentHub&apos;s website, even
-              if AgentHub or a AgentHub authorized representative has been
+              or inability to use the materials on AffinityBots&apos;s website, even
+              if AffinityBots or a AffinityBots authorized representative has been
               notified orally or in writing of the possibility of such damage.
             </p>
 
@@ -78,7 +78,7 @@ export default function TermsOfService() {
               If you have any questions about these Terms, please contact us at:
             </p>
             <p>
-              <a href="mailto:support@agenthub.click">support@agenthub.click</a>
+              <a href="mailto:support@AffinityBots.click">support@AffinityBots.click</a>
             </p>
           </div>
         </div>

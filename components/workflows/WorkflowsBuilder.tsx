@@ -44,6 +44,11 @@ interface StoredWorkflowNode {
     description: string;
     task_type: TaskType;
     workflow_id: string;
+    assignedAssistant?: {
+      id: string;
+      name: string;
+      avatar?: string;
+    };
     config: {
       input: {
         source: string;
@@ -86,6 +91,17 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
   const [isAgentSelectionLoading, setIsAgentSelectionLoading] = useState(false);
 
   const createdWorkflowRef = useRef(false);
+  const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSavedSnapshotRef = useRef<string>("");
+
+  type DbWorkflowTask = {
+    workflow_task_id: string;
+    name: string;
+    description?: string;
+    task_type: TaskType;
+    position?: number;
+    config?: any;
+  };
 
   const handleAddTrigger = useCallback(async () => {
     if (!workflowId) {
@@ -320,27 +336,28 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
           setWorkflowId(workflow.workflow_id);
           setWorkflowName(workflow.name);
 
-          // Combine trigger nodes with task nodes
-          const allNodes: WorkflowNode[] = [
-            ...triggers.map((trigger: WorkflowTrigger) => ({
-              id: `trigger-${trigger.trigger_id}`,
-              type: "trigger" as const,
-              position: { x: 100, y: 100 },
-              data: {
-                ...trigger,
-                workflow_id: workflow.workflow_id,
-                // Check if this trigger has any connected tasks based on edges
-                hasConnectedTask:
-                  Array.isArray(workflow.edges) &&
-                  workflow.edges.some(
-                    (edge: Edge) =>
-                      edge.source === `trigger-${trigger.trigger_id}`
-                  ),
-                onOpenTaskSidebar: () => setIsTaskSidebarOpen(true),
-              } as TriggerNodeData,
-            })),
-            ...((workflow.nodes || []) as StoredWorkflowNode[]).map(
-              (node: StoredWorkflowNode) => ({
+          const storedNodes = (workflow.nodes || []) as StoredWorkflowNode[];
+
+          if (Array.isArray(storedNodes) && storedNodes.length > 0) {
+            // Combine trigger nodes with stored task nodes
+            const allNodes: WorkflowNode[] = [
+              ...triggers.map((trigger: WorkflowTrigger) => ({
+                id: `trigger-${trigger.trigger_id}`,
+                type: "trigger" as const,
+                position: { x: 100, y: 100 },
+                data: {
+                  ...trigger,
+                  workflow_id: workflow.workflow_id,
+                  hasConnectedTask:
+                    Array.isArray(workflow.edges) &&
+                    workflow.edges.some(
+                      (edge: Edge) =>
+                        edge.source === `trigger-${trigger.trigger_id}`
+                    ),
+                  onOpenTaskSidebar: () => setIsTaskSidebarOpen(true),
+                } as TriggerNodeData,
+              })),
+              ...storedNodes.map((node: StoredWorkflowNode) => ({
                 ...node,
                 type: "task" as const,
                 data: {
@@ -349,18 +366,107 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
                   name: node.data.name,
                   description: node.data.description,
                   task_type: node.data.task_type,
+                  assignedAssistant: node.data.assignedAssistant,
                   config: node.data.config,
                   onAssignAssistant: handleAssignAgent,
                   onConfigureTask: handleConfigureTask,
                   isConfigOpen: false,
                   status: "idle",
                 } as unknown as TaskNodeData,
-              })
-            ),
-          ];
+              })),
+            ];
 
-          setNodes(allNodes);
-          setEdges(workflow.edges);
+            setNodes(allNodes);
+            setEdges(workflow.edges);
+          } else {
+            // Fallback: reconstruct nodes from workflow_tasks if stored nodes are empty
+            const { data: tasks, error: tasksError } = await supabase
+              .from("workflow_tasks")
+              .select("*")
+              .eq("workflow_id", idToLoad)
+              .order("position", { ascending: true });
+
+            if (tasksError) throw tasksError;
+
+            const taskNodes: WorkflowNode[] = ((tasks || []) as DbWorkflowTask[]).map((t: DbWorkflowTask) => ({
+              id: `task-${t.workflow_task_id}`,
+              type: "task" as const,
+              position: { x: 300 + (t.position || 0) * 400, y: 100 },
+              data: {
+                workflow_task_id: t.workflow_task_id,
+                name: t.name,
+                description: t.description || "",
+                task_type: t.task_type,
+                workflow_id: workflow.workflow_id,
+                assignedAssistant: t.config?.assigned_assistant,
+                config: t.config?.input && t.config?.output
+                  ? {
+                      input: {
+                        source: t.config.input.source || "previous_node",
+                        parameters: t.config.input.parameters || {},
+                        prompt: t.config.input.prompt || "",
+                      },
+                      output: {
+                        destination: t.config.output.destination || "next_node",
+                      },
+                    }
+                  : {
+                      input: { source: "previous_node", parameters: {}, prompt: "" },
+                      output: { destination: "next_node" },
+                    },
+                status: "idle",
+                onAssignAssistant: handleAssignAgent,
+                onConfigureTask: handleConfigureTask,
+                isConfigOpen: false,
+                onConfigClose: () => setSelectedTaskId(null),
+              } as unknown as TaskNodeData,
+            }));
+
+            // Build simple sequential edges based on position
+            const sortedTaskNodes = [...taskNodes].sort((a, b) => {
+              const aPos = ((tasks || []) as DbWorkflowTask[]).find((t: DbWorkflowTask) => `task-${t.workflow_task_id}` === a.id)?.position ?? 0;
+              const bPos = ((tasks || []) as DbWorkflowTask[]).find((t: DbWorkflowTask) => `task-${t.workflow_task_id}` === b.id)?.position ?? 0;
+              return aPos - bPos;
+            });
+
+            const sequentialEdges: Edge[] = [];
+            for (let i = 0; i < sortedTaskNodes.length - 1; i++) {
+              sequentialEdges.push({
+                id: `edge-${sortedTaskNodes[i].id}-${sortedTaskNodes[i + 1].id}`,
+                source: sortedTaskNodes[i].id,
+                target: sortedTaskNodes[i + 1].id,
+                type: "custom",
+              });
+            }
+
+            // Trigger nodes
+            const triggerNodes: WorkflowNode[] = triggers.map(
+              (trigger: WorkflowTrigger) => ({
+                id: `trigger-${trigger.trigger_id}`,
+                type: "trigger" as const,
+                position: { x: 100, y: 100 },
+                data: {
+                  ...trigger,
+                  workflow_id: workflow.workflow_id,
+                  hasConnectedTask: sortedTaskNodes.length > 0,
+                  onOpenTaskSidebar: () => setIsTaskSidebarOpen(true),
+                } as TriggerNodeData,
+              })
+            );
+
+            // Connect trigger to first task if exists
+            if (triggerNodes.length > 0 && sortedTaskNodes.length > 0) {
+              sequentialEdges.unshift({
+                id: `edge-${triggerNodes[0].id}-${sortedTaskNodes[0].id}`,
+                source: triggerNodes[0].id,
+                target: sortedTaskNodes[0].id,
+                type: "custom",
+              });
+            }
+
+            setNodes([...triggerNodes, ...taskNodes]);
+            setEdges(sequentialEdges);
+          }
         }
       } catch (err) {
         console.error("Error loading workflow:", err);
@@ -377,6 +483,59 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
 
     loadWorkflow();
   }, [workflowId, initialWorkflowId, handleAssignAgent, handleConfigureTask]);
+
+  // Autosave nodes and edges to workflows table (debounced)
+  useEffect(() => {
+    if (!workflowId) return;
+
+    // Serialize only task nodes (avoid functions in data)
+    const serializableNodes: StoredWorkflowNode[] = nodes
+      .filter((n) => n.type === "task")
+      .map((n) => ({
+        id: n.id,
+        type: "task",
+        position: n.position,
+        data: {
+          workflow_task_id: (n.data as any).workflow_task_id,
+          name: (n.data as any).name,
+          description: (n.data as any).description,
+          task_type: (n.data as any).task_type,
+          workflow_id: (n.data as any).workflow_id,
+          assignedAssistant: (n.data as any).assignedAssistant,
+          config: (n.data as any).config,
+        },
+      }));
+
+    const serializableEdges: Edge[] = edges.map((e) => ({
+      id: e.id,
+      source: e.source,
+      target: e.target,
+      type: e.type,
+    } as Edge));
+
+    const snapshot = JSON.stringify({ serializableNodes, serializableEdges });
+    if (snapshot === lastSavedSnapshotRef.current) return;
+
+    if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+    autosaveTimerRef.current = setTimeout(async () => {
+      try {
+        const { error } = await supabase
+          .from("workflows")
+          .update({ nodes: serializableNodes, edges: serializableEdges })
+          .eq("workflow_id", workflowId);
+        if (!error) {
+          lastSavedSnapshotRef.current = snapshot;
+        }
+      } catch (e) {
+        // Non-blocking; autosave errors are logged silently
+        console.error("Autosave failed:", e);
+      }
+    }, 800);
+
+    return () => {
+      if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+    };
+  }, [nodes, edges, workflowId, supabase]);
 
   // Load assistants
   useEffect(() => {

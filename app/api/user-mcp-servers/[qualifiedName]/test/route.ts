@@ -130,7 +130,7 @@ export async function POST(
               protocolVersion: '2024-11-05',
               capabilities: {},
               clientInfo: {
-                name: 'AgentHub',
+                name: 'AffinityBots',
                 version: '1.0.0'
               }
             }
