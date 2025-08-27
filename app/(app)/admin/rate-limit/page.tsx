@@ -25,11 +25,15 @@ export default function AdminRateLimitPage() {
     })();
   }, []);
 
-  const adminAuthHeader = useMemo(() => {
+  const adminAuthHeader = useMemo<Record<string, string>>(() => {
     // Optional: If you configure ADMIN_API_TOKEN, we can send it.
     // Do NOT expose secrets in production. This is primarily for dev/ops.
-    const token = (process.env.NEXT_PUBLIC_ADMIN_API_TOKEN as string) || "";
-    return token ? { Authorization: `Bearer ${token}` } : {};
+    const token = process.env.NEXT_PUBLIC_ADMIN_API_TOKEN;
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+    return headers;
   }, []);
 
   const getUsage = async (userId: string) => {
