@@ -21,7 +21,7 @@ export async function sendInviteEmail({
 
   const signupUrl = `${
     process.env.NEXT_PUBLIC_BASE_URL || "https://AffinityBots.click"
-  }/signup`;
+  }/auth/signup`;
 
   const html = `
       <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto;">
