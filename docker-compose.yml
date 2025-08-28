@@ -10,7 +10,7 @@ services:
             retries: 5
 
     langgraph-api:
-        image: "agenthub:latest"
+        image: "affinitybots:latest"
         ports:
             - "8123:8000"
         depends_on:
@@ -19,8 +19,9 @@ services:
         env_file:
             - .env
         environment:
+
             REDIS_URI: redis://langgraph-redis:6379
-            
+            REDIS_URL: redis://langgraph-redis:6379
             POSTGRES_URI: postgresql://postgres.lcnkzptzirdcvemvbjan:GMRjt41fMuDShNoV@aws-0-us-west-1.pooler.supabase.com:5432/postgres
             LANGSMITH_API_KEY: ${LANGSMITH_API_KEY}
             LANGSMITH_ENDPOINT: ${LANGSMITH_ENDPOINT}

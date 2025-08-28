@@ -52,7 +52,6 @@ export async function POST(request: Request) {
           config: {
             configurable: {
               user_id: user.id,
-              assistant_id: user.id, // Use user ID as assistantId
               model: generatedConfig.model,
               tools: generatedConfig.tools,
               memory: generatedConfig.memory,
@@ -70,6 +69,16 @@ export async function POST(request: Request) {
             owner_id: user.id,
             description: generatedConfig.description,
             agent_avatar: generatedConfig.agent_avatar,
+          },
+        });
+
+        // Update the assistant configuration with the actual assistant_id
+        const updatedAssistant = await langgraphClient.assistants.update(assistant.assistant_id, {
+          config: {
+            configurable: {
+              ...assistant.config.configurable,
+              assistant_id: assistant.assistant_id,
+            },
           },
         });
 
@@ -91,7 +100,7 @@ export async function POST(request: Request) {
 
         return NextResponse.json({
           success: true,
-          assistant: assistant,
+          assistant: updatedAssistant,
         });
       })(),
       createTimeoutPromise(120000) // 2 minute timeout for entire request

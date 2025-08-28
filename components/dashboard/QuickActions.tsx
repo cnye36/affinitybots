@@ -4,7 +4,7 @@ import { PlusCircle, Settings2 } from "lucide-react";
 export function QuickActions() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-      <Link href="/assistants/new" className="group">
+      <Link href="/agents/new" className="group">
         <div className="relative p-6 rounded-lg overflow-hidden border group-hover:border-primary transition-colors">
           <div className="flex items-center space-x-4">
             <PlusCircle className="h-8 w-8 text-primary" />
@@ -18,7 +18,7 @@ export function QuickActions() {
         </div>
       </Link>
 
-      <Link href="/workflows/new" className="group">
+      <Link href="/workflows/workflows-coming-soon" className="group">
         <div className="relative p-6 rounded-lg overflow-hidden border group-hover:border-primary transition-colors">
           <div className="flex items-center space-x-4">
             <PlusCircle className="h-8 w-8 text-primary" />

@@ -25,7 +25,7 @@ export function MemoryConfig({ config, onChange, assistantId }: MemoryConfigProp
 
   const navigateToMemoryManager = () => {
     if (assistantId) {
-      router.push(`/assistants/${assistantId}/memories`);
+      router.push(`/agents/${assistantId}/memories`);
     }
   };
 

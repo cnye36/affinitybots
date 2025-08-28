@@ -113,95 +113,81 @@ export async function POST(
             if (eventName) controller.enqueue(encoder.encode(`event: ${eventName}\n`));
             controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
 
-            // Capture token usage if provided by the provider/SDK
-            try {
-              if (debugStream && typeof eventName === "string") {
-                console.debug("[chat stream] event:", eventName, "data preview:", JSON.stringify(data).slice(0, 500));
-              }
               
-              // Check for token usage in messages/complete event (where LangGraph provides final usage)
-              if (typeof eventName === "string" && eventName === "messages/complete") {
-                if (Array.isArray(data) && data.length > 0) {
-                  const message = data[0];
-                  const usage = 
-                    message?.response_metadata?.usage ||
-                    message?.usage_metadata ||
-                    null;
-                  
-                  if (usage) {
-                    const inTok = 
-                      usage.prompt_tokens ?? 
-                      usage.input_tokens ?? 
-                      0;
-                    const outTok = 
-                      usage.completion_tokens ?? 
-                      usage.output_tokens ?? 
-                      0;
-                    
-                    if (Number.isFinite(inTok) && Number.isFinite(outTok)) {
-                      inputTokensFromStream = Math.max(inputTokensFromStream, Number(inTok));
-                      outputTokensFromStream = Math.max(outputTokensFromStream, Number(outTok));
-                      sawUsageMetadata = true;
-                      console.log(`[chat stream] Found usage in complete event: input=${inTok}, output=${outTok}`);
-                    }
-                  }
-                }
-              }
-              
-              // Legacy metadata event parsing (fallback)
-              if (typeof eventName === "string" && /metadata$/i.test(eventName)) {
-                const usage =
-                  data?.usage ||
-                  data?.token_usage ||
-                  data?.usage_metadata ||
-                  data?.usageMetadata ||
-                  data?.message?.usage ||
-                  data?.response?.usage ||
+            // Check for token usage in messages/complete event (where LangGraph provides final usage)
+            if (typeof eventName === "string" && eventName === "messages/complete") {
+              if (Array.isArray(data) && data.length > 0) {
+                const message = data[0];
+                const usage = 
+                  message?.response_metadata?.usage ||
+                  message?.usage_metadata ||
                   null;
+                
                 if (usage) {
-                  const inTok =
-                    usage.input_tokens ??
-                    usage.prompt_tokens ??
-                    usage.inputTokens ??
-                    usage.promptTokens ??
-                    usage.total_input_tokens ?? 0;
-                  const outTok =
-                    usage.output_tokens ??
-                    usage.completion_tokens ??
-                    usage.outputTokens ??
-                    usage.completionTokens ??
-                    usage.total_output_tokens ?? 0;
-                  if (Number.isFinite(inTok) || Number.isFinite(outTok)) {
-                    inputTokensFromStream = Math.max(inputTokensFromStream, Number(inTok) || 0);
-                    outputTokensFromStream = Math.max(outputTokensFromStream, Number(outTok) || 0);
+                  const inTok = 
+                    usage.prompt_tokens ?? 
+                    usage.input_tokens ?? 
+                    0;
+                  const outTok = 
+                    usage.completion_tokens ?? 
+                    usage.output_tokens ?? 
+                    0;
+                  
+                  if (Number.isFinite(inTok) && Number.isFinite(outTok)) {
+                    inputTokensFromStream = Math.max(inputTokensFromStream, Number(inTok));
+                    outputTokensFromStream = Math.max(outputTokensFromStream, Number(outTok));
                     sawUsageMetadata = true;
+                    console.log(`[chat stream] Found usage in complete event: input=${inTok}, output=${outTok}`);
                   }
                 }
               }
-              
-              // Only count small token/delta text pieces as a fallback
-              if (typeof eventName === "string" && /messages\/(delta|partial|token)/i.test(eventName)) {
-                const deltaText =
-                  typeof (data?.delta as unknown) === "string"
-                    ? (data.delta as string)
-                    : typeof (data?.token as unknown) === "string"
-                    ? (data.token as string)
-                    : typeof (data?.text as unknown) === "string"
-                    ? (data.text as string)
-                    : "";
-                outputCharsEstimate += deltaText.length;
-              }
-            } catch (e) {
-              console.warn("Usage parse error:", e);
             }
-          }
-
-          // Log the complete response for analysis
-          if (logFullResponse) {
-            console.log("=== FULL LANGGRAPH RESPONSE ===");
-            console.log(JSON.stringify(allChunks, null, 2));
-            console.log("=== END FULL RESPONSE ===");
-          }
+            
+            // Legacy metadata event parsing (fallback)
+            if (typeof eventName === "string" && /metadata$/i.test(eventName)) {
+              const usage =
+                data?.usage ||
+                data?.token_usage ||
+                data?.usage_metadata ||
+                data?.usageMetadata ||
+                data?.message?.usage ||
+                data?.response?.usage ||
+                null;
+              if (usage) {
+                const inTok =
+                  usage.input_tokens ??
+                  usage.prompt_tokens ??
+                  usage.inputTokens ??
+                  usage.promptTokens ??
+                  usage.total_input_tokens ?? 0;
+                const outTok =
+                  usage.output_tokens ??
+                  usage.completion_tokens ??
+                  usage.outputTokens ??
+                  usage.completionTokens ??
+                  usage.total_output_tokens ?? 0;
+                if (Number.isFinite(inTok) || Number.isFinite(outTok)) {
+                  inputTokensFromStream = Math.max(inputTokensFromStream, Number(inTok) || 0);
+                  outputTokensFromStream = Math.max(outputTokensFromStream, Number(outTok) || 0);
+                  sawUsageMetadata = true;
+                }
+              }
+            }
+            
+            // Only count small token/delta text pieces as a fallback
+            if (typeof eventName === "string" && /messages\/(delta|partial|token)/i.test(eventName)) {
+              const deltaText =
+                typeof (data?.delta as unknown) === "string"
+                  ? (data.delta as string)
+                  : typeof (data?.token as unknown) === "string"
+                  ? (data.token as string)
+                  : typeof (data?.text as unknown) === "string"
+                  ? (data.text as string)
+                  : "";
+              outputCharsEstimate += deltaText.length;
+            }
+          
+        }
 
           // Record usage best-effort after stream finishes
           try {

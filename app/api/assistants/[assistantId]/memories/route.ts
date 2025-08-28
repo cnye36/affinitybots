@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { store } from "@/lib/agent/reactAgent";
-import { createClient } from "@/supabase/client";
+import { createClient } from "@/supabase/server";
+type StoreRow = {
+  prefix: string;
+  key: string;
+  value: any;
+  created_at: string | null;
+  updated_at: string | null;
+};
 
-export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+export async function GET(request: NextRequest, props: { params: Promise<{ assistantId: string }> }) {
   const params = await props.params;
   try {
     // Create a Supabase client
@@ -16,16 +22,36 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const agentId = params.id;
+    const assistantId = params.assistantId;
 
-    // Fetch memories from the store
-    const namespace = ["user_profile", agentId];
-    const memories = await store.search(namespace, { filter: {} });
+    // Verify user has access to this assistant
+    const { data: userAssistant, error: accessError } = await supabase
+      .from("user_assistants")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("assistant_id", assistantId)
+      .single();
+
+    if (accessError || !userAssistant) {
+      console.error("Access denied or assistant not found:", accessError);
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    }
+
+    // Read memories from platform store table
+    const prefixDot = `user_profile.${assistantId}`;
+    const prefixJson = JSON.stringify(["user_profile", assistantId]);
+
+    const { data: rows, error: storeError } = await supabase
+      .from("store")
+      .select("prefix,key,value,created_at,updated_at")
+      .in("prefix", [prefixDot, prefixJson])
+      .order("updated_at", { ascending: true });
+    if (storeError) throw storeError;
 
     // Format memories for the frontend
-    const formattedMemories = memories.map((memory) => {
+    const formattedMemories = (rows as StoreRow[]).map((row) => {
       const { attribute, value, extracted_at, source_message } =
-        memory.value as {
+        (row.value || {}) as {
           attribute: string;
           value: unknown;
           extracted_at: string;
@@ -33,7 +59,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
         };
 
       return {
-        id: memory.key, // Use the memory key as the ID
+        id: row.key,
         attribute,
         value,
         extracted_at,

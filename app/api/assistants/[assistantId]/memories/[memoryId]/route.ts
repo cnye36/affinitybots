@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { store } from "@/lib/agent/reactAgent";
-import { createClient } from "@/supabase/client";
+import { createClient } from "@/supabase/server";
 
 export async function DELETE(
   request: NextRequest,
-  props: { params: Promise<{ id: string; memoryId: string }> }
+  props: { params: Promise<{ assistantId: string; memoryId: string }> }
 ) {
   const params = await props.params;
   try {
@@ -19,14 +18,28 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id: agentId, memoryId } = params;
+    const { assistantId, memoryId } = params;
 
-    // The memory key is stored as the memoryId
-    // We need to delete from the correct namespace
-    const namespace = ["user_profile", agentId];
+    // Verify user has access to this assistant
+    const { data: userAssistant, error: accessError } = await supabase
+      .from("user_assistants")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("assistant_id", assistantId)
+      .single();
 
-    // Delete the memory
-    await store.delete(namespace, memoryId);
+    if (accessError || !userAssistant) {
+      console.error("Access denied or assistant not found:", accessError);
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    }
+
+    // Delete the memory row from platform store table
+    const prefix = JSON.stringify(["user_profile", assistantId]);
+    const { error: delError } = await supabase
+      .from("store")
+      .delete()
+      .match({ prefix, key: memoryId });
+    if (delError) throw delError;
 
     return NextResponse.json({ success: true });
   } catch (error) {

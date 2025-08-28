@@ -21,8 +21,9 @@ import { v4 as uuidv4 } from "uuid";
 import { mcpClientFactory, MCPFactoryResult } from "../mcp/mcpClientFactory";
 import { rateLimiter, RateLimitError, TokenUsage } from "../rateLimiting";
 
-// Initialize the memory store
-export const store = new InMemoryStore();
+// Local fallback store for development. On LangGraph Platform, a persistent
+// store is injected into config.store; we only use this if none is provided.
+const fallbackStore = new InMemoryStore();
 
 // Cache for MCP factory results to avoid recreating them on every call
 const mcpFactoryCache = new Map<string, MCPFactoryResult>();
@@ -84,13 +85,15 @@ async function writeMemory(state: AgentState, config: LangGraphRunnableConfig) {
   const configurable =
     (config.configurable as {
       user_id?: string;
+      assistant_id?: string;
       memory?: { enabled: boolean };
     }) || {};
-  const userId = configurable.user_id; // Using user_id instead of agentId
+  const userId = configurable.user_id;
+  const assistantId = configurable.assistant_id;
   const memoryEnabled = configurable.memory?.enabled ?? true; // Default to enabled if not specified
 
-  // Skip memory writing if memory is disabled or no userId
-  if (!userId || !memoryEnabled) {
+  // Skip memory writing if memory is disabled or no assistantId
+  if (!assistantId || !memoryEnabled) {
     return { messages: state.messages, has_memory_updates: false };
   }
 
@@ -107,6 +110,7 @@ async function writeMemory(state: AgentState, config: LangGraphRunnableConfig) {
       : JSON.stringify(userMessage.content);
 
   try {
+    const kvStore = (config as any).store ?? fallbackStore;
     // Use the LLM to extract memories from the message
     const memoryExtractor = new ChatOpenAI({
       model: "gpt-5-mini-2025-08-07",
@@ -135,17 +139,17 @@ async function writeMemory(state: AgentState, config: LangGraphRunnableConfig) {
         new AIMessage("Updating memory..."),
       ];
 
-      const namespace = ["user_profile", userId];
+      const namespace = ["user_profile", assistantId];
       const memoryId = uuidv4();
 
       // Check if any of the data already exists
-      const existingMemories = await store.search(namespace, {
+      const existingMemories = await kvStore.search(namespace, {
         filter: {},
       });
       const existingData: Record<string, unknown> = {};
 
       // Build a map of existing attribute types
-      existingMemories.forEach((memory) => {
+      existingMemories.forEach((memory: { value: { attribute: string; value: unknown } }) => {
         const { attribute, value } = memory.value as {
           attribute: string;
           value: unknown;
@@ -164,7 +168,7 @@ async function writeMemory(state: AgentState, config: LangGraphRunnableConfig) {
           !existingData[key] ||
           JSON.stringify(existingData[key]) !== JSON.stringify(value)
         ) {
-          await store.put(namespace, `${key}_${memoryId}`, {
+          await kvStore.put(namespace, `${key}_${memoryId}`, {
             attribute: key,
             value: value,
             extracted_at: new Date().toISOString(),
@@ -199,16 +203,18 @@ function shouldUpdateMemory(state: typeof MessagesAnnotation.State) {
 
 // Function to retrieve user memories
 async function retrieveMemories(
-  userId: string | undefined,
-  memoryEnabled: boolean = true
+  assistantId: string | undefined,
+  memoryEnabled: boolean = true,
+  config?: LangGraphRunnableConfig
 ) {
-  if (!userId || !memoryEnabled) {
+  if (!assistantId || !memoryEnabled) {
     return [];
   }
 
-  const namespace = ["user_profile", userId];
+  const namespace = ["user_profile", assistantId];
   try {
-    const memories = await store.search(namespace, { filter: {} });
+    const kvStore = (config as any)?.store ?? fallbackStore;
+    const memories = await kvStore.search(namespace, { filter: {} });
     return memories;
   } catch (error) {
     console.error("Error retrieving memories:", error);
@@ -224,8 +230,8 @@ export async function retrieveKb(state: AgentState, config: RunnableConfig) {
   }) || {};
   const { user_id, thread_id, assistant_id } = configurable;
   
-  // Use user_id as the primary identifier, fallback to assistant_id
-  const effectiveAssistantId = user_id || assistant_id;
+  // Use assistant_id as the primary identifier for knowledge base retrieval
+  const effectiveAssistantId = assistant_id;
 
   let lastUserMsgContent = state.messages.at(-1)?.content ?? "";
 
@@ -409,15 +415,15 @@ async function callModel(
   const systemPrompt = configurable.prompt_template || DEFAULT_SYSTEM_PROMPT;
   const memoryEnabled = configurable.memory?.enabled ?? true;
   
-  // Retrieve user memories
-  const memories = await retrieveMemories(userId, memoryEnabled);
+  // Retrieve user memories (platform store if injected)
+  const memories = await retrieveMemories(assistantId, memoryEnabled, config);
   
   // Format memories for inclusion in the prompt
   let memoryContext = "";
   if (memories.length > 0 && memoryEnabled) {
     memoryContext = "\n\nUser Profile Information:\n";
     const profileData: Record<string, unknown> = {};
-    memories.forEach((memory) => {
+    memories.forEach((memory: { value: { attribute: string; value: unknown } }) => {
       const { attribute, value } = memory.value as {
         attribute: string;
         value: unknown;
@@ -436,7 +442,7 @@ async function callModel(
   }
 
   // Load MCP tools using the new factory
-  const { tools } = await createMcpClientAndTools(userId || assistantId || "default", configurable);
+  const { tools } = await createMcpClientAndTools(assistantId || userId || "default", configurable);
   
   console.log(`Assistant ${userId || assistantId}: Binding ${tools.length} tools to model`);
   console.log(`Enabled servers: ${configurable.enabled_mcp_servers?.join(", ") || "none"}`);
@@ -559,7 +565,7 @@ async function createToolNode(state: any, config: any): Promise<any> {
   console.log(`Tool node for assistant ${userId || assistantId}: Loading ${enabledServers.length} servers`);
   
   // Get the same tools that were used in callModel
-  const { tools } = await createMcpClientAndTools(userId || assistantId || "default", configurable);
+  const { tools } = await createMcpClientAndTools(assistantId || userId || "default", configurable);
   
   console.log(`Tool node for assistant ${userId || assistantId}: Executing with ${tools.length} available tools`);
   console.log(`Enabled servers for tool node: ${enabledServers.join(", ")}`);
@@ -596,7 +602,7 @@ async function createToolNode(state: any, config: any): Promise<any> {
       console.log(`🔄 Session expired detected, refreshing MCP client and retrying...`);
       
               // Force refresh the MCP client
-        const { tools: freshTools } = await createMcpClientAndTools(userId || "default", {
+        const { tools: freshTools } = await createMcpClientAndTools(assistantId || userId || "default", {
           ...configurable,
           force_mcp_refresh: true
         });
@@ -666,7 +672,7 @@ const workflow = new StateGraph(MessagesAnnotation)
 // ============================================================================
 
 export const graph = workflow.compile(
-  { 
-    store: new InMemoryStore(),
-  }
+  process.env.NODE_ENV === "development"
+    ? { store: fallbackStore }
+    : {}
 );

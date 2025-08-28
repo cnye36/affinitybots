@@ -8,7 +8,7 @@ const RATE_LIMIT_CONFIG = {
   OUTPUT_TOKEN_COST_PER_MILLION: 10.00, // $10.00 per 1M output tokens
   
   // Daily spending limit
-  DAILY_SPENDING_LIMIT: 2.00, // $2.00 per day
+  DAILY_SPENDING_LIMIT: 1.00, // $1.00 per day
   
   // Redis key prefixes
   REDIS_KEY_PREFIX: 'rate_limit:',
