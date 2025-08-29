@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import Image from "next/image";
 import { ArrowLeft, ExternalLink, Shield, CheckCircle, XCircle, Globe, Server, Calendar, GitBranch, Users, Activity, Settings } from "lucide-react";
 import { ServerConfigForm } from "@/components/ServerConfigForm";
-import { findOfficialServer } from "@/lib/officialMcpServers";
+import { findOfficialServer } from "@/lib/mcp/officialMcpServers";
 
 interface Tool {
   name: string;

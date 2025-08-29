@@ -10,7 +10,7 @@ import { Settings, CheckCircle, XCircle, Globe, Server, Loader2 } from "lucide-r
 import Image from "next/image";
 import Link from "next/link";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { OFFICIAL_MCP_SERVERS } from "@/lib/officialMcpServers";
+import { OFFICIAL_MCP_SERVERS } from "@/lib/mcp/officialMcpServers";
 
 interface SmitheryServer {
   qualifiedName: string;
@@ -102,16 +102,35 @@ export function ToolSelector({
       setUserServers(userRes.servers || []);
       setUserAddedServers(userAddedRes.servers || []);
 
-      // Fetch logos for servers that have them
-      const serversWithLogos = servers.filter((s: SmitheryServer) => s.iconUrl || s.logo);
-      if (serversWithLogos.length > 0) {
-        const logoMap: Record<string, string> = {};
-        serversWithLogos.forEach((server: SmitheryServer) => {
-          if (server.iconUrl || server.logo) {
-            logoMap[server.qualifiedName] = server.iconUrl || server.logo || '';
+      // Fetch logos using Smithery bulk endpoint to ensure we get icons even if not included in the list payload
+      try {
+        const qualifiedNames = (servers || []).map((s: any) => s.qualifiedName).filter(Boolean);
+        if (qualifiedNames.length > 0) {
+          const bulkResponse = await fetch('/api/smithery/bulk', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ qualifiedNames })
+          });
+          if (bulkResponse.ok) {
+            const bulkData = await bulkResponse.json();
+            const logoMap: Record<string, string> = {};
+            Object.entries(bulkData?.servers || {}).forEach(([qualifiedName, serverData]: [string, any]) => {
+              const url = (serverData as any)?.iconUrl || (serverData as any)?.logo;
+              if (url) {
+                logoMap[qualifiedName] = url as string;
+              }
+            });
+            if (Object.keys(logoMap).length > 0) setLogos(logoMap);
           }
+        }
+      } catch {
+        // Non-fatal; fall back to any inline iconUrl/logo present in list
+        const fallbackMap: Record<string, string> = {};
+        servers.forEach((s: any) => {
+          const url = s?.iconUrl || s?.logo;
+          if (url) fallbackMap[s.qualifiedName] = url;
         });
-        setLogos(logoMap);
+        if (Object.keys(fallbackMap).length > 0) setLogos(fallbackMap);
       }
 
     } catch (err) {
@@ -180,29 +199,37 @@ export function ToolSelector({
     );
   }
 
-  // Combine all server types
-  const allServers = [
-    // User-added servers first
-    ...userAddedServers.map(server => ({
+  // Combine all server types (deduplicated by qualifiedName).
+  // Priority: custom > official > smithery
+  const allServersMap: Record<string, any> = {};
+  userAddedServers.forEach(server => {
+    allServersMap[server.qualified_name] = {
       ...server,
       qualifiedName: server.qualified_name,
       displayName: server.display_name,
       description: server.description,
       serverType: 'custom' as const,
       isLocal: false
-    })),
-    // Official servers
-    ...OFFICIAL_MCP_SERVERS.map(server => ({
-      ...server,
-      serverType: 'official' as const,
-      isLocal: false
-    })),
-    // Smithery servers
-    ...smitheryServers.map(server => ({
-      ...server,
-      serverType: 'smithery' as const
-    }))
-  ];
+    };
+  });
+  OFFICIAL_MCP_SERVERS.forEach(server => {
+    if (!allServersMap[server.qualifiedName]) {
+      allServersMap[server.qualifiedName] = {
+        ...server,
+        serverType: 'official' as const,
+        isLocal: false
+      };
+    }
+  });
+  smitheryServers.forEach(server => {
+    if (!allServersMap[server.qualifiedName]) {
+      allServersMap[server.qualifiedName] = {
+        ...server,
+        serverType: 'smithery' as const
+      };
+    }
+  });
+  const allServers = Object.values(allServersMap);
 
   // Separate configured and unconfigured servers
   const configuredServers = allServers.filter(server => isConfigured(server.qualifiedName));
@@ -246,7 +273,8 @@ export function ToolSelector({
                   alt={server.displayName || server.qualifiedName}
                   width={32}
                   height={32}
-                  className="rounded-full bg-white border"
+                  className="rounded bg-white border p-0.5 object-contain"
+                  style={{ objectFit: 'contain' }}
                 />
               ) : (
                 <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-lg">

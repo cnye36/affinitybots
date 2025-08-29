@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ExternalLink } from "lucide-react";
 import { BaseServerCard } from "./BaseServerCard";
-import type { OfficialMcpServerMeta } from "@/lib/officialMcpServers";
+import type { OfficialMcpServerMeta } from "@/lib/mcp/officialMcpServers";
 import Link from "next/link";
 
 interface Props {

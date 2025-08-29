@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Plus } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { OFFICIAL_MCP_SERVERS } from "@/lib/officialMcpServers";
+import { OFFICIAL_MCP_SERVERS } from "@/lib/mcp/officialMcpServers";
 import { OfficialServerCard } from "@/components/tools/OfficialServerCard";
 import { SmitheryServerCard } from "@/components/tools/SmitheryServerCard";
 import { CustomServerCard } from "@/components/tools/CustomServerCard";
