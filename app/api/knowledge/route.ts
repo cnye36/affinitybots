@@ -13,36 +13,42 @@ export async function POST(req: Request) {
   try {
     const formData = await req.formData();
     const file = formData.get("file") as File;
-    const agentId = formData.get("agentId") as string;
-    console.log("[Knowledge API] Received agentId from formData:", agentId);
+    
+    const assistantId = (formData.get("assistantId")) as string;
+    console.log("[Knowledge API] Received assistantId from formData:", assistantId);
 
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    if (!agentId || agentId.trim() === "") {
+    if (!assistantId || assistantId.trim() === "") {
       console.error(
-        "[Knowledge API] Validation failed: agentId is null, empty, or whitespace. Value:",
-        agentId
+        "[Knowledge API] Validation failed: assistantId is null, empty, or whitespace. Value:",
+        assistantId
       );
       return NextResponse.json(
-        { error: "Valid agent ID is required" },
+        { error: "Valid assistant ID is required" },
         { status: 400 }
       );
     }
 
-    const trimmedAgentId = agentId.trim();
+    const trimmedAssistantId = assistantId.trim();
     console.log(
-      "[Knowledge API] Trimmed agentId to be used in metadata:",
-      trimmedAgentId
+      "[Knowledge API] Trimmed assistantId to be used in metadata:",
+      trimmedAssistantId
     );
 
-    // Create an entry in the 'documents' table
-    const supabase = await createClient();
-    const { data: documentEntry, error: docError } = await supabase
+    // Create a service role client to bypass RLS
+    const serviceClient = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    // Create an entry in the 'documents' table (no assistant FK required; association is in vectors metadata)
+    const { data: documentEntry, error: docError } = await serviceClient
       .from("documents")
       .insert({
-        agent_id: trimmedAgentId,
+        // agent_id is intentionally omitted; moving to assistants-first model
         filename: file.name,
         type: file.type,
         size: file.size,
@@ -188,7 +194,7 @@ export async function POST(req: Request) {
       const docMetadata = {
         ...doc.metadata,
         filename: file.name,
-        agent_id: trimmedAgentId,
+        assistant_id: trimmedAssistantId,
         document_id: documentId,
         uploaded_at: new Date().toISOString(),
       };
@@ -198,12 +204,6 @@ export async function POST(req: Request) {
         metadata: docMetadata,
       };
     });
-
-    // Create a service role client to bypass RLS for vector insertion
-    const serviceClient = createServiceClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
 
     await SupabaseVectorStore.fromDocuments(documentsWithMetadata, embeddings, {
       client: serviceClient,
@@ -224,38 +224,43 @@ export async function POST(req: Request) {
 export async function DELETE(req: Request) {
   try {
     const url = new URL(req.url);
-    const agentId = url.searchParams.get("agentId");
+    const assistantId = url.searchParams.get("assistantId");
     const filename = url.searchParams.get("filename");
 
-    if (!agentId || !filename) {
+    if (!assistantId || !filename) {
       return NextResponse.json(
-        { error: "Agent ID and filename are required" },
+        { error: "Assistant ID and filename are required" },
         { status: 400 }
       );
     }
 
     const supabase = await createClient();
+    const serviceClient = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
 
-    // First find the document entry to get its ID
-    const { data: documentEntry, error: findError } = await supabase
-      .from("documents")
-      .select("id")
-      .eq("agent_id", agentId)
-      .eq("filename", filename)
-      .single();
+    // Locate the document via vectors metadata to support assistants-first model (use service client to bypass RLS)
+    const { data: vectorForDoc, error: vectorLookupError } = await serviceClient
+      .from("document_vectors")
+      .select("metadata")
+      .eq("metadata->>assistant_id", assistantId)
+      .eq("metadata->>filename", filename)
+      .limit(1)
+      .maybeSingle();
 
-    if (findError || !documentEntry) {
-      console.error("[Knowledge API] Error finding document:", findError);
+    if (vectorLookupError || !vectorForDoc?.metadata?.document_id) {
+      console.error("[Knowledge API] Error finding document via vectors:", vectorLookupError);
       return NextResponse.json(
-        { error: "Document not found in database" },
+        { error: "Document not found for this assistant and filename" },
         { status: 404 }
       );
     }
 
-    const documentId = documentEntry.id;
+    const documentId = vectorForDoc.metadata.document_id as string;
 
     // Delete vector embeddings associated with this document
-    const { error: vectorDeleteError } = await supabase
+    const { error: vectorDeleteError } = await serviceClient
       .from("document_vectors")
       .delete()
       .eq("metadata->>document_id", documentId);
@@ -272,7 +277,7 @@ export async function DELETE(req: Request) {
     }
 
     // Delete the document entry
-    const { error: docDeleteError } = await supabase
+    const { error: docDeleteError } = await serviceClient
       .from("documents")
       .delete()
       .eq("id", documentId);

@@ -287,7 +287,7 @@ This is an uploaded image file. The user has shared this image and may ask quest
    */
   async storeProcessingResults(
     attachmentId: string,
-    agentId: string,
+    assistantId: string,
     result: ProcessingResult
   ): Promise<void> {
     if (!result.success || !result.chunks || !result.embeddings) {
@@ -307,7 +307,7 @@ This is an uploaded image file. The user has shared this image and may ask quest
           .insert({
             content: chunk,
             metadata: {
-              agent_id: agentId,
+              assistant_id: assistantId,
               attachment_id: attachmentId,
               chunk_index: i,
               total_chunks: result.chunks.length,

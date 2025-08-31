@@ -17,15 +17,15 @@ export async function retrieveRelevantDocuments(
   query: string,
   supabase: SupabaseClient,
   topK: number = 5,
-  agentId?: string
+  assistantId?: string
 ): Promise<Document[]> {
   const embeddings = new OpenAIEmbeddings();
 
   try {
     // Get traditional document vectors from knowledgebase ONLY
     const filter: Record<string, unknown> = {};
-    if (agentId) {
-      filter.agent_id = agentId;
+    if (assistantId) {
+      filter.assistant_id = assistantId;
     }
 
     const vectorStore = await SupabaseVectorStore.fromExistingIndex(embeddings, {
@@ -43,7 +43,7 @@ export async function retrieveRelevantDocuments(
       metadata: {
         ...doc.metadata,
         source: 'knowledgebase',
-        scope: 'agent' // Available across all threads for this agent
+        scope: 'assistant' // Available across all threads for this assistant
       }
     }));
 
@@ -61,13 +61,13 @@ export async function retrieveThreadAttachments(
   query: string,
   supabase: SupabaseClient,
   threadId: string,
-  agentId?: string,
+  assistantId?: string,
   topK: number = 5
 ): Promise<Document[]> {
   try {
     const multimodalContent = await multimodalRetrieval.retrieveRelevantContent({
       query,
-      agentId,
+      assistantId: assistantId,
       threadId,
       limit: topK,
       similarityThreshold: 0.6,
@@ -102,7 +102,7 @@ export async function retrieveThreadAttachments(
 export async function retrieveAllRelevantContent(
   query: string,
   supabase: SupabaseClient,
-  agentId?: string,
+  assistantId?: string,
   threadId?: string,
   topK: number = 5
 ): Promise<{
@@ -118,9 +118,9 @@ export async function retrieveAllRelevantContent(
 
   try {
     // Get knowledgebase documents (always available)
-    if (agentId) {
+    if (assistantId) {
       const kbLimit = threadId ? Math.floor(topK * 0.7) : topK;
-      results.knowledgebase = await retrieveRelevantDocuments(query, supabase, kbLimit, agentId);
+      results.knowledgebase = await retrieveRelevantDocuments(query, supabase, kbLimit, assistantId);
     }
 
     // Get thread attachments (only if threadId provided)
@@ -130,7 +130,7 @@ export async function retrieveAllRelevantContent(
         query, 
         supabase, 
         threadId, 
-        agentId, 
+        assistantId, 
         attachmentLimit
       );
     }

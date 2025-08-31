@@ -22,7 +22,7 @@ export interface MultimodalContent {
 export interface RetrievalContext {
   query: string;
   threadId?: string;
-  agentId?: string;
+  assistantId?: string;
   limit?: number;
   similarityThreshold?: number;
   includeAttachments?: boolean;
@@ -109,8 +109,8 @@ export class MultimodalRetrieval {
         `);
 
       // Add filters based on context
-      if (context.agentId) {
-        query = query.eq('metadata->agent_id', context.agentId);
+      if (context.assistantId) {
+        query = query.eq('metadata->assistant_id', context.assistantId);
       }
 
       // IMPORTANT: Only search for attachment-related vectors, not knowledgebase documents

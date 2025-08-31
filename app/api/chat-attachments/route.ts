@@ -7,7 +7,7 @@ export async function POST(request: Request) {
     const formData = await request.formData();
     const file = formData.get("file") as File;
     const threadId = formData.get("threadId") as string | null;
-    const agentId = formData.get("agentId") as string;
+    const assistantId = formData.get("assistantId") as string;
 
     if (!file) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
@@ -95,9 +95,9 @@ export async function POST(request: Request) {
     }
 
     // Start async processing if we have attachment data
-    if (attachmentData && agentId) {
+    if (attachmentData && assistantId) {
       // Don't await this - let it run in background
-      processFileAsync(attachmentData.id, agentId, filePath, file, fileBuffer)
+      processFileAsync(attachmentData.id, assistantId, filePath, file, fileBuffer)
         .catch(error => console.error("Background processing error:", error));
     }
 
@@ -121,7 +121,7 @@ export async function POST(request: Request) {
  */
 async function processFileAsync(
   attachmentId: string,
-  agentId: string,
+  assistantId: string,
   filePath: string,
   file: File,
   fileBuffer: Buffer
@@ -181,8 +181,8 @@ async function processFileAsync(
       .eq('id', attachmentId);
 
     // Store embeddings if available
-    if (result.success && result.chunks && result.embeddings && agentId) {
-      await fileProcessor.storeProcessingResults(attachmentId, agentId, result);
+    if (result.success && result.chunks && result.embeddings && assistantId) {
+      await fileProcessor.storeProcessingResults(attachmentId, assistantId, result);
     }
 
   } catch (error) {
