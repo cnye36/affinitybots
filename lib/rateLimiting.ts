@@ -82,7 +82,7 @@ class RateLimiter {
     this.redis = new Redis(redisUrl, {
       maxRetriesPerRequest: 3,
       lazyConnect: true,
-      db: 1, // Use database 1 to avoid conflicts with LangGraph (which uses db 0)
+      db: 0, // Upstash supports only DB 0; use 0 for compatibility
     });
 
     this.redis.on('connect', () => {
@@ -100,10 +100,7 @@ class RateLimiter {
       this.isConnected = false;
     });
 
-    // Attempt an eager connection so early checks don't no-op
-    this.connect().catch((err) => {
-      console.warn('Rate limiter initial connect failed (will retry on demand):', err?.message || err);
-    });
+    // Defer connecting until first use to avoid build-time connections
   }
 
   private async connect(): Promise<void> {

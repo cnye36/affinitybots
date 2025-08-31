@@ -25,7 +25,7 @@ AffinityBots is a full-stack web application with Next.js TypeScript frontend an
 - Tabs for indentation (2 spaces for YAML/JSON/MD)
 - Double quotes, no semicolons, trailing commas
 - Use JSDoc docstrings for documenting TypeScript definitions, not `//` comments
-- 100 character line limit
+- 120 character line limit
 - Imports: Use consistent-type-imports
 - Use descriptive variable/function names
 - In CamelCase names, use "URL" (not "Url"), "API" (not "Api"), "ID" (not "Id")
@@ -52,7 +52,7 @@ AffinityBots is a full-stack web application with Next.js TypeScript frontend an
 - Backend: Langgraph platform running in Docker
 - Database: Supabase (PostgreSQL)
 - Authentication: Supabase Auth
-- State management: Zustand
+- State management: Zustand + Langgraph Platform
 - Styling: Tailwind CSS
 - Build tool: Next.js
 - Package manager: pnpm
@@ -73,21 +73,9 @@ AffinityBots is a full-stack web application with Next.js TypeScript frontend an
 
 - ALWAYS run `pnpm run lint` before committing
 - Fix linting errors with `pnpm run lint --fix`
-- Run `pnpm build` to verify typecheck passes
 - NEVER use `git push --force` on the main branch
 - Use `git push --force-with-lease` for feature branches if needed
 - Always verify current branch before force operations
-
-## Configuration
-
-When adding new configuration options, update all relevant places:
-1. Environment variables in `.env.example`
-2. Next.js configuration in `next.config.mjs`
-3. Supabase configuration if database-related
-4. Docker environment variables in `docker-compose.yml` if backend-related
-5. Documentation in README.md
-
-All configuration keys use consistent naming and MUST be documented.
 
 ## Next.js Specific Guidelines
 

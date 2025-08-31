@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { mcpClientFactory } from './mcpClientFactory';
 import { sessionStore } from '@/lib/session-store';
 import { AssistantConfiguration } from '@/types/assistant';
@@ -20,7 +20,7 @@ export interface SessionCleanupResult {
  */
 export class MCPSessionManager {
   private static instance: MCPSessionManager;
-  private supabase;
+  private supabase: SupabaseClient | null = null;
 
   static getInstance(): MCPSessionManager {
     if (!MCPSessionManager.instance) {
@@ -29,11 +29,18 @@ export class MCPSessionManager {
     return MCPSessionManager.instance;
   }
 
-  private constructor() {
-    this.supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+  private constructor() {}
+
+  private getSupabase(): SupabaseClient {
+    if (!this.supabase) {
+      const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if (!url || !key) {
+        throw new Error('supabaseKey is required.');
+      }
+      this.supabase = createClient(url, key);
+    }
+    return this.supabase;
   }
 
   /**
@@ -99,7 +106,7 @@ export class MCPSessionManager {
    */
   private async refreshServerSession(userId: string, serverName: string): Promise<void> {
     // Get server info from database
-    const { data: serverData, error } = await this.supabase
+    const { data: serverData, error } = await this.getSupabase()
       .from('user_mcp_servers')
       .select('*')
       .eq('user_id', userId)
@@ -139,7 +146,7 @@ export class MCPSessionManager {
    * Marks a session as expired in the database
    */
   private async markSessionAsExpired(userId: string, serverName: string): Promise<void> {
-    const { error } = await this.supabase
+    const { error } = await this.getSupabase()
       .from('user_mcp_servers')
       .update({
         oauth_token: null,
@@ -166,7 +173,7 @@ export class MCPSessionManager {
 
     try {
       // Clean up expired sessions from database
-      const { data: expiredSessions, error } = await this.supabase
+      const { data: expiredSessions, error } = await this.getSupabase()
         .from('user_mcp_servers')
         .select('session_id, qualified_name, user_id')
         .not('expires_at', 'is', null)
@@ -262,7 +269,7 @@ export class MCPSessionManager {
   }> {
     try {
       // Get all OAuth sessions for the user
-      const { data: allSessions, error } = await this.supabase
+      const { data: allSessions, error } = await this.getSupabase()
         .from('user_mcp_servers')
         .select('*')
         .eq('user_id', userId)
@@ -329,7 +336,7 @@ export class MCPSessionManager {
 
     try {
       // Get all sessions for the user
-      const { data: userSessions, error } = await this.supabase
+      const { data: userSessions, error } = await this.getSupabase()
         .from('user_mcp_servers')
         .select('session_id, qualified_name')
         .eq('user_id', userId)

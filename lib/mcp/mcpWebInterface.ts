@@ -2,7 +2,7 @@ import { mcpClientFactory } from './mcpClientFactory';
 import { mcpSessionManager } from './mcpSessionManager';
 import { mcpDiagnostics } from './mcpDiagnostics';
 import { AssistantConfiguration } from '@/types/assistant';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 export interface MCPServerConnectRequest {
   serverUrl: string;
@@ -50,7 +50,7 @@ export interface MCPDiagnosticResponse {
  */
 export class MCPWebInterface {
   private static instance: MCPWebInterface;
-  private supabase;
+  private supabase: SupabaseClient | null = null;
 
   static getInstance(): MCPWebInterface {
     if (!MCPWebInterface.instance) {
@@ -59,11 +59,18 @@ export class MCPWebInterface {
     return MCPWebInterface.instance;
   }
 
-  private constructor() {
-    this.supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+  private constructor() {}
+
+  private getSupabase(): SupabaseClient {
+    if (!this.supabase) {
+      const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if (!url || !key) {
+        throw new Error('supabaseKey is required.');
+      }
+      this.supabase = createClient(url, key);
+    }
+    return this.supabase;
   }
 
   /**
@@ -330,7 +337,7 @@ export class MCPWebInterface {
     
     console.log('Storing OAuth attempt with data:', JSON.stringify(insertData, null, 2));
     
-    const { error } = await this.supabase
+    const { error } = await this.getSupabase()
       .from('user_mcp_servers')
       .upsert(insertData);
 
@@ -355,7 +362,7 @@ export class MCPWebInterface {
     
     console.log('Storing successful connection with data:', JSON.stringify(insertData, null, 2));
     
-    const { error } = await this.supabase
+    const { error } = await this.getSupabase()
       .from('user_mcp_servers')
       .upsert(insertData);
 
@@ -367,7 +374,7 @@ export class MCPWebInterface {
   }
 
   private async updateOAuthCompletion(sessionId: string, userId: string): Promise<void> {
-    const { error } = await this.supabase
+    const { error } = await this.getSupabase()
       .from('user_mcp_servers')
       .update({
         is_enabled: true,
@@ -383,7 +390,7 @@ export class MCPWebInterface {
   }
 
   private async removeServerConnection(sessionId: string, userId: string): Promise<void> {
-    const { error } = await this.supabase
+    const { error } = await this.getSupabase()
       .from('user_mcp_servers')
       .delete()
       .eq('session_id', sessionId)
