@@ -210,13 +210,6 @@ export class MCPWebInterface {
       console.log(`MCPWebInterface: Calling tool ${toolName} for user ${userId}`);
 
       const factoryResult = await mcpClientFactory.createForAgent(userId, agentConfig);
-      
-      if (!factoryResult.client) {
-        return {
-          success: false,
-          error: "No MCP client available"
-        };
-      }
 
       // Find the tool
       const tool = factoryResult.tools.find(t => t.name === toolName);

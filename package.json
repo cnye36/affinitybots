@@ -7,6 +7,8 @@
     "build": "next build --no-lint",
     "start": "next start",
     "lint": "next lint",
+    "mcp:diag": "node --loader ts-node/esm scripts/mcp-diagnostics.ts",
+    "mcp:fix": "node --loader ts-node/esm scripts/mcp-autofix.ts",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
@@ -41,6 +43,7 @@
     "@radix-ui/react-dialog": "^1.1.4",
     "@radix-ui/react-dropdown-menu": "^2.1.4",
     "@radix-ui/react-label": "^2.1.1",
+    "@radix-ui/react-popover": "^1.1.15",
     "@radix-ui/react-scroll-area": "^1.2.2",
     "@radix-ui/react-select": "^2.1.4",
     "@radix-ui/react-separator": "^1.1.1",
@@ -132,6 +135,7 @@
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
     "tavily-mcp": "0.1.4",
+    "ts-node": "^10.9.2",
     "typescript": "^5.7.3"
   },
   "packageManager": "pnpm@10.12.4"

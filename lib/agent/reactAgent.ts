@@ -441,8 +441,17 @@ async function callModel(
     }
   }
 
-  // Load MCP tools using the new factory
-  const { tools } = await createMcpClientAndTools(assistantId || userId || "default", configurable);
+  // Load MCP tools using the new factory (keyed to real userId for DB-backed servers)
+  let { tools } = await createMcpClientAndTools(userId || assistantId || "default", configurable);
+  // If specific servers are enabled but tools came back empty, try a one-time forced refresh
+  if ((configurable.enabled_mcp_servers?.length || 0) > 0 && tools.length === 0) {
+    console.log(`No tools loaded for enabled servers (${configurable.enabled_mcp_servers?.join(", ")}). Forcing refresh once...`);
+    const refreshed = await createMcpClientAndTools(userId || assistantId || "default", {
+      ...configurable,
+      force_mcp_refresh: true,
+    } as any);
+    tools = refreshed.tools;
+  }
   
   console.log(`Assistant ${userId || assistantId}: Binding ${tools.length} tools to model`);
   console.log(`Enabled servers: ${configurable.enabled_mcp_servers?.join(", ") || "none"}`);
@@ -564,8 +573,16 @@ async function createToolNode(state: any, config: any): Promise<any> {
   console.log(`🔍 Tool node execution - metadata user_id: ${config.metadata?.user_id}, configurable user_id: ${configurable.user_id}, assistant_id: ${configurable.assistant_id}, using userId: ${userId}, assistantId: ${assistantId}`);
   console.log(`Tool node for assistant ${userId || assistantId}: Loading ${enabledServers.length} servers`);
   
-  // Get the same tools that were used in callModel
-  const { tools } = await createMcpClientAndTools(assistantId || userId || "default", configurable);
+  // Get the same tools that were used in callModel (use real userId for consistency)
+  let { tools } = await createMcpClientAndTools(userId || assistantId || "default", configurable);
+  if ((configurable.enabled_mcp_servers?.length || 0) > 0 && tools.length === 0) {
+    console.log(`Tool node: no tools for enabled servers. Forcing refresh once...`);
+    const refreshed = await createMcpClientAndTools(userId || assistantId || "default", {
+      ...configurable,
+      force_mcp_refresh: true,
+    } as any);
+    tools = refreshed.tools;
+  }
   
   console.log(`Tool node for assistant ${userId || assistantId}: Executing with ${tools.length} available tools`);
   console.log(`Enabled servers for tool node: ${enabledServers.join(", ")}`);
@@ -602,7 +619,7 @@ async function createToolNode(state: any, config: any): Promise<any> {
       console.log(`🔄 Session expired detected, refreshing MCP client and retrying...`);
       
               // Force refresh the MCP client
-        const { tools: freshTools } = await createMcpClientAndTools(assistantId || userId || "default", {
+        const { tools: freshTools } = await createMcpClientAndTools(userId || assistantId || "default", {
           ...configurable,
           force_mcp_refresh: true
         });

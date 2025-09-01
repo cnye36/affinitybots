@@ -61,12 +61,15 @@ export class MCPClientManager {
         // Validate both OAuth and HTTP sessions are still active
         const oauthValid = await this.validateOAuthSessions(cachedEntry.result.oauthClients);
         const httpValid = await this.validateHttpSessions(cachedEntry.result.client);
-        
-        if (oauthValid && httpValid) {
+        // Avoid sticky empty-tool cache when servers are enabled
+        const hasEnabledServers = enabledServers.length > 0;
+        const isEmptyTools = cachedEntry.result.tools.length === 0;
+
+        if (oauthValid && httpValid && !(hasEnabledServers && isEmptyTools)) {
           console.log(`Using cached MCP client for ${userId} (cache age: ${Math.round(cacheAge / 1000)}s)`);
           return cachedEntry.result;
         } else {
-          console.log(`Sessions expired (OAuth: ${oauthValid}, HTTP: ${httpValid}), refreshing MCP client for ${userId}`);
+          console.log(`Refreshing MCP client for ${userId} (oauthValid=${oauthValid}, httpValid=${httpValid}, hasEnabled=${hasEnabledServers}, emptyTools=${isEmptyTools})`);
         }
       } else {
         console.log(`Cache expired for ${userId} (age: ${Math.round(cacheAge / 1000)}s), refreshing`);
@@ -82,6 +85,39 @@ export class MCPClientManager {
       
       // If no servers are explicitly enabled, fall back to all available servers
       let serversToLoad = enabledServers;
+      // Normalize and resolve requested server names against available servers
+      if (serversToLoad.length > 0) {
+        const simplify = (name: string) => name.toLowerCase().replace(/^@/, "").replace(/[^a-z0-9]/g, "");
+        const availableBySimple = new Map<string, string>();
+        for (const key of Object.keys(allServers)) {
+          availableBySimple.set(simplify(key), key);
+        }
+        const resolved: string[] = [];
+        const missing: string[] = [];
+        for (const req of serversToLoad) {
+          if (allServers[req]) {
+            resolved.push(req);
+            continue;
+          }
+          const simple = simplify(req);
+          const mapped = availableBySimple.get(simple);
+          if (mapped) {
+            console.log(`Resolved requested server \"${req}\" -> \"${mapped}\"`);
+            resolved.push(mapped);
+          } else {
+            missing.push(req);
+          }
+        }
+        if (missing.length > 0) {
+          console.warn(`Requested servers not found: ${missing.join(", ")}. Available: ${Object.keys(allServers).join(", ")}`);
+        }
+        if (resolved.length > 0) {
+          serversToLoad = resolved;
+        } else {
+          console.warn(`No enabled servers could be resolved; falling back to all available servers.`);
+          serversToLoad = Object.keys(allServers);
+        }
+      }
       if (enabledServers.length === 0) {
         serversToLoad = Object.keys(allServers);
         console.log(`No servers explicitly enabled, falling back to all available: ${serversToLoad.join(", ")}`);
@@ -352,7 +388,9 @@ export class MCPClientManager {
    * Validates that HTTP MCP sessions are still active (for Smithery servers)
    */
   private async validateHttpSessions(client: MultiServerMCPClient | null): Promise<boolean> {
-    if (!client) return false;
+    // If there is no HTTP client, we may still have OAuth-only tools available.
+    // Treat this as valid rather than forcing a refresh.
+    if (!client) return true;
     
     try {
       // Try to get tools to verify connection is still active
