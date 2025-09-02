@@ -16,6 +16,7 @@ interface Props {
 export function OfficialServerCard({ server, onConnected, isConfigured = false }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [disconnecting, setDisconnecting] = useState(false);
 
   async function handleConnect(e: React.MouseEvent) {
     e.preventDefault();
@@ -48,6 +49,27 @@ export function OfficialServerCard({ server, onConnected, isConfigured = false }
     }
   }
 
+  async function handleDisconnect(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      setDisconnecting(true);
+      setError(null);
+      const res = await fetch("/api/mcp/auth/disconnect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ serverName: server.qualifiedName }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to disconnect");
+      onConnected?.();
+    } catch (e: any) {
+      setError(e.message || String(e));
+    } finally {
+      setDisconnecting(false);
+    }
+  }
+
   const handleCardClick = () => {
     // Navigate to server detail page
     window.location.href = `/tools/${encodeURIComponent(server.qualifiedName)}`;
@@ -74,6 +96,13 @@ export function OfficialServerCard({ server, onConnected, isConfigured = false }
           variant={isConfigured ? "secondary" : "default"}
         >
           {loading ? "Connecting…" : isConfigured ? "Configure" : "Connect"}
+        </Button>
+        <Button
+          onClick={handleDisconnect}
+          disabled={disconnecting}
+          variant="outline"
+        >
+          {disconnecting ? "Disconnecting…" : "Disconnect"}
         </Button>
         {server.docsUrl && (
           <Button variant="outline" asChild>

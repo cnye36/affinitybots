@@ -21,6 +21,7 @@ import { AssistantConfiguration, AssistantMetadata, ModelType } from "@/types/as
 import { useRouter } from "next/navigation";
 import { mutate } from "swr";
 import { Assistant } from "@/types/assistant";
+import { useOnboarding, configTabsTutorialSteps } from "@/hooks/use-onboarding";
 
 interface AgentConfigModalProps {
   open: boolean;
@@ -50,6 +51,9 @@ export function AgentConfigModal({
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const { startTour, isActive, getCurrentStep } = useOnboarding();
+  const currentStep = getCurrentStep();
+  const isConfigStep = !!currentStep && currentStep.id.startsWith('config-tab-');
 
 
 
@@ -130,9 +134,31 @@ export function AgentConfigModal({
     }
   };
 
+  useEffect(() => {
+    try {
+      if (open) {
+        const seen = localStorage.getItem('onboarding-config-tabs-seen')
+        if (!seen && !isActive) {
+          localStorage.setItem('onboarding-config-tabs-seen', 'true')
+          // delay to ensure tabs are rendered
+          setTimeout(() => startTour(configTabsTutorialSteps), 300)
+        }
+      }
+    } catch (e) {
+      // no-op
+    }
+  }, [open, startTour, isActive])
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl">
+    <Dialog open={open || (isActive && isConfigStep)} onOpenChange={(next) => {
+      if (isActive && next === false) return;
+      onOpenChange(next);
+    }}>
+      <DialogContent 
+        className="max-w-4xl h-[80vh] flex flex-col"
+        onInteractOutside={(e) => { if (isActive) e.preventDefault() }}
+        onEscapeKeyDown={(e) => { if (isActive) e.preventDefault() }}
+      >
         <DialogHeader>
           <DialogTitle>Configure Agent</DialogTitle>
           <DialogDescription>
@@ -140,16 +166,16 @@ export function AgentConfigModal({
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue="general" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="general">General</TabsTrigger>
-            <TabsTrigger value="prompts">Prompts</TabsTrigger>
-            <TabsTrigger value="tools">Tools</TabsTrigger>
-            <TabsTrigger value="knowledge">Knowledge</TabsTrigger>
-            <TabsTrigger value="memory">Memory</TabsTrigger>
+        <Tabs defaultValue="general" className="space-y-6 flex-1 flex flex-col">
+          <TabsList data-tutorial="config-tabs-list">
+            <TabsTrigger value="general" data-tutorial="config-tab-general">General</TabsTrigger>
+            <TabsTrigger value="prompt" data-tutorial="config-tab-prompt">Prompt</TabsTrigger>
+            <TabsTrigger value="tools" data-tutorial="config-tab-tools">Tools</TabsTrigger>
+            <TabsTrigger value="knowledge" data-tutorial="config-tab-knowledge">Knowledge</TabsTrigger>
+            <TabsTrigger value="memory" data-tutorial="config-tab-memory">Memory</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="general">
+          <TabsContent value="general" className="flex-1 overflow-y-auto">
             <GeneralConfig
               config={{
                 id: assistant.assistant_id,
@@ -164,14 +190,14 @@ export function AgentConfigModal({
             />
           </TabsContent>
 
-          <TabsContent value="prompts">
+          <TabsContent value="prompt" className="flex-1 overflow-y-auto">
             <PromptsConfig
               config={config.config as AssistantConfiguration}
               onChange={handleConfigurableChange}
             />
           </TabsContent>
 
-          <TabsContent value="tools">
+          <TabsContent value="tools" className="flex-1 overflow-y-auto">
             <ToolSelector
               enabledMCPServers={
                 config.config.enabled_mcp_servers || []
@@ -180,7 +206,7 @@ export function AgentConfigModal({
             />
           </TabsContent>
 
-          <TabsContent value="knowledge">
+          <TabsContent value="knowledge" className="flex-1 overflow-y-auto">
             <KnowledgeConfig
               config={config.config as AssistantConfiguration}
               onChange={handleConfigurableChange}
@@ -188,7 +214,7 @@ export function AgentConfigModal({
             />
           </TabsContent>
 
-          <TabsContent value="memory">
+          <TabsContent value="memory" className="flex-1 overflow-y-auto">
             <MemoryConfig
               config={config.config as AssistantConfiguration}
               onChange={handleConfigurableChange}

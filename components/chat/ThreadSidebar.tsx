@@ -88,7 +88,7 @@ const ThreadSidebar = forwardRef<ThreadSidebarRef, ThreadSidebarProps>(({
     refreshThreads: fetchThreads,
   }));
 
-  // Initial fetch when component mounts or agentId changes
+  // Initial fetch when component mounts or assistantId changes
   useEffect(() => {
     fetchThreads();
   }, [fetchThreads]);
@@ -214,7 +214,7 @@ const ThreadSidebar = forwardRef<ThreadSidebarRef, ThreadSidebarProps>(({
 
   return (
     <div className="flex flex-col h-full bg-background">
-      <div className="p-2 sm:p-4 border-b">
+      <div className="p-2 sm:p-4 border-b" data-tutorial="agent-new-chat">
         <button
           onClick={onNewThread}
           className="w-full py-2 px-3 sm:px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center justify-center gap-2 transition-colors text-sm sm:text-base"

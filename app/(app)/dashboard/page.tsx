@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { formatRelativeTime } from "@/lib/utils";
+import { TutorialButton } from "@/components/onboarding/TutorialButton";
 
 // Helper to impose a maximum time for the entire server function.
 function createTimeoutPromise(timeoutMs: number): Promise<never> {
@@ -173,18 +174,9 @@ export default async function Dashboard() {
           <div className="min-h-screen bg-background">
             <div className="container mx-auto px-4 py-8">
               {/* Header with time range and actions */}
-              <div className="flex justify-between items-center mb-8">
+              <div className="flex justify-between items-center mb-8" data-tutorial="dashboard-header">
                 <h1 className="text-2xl font-bold">Dashboard Overview</h1>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm">
-                    <Clock className="mr-2 h-4 w-4" />
-                    Last 7 days
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    <BarChart3 className="mr-2 h-4 w-4" />
-                    View Reports
-                  </Button>
-                </div>
+                
               </div>
 
               {/* Summary statistics */}
@@ -303,6 +295,7 @@ export default async function Dashboard() {
                 <RecentActivity activities={recentActivity} />
               </div>
             </div>
+            <TutorialButton />
           </div>
         );
       })(),

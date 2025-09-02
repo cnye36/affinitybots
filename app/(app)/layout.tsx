@@ -2,6 +2,9 @@ import { createClient } from "@/supabase/server";
 import { redirect } from "next/navigation";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/app-sidebar";
+import { OnboardingProvider } from "@/hooks/use-onboarding";
+import { TutorialOverlay } from "@/components/onboarding/TutorialOverlay";
+import { WelcomeModal } from "@/components/onboarding/WelcomeModal";
 
 export default async function AuthenticatedLayout({
   children,
@@ -23,9 +26,16 @@ export default async function AuthenticatedLayout({
   }
 
   return (
-    <SidebarProvider>
-      <AppSidebar user={user} />
-      <SidebarInset>{children}</SidebarInset>
-    </SidebarProvider>
+    <OnboardingProvider>
+      <SidebarProvider>
+        <AppSidebar user={user} />
+        <SidebarInset>
+          <TutorialOverlay>
+            {children}
+            <WelcomeModal />
+          </TutorialOverlay>
+        </SidebarInset>
+      </SidebarProvider>
+    </OnboardingProvider>
   );
 }

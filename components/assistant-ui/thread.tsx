@@ -42,7 +42,7 @@ export const Thread: FC = () => {
         ["--thread-padding-x" as string]: "1rem",
       }}
     >
-      <ThreadPrimitive.Viewport className="relative flex min-w-0 flex-1 flex-col gap-6 overflow-y-scroll">
+      <ThreadPrimitive.Viewport className="relative flex min-w-0 flex-1 flex-col gap-6 overflow-y-scroll" data-tutorial="agent-chat-viewport">
         <ThreadWelcome />
 
         <ThreadPrimitive.Messages
@@ -181,7 +181,7 @@ const ThreadWelcome: FC = () => {
 
 const Composer: FC = () => {
   return (
-    <div className="bg-background relative mx-auto flex w-full max-w-[var(--thread-max-width)] flex-col gap-4 px-[var(--thread-padding-x)] pb-4 md:pb-6">
+    <div className="bg-background relative mx-auto flex w-full max-w-[var(--thread-max-width)] flex-col gap-4 px-[var(--thread-padding-x)] pb-4 md:pb-6" data-tutorial="agent-composer">
       <ThreadScrollToBottom />
       <ThreadPrimitive.Empty>
         {/* <ThreadWelcomeSuggestions /> */}
@@ -203,7 +203,7 @@ const Composer: FC = () => {
 
 const ComposerAction: FC = () => {
   return (
-    <div className="bg-muted border-border dark:border-muted-foreground/15 relative flex items-center justify-between rounded-b-2xl border-x border-b p-2">
+    <div className="bg-muted border-border dark:border-muted-foreground/15 relative flex items-center justify-between rounded-b-2xl border-x border-b p-2" data-tutorial="agent-attachments">
       <ComposerAttachments />
       <ComposerAddAttachment />
       

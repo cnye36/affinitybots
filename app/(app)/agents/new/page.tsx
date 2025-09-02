@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from "next/link";
 import { AGENT_TEMPLATES } from "./templates";
@@ -18,9 +18,11 @@ import {
   DropdownMenuContent,
 } from "@/components/ui/dropdown-menu";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
+import { useOnboarding, newAgentTutorialSteps } from "@/hooks/use-onboarding";
 
 export default function NewAgentPage() {
   const router = useRouter();
+  const { startTour, isActive } = useOnboarding();
   const [customPrompt, setCustomPrompt] = useState("");
   const [customName, setCustomName] = useState("");
   // No explicit agent type; template clicks only prefill prompt
@@ -48,6 +50,19 @@ export default function NewAgentPage() {
     "application/xml",
     "text/xml",
   ];
+
+  // Auto-start the New Agent onboarding tour on first visit
+  useEffect(() => {
+    try {
+      const seen = localStorage.getItem('onboarding-new-agent-seen')
+      if (!seen && !isActive) {
+        localStorage.setItem('onboarding-new-agent-seen', 'true')
+        setTimeout(() => startTour(newAgentTutorialSteps), 300)
+      }
+    } catch (e) {
+      // no-op
+    }
+  }, [startTour, isActive])
 
   const handleCreateAgent = async (prompt: string) => {
     setIsSubmitting(true);
@@ -109,8 +124,8 @@ export default function NewAgentPage() {
 
         <div className="space-y-6">
           {/* Optional Name */}
-          <div className="gradient-border p-6 rounded-lg">
-            <Label className="mb-2 block">Optional Name</Label>
+          <div className="gradient-border p-6 rounded-lg" data-tutorial="agent-name">
+            <Label className="mb-2 block">Name (Optional)</Label>
             <Input
               placeholder="e.g., Prism Atlas"
               value={customName}
@@ -120,10 +135,10 @@ export default function NewAgentPage() {
           </div>
 
           {/* Prompt */}
-          <div className="gradient-border p-6 rounded-lg">
+          <div className="gradient-border p-6 rounded-lg" data-tutorial="agent-description">
             <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
               <Sparkles className="h-5 w-5" />
-              Describe Your AI Agent
+              Describe Your AI Agent (Required)
             </h2>
             <p className="text-muted-foreground mb-4">
               Tell us what you want your AI agent to do. We’ll infer the best agent profile, craft a strong system prompt, and set sensible defaults.
@@ -172,13 +187,13 @@ export default function NewAgentPage() {
           </div>
 
           {/* Tools (Accordion) */}
-          <div className="gradient-border p-0 rounded-lg">
+          <div className="gradient-border p-0 rounded-lg" data-tutorial="agent-tools">
             <Accordion type="single" collapsible>
               <AccordionItem value="tools">
                 <AccordionTrigger className="px-4">
                   <div className="flex items-center gap-2">
                     <Plus className="h-4 w-4" />
-                    <h3 className="font-medium">Add Tools</h3>
+                    <h3 className="font-medium">Add Tools (Optional)</h3>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="px-4">
@@ -194,10 +209,10 @@ export default function NewAgentPage() {
           </div>
 
           {/* Knowledge (Dropdown) */}
-          <div className="gradient-border p-4 rounded-lg flex items-center justify-between">
+          <div className="gradient-border p-4 rounded-lg flex items-center justify-between" data-tutorial="agent-knowledge">
             <div className="flex items-center gap-2">
               <Upload className="h-4 w-4" />
-              <h3 className="font-medium">Add Knowledge</h3>
+              <h3 className="font-medium">Add Knowledge (Optional)</h3>
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -243,7 +258,7 @@ export default function NewAgentPage() {
           </div>
 
           {/* Templates as pills under prompt; click to populate */}
-          <div className="space-y-2">
+          <div className="space-y-2" data-tutorial="agent-templates">
             <div className="flex items-center gap-2">
               <Wand2 className="h-4 w-4" />
               <h3 className="text-lg font-semibold">Start from a template</h3>
