@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AGENT_TEMPLATES } from "./templates";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,12 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
 } from "@/components/ui/dropdown-menu";
-import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from "@/components/ui/accordion";
 
 export default function NewAgentPage() {
   const router = useRouter();
@@ -76,6 +81,7 @@ export default function NewAgentPage() {
       // If user queued knowledge files, upload them now
       if (knowledgeFiles.length > 0 && data?.assistant?.assistant_id) {
         for (const file of knowledgeFiles) {
+          if (!allowedFileTypes.includes(file.type)) continue;
           const formData = new FormData();
           formData.append("file", file);
           formData.append("assistantId", data.assistant.assistant_id);
@@ -116,7 +122,9 @@ export default function NewAgentPage() {
               value={customName}
               onChange={(e) => setCustomName(e.target.value)}
             />
-            <p className="text-xs text-muted-foreground mt-2">Leave blank to auto-generate a creative name.</p>
+            <p className="text-xs text-muted-foreground mt-2">
+              Leave blank to auto-generate a creative name.
+            </p>
           </div>
 
           {/* Prompt */}
@@ -126,7 +134,9 @@ export default function NewAgentPage() {
               Describe Your AI Agent
             </h2>
             <p className="text-muted-foreground mb-4">
-              Tell us what you want your AI agent to do. We’ll infer the best agent profile, craft a strong system prompt, and set sensible defaults.
+              Tell us what you want your AI agent to do. We’ll infer the best
+              agent profile, craft a strong system prompt, and set sensible
+              defaults.
             </p>
             <Textarea
               placeholder="Example: Analyze our revenue data monthly, build concise dashboards, and alert me to anomalies."
@@ -149,14 +159,15 @@ export default function NewAgentPage() {
                 onClick={async () => {
                   try {
                     setIsEnhancing(true);
-                    const res = await fetch('/api/prompt/enhance', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ prompt: customPrompt })
+                    const res = await fetch("/api/prompt/enhance", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ prompt: customPrompt }),
                     });
-                    if (!res.ok) throw new Error('Failed to enhance prompt');
+                    if (!res.ok) throw new Error("Failed to enhance prompt");
                     const data = await res.json();
-                    if (data?.enhancedPrompt) setCustomPrompt(data.enhancedPrompt);
+                    if (data?.enhancedPrompt)
+                      setCustomPrompt(data.enhancedPrompt);
                   } catch (e) {
                     console.error(e);
                   } finally {
@@ -166,7 +177,7 @@ export default function NewAgentPage() {
                 title="Enhance prompt"
               >
                 <Wand className="h-4 w-4 mr-2" />
-                {isEnhancing ? 'Enhancing…' : 'Enhance'}
+                {isEnhancing ? "Enhancing…" : "Enhance"}
               </Button>
             </div>
           </div>
@@ -201,20 +212,37 @@ export default function NewAgentPage() {
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">Upload</Button>
+                <Button variant="outline" size="sm">
+                  Upload
+                </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-[420px] p-4">
                 <div
-                  onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true); }}
-                  onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                  onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(false); }}
+                  onDragEnter={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsDragging(true);
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  onDragLeave={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsDragging(false);
+                  }}
                   onDrop={(e) => {
-                    e.preventDefault(); e.stopPropagation(); setIsDragging(false);
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsDragging(false);
                     const files = Array.from(e.dataTransfer.files || []);
-                    const valid = files.filter((file) => file.name.endsWith('.csv') || allowedFileTypes.includes(file.type));
+                    const valid = files.filter((file) =>
+                      allowedFileTypes.includes(file.type),
+                    );
                     setKnowledgeFiles((prev) => [...prev, ...valid]);
                   }}
-                  className={`border-2 border-dashed rounded-md p-6 text-center transition-colors ${isDragging ? 'border-primary bg-primary/5' : 'border-muted-foreground/25'}`}
+                  className={`border-2 border-dashed rounded-md p-6 text-center transition-colors ${isDragging ? "border-primary bg-primary/5" : "border-muted-foreground/25"}`}
                 >
                   <input
                     type="file"
@@ -223,19 +251,29 @@ export default function NewAgentPage() {
                     className="hidden"
                     id="kb-upload"
                     onChange={(e) => {
-                      const files = e.target.files ? Array.from(e.target.files) : [];
-                      const valid = files.filter((file) => file.name.endsWith('.csv') || allowedFileTypes.includes(file.type));
+                      const files = e.target.files
+                        ? Array.from(e.target.files)
+                        : [];
+                      const valid = files.filter((file) =>
+                        allowedFileTypes.includes(file.type),
+                      );
                       setKnowledgeFiles((prev) => [...prev, ...valid]);
                     }}
                   />
                   <label htmlFor="kb-upload" className="cursor-pointer">
-                    <p>{isDragging ? 'Drop files here…' : 'Drag & drop files, or click to select'}</p>
-                    <p className="text-xs text-muted-foreground mt-1">Files upload after the agent is created.</p>
+                    <p>
+                      {isDragging
+                        ? "Drop files here…"
+                        : "Drag & drop files, or click to select"}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Files upload after the agent is created.
+                    </p>
                   </label>
                 </div>
                 {knowledgeFiles.length > 0 && (
                   <div className="mt-3 text-xs text-muted-foreground">
-                    Queued: {knowledgeFiles.map((f) => f.name).join(', ')}
+                    Queued: {knowledgeFiles.map((f) => f.name).join(", ")}
                   </div>
                 )}
               </DropdownMenuContent>

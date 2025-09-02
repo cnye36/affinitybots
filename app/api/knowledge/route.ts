@@ -9,6 +9,21 @@ import { SupabaseVectorStore } from "@langchain/community/vectorstores/supabase"
 import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 import * as XLSX from "xlsx";
 
+const allowedFileTypes = [
+  "application/pdf",
+  "text/plain",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "text/csv",
+  "application/csv",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/json",
+  "text/markdown",
+  "application/xml",
+  "text/xml",
+];
+
 export async function POST(req: Request) {
   try {
     const formData = await req.formData();
@@ -20,21 +35,28 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
+    if (!allowedFileTypes.includes(file.type)) {
+      return NextResponse.json(
+        { error: `Unsupported file type: ${file.type}` },
+        { status: 400 },
+      );
+    }
+
     if (!agentId || agentId.trim() === "") {
       console.error(
         "[Knowledge API] Validation failed: agentId is null, empty, or whitespace. Value:",
-        agentId
+        agentId,
       );
       return NextResponse.json(
         { error: "Valid agent ID is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     const trimmedAgentId = agentId.trim();
     console.log(
       "[Knowledge API] Trimmed agentId to be used in metadata:",
-      trimmedAgentId
+      trimmedAgentId,
     );
 
     // Create an entry in the 'documents' table
@@ -54,7 +76,7 @@ export async function POST(req: Request) {
       console.error("[Knowledge API] Error creating document entry:", docError);
       return NextResponse.json(
         { error: "Failed to create document entry in database" },
-        { status: 500 }
+        { status: 500 },
       );
     }
     const documentId = documentEntry.id;
@@ -176,7 +198,7 @@ export async function POST(req: Request) {
             {
               error: `Unsupported file type: ${fileType} for file ${fileName}`,
             },
-            { status: 400 }
+            { status: 400 },
           );
       }
     }
@@ -202,7 +224,7 @@ export async function POST(req: Request) {
     // Create a service role client to bypass RLS for vector insertion
     const serviceClient = createServiceClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
     );
 
     await SupabaseVectorStore.fromDocuments(documentsWithMetadata, embeddings, {
@@ -216,7 +238,7 @@ export async function POST(req: Request) {
     console.error("Error processing document:", error);
     return NextResponse.json(
       { error: "Error processing document" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -230,7 +252,7 @@ export async function DELETE(req: Request) {
     if (!agentId || !filename) {
       return NextResponse.json(
         { error: "Agent ID and filename are required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -248,7 +270,7 @@ export async function DELETE(req: Request) {
       console.error("[Knowledge API] Error finding document:", findError);
       return NextResponse.json(
         { error: "Document not found in database" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -263,11 +285,11 @@ export async function DELETE(req: Request) {
     if (vectorDeleteError) {
       console.error(
         "[Knowledge API] Error deleting vector embeddings:",
-        vectorDeleteError
+        vectorDeleteError,
       );
       return NextResponse.json(
         { error: "Failed to delete document embeddings" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -280,11 +302,11 @@ export async function DELETE(req: Request) {
     if (docDeleteError) {
       console.error(
         "[Knowledge API] Error deleting document entry:",
-        docDeleteError
+        docDeleteError,
       );
       return NextResponse.json(
         { error: "Failed to delete document entry" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -296,7 +318,7 @@ export async function DELETE(req: Request) {
     console.error("Error deleting document:", error);
     return NextResponse.json(
       { error: "Error deleting document" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
