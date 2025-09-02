@@ -7,7 +7,7 @@ export default function EarlyAccessPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      <main className="flex-1 container mx-auto px-4 pt-32 pb-16 flex flex-col items-center justify-center">
+      <main className="flex-1 container mx-auto px-4 pt-40 pb-16 flex flex-col items-center justify-center">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold mb-4">
