@@ -28,7 +28,7 @@ function VerifyEmailContent() {
                 <ol className="list-decimal list-inside space-y-2 text-left">
                   <li>Check your email inbox (and spam folder)</li>
                   <li>Click the verification link in the email</li>
-                  <li>Return here to sign in</li>
+                  <li>Close this page</li>
                 </ol>
               </div>
             </div>
@@ -42,30 +42,13 @@ function VerifyEmailContent() {
               </button>
             </p>
             
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Button 
-                variant="outline" 
-                asChild
-                className="flex-1"
-              >
-                <Link href="/signin">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Sign In
-                </Link>
-              </Button>
-              <Button 
-                asChild
-                className="flex-1"
-              >
-                <Link href="/dashboard">
-                  Go to Dashboard
-                </Link>
-              </Button>
+            
+             
             </div>
           </div>
         </div>
       </div>
-    </div>
+    
   );
 }
 

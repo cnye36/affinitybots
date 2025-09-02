@@ -155,19 +155,19 @@ export function AgentConfigModal({
       onOpenChange(next);
     }}>
       <DialogContent 
-        className="max-w-4xl h-[80vh] flex flex-col"
+        className="max-w-4xl h-[80vh] flex flex-col overflow-hidden"
         onInteractOutside={(e) => { if (isActive) e.preventDefault() }}
         onEscapeKeyDown={(e) => { if (isActive) e.preventDefault() }}
       >
-        <DialogHeader>
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>Configure Agent</DialogTitle>
           <DialogDescription>
             Modify the settings for your agent.
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue="general" className="space-y-6 flex-1 flex flex-col">
-          <TabsList data-tutorial="config-tabs-list">
+        <Tabs defaultValue="general" className="flex-1 flex flex-col min-h-0">
+          <TabsList data-tutorial="config-tabs-list" className="flex-shrink-0">
             <TabsTrigger value="general" data-tutorial="config-tab-general">General</TabsTrigger>
             <TabsTrigger value="prompt" data-tutorial="config-tab-prompt">Prompt</TabsTrigger>
             <TabsTrigger value="tools" data-tutorial="config-tab-tools">Tools</TabsTrigger>
@@ -175,7 +175,7 @@ export function AgentConfigModal({
             <TabsTrigger value="memory" data-tutorial="config-tab-memory">Memory</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="general" className="flex-1 overflow-y-auto">
+          <TabsContent value="general" className="flex-1 overflow-y-auto min-h-0">
             <GeneralConfig
               config={{
                 id: assistant.assistant_id,
@@ -190,14 +190,14 @@ export function AgentConfigModal({
             />
           </TabsContent>
 
-          <TabsContent value="prompt" className="flex-1 overflow-y-auto">
+          <TabsContent value="prompt" className="flex-1 overflow-y-auto min-h-0">
             <PromptsConfig
               config={config.config as AssistantConfiguration}
               onChange={handleConfigurableChange}
             />
           </TabsContent>
 
-          <TabsContent value="tools" className="flex-1 overflow-y-auto">
+          <TabsContent value="tools" className="flex-1 overflow-y-auto min-h-0">
             <ToolSelector
               enabledMCPServers={
                 config.config.enabled_mcp_servers || []
@@ -206,7 +206,7 @@ export function AgentConfigModal({
             />
           </TabsContent>
 
-          <TabsContent value="knowledge" className="flex-1 overflow-y-auto">
+          <TabsContent value="knowledge" className="flex-1 overflow-y-auto min-h-0">
             <KnowledgeConfig
               config={config.config as AssistantConfiguration}
               onChange={handleConfigurableChange}
@@ -214,7 +214,7 @@ export function AgentConfigModal({
             />
           </TabsContent>
 
-          <TabsContent value="memory" className="flex-1 overflow-y-auto">
+          <TabsContent value="memory" className="flex-1 overflow-y-auto min-h-0">
             <MemoryConfig
               config={config.config as AssistantConfiguration}
               onChange={handleConfigurableChange}
@@ -224,12 +224,12 @@ export function AgentConfigModal({
         </Tabs>
 
         {error && (
-          <Alert variant="destructive">
+          <Alert variant="destructive" className="flex-shrink-0">
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
 
-        <DialogFooter className="flex justify-end space-x-2">
+        <DialogFooter className="flex justify-end space-x-2 flex-shrink-0">
           <Button
             variant="ghost"
             onClick={() => onOpenChange(false)}

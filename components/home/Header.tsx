@@ -38,12 +38,12 @@ export function Header() {
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border transition-all duration-200 ${
-        scrolled ? "py-2" : "py-4 md:py-6"
+        scrolled ? "py-2" : "pt-0 pb-4 md:pb-6"
       }`}
     >
       {showAnnouncement && (
         <div className="w-full bg-primary/10 text-primary relative">
-          <div className="container mx-auto px-4 pr-8 py-1 text-center text-xs md:text-sm whitespace-nowrap overflow-hidden text-ellipsis">
+          <div className="container mx-auto px-4 pr-8 py-2 text-center text-sm md:text-base whitespace-nowrap overflow-hidden text-ellipsis">
             <span className="font-semibold">AgentHub is now AffinityBots</span>
             <span className="mx-2 opacity-60">•</span>
             <span>Same Awesome Agents, New Name</span>

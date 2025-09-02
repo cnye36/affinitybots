@@ -366,7 +366,7 @@ export function ToolSelector({
   };
 
   return (
-    <div className="space-y-6 max-h-[70vh] overflow-y-auto">
+    <div className="space-y-6">
       {/* Configured Tools Section */}
       {configuredServers.length > 0 && (
         <div>
