@@ -3,20 +3,14 @@ import { mcpWebInterface } from "@/lib/mcp/mcpWebInterface";
 import { createClient } from "@/supabase/server";
 
 interface DisconnectRequestBody {
-  sessionId: string;
+  sessionId?: string;
+  serverName?: string; // optional alternative: disconnect by qualified name
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body: DisconnectRequestBody = await request.json();
-    const { sessionId } = body;
-
-    if (!sessionId) {
-      return NextResponse.json(
-        { error: "Session ID is required" },
-        { status: 400 }
-      );
-    }
+    const { sessionId, serverName } = body;
 
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -24,7 +18,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const result = await mcpWebInterface.disconnectServer(sessionId, user.id);
+    if (!sessionId && !serverName) {
+      return NextResponse.json({ error: "sessionId or serverName is required" }, { status: 400 });
+    }
+
+    const result = sessionId
+      ? await mcpWebInterface.disconnectServer(sessionId, user.id)
+      : await mcpWebInterface.disconnectServerByName(serverName!, user.id);
     return NextResponse.json(result, { status: result.success ? 200 : 500 });
   } catch (error: unknown) {
     if (error instanceof Error) {

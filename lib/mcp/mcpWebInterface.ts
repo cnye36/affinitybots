@@ -332,7 +332,7 @@ export class MCPWebInterface {
     
     const { error } = await this.getSupabase()
       .from('user_mcp_servers')
-      .upsert(insertData);
+      .upsert(insertData, { onConflict: 'user_id,qualified_name' });
 
     if (error) {
       console.error('Failed to store OAuth attempt:', error);
@@ -357,7 +357,7 @@ export class MCPWebInterface {
     
     const { error } = await this.getSupabase()
       .from('user_mcp_servers')
-      .upsert(insertData);
+      .upsert(insertData, { onConflict: 'user_id,qualified_name' });
 
     if (error) {
       console.error('Failed to store successful connection:', error);
@@ -391,6 +391,53 @@ export class MCPWebInterface {
 
     if (error) {
       console.error('Failed to remove server connection:', error);
+    }
+  }
+
+  /**
+   * Disconnects a server connection by its qualified name for the current user
+   */
+  async disconnectServerByName(serverName: string, userId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Look up the server row to find any active session_id
+      const { data: row, error: fetchError } = await this.getSupabase()
+        .from('user_mcp_servers')
+        .select('session_id')
+        .eq('user_id', userId)
+        .eq('qualified_name', serverName)
+        .single();
+
+      if (fetchError) {
+        if ((fetchError as any).code === 'PGRST116') {
+          return { success: true }; // Nothing to do
+        }
+        throw new Error(fetchError.message);
+      }
+
+      // If there's an in-memory OAuth session, disconnect it
+      if (row?.session_id) {
+        try {
+          await mcpClientFactory.disconnectOAuth(row.session_id);
+        } catch (e) {
+          // Best-effort; continue to delete DB row
+          console.warn('Warning disconnecting OAuth session for', serverName, e);
+        }
+      }
+
+      // Delete the server row
+      const { error: deleteError } = await this.getSupabase()
+        .from('user_mcp_servers')
+        .delete()
+        .eq('user_id', userId)
+        .eq('qualified_name', serverName);
+
+      if (deleteError) {
+        throw new Error(deleteError.message);
+      }
+
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   }
 }

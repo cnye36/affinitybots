@@ -49,7 +49,7 @@ export function NavMain({ items }: { items: NavItem[] }) {
             defaultOpen={isActiveLink(item.url)}
             className="group/collapsible"
           >
-            <SidebarMenuItem>
+            <SidebarMenuItem data-tutorial={item.title === "Tools" ? "tools-sidebar" : undefined}>
               {item.items ? (
                 <CollapsibleTrigger asChild>
                   <SidebarMenuButton tooltip={item.title}>

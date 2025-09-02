@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { signUp, signUpWithGitHub, signUpWithGoogle } from "../actions";
+import { signUp } from "../actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,7 +9,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useRef, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
-
 function SignUpForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,6 +35,7 @@ function SignUpForm() {
     if (result?.error) {
       setError(result.error);
     }
+    // On success, the action will redirect to the verification page
   }
 
   return (
@@ -87,6 +87,7 @@ function SignUpForm() {
           <Button formAction={handleSignUp} className="w-full">
             Sign Up
           </Button>
+          {/* Temporarily disabled OAuth while fixing production issues
           <div className="relative my-2 text-center text-sm text-muted-foreground">
             <span className="px-2 bg-background relative z-10">or</span>
             <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-px bg-border" />
@@ -119,6 +120,7 @@ function SignUpForm() {
           >
             Continue with GitHub
           </Button>
+          */}
         </form>
         <p className="mt-4 text-center">
           Already have an account?{" "}

@@ -68,7 +68,12 @@ export async function signUp(formData: FormData) {
     await supabase.auth.signUp({
       email,
       password,
-      // You can add options here, like email_confirm: true if you want email verification
+      options: {
+        emailRedirectTo: `${await getSiteUrl()}/auth/callback`,
+        data: {
+          invite_code: inviteCode,
+        }
+      }
     });
 
   if (signUpAuthError) {
@@ -101,9 +106,8 @@ export async function signUp(formData: FormData) {
   }
 
   revalidatePath("/", "layout");
-  // If you have email confirmation enabled, you might redirect to a page saying "Check your email"
-  // Otherwise, redirect to dashboard or a welcome page.
-  redirect("/dashboard");
+  // Redirect to verification page since email confirmation is required
+  redirect(`/auth/verify-email?email=${encodeURIComponent(email)}`);
 }
 
 export async function signOut() {

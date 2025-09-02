@@ -136,10 +136,11 @@ export class MCPSessionManager {
    * Attempts to refresh using a refresh token
    */
   private async refreshWithRefreshToken(userId: string, serverName: string, refreshToken: string): Promise<void> {
-    // This would depend on the specific OAuth provider's refresh token flow
-    // For now, we'll just mark as expired and require re-authorization
-    console.log(`Refresh token flow not yet implemented for ${serverName}`);
-    throw new Error("Refresh token flow not implemented");
+    // GitHub Copilot MCP currently does not expose a public refresh endpoint via MCP SDk.
+    // We mark for re-authorization. Hook for future provider-specific refresh.
+    console.log(`Refresh token flow not implemented for ${serverName}; marking expired.`);
+    await this.markSessionAsExpired(userId, serverName);
+    throw new Error("Refresh requires re-authorization");
   }
 
   /**
