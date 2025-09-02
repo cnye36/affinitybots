@@ -1,15 +1,9 @@
-"use client";
-
-import React from "react";
+import React, { Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Mail, CheckCircle, ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 
-export default function VerifyEmailPage() {
-  const searchParams = useSearchParams();
-  const email = searchParams.get("email");
-
+function VerifyEmailContent() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="w-full max-w-md">
@@ -21,10 +15,7 @@ export default function VerifyEmailPage() {
           <h1 className="text-3xl font-bold mb-4">Check Your Email</h1>
           
           <p className="text-muted-foreground text-lg mb-6">
-            We've sent a verification link to{" "}
-            <span className="font-medium text-foreground">
-              {email || "your email address"}
-            </span>
+            We've sent a verification link to your email address.
           </p>
         </div>
         
@@ -75,5 +66,22 @@ export default function VerifyEmailPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900">
+            <Mail className="h-10 w-10 text-blue-600 dark:text-blue-400" />
+          </div>
+          <h1 className="text-3xl font-bold mb-4">Loading...</h1>
+        </div>
+      </div>
+    }>
+      <VerifyEmailContent />
+    </Suspense>
   );
 }
