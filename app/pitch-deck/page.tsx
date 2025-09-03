@@ -9,7 +9,6 @@ import { Download, FileText, Eye, Star, ExternalLink, Monitor } from "lucide-rea
 import { Header } from "@/components/home/Header";
 import { Footer } from "@/components/home/Footer";
 import dynamic from "next/dynamic";
-const PresentationPdf = dynamic(() => import("@/components/pdf/PresentationPdf"), { ssr: false });
 const SlideCarousel = dynamic(() => import("@/components/presentation/SlideCarousel"), { ssr: false });
 
 export default function PitchDeckPage() {
@@ -95,8 +94,7 @@ export default function PitchDeckPage() {
                   "/slides/AffinityBots-Pitch-Deck-Page-8.jpg",
                 ]} />
 
-                {/* Fallback: PDF Viewer (kept available) */}
-                {/* <PresentationPdf /> */}
+                {/* PDF viewer removed in favor of image carousel */}
 
                 {/* Viewing Options */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

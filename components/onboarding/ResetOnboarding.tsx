@@ -21,7 +21,7 @@ export function ResetOnboarding() {
   return (
     <Button variant="ghost" size="sm" className="w-full justify-start" onClick={handleReset}>
       <RotateCcw className="h-4 w-4 mr-2" />
-      Reset Tour (test)
+      Reset Tour
     </Button>
   )
 }

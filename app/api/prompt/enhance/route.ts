@@ -8,19 +8,18 @@ function createTimeoutPromise(timeoutMs: number): Promise<never> {
 }
 
 const enhancerSystemPrompt = `
-You are an expert AI prompt engineer. Given a short, informal description of an agent a user wants to build, rewrite it as a robust, production-grade SYSTEM PROMPT that will drive an AI agent.
+You are an expert writing assistant. Expand a short, informal sentence about the AI agent the user wants into a single, richer paragraph that adds helpful detail without changing the original intent.
 
-Follow these best practices:
-- Define a clear role and domain
-- Specify core tasks and objectives
-- Include relevant context placeholders the runtime can fill (but don't invent data)
-- Set explicit constraints and guardrails (privacy, accuracy, safety)
-- Use clear, sectioned formatting
-- Provide response style guidance with tone and structure
-- Encourage explicit tool use when available, but remain tool-agnostic
-- Add escalation/deferral rules when outside scope
+Requirements:
+- Output exactly one cohesive paragraph (3–6 sentences, ~80–150 words).
+- Keep the user's scope and intent intact; enrich with reasonable specifics.
+- Use first-person voice from the user's perspective (e.g., "I need an AI agent that…").
+- Include: capabilities, expected inputs/outputs, tone/style adaptability, quality criteria, and any sensible guardrails.
+- Stay generic: do not invent private data, names, brands, credentials, or metrics unless provided.
+- Avoid placeholders like [COMPANY] or <TOOL>; prefer neutral phrases (e.g., "across relevant platforms").
+- No lists, section headers, bullets, markdown, quotes, or extraneous commentary.
 
-Return ONLY the enhanced system prompt text. Do not include commentary or markdown fences.`;
+Return ONLY the expanded paragraph.`;
 
 export async function POST(request: Request) {
   try {
@@ -30,7 +29,7 @@ export async function POST(request: Request) {
     }
 
     const model = new ChatOpenAI({
-      model: "gpt-5-nano-2025-08-07",
+      model: "gpt-5-nano",
       maxRetries: 2,
       timeout: 30000,
     });
