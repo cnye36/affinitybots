@@ -1,114 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Download, FileText, Eye, Star, ExternalLink, Monitor, ChevronLeft, ChevronRight } from "lucide-react";
+import { Download, FileText, Eye, Star, ExternalLink, Monitor } from "lucide-react";
 import { Header } from "@/components/home/Header";
 import { Footer } from "@/components/home/Footer";
-import { Document, Page, pdfjs } from "react-pdf";
-
-// Use locally hosted worker matching pdfjs-dist v5 (module format)
-pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
-
-function PresentationPdf() {
-  const [numPages, setNumPages] = useState<number>(0);
-  const [pageNumber, setPageNumber] = useState<number>(1);
-  const [containerWidth, setContainerWidth] = useState<number>(800);
-  const [fileUrl, setFileUrl] = useState<string>("/pitch-deck.pdf");
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const swipeStateRef = useRef<{ startX: number | null }>({ startX: null });
-
-  // Measure container width
-  useEffect(() => {
-    const update = () => {
-      const el = containerRef.current;
-      if (el) setContainerWidth(el.clientWidth);
-    };
-    update();
-    window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
-  }, []);
-
-  // Resolve absolute URL on client to avoid loader issues in some environments
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      setFileUrl(`${window.location.origin}/pitch-deck.pdf`);
-    }
-  }, []);
-
-  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
-    setNumPages(numPages);
-    setPageNumber(1);
-  };
-
-  const prevPage = () => setPageNumber((p) => Math.max(1, p - 1));
-  const nextPage = () => setPageNumber((p) => Math.min(numPages || p, p + 1));
-
-  // Keyboard navigation
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "ArrowLeft") prevPage();
-      if (e.key === "ArrowRight") nextPage();
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [numPages]);
-
-  return (
-    <div className="w-full rounded-lg overflow-hidden border bg-background">
-      <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/50">
-        <div className="text-sm text-muted-foreground">Slide {pageNumber}{numPages ? ` / ${numPages}` : ""}</div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="icon" onClick={prevPage} disabled={pageNumber <= 1} aria-label="Previous slide">
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button variant="outline" size="icon" onClick={nextPage} disabled={numPages > 0 ? pageNumber >= numPages : false} aria-label="Next slide">
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
-      <div
-        ref={containerRef}
-        className="w-full flex items-center justify-center p-2 md:p-4 select-none"
-        onTouchStart={(e) => {
-          swipeStateRef.current.startX = e.changedTouches[0]?.clientX ?? null;
-        }}
-        onTouchEnd={(e) => {
-          const startX = swipeStateRef.current.startX;
-          const endX = e.changedTouches[0]?.clientX ?? null;
-          if (startX !== null && endX !== null) {
-            const delta = endX - startX;
-            const threshold = 40; // px
-            if (Math.abs(delta) > threshold) {
-              if (delta < 0) nextPage();
-              else prevPage();
-            }
-          }
-          swipeStateRef.current.startX = null;
-        }}
-      >
-        <Document
-          file={fileUrl}
-          onLoadSuccess={onDocumentLoadSuccess}
-          onLoadError={(err) => console.error("PDF load error:", err)}
-          onSourceError={(err) => console.error("PDF source error:", err)}
-          loading={<div className="p-8">Loading…</div>}
-        >
-          <Page
-            pageNumber={pageNumber}
-            renderAnnotationLayer={false}
-            renderTextLayer={false}
-            width={Math.min(Math.max(containerWidth - 16, 320), 1200)}
-          />
-        </Document>
-      </div>
-    </div>
-  );
-}
+import dynamic from "next/dynamic";
+const PresentationPdf = dynamic(() => import("@/components/pdf/PresentationPdf"), { ssr: false });
+const SlideCarousel = dynamic(() => import("@/components/presentation/SlideCarousel"), { ssr: false });
 
 export default function PitchDeckPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -180,8 +82,21 @@ export default function PitchDeckPage() {
                 </p>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Presentation PDF Viewer */}
-                <PresentationPdf />
+                {/* Presentation Image Carousel (uses images if present) */}
+                {/* Replace the array below with your actual slide image paths under /public */}
+                <SlideCarousel images={[
+                  "/slides/AffinityBots-Pitch-Deck-Page-1.jpg",
+                  "/slides/AffinityBots-Pitch-Deck-Page-2.jpg",
+                  "/slides/AffinityBots-Pitch-Deck-Page-3.jpg",
+                  "/slides/AffinityBots-Pitch-Deck-Page-4.jpg",
+                  "/slides/AffinityBots-Pitch-Deck-Page-5.jpg",
+                  "/slides/AffinityBots-Pitch-Deck-Page-6.jpg",
+                  "/slides/AffinityBots-Pitch-Deck-Page-7.jpg",
+                  "/slides/AffinityBots-Pitch-Deck-Page-8.jpg",
+                ]} />
+
+                {/* Fallback: PDF Viewer (kept available) */}
+                {/* <PresentationPdf /> */}
 
                 {/* Viewing Options */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
