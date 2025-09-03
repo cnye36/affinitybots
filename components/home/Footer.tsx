@@ -33,21 +33,21 @@ export function Footer() {
             </p>
             <div className="flex items-center space-x-4">
               <Link
-                href="https://x.com/Agenthub2025"
+                href="https://x.com/Affinitybots"
                 className="text-muted-foreground hover:text-foreground"
               >
                 <Twitter className="h-5 w-5" />
                 <span className="sr-only">Twitter</span>
               </Link>
               <Link
-                href="https://github.com/cnye/Agenthub"
+                href="https://github.com/cnye/Affinitybots"
                 className="text-muted-foreground hover:text-foreground"
               >
                 <Github className="h-5 w-5" />
                 <span className="sr-only">GitHub</span>
               </Link>
               <Link
-                href="https://linkedin.com/company/Agenthub2025"
+                href="https://linkedin.com/company/Affinitybots"
                 className="text-muted-foreground hover:text-foreground"
               >
                 <Linkedin className="h-5 w-5" />
@@ -105,7 +105,7 @@ export function Footer() {
                   className="flex items-center text-muted-foreground hover:text-foreground"
                 >
                   <Mail className="h-4 w-4 mr-2" />
-                  support@AffinityBots.click
+                  support@affinitybots.com
                 </Link>
               </li>
             </ul>

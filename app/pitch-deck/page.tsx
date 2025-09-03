@@ -1,17 +1,118 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Download, FileText, Eye, Star, ExternalLink, Monitor } from "lucide-react";
+import { Download, FileText, Eye, Star, ExternalLink, Monitor, ChevronLeft, ChevronRight } from "lucide-react";
 import { Header } from "@/components/home/Header";
 import { Footer } from "@/components/home/Footer";
+import { Document, Page, pdfjs } from "react-pdf";
+
+// Use locally hosted worker matching pdfjs-dist v5 (module format)
+pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+
+function PresentationPdf() {
+  const [numPages, setNumPages] = useState<number>(0);
+  const [pageNumber, setPageNumber] = useState<number>(1);
+  const [containerWidth, setContainerWidth] = useState<number>(800);
+  const [fileUrl, setFileUrl] = useState<string>("/pitch-deck.pdf");
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const swipeStateRef = useRef<{ startX: number | null }>({ startX: null });
+
+  // Measure container width
+  useEffect(() => {
+    const update = () => {
+      const el = containerRef.current;
+      if (el) setContainerWidth(el.clientWidth);
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
+  // Resolve absolute URL on client to avoid loader issues in some environments
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setFileUrl(`${window.location.origin}/pitch-deck.pdf`);
+    }
+  }, []);
+
+  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
+    setNumPages(numPages);
+    setPageNumber(1);
+  };
+
+  const prevPage = () => setPageNumber((p) => Math.max(1, p - 1));
+  const nextPage = () => setPageNumber((p) => Math.min(numPages || p, p + 1));
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft") prevPage();
+      if (e.key === "ArrowRight") nextPage();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [numPages]);
+
+  return (
+    <div className="w-full rounded-lg overflow-hidden border bg-background">
+      <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/50">
+        <div className="text-sm text-muted-foreground">Slide {pageNumber}{numPages ? ` / ${numPages}` : ""}</div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="icon" onClick={prevPage} disabled={pageNumber <= 1} aria-label="Previous slide">
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" size="icon" onClick={nextPage} disabled={numPages > 0 ? pageNumber >= numPages : false} aria-label="Next slide">
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      <div
+        ref={containerRef}
+        className="w-full flex items-center justify-center p-2 md:p-4 select-none"
+        onTouchStart={(e) => {
+          swipeStateRef.current.startX = e.changedTouches[0]?.clientX ?? null;
+        }}
+        onTouchEnd={(e) => {
+          const startX = swipeStateRef.current.startX;
+          const endX = e.changedTouches[0]?.clientX ?? null;
+          if (startX !== null && endX !== null) {
+            const delta = endX - startX;
+            const threshold = 40; // px
+            if (Math.abs(delta) > threshold) {
+              if (delta < 0) nextPage();
+              else prevPage();
+            }
+          }
+          swipeStateRef.current.startX = null;
+        }}
+      >
+        <Document
+          file={fileUrl}
+          onLoadSuccess={onDocumentLoadSuccess}
+          onLoadError={(err) => console.error("PDF load error:", err)}
+          onSourceError={(err) => console.error("PDF source error:", err)}
+          loading={<div className="p-8">Loading…</div>}
+        >
+          <Page
+            pageNumber={pageNumber}
+            renderAnnotationLayer={false}
+            renderTextLayer={false}
+            width={Math.min(Math.max(containerWidth - 16, 320), 1200)}
+          />
+        </Document>
+      </div>
+    </div>
+  );
+}
 
 export default function PitchDeckPage() {
   const [isLoading, setIsLoading] = useState(false);
-  const [showPdfViewer, setShowPdfViewer] = useState(false);
+  
 
   const handleDownload = async () => {
     setIsLoading(true);
@@ -32,10 +133,7 @@ export default function PitchDeckPage() {
   const handleViewFullscreen = () => {
     window.open('/pitch-deck.pdf', '_blank', 'width=1200,height=800');
   };
-
-  const togglePdfViewer = () => {
-    setShowPdfViewer(!showPdfViewer);
-  };
+  
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -60,41 +158,11 @@ export default function PitchDeckPage() {
                 AffinityBots Pitch Deck
               </h1>
               
-              <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+              <p className="text-xl text-muted-foreground mb-4 max-w-2xl mx-auto">
                 Discover how AffinityBots is revolutionizing AI agent workflows and transforming the way businesses automate their processes.
               </p>
 
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
-                <Button
-                  size="lg"
-                  onClick={handleViewFullscreen}
-                  className="gap-2"
-                >
-                  <Monitor className="h-5 w-5" />
-                  View Pitch Deck
-                </Button>
-                
-                <Button
-                  variant="outline"
-                  size="lg"
-                  onClick={handleDownload}
-                  disabled={isLoading}
-                  className="gap-2"
-                >
-                  <Download className="h-5 w-5" />
-                  {isLoading ? 'Downloading...' : 'Download PDF'}
-                </Button>
-                
-                <Button
-                  variant="outline"
-                  size="lg"
-                  onClick={() => document.getElementById('pdf-section')?.scrollIntoView({ behavior: 'smooth' })}
-                  className="gap-2"
-                >
-                  <Eye className="h-5 w-5" />
-                  View Details
-                </Button>
-              </div>
+              
             </div>
           </div>
         </section>
@@ -112,34 +180,8 @@ export default function PitchDeckPage() {
                 </p>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* PDF Preview Image/Info */}
-                <div className="aspect-[16/9] w-full rounded-lg bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border-2 border-dashed border-muted-foreground/20 flex items-center justify-center">
-                  <div className="text-center p-8">
-                    <FileText className="h-24 w-24 text-primary mx-auto mb-4" />
-                    <h3 className="text-2xl font-semibold mb-2">AffinityBots Pitch Deck</h3>
-                    <p className="text-muted-foreground mb-6">
-                      7 slides • 5 min read • Updated 2025
-                    </p>
-                    <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                      <Button
-                        onClick={handleViewFullscreen}
-                        className="gap-2 w-full sm:w-auto"
-                      >
-                        <Monitor className="h-4 w-4" />
-                        Open PDF Viewer
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={handleDownload}
-                        disabled={isLoading}
-                        className="gap-2 w-full sm:w-auto"
-                      >
-                        <Download className="h-4 w-4" />
-                        {isLoading ? 'Downloading...' : 'Download PDF'}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
+                {/* Presentation PDF Viewer */}
+                <PresentationPdf />
 
                 {/* Viewing Options */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -191,22 +233,6 @@ export default function PitchDeckPage() {
                       Open Link
                     </Button>
                   </Card>
-                </div>
-
-                {/* Alternative: Show direct link prominently */}
-                <div className="bg-muted/50 rounded-lg p-4 text-center">
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Having trouble viewing? Access the PDF directly:
-                  </p>
-                  <code className="bg-muted px-3 py-1 rounded text-sm">
-                    <a 
-                      href="/pitch-deck.pdf" 
-                      target="_blank" 
-                      className="text-primary hover:underline"
-                    >
-                      localhost:3000/pitch-deck.pdf
-                    </a>
-                  </code>
                 </div>
               </CardContent>
             </Card>
