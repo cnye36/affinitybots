@@ -113,7 +113,7 @@ async function writeMemory(state: AgentState, config: LangGraphRunnableConfig) {
     const kvStore = (config as any).store ?? fallbackStore;
     // Use the LLM to extract memories from the message
     const memoryExtractor = new ChatOpenAI({
-      model: "gpt-5-mini-2025-08-07",
+      model: "gpt-5-mini",
     });
 
     const extractionPrompt = [
@@ -458,7 +458,7 @@ async function callModel(
   
   // Create a model and give it access to the tools
   const baseModel = new ChatOpenAI({
-    model: configurable.model || "gpt-5-2025-08-07",
+    model: configurable.model || "gpt-5",
   });
   
   console.log(`Binding ${tools.length} tools to ${baseModel.modelName} model...`);
@@ -525,7 +525,7 @@ async function callModel(
         inputTokens: actualInputTokens,
         outputTokens: actualOutputTokens,
         timestamp: Date.now(),
-        model: configurable.model || "gpt-5-2025-08-07",
+        model: configurable.model || "gpt-5",
         sessionId: configurable.thread_id,
       };
       await rateLimiter.recordUsage(usage);

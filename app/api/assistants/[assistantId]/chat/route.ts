@@ -200,7 +200,7 @@ export async function POST(
                 inputTokens,
                 outputTokens,
                 timestamp: Date.now(),
-                model: "gpt-5-2025-08-07",
+                model: "gpt-5",
                 sessionId: threadId,
               });
             }

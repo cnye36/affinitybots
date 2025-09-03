@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { type LangGraphRunnableConfig } from "@langchain/langgraph";
 
-export type ModelType = "gpt-5-2025-08-07" | "gpt-5-mini-2025-08-07" | "gpt-5-nano-2025-08-07" | "gpt-4o";
+export type ModelType = "gpt-5" | "gpt-5-mini" | "gpt-5-nano" | "gpt-4o";
 
 // Memory options schema
 export const AgentMemoryOptionsSchema = z.object({
@@ -27,7 +27,7 @@ export const AgentMetadataSchema = z.object({
 
 // Configurable options schema
 export const AgentConfigurableOptionsSchema = z.object({
-  model: z.enum(["gpt-5-mini-2025-08-07", "gpt-4o"]),
+  model: z.enum(["gpt-5-mini", "gpt-4o"]),
   tools: z.array(z.string()),
   memory: AgentMemoryOptionsSchema,
   knowledge_base: KnowledgeBaseOptionsSchema.optional(),

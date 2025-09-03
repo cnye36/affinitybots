@@ -6,7 +6,7 @@ import { AssistantConfiguration } from "@/types/assistant";
 function defaultConfig(): AssistantConfiguration {
   return {
     assistant_id: "diag",
-    model: "gpt-5-2025-08-07",
+    model: "gpt-5",
     tools: [],
     memory: { enabled: false },
     prompt_template: "",

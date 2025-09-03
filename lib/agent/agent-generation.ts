@@ -105,7 +105,7 @@ Return your response as a valid JSON object with exactly this structure:
   "description": "Concise 1-2 sentence summary of capabilities",
   "domain": "1-3 word specialization, e.g., Market Research, Content Strategy",
   "instructions": "Comprehensive system prompt following the specified format below",
-  "model": "gpt-5-2025-08-07",
+  "model": "gpt-5",
 }}
 
 For the instructions field, create a detailed system prompt with this exact structure:
@@ -204,7 +204,7 @@ export async function generateAgentName(
   ownerId: string
 ): Promise<string> {
   const model = new ChatOpenAI({
-    modelName: "gpt-5-mini-2025-08-07",
+    modelName: "gpt-5-mini",
     maxRetries: 2,
     timeout: 30000, // 30 second timeout
   });
@@ -261,7 +261,7 @@ export async function generateAgentConfiguration(
   
 
   const llm = new ChatOpenAI({
-    model: "gpt-5-mini-2025-08-07",
+    model: "gpt-5-mini",
     maxRetries: 2,
     timeout: 45000, // 45 second timeout
   });
@@ -332,7 +332,7 @@ export async function generateAgentConfiguration(
       domain: parsedData.domain,
       instructions: finalInstructions,
       tools, // Save selected tools
-      model: parsedData.model || "gpt-5-mini-2025-08-07",
+      model: parsedData.model || "gpt-5-mini",
       memory: {
         enabled: true,
         max_entries: 20,
