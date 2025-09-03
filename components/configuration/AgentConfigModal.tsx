@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -21,7 +21,7 @@ import { AssistantConfiguration, AssistantMetadata, ModelType } from "@/types/as
 import { useRouter } from "next/navigation";
 import { mutate } from "swr";
 import { Assistant } from "@/types/assistant";
-import { useOnboarding, configTabsTutorialSteps } from "@/hooks/use-onboarding";
+ 
 
 interface AgentConfigModalProps {
   open: boolean;
@@ -51,9 +51,7 @@ export function AgentConfigModal({
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-  const { startTour, isActive, getCurrentStep } = useOnboarding();
-  const currentStep = getCurrentStep();
-  const isConfigStep = !!currentStep && currentStep.id.startsWith('config-tab-');
+  
 
 
 
@@ -134,30 +132,12 @@ export function AgentConfigModal({
     }
   };
 
-  useEffect(() => {
-    try {
-      if (open) {
-        const seen = localStorage.getItem('onboarding-config-tabs-seen')
-        if (!seen && !isActive) {
-          localStorage.setItem('onboarding-config-tabs-seen', 'true')
-          // delay to ensure tabs are rendered
-          setTimeout(() => startTour(configTabsTutorialSteps), 300)
-        }
-      }
-    } catch (e) {
-      // no-op
-    }
-  }, [open, startTour, isActive])
+  
 
   return (
-    <Dialog open={open || (isActive && isConfigStep)} onOpenChange={(next) => {
-      if (isActive && next === false) return;
-      onOpenChange(next);
-    }}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
         className="max-w-4xl h-[80vh] flex flex-col overflow-hidden"
-        onInteractOutside={(e) => { if (isActive) e.preventDefault() }}
-        onEscapeKeyDown={(e) => { if (isActive) e.preventDefault() }}
       >
         <DialogHeader className="flex-shrink-0">
           <DialogTitle>Configure Agent</DialogTitle>

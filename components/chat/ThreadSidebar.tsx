@@ -215,13 +215,13 @@ const ThreadSidebar = forwardRef<ThreadSidebarRef, ThreadSidebarProps>(({
   return (
     <div className="flex flex-col h-full bg-background">
       <div className="p-2 sm:p-4 border-b" data-tutorial="agent-new-chat">
-        <button
+        <Button
           onClick={onNewThread}
-          className="w-full py-2 px-3 sm:px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center justify-center gap-2 transition-colors text-sm sm:text-base"
+          className="w-full py-2 px-3 sm:px-4 bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground border border-border hover:border-border/80 rounded-lg flex items-center justify-center gap-2 transition-all text-sm sm:text-base shadow-sm"
         >
           <PlusCircle className="h-4 w-4 sm:h-5 sm:w-5" />
           <span>New Chat</span>
-        </button>
+        </Button>
       </div>
 
       <div className="flex-1 overflow-y-auto overflow-x-hidden p-2">

@@ -57,7 +57,8 @@ export function TutorialOverlay({ children }: TutorialOverlayProps) {
           if (selector) {
             const activator = document.querySelector(selector) as HTMLElement | null
             if (activator) {
-              activator.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+              // Use native click for reliability with component libraries (e.g., Radix Tabs)
+              activator.click()
               // After tab change, wait one frame then recalc anchor to avoid flicker
               requestAnimationFrame(() => {
                 const newTarget = document.querySelector(currentStepData.target) as HTMLElement | null
