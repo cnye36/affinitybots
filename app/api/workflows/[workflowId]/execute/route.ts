@@ -83,16 +83,27 @@ export async function POST(
     }
 
     // Create a workflow run record
-    const { data: workflowRun } = await supabase
+    const generatedWorkflowRunId = (globalThis as any).crypto?.randomUUID?.();
+    const { data: workflowRun, error: workflowRunError } = await supabase
       .from("workflow_runs")
       .insert({
+        ...(generatedWorkflowRunId ? { run_id: generatedWorkflowRunId } : {}),
         workflow_id: workflowId,
         status: "running",
         started_at: new Date().toISOString(),
         metadata: {},
+        owner_id: user.id,
       })
-      .select()
+      .select("run_id")
       .single();
+
+    if (workflowRunError || !workflowRun?.run_id) {
+      console.error("Failed to create workflow run:", workflowRunError ? JSON.stringify(workflowRunError) : workflowRunError);
+      return NextResponse.json(
+        { error: "Failed to create workflow run", details: workflowRunError?.message || null, code: (workflowRunError as any)?.code || null },
+        { status: 500 }
+      );
+    }
 
     // Update workflow status
     await supabase
@@ -106,17 +117,24 @@ export async function POST(
     // Create task run records for each task
     const taskRuns = await Promise.all(
       tasks.map(async (task: Task) => {
-        const { data: taskRun } = await supabase
+        const taskRunId = (globalThis as any).crypto?.randomUUID?.();
+        const { data: taskRun, error: trErr } = await supabase
           .from("workflow_task_runs")
           .insert({
+            ...(taskRunId ? { run_id: taskRunId } : {}),
             workflow_run_id: workflowRun.run_id,
             workflow_task_id: task.workflow_task_id,
             status: "pending",
             started_at: new Date().toISOString(),
             metadata: {},
+            owner_id: user.id,
           })
           .select()
           .single();
+        if (trErr) {
+          console.error("Failed to create workflow_task_run:", JSON.stringify(trErr));
+          return null as any;
+        }
         return taskRun;
       })
     );

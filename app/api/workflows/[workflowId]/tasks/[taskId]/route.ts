@@ -3,22 +3,7 @@ import { createClient } from "@/supabase/server";
 import { Task, TaskType } from "@/types/workflow";
 
 const VALID_TASK_TYPES: TaskType[] = [
-  // Notion tasks
-  "notion_create_page",
-  "notion_update_page",
-  "notion_add_to_database",
-  "notion_search",
-  // Twitter tasks
-  "twitter_post_tweet",
-  "twitter_dm",
-  "twitter_retweet",
-  // Google tasks
-  "google_calendar_create_event",
-  "google_calendar_update_event",
-  "google_docs_create",
-  "google_sheets_update",
-  "google_drive_upload",
-  // AI tasks
+   // AI tasks
   "ai_task",
 ];
 
