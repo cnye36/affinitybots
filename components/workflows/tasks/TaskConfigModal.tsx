@@ -58,8 +58,12 @@ export function TaskConfigModal({
   const [loadingAssistants, setLoadingAssistants] = useState(true);
 
   useEffect(() => {
-    setCurrentTask(task);
-  }, [task]);
+    // Only sync from props when opening or switching to a different task id
+    if (isOpen) {
+      setCurrentTask(task);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, task.workflow_task_id]);
 
   useEffect(() => {
     let isMounted = true;

@@ -241,13 +241,72 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
       "updateTaskNode",
       handleTaskUpdate as EventListener
     );
+    // Listen for test completion to propagate as previousNodeOutput to the next node in sequence
+    const handleTaskTestCompleted = (
+      e: CustomEvent<{
+        workflowTaskId: string;
+        output: { result: unknown; metadata?: Record<string, unknown> };
+      }>
+    ) => {
+      setNodes((nds: WorkflowNode[]) => {
+        // Find the current node id and its next by edges
+        const currentNode = nds.find(
+          (n) => n.type === "task" && n.data.workflow_task_id === e.detail.workflowTaskId
+        );
+        if (!currentNode) return nds;
+        const currentNodeId = currentNode.id;
+        let nextNodeId: string | null = null;
+        const nextEdge = edges.find((edge) => edge.source === currentNodeId);
+        if (nextEdge) {
+          nextNodeId = nextEdge.target;
+        } else {
+          // Fallback 1: use position index if present
+          const taskNodes = nds.filter((n) => n.type === "task");
+          // Prefer explicit data.position if set, otherwise x coordinate
+          const sorted = [...taskNodes].sort((a, b) => {
+            const aPos = (a.data as any)?.position ?? a.position.x;
+            const bPos = (b.data as any)?.position ?? b.position.x;
+            return (aPos || 0) - (bPos || 0);
+          });
+          const idx = sorted.findIndex((n) => n.id === currentNodeId);
+          if (idx >= 0 && idx < sorted.length - 1) {
+            nextNodeId = sorted[idx + 1].id;
+          }
+        }
+        if (!nextNodeId) return nds;
+        return nds.map((n) =>
+          n.id === nextNodeId && n.type === "task"
+            ? ({
+                ...n,
+                data: {
+                  ...n.data,
+                  previousNodeOutput: {
+                    result: e.detail.output.result,
+                    metadata: e.detail.output.metadata || {},
+                  },
+                  // Attach the last thread id from the test stream if provided via window metadata event
+                  previousNodeThreadId: (window as any)?.__lastTestThreadId || n.data?.previousNodeThreadId,
+                },
+              } as WorkflowNode)
+            : n
+        );
+      });
+    };
+    window.addEventListener(
+      "taskTestCompleted",
+      handleTaskTestCompleted as EventListener
+    );
     return () => {
       window.removeEventListener(
         "updateTaskNode",
         handleTaskUpdate as EventListener
       );
+      window.removeEventListener(
+        "taskTestCompleted",
+        handleTaskTestCompleted as EventListener
+      );
     };
-  }, []);
+  }, [edges]);
 
   // Create a new workflow immediately if we don't have an ID
   useEffect(() => {

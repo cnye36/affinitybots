@@ -80,6 +80,8 @@ export const MemoizedTaskNode = memo(
       window.dispatchEvent(event);
     };
 
+    type StreamTestResult = { type?: string; content?: string; result?: unknown };
+
     const handleTestTask = async () => {
       try {
         const response = await fetch(
@@ -90,6 +92,8 @@ export const MemoizedTaskNode = memo(
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
+              // Prefer reusing previous node's thread during test if available
+              thread_id: props.data.previousNodeThreadId || undefined,
               input: {
                 messages: [
                   {
@@ -97,6 +101,13 @@ export const MemoizedTaskNode = memo(
                     content: props.data.config.input.prompt,
                   },
                 ],
+              },
+              overrideConfig: {
+                context: {
+                  // If we have a previous node thread id, behave like previous_output path
+                  inputSource: props.data.previousNodeThreadId ? "previous_output" : (props.data as any)?.config?.context?.inputSource,
+                  thread: props.data.previousNodeThreadId ? { mode: "workflow" } : (props.data as any)?.config?.context?.thread,
+                },
               },
             }),
           }
@@ -156,6 +167,9 @@ export const MemoizedTaskNode = memo(
                   }
                   finalPayload = parsed;
                 }
+                if (eventType === "metadata" && parsed?.thread_id) {
+                  (window as any).__lastTestThreadId = parsed.thread_id;
+                }
                 // When backend signals rate-limit update, notify UI to refresh usage without polling
                 if (parsed?.event === "rate-limit") {
                   window.dispatchEvent(new Event("rate-limit:updated"));
@@ -167,11 +181,27 @@ export const MemoizedTaskNode = memo(
           }
         }
 
-        return {
+        const testResult: StreamTestResult = {
           type: finalPayload?.event || "messages/complete",
           content: accumulatedText,
           result: finalPayload?.data || finalPayload || null,
-        } as unknown as Task;
+        };
+
+        // Broadcast completion so the next node can display it as previous output
+        try {
+          const event = new CustomEvent("taskTestCompleted", {
+            detail: {
+              workflowTaskId: props.data.workflow_task_id,
+              output: {
+                result: testResult?.result ?? accumulatedText ?? null,
+                metadata: { event: testResult?.type },
+              },
+            },
+          });
+          window.dispatchEvent(event);
+        } catch {}
+
+        return testResult;
       } catch (error) {
         console.error("Error testing task:", error);
         throw error;
@@ -360,6 +390,7 @@ export const MemoizedTaskNode = memo(
             owner_id: props.data.owner_id,
             metadata: {},
           }}
+          previousNodeOutput={props.data.previousNodeOutput as any}
           onTest={handleTestTask}
           onUpdate={handleTaskUpdate}
         />
@@ -376,7 +407,9 @@ export const MemoizedTaskNode = memo(
     JSON.stringify(prevProps.data.config) ===
       JSON.stringify(nextProps.data.config) &&
     JSON.stringify(prevProps.data.assignedAssistant) ===
-      JSON.stringify(nextProps.data.assignedAssistant)
+      JSON.stringify(nextProps.data.assignedAssistant) &&
+    JSON.stringify(prevProps.data.previousNodeOutput) ===
+      JSON.stringify(nextProps.data.previousNodeOutput)
 );
 
 MemoizedTaskNode.displayName = "MemoizedTaskNode";

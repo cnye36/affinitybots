@@ -26,84 +26,7 @@ const AI_TASKS: TaskOption[] = [
   },
 ];
 
-const NOTION_TASKS: TaskOption[] = [
-  {
-    type: "notion_create_page",
-    label: "Create Page",
-    description: "Create a new Notion page",
-  },
-  {
-    type: "notion_update_page",
-    label: "Update Page",
-    description: "Update an existing Notion page",
-  },
-  {
-    type: "notion_add_to_database",
-    label: "Add to Database",
-    description: "Add an entry to a Notion database",
-  },
-  {
-    type: "notion_search",
-    label: "Search Database",
-    description: "Search through Notion content",
-  },
-];
 
-const TWITTER_TASKS: TaskOption[] = [
-  {
-    type: "twitter_post_tweet",
-    label: "Post Tweet",
-    description: "Post a new tweet",
-  },
-  {
-    type: "twitter_create_thread",
-    label: "Create Thread",
-    description: "Create a Twitter thread",
-  },
-  {
-    type: "twitter_dm",
-    label: "Send DM",
-    description: "Send a direct message",
-  },
-  {
-    type: "twitter_like_tweet",
-    label: "Like Tweet",
-    description: "Like a specific tweet",
-  },
-  {
-    type: "twitter_retweet",
-    label: "Retweet",
-    description: "Retweet a specific tweet",
-  },
-];
-
-const GOOGLE_TASKS: TaskOption[] = [
-  {
-    type: "google_calendar_create_event",
-    label: "Create Calendar Event",
-    description: "Create a new Google Calendar event",
-  },
-  {
-    type: "google_calendar_update_event",
-    label: "Update Calendar Event",
-    description: "Update an existing calendar event",
-  },
-  {
-    type: "google_docs_create",
-    label: "Create Doc",
-    description: "Create a new Google Doc",
-  },
-  {
-    type: "google_sheets_update",
-    label: "Update Sheet",
-    description: "Update a Google Sheet",
-  },
-  {
-    type: "google_drive_upload",
-    label: "Upload to Drive",
-    description: "Upload a file to Google Drive",
-  },
-];
 
 interface TaskSidebarProps {
   isOpen: boolean;
@@ -174,14 +97,7 @@ export function TaskSidebar({
           {/* AI Tasks */}
           {renderTaskGroup("AI Tasks", AI_TASKS, SiOpenai)}
 
-          {/* Notion Tasks */}
-          {renderTaskGroup("Notion Tasks", NOTION_TASKS, SiNotion)}
-
-          {/* Twitter Tasks */}
-          {renderTaskGroup("Twitter Tasks", TWITTER_TASKS, FaXTwitter)}
-
-          {/* Google Tasks */}
-          {renderTaskGroup("Google Tasks", GOOGLE_TASKS, SiGoogle)}
+        
         </Accordion>
       </SidebarContent>
     </Sidebar>

@@ -5,6 +5,13 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Task } from "@/types/workflow";
 import { Assistant } from "@/types/assistant";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface TaskConfigurationPanelProps {
   currentTask: Task;
@@ -52,6 +59,45 @@ export function TaskConfigurationPanel({
             />
           </div>
 
+                    {/* Context Options - simplified UX */}
+                    <div className="space-y-2">
+            <Label className="flex items-center gap-2">Source for Prompt</Label>
+            <Select
+              value={
+                ((currentTask as any)?.config?.context?.inputSource === "previous_output")
+                  ? "previous_output"
+                  : "prompt"
+              }
+              onValueChange={(value) => {
+                const inputSource = (value as "prompt" | "previous_output");
+                // Selecting previous_output implies same thread; selecting prompt implies new thread
+                const thread = (inputSource === "previous_output")
+                  ? { mode: "workflow" as const }
+                  : { mode: "new" as const };
+                // Prevent click-through to dialog overlay
+                setCurrentTask({
+                  ...currentTask,
+                  config: {
+                    ...currentTask.config,
+                    context: {
+                      ...(currentTask as any).config?.context,
+                      inputSource,
+                      thread,
+                    },
+                  },
+                });
+              }}
+            >
+              <SelectTrigger onClick={(e) => e.stopPropagation()}>
+                <SelectValue placeholder="Select source" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="previous_output">Previous Node Output</SelectItem>
+                <SelectItem value="prompt">Define</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Prompt Input */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
@@ -94,7 +140,9 @@ export function TaskConfigurationPanel({
                 type="checkbox"
                 className="h-4 w-4"
                 checked={Boolean((currentTask as any)?.config?.outputOptions?.structuredJson)}
-                onChange={(e) =>
+                onClick={(e) => e.stopPropagation()}
+                onChange={(e) => {
+                  e.stopPropagation();
                   setCurrentTask({
                     ...currentTask,
                     config: {
@@ -104,13 +152,13 @@ export function TaskConfigurationPanel({
                         structuredJson: e.target.checked,
                       },
                     },
-                  })
-                }
+                  });
+                }}
               />
               <Label htmlFor="structured-json">Output as JSON (structured)</Label>
             </div>
           </div>
-          
+
           {/* Advanced Configuration */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2">

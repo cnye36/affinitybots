@@ -1,20 +1,6 @@
 export type TaskType =
   | "ai_task"
-  | "integration"
-  | "notion_create_page"
-  | "notion_update_page"
-  | "notion_add_to_database"
-  | "notion_search"
-  | "twitter_post_tweet"
-  | "twitter_create_thread"
-  | "twitter_dm"
-  | "twitter_like_tweet"
-  | "twitter_retweet"
-  | "google_calendar_create_event"
-  | "google_calendar_update_event"
-  | "google_docs_create"
-  | "google_sheets_update"
-  | "google_drive_upload";
+
 export type TriggerType = "manual" | "webhook" | "form" | "integration";
 
 export interface TaskNodeData {
@@ -36,6 +22,10 @@ export interface TaskNodeData {
   onConfigureTask: (taskId: string) => void;
   isConfigOpen: boolean;
   onConfigClose?: () => void;
+  // The last known output from the immediately preceding node, if any
+  previousNodeOutput?: TaskOutput;
+  // Thread id used by the previous node's test execution (for reusing during tests)
+  previousNodeThreadId?: string;
 }
 
 export interface TriggerNodeData {
@@ -93,12 +83,31 @@ export interface TaskConfig {
   outputOptions?: {
     structuredJson?: boolean;
   };
+  // Controls how a node uses or isolates conversational context
+  context?: {
+    // Thread selection strategy for this node
+    thread?:
+      | { mode: "workflow" }
+      | { mode: "new" }
+      | { mode: "from_node"; nodeId: string };
+    // What to send as input to the assistant
+    // - prompt: use this node's prompt only
+    // - previous_output: use previous node's output only
+    // - prompt_and_previous_output: send both
+    inputSource?: "prompt" | "previous_output" | "prompt_and_previous_output";
+  };
   // When persisted, some tasks store assistant metadata in config
   assigned_assistant?: {
     id: string;
     name: string;
     avatar?: string;
   };
+}
+
+export interface TaskOutput {
+  result: unknown;
+  error?: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface Task {

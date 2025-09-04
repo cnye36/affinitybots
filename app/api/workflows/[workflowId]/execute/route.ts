@@ -34,10 +34,46 @@ export async function POST(
       );
     }
 
-    // Sort tasks by position
-    const tasks = (workflow.workflow_tasks as Task[]).sort(
-      (a: Task, b: Task) => (a.position ?? 0) - (b.position ?? 0)
-    );
+    // Build DAG order from edges when available; fallback to position
+    const allTasks = (workflow.workflow_tasks as Task[]) || [];
+    const edges = (workflow.edges as Array<{ source: string; target: string }>) || [];
+    const idToNodeId: Record<string, string> = {};
+    for (const t of allTasks) {
+      idToNodeId[t.workflow_task_id] = `task-${t.workflow_task_id}`;
+    }
+    const adj = new Map<string, Set<string>>();
+    const indeg = new Map<string, number>();
+    for (const t of allTasks) {
+      indeg.set(t.workflow_task_id, 0);
+      adj.set(t.workflow_task_id, new Set());
+    }
+    for (const e of edges) {
+      const sourceTaskId = Object.keys(idToNodeId).find((tid) => idToNodeId[tid] === e.source);
+      const targetTaskId = Object.keys(idToNodeId).find((tid) => idToNodeId[tid] === e.target);
+      if (sourceTaskId && targetTaskId) {
+        if (!adj.get(sourceTaskId)!.has(targetTaskId)) {
+          adj.get(sourceTaskId)!.add(targetTaskId);
+          indeg.set(targetTaskId, (indeg.get(targetTaskId) || 0) + 1);
+        }
+      }
+    }
+    const queue: string[] = [];
+    for (const [tid, d] of indeg.entries()) {
+      if ((d || 0) === 0) queue.push(tid);
+    }
+    const orderedTaskIds: string[] = [];
+    while (queue.length) {
+      const tid = queue.shift() as string;
+      orderedTaskIds.push(tid);
+      for (const nxt of adj.get(tid) || []) {
+        const nd = (indeg.get(nxt) || 0) - 1;
+        indeg.set(nxt, nd);
+        if (nd === 0) queue.push(nxt);
+      }
+    }
+    const tasks = (orderedTaskIds.length ? orderedTaskIds : allTasks.map((t) => t.workflow_task_id))
+      .map((tid) => allTasks.find((t) => t.workflow_task_id === tid)!)
+      .filter(Boolean);
 
     if (tasks.length === 0) {
       return NextResponse.json(
@@ -85,107 +121,179 @@ export async function POST(
       })
     );
 
-    // Execute tasks sequentially in a single LangGraph thread, passing outputs along
+    // Execute tasks sequentially with per-node thread/input options
     const client = new Client({
       apiUrl: process.env.LANGGRAPH_API_URL,
       apiKey: process.env.LANGSMITH_API_KEY,
     });
+    // SSE stream for client progress
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          // Default workflow-level thread (used when nodes choose workflow mode)
+          const wfThread = await client.threads.create();
+          const workflowThreadId = wfThread.thread_id;
+          let previousOutput: unknown = null;
+          const nodeIdToThreadId: Record<string, string> = {};
 
-    // Create a persistent thread for this workflow execution
-    const thread = await client.threads.create();
-    const threadId = thread.thread_id;
-
-    let previousOutput: unknown = null;
-    for (const task of tasks) {
-      const input = {
-        messages: [
-          previousOutput
-            ? { role: "user", content: JSON.stringify(previousOutput) }
-            : { role: "user", content: task.config?.input?.prompt || "" },
-        ],
-      };
-
-      const assistantId = task.assistant_id || task.config?.assigned_assistant?.id;
-      const runStream = await client.runs.stream(threadId, assistantId as string, {
-        input,
-        streamMode: "updates",
-        config: {
-          configurable: {
-            ...(task.config || {}),
-            user_id: user.id,
-            assistant_id: assistantId,
-          },
-        },
-      });
-
-      let finalEvent: any = null;
-      let inputTokens = 0;
-      let outputTokens = 0;
-      for await (const evt of runStream) {
-        const e: any = evt as any;
-        // evt.event is one of updates/metadata/feedback/error
-        if (e.event === "updates" && e.data) {
-          finalEvent = e;
-        }
-        if (e.event && /metadata$/i.test(e.event)) {
-          const usage =
-            e.data?.usage ||
-            e.data?.token_usage ||
-            e.data?.usage_metadata ||
-            e.data?.message?.usage ||
-            e.data?.response?.usage ||
-            null;
-          if (usage) {
-            inputTokens = Math.max(
-              inputTokens,
-              Number(
-                usage.input_tokens || usage.prompt_tokens || usage.total_input_tokens || 0
+          for (const task of tasks) {
+            // Emit start event
+            controller.enqueue(
+              encoder.encode(
+                `event: task-start\n` +
+                  `data: ${JSON.stringify({ workflow_task_id: task.workflow_task_id, name: task.name })}\n\n`
               )
             );
-            outputTokens = Math.max(
-              outputTokens,
-              Number(
-                usage.output_tokens || usage.completion_tokens || usage.total_output_tokens || 0
+
+            // Mark run row running
+            const taskRun = taskRuns.find((tr) => tr?.workflow_task_id === task.workflow_task_id);
+            if (taskRun?.run_id) {
+              await supabase
+                .from("workflow_task_runs")
+                .update({ status: "running" })
+                .eq("run_id", taskRun.run_id);
+            }
+
+            // Determine thread for this node
+            const mode: "workflow" | "new" | "from_node" = (task.config as any)?.context?.thread?.mode || "workflow";
+            let threadIdForNode = workflowThreadId;
+            if (mode === "new") {
+              const t = await client.threads.create();
+              threadIdForNode = t.thread_id;
+            } else if (mode === "from_node") {
+              const ref = (task.config as any)?.context?.thread?.nodeId;
+              if (ref && nodeIdToThreadId[ref]) {
+                threadIdForNode = nodeIdToThreadId[ref];
+              }
+            }
+
+            // Build input messages based on inputSource
+            const inputSource: "prompt" | "previous_output" | "prompt_and_previous_output" =
+              (task.config as any)?.context?.inputSource || "prompt";
+            const promptText = task.config?.input?.prompt || "";
+            const messages: Array<{ role: string; content: string }> = [];
+            // Always include this node's prompt as instruction if present
+            if (promptText) {
+              messages.push({ role: "user", content: promptText });
+            }
+            // Optionally include previous node output as additional context
+            if (inputSource === "previous_output" && (previousOutput !== null && previousOutput !== undefined)) {
+              messages.push({ role: "user", content: typeof previousOutput === 'string' ? previousOutput : JSON.stringify(previousOutput) });
+            }
+
+            const assistantId = task.assistant_id || task.config?.assigned_assistant?.id;
+            const runStream = await client.runs.stream(threadIdForNode, assistantId as string, {
+              input: { messages },
+              streamMode: "updates",
+              config: {
+                configurable: {
+                  ...(task.config || {}),
+                  user_id: user.id,
+                  assistant_id: assistantId,
+                  ...(((task.config as any)?.outputOptions?.structuredJson)
+                    ? { response_format: { type: "json_object" } }
+                    : {}),
+                },
+              },
+            });
+
+            let finalEvent: any = null;
+            let inputTokens = 0;
+            let outputTokens = 0;
+            for await (const evt of runStream) {
+              const e: any = evt as any;
+              if (e.event === "updates" && e.data) {
+                finalEvent = e;
+              }
+              if (e.event && /metadata$/i.test(e.event)) {
+                const usage =
+                  e.data?.usage ||
+                  e.data?.token_usage ||
+                  e.data?.usage_metadata ||
+                  e.data?.message?.usage ||
+                  e.data?.response?.usage ||
+                  null;
+                if (usage) {
+                  inputTokens = Math.max(
+                    inputTokens,
+                    Number(
+                      usage.input_tokens || usage.prompt_tokens || usage.total_input_tokens || 0
+                    )
+                  );
+                  outputTokens = Math.max(
+                    outputTokens,
+                    Number(
+                      usage.output_tokens || usage.completion_tokens || usage.total_output_tokens || 0
+                    )
+                  );
+                }
+              }
+            }
+
+            previousOutput = finalEvent?.data ?? null;
+            nodeIdToThreadId[task.workflow_task_id] = threadIdForNode;
+
+            // Persist completion
+            if (taskRun?.run_id) {
+              await supabase
+                .from("workflow_task_runs")
+                .update({ status: "completed", completed_at: new Date().toISOString(), result: previousOutput })
+                .eq("run_id", taskRun.run_id);
+            }
+
+            // Emit complete event
+            controller.enqueue(
+              encoder.encode(
+                `event: task-complete\n` +
+                  `data: ${JSON.stringify({ workflow_task_id: task.workflow_task_id, result: previousOutput, thread_id: threadIdForNode })}\n\n`
               )
             );
+
+            // Record usage
+            try {
+              if (!inputTokens && !outputTokens) {
+                const promptStr = typeof messages?.[0]?.content === 'string' ? messages[0].content : JSON.stringify(messages?.[0]?.content ?? "");
+                const outputStr = typeof previousOutput === 'string' ? previousOutput : JSON.stringify(previousOutput ?? "");
+                inputTokens = Math.ceil((promptStr?.length || 0) / 4);
+                outputTokens = Math.ceil((outputStr?.length || 0) / 4);
+              }
+              await rateLimiter.recordUsage({
+                userId: user.id,
+                inputTokens: inputTokens || 0,
+                outputTokens: outputTokens || 0,
+                timestamp: Date.now(),
+                model: "workflow-task",
+                sessionId: threadIdForNode,
+              });
+            } catch (e) {
+              console.error("Failed to record rate limit usage for workflow task:", e);
+            }
           }
+
+          // Finish
+          controller.enqueue(encoder.encode(`event: done\ndata: {"ok":true}\n\n`));
+          controller.close();
+        } catch (err) {
+          console.error("Workflow SSE error:", err);
+          controller.enqueue(
+            encoder.encode(
+              `event: error\n` +
+                `data: ${JSON.stringify({ error: err instanceof Error ? err.message : "Unknown error" })}\n\n`
+            )
+          );
+          controller.close();
         }
-      }
+      },
+    });
 
-      previousOutput = finalEvent?.data ?? null;
-
-      // Persist output to task_runs if we created them earlier
-      const taskRun = taskRuns.find((tr) => tr?.workflow_task_id === task.workflow_task_id);
-      if (taskRun?.run_id) {
-        await supabase
-          .from("task_runs")
-          .update({ status: "completed", completed_at: new Date().toISOString(), result: previousOutput })
-          .eq("run_id", taskRun.run_id);
-      }
-
-      // Record token usage per task best-effort
-      try {
-        // Fallback estimate if provider usage not present
-        if (!inputTokens && !outputTokens) {
-          const promptStr = typeof input.messages?.[0]?.content === 'string' ? input.messages[0].content : JSON.stringify(input.messages?.[0]?.content ?? "");
-          const outputStr = typeof previousOutput === 'string' ? previousOutput : JSON.stringify(previousOutput ?? "");
-          inputTokens = Math.ceil((promptStr?.length || 0) / 4);
-          outputTokens = Math.ceil((outputStr?.length || 0) / 4);
-        }
-        await rateLimiter.recordUsage({
-          userId: user.id,
-          inputTokens: inputTokens || 0,
-          outputTokens: outputTokens || 0,
-          timestamp: Date.now(),
-          model: "workflow-task",
-          sessionId: threadId,
-        });
-      } catch (e) {
-        console.error("Failed to record rate limit usage for workflow task:", e);
-      }
-    }
-
-    return NextResponse.json({ workflow_run_id: workflowRun.run_id });
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+      },
+    });
   } catch (error) {
     console.error("Error executing workflow:", error);
 

@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Home, Bot, Sliders, Hammer, Play } from "lucide-react";
+import { Home, Bot, Sliders, Hammer, Play, TestTubeDiagonal } from "lucide-react";
 
 import { NavMain } from "@/components/layout/nav-main";
 import { NavUser } from "@/components/layout/nav-user";
@@ -71,7 +71,7 @@ const data = {
     {
       title: "Playground (Coming Soon)",
       url: "/playground/playground-coming-soon",
-      icon: Play,
+      icon: TestTubeDiagonal,
     },
   ],
 };

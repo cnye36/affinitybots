@@ -45,6 +45,7 @@ export async function POST(
     const input = body?.input || {};
     const overrideConfig = body?.overrideConfig || null;
     let incomingThreadId: string | null = body?.thread_id || null;
+    const previousOutputFromClient: unknown = body?.previousOutput ?? null;
     console.log("Input received:", input);
 
     if (task.task_type === "ai_task") {
@@ -64,8 +65,15 @@ export async function POST(
             let runId: string | null = null;
 
             try {
-              // 1. Ensure a thread exists (use provided or create new)
-              if (!incomingThreadId) {
+              // 1. Determine thread strategy from task config; default to workflow thread
+              const threadMode: "workflow" | "new" | "from_node" = (
+                ((overrideConfig as any)?.context?.thread?.mode as any) ??
+                ((task.config as any)?.context?.thread?.mode as any)
+              ) || "workflow";
+              if (threadMode === "new") {
+                const thread = await client.threads.create();
+                incomingThreadId = thread.thread_id;
+              } else if (!incomingThreadId) {
                 const thread = await client.threads.create();
                 incomingThreadId = thread.thread_id;
               }
@@ -77,17 +85,34 @@ export async function POST(
                 )
               );
 
-              // 2. Stream the execution on that thread (assistants can be swapped per run)
+              // 2. Build messages according to inputSource
+              const inputSource: "prompt" | "previous_output" | "prompt_and_previous_output" =
+                ((overrideConfig as any)?.context?.inputSource as any) ||
+                (task.config as any)?.context?.inputSource ||
+                "prompt";
+              const messages: Array<{ role: string; content: string }> = [];
+              const promptText = task.config?.input?.prompt || input?.prompt || "";
+              const previousText = previousOutputFromClient
+                ? (typeof previousOutputFromClient === "string"
+                    ? previousOutputFromClient
+                    : JSON.stringify(previousOutputFromClient))
+                : (typeof (input as any)?.previous_output === "string"
+                    ? (input as any).previous_output
+                    : ((input as any)?.previous_output
+                        ? JSON.stringify((input as any).previous_output)
+                        : ""));
+              // Always include this node's instruction if provided
+              if (promptText) {
+                messages.push({ role: "user", content: promptText });
+              }
+              // Optionally include previous node output
+              if (inputSource === "previous_output" && previousText) {
+                messages.push({ role: "user", content: previousText });
+              }
+
+              // 3. Stream the execution on the selected thread
               const payload = {
-                input: {
-                  messages: [
-                    {
-                      role: "user",
-                      content:
-                        task.config?.input?.prompt || input?.prompt || "",
-                    },
-                  ],
-                },
+                input: { messages },
                 metadata: {
                   workflow_id: workflowId,
                   workflow_task_id: taskId,

@@ -40,7 +40,7 @@ export function Footer() {
                 <span className="sr-only">Twitter</span>
               </Link>
               <Link
-                href="https://github.com/cnye/Affinitybots"
+                href="https://github.com/cnye36/Affinitybots"
                 className="text-muted-foreground hover:text-foreground"
               >
                 <Github className="h-5 w-5" />
