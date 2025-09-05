@@ -18,6 +18,7 @@ import { WorkflowHeader } from "./WorkflowHeader";
 import { executeWorkflow } from "./WorkflowExecutionManager";
 import { toast } from "@/hooks/use-toast";
 import { TaskSidebar } from "./tasks/TaskSidebar";
+import { WorkflowExecutions } from "./WorkflowExecutions";
 
 import { Assistant } from "@/types/assistant";
 
@@ -89,6 +90,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
     task_type: TaskType;
   } | null>(null);
   const [isAgentSelectionLoading, setIsAgentSelectionLoading] = useState(false);
+  const [mode, setMode] = useState<"editor" | "executions">("editor");
 
   const createdWorkflowRef = useRef(false);
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1036,34 +1038,48 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
         saving={saving}
         executing={isExecuting}
         workflowId={workflowId}
+        mode={mode}
+        onModeChange={setMode}
       />
       <div className="flex-1 relative">
-        <WorkflowCanvas
-          nodes={nodes}
-          setNodes={setNodes}
-          edges={edges}
-          setEdges={setEdges}
-          initialWorkflowId={workflowId}
-          selectedTaskId={selectedTaskId}
-          onTaskConfigClose={handleTaskConfigClose}
-          activeNodeId={activeNodeId}
-          setActiveNodeId={setActiveNodeId}
-          onAddTask={handleAddTaskFromNode}
-        />
-        {nodes.length === 0 && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="pointer-events-auto">
-              <EmptyWorkflowState onAddTrigger={handleAddTrigger} />
+        {mode === "editor" ? (
+          <>
+            <WorkflowCanvas
+              nodes={nodes}
+              setNodes={setNodes}
+              edges={edges}
+              setEdges={setEdges}
+              initialWorkflowId={workflowId}
+              selectedTaskId={selectedTaskId}
+              onTaskConfigClose={handleTaskConfigClose}
+              activeNodeId={activeNodeId}
+              setActiveNodeId={setActiveNodeId}
+              onAddTask={handleAddTaskFromNode}
+            />
+            {nodes.length === 0 && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="pointer-events-auto">
+                  <EmptyWorkflowState onAddTrigger={handleAddTrigger} />
+                </div>
+              </div>
+            )}
+            <TaskSidebar
+              isOpen={isTaskSidebarOpen}
+              onClose={() => {
+                setIsTaskSidebarOpen(false);
+              }}
+              onTaskSelect={handleTaskSelect}
+            />
+          </>
+        ) : (
+          workflowId ? (
+            <WorkflowExecutions workflowId={workflowId} />
+          ) : (
+            <div className="absolute inset-0 grid place-items-center text-sm text-muted-foreground">
+              Save the workflow first to view executions
             </div>
-          </div>
+          )
         )}
-        <TaskSidebar
-          isOpen={isTaskSidebarOpen}
-          onClose={() => {
-            setIsTaskSidebarOpen(false);
-          }}
-          onTaskSelect={handleTaskSelect}
-        />
       </div>
       <AgentSelectModal
         isOpen={isAgentSelectOpen}

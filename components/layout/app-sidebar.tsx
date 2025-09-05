@@ -54,17 +54,17 @@ const data = {
       ],
     },
     {
-      title: "Workflows (Coming Soon)",
-      url: "/workflows/workflows-coming-soon",
+      title: "Workflows",
+      url: "/workflows/workflows",
       icon: Sliders,
       items: [
         {
           title: "My Workflows",
-          url: "/workflows/workflows-coming-soon",
+          url: "/workflows/workflows",
         },
         {
           title: "Create Workflow",
-          url: "/workflows/workflows-coming-soon",
+          url: "/workflows/workflows/new",
         },
       ],
     },

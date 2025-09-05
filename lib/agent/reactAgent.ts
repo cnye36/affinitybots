@@ -1,4 +1,5 @@
 import { ChatOpenAI } from "@langchain/openai";
+import { initChatModel } from "langchain/chat_models/universal";
 import {
   AIMessage,
   HumanMessage,
@@ -441,27 +442,50 @@ async function callModel(
     }
   }
 
-  // Load MCP tools using the new factory (keyed to real userId for DB-backed servers)
-  let { tools } = await createMcpClientAndTools(userId || assistantId || "default", configurable);
-  // If specific servers are enabled but tools came back empty, try a one-time forced refresh
-  if ((configurable.enabled_mcp_servers?.length || 0) > 0 && tools.length === 0) {
-    console.log(`No tools loaded for enabled servers (${configurable.enabled_mcp_servers?.join(", ")}). Forcing refresh once...`);
-    const refreshed = await createMcpClientAndTools(userId || assistantId || "default", {
-      ...configurable,
-      force_mcp_refresh: true,
-    } as any);
-    tools = refreshed.tools;
+  // Load MCP tools only when the user explicitly enabled servers
+  let tools: any[] = [];
+  const enabledServersForRun = configurable.enabled_mcp_servers || [];
+  if (enabledServersForRun.length > 0) {
+    let result = await createMcpClientAndTools(userId || assistantId || "default", configurable);
+    tools = result.tools;
+    if (tools.length === 0) {
+      console.log(`No tools loaded for enabled servers (${enabledServersForRun.join(", ")}). Forcing refresh once...`);
+      const refreshed = await createMcpClientAndTools(userId || assistantId || "default", {
+        ...configurable,
+        force_mcp_refresh: true,
+      } as any);
+      tools = refreshed.tools;
+    }
   }
-  
   console.log(`Assistant ${userId || assistantId}: Binding ${tools.length} tools to model`);
-  console.log(`Enabled servers: ${configurable.enabled_mcp_servers?.join(", ") || "none"}`);
+  console.log(`Enabled servers: ${enabledServersForRun.join(", ") || "none"}`);
   
   // Create a model and give it access to the tools
-  const baseModel = new ChatOpenAI({
-    model: configurable.model || "gpt-5",
-  });
+  // Prefer universal init when `llm` is provided; fallback to OpenAI
+  let baseModel: any;
+  if (configurable.llm) {
+    const llmId = String(configurable.llm);
+    const hasProviderPrefix = llmId.includes(":");
+    let [modelProvider, providerModel] = hasProviderPrefix ? llmId.split(":", 2) : [undefined, llmId];
+    // Normalize provider names and infer when omitted
+    if (modelProvider === "google") modelProvider = "google-genai" as any;
+    if (!modelProvider) {
+      if (providerModel?.startsWith("gemini")) modelProvider = "google-genai" as any;
+    }
+    baseModel = await initChatModel(providerModel, {
+      modelProvider: modelProvider as any,
+      temperature: (typeof configurable.temperature === 'number' ? configurable.temperature : 0.3),
+      reasoningEffort: configurable.reasoningEffort ?? "medium",
+    });
+  } else {
+    baseModel = new ChatOpenAI({
+      model: configurable.model || "gpt-5",
+      temperature: (typeof configurable.temperature === 'number' ? configurable.temperature : 0.3),
+      reasoningEffort: configurable.reasoningEffort ?? "medium",
+    });
+  }
   
-  console.log(`Binding ${tools.length} tools to ${baseModel.modelName} model...`);
+  console.log(`Binding ${tools.length} tools to model...`);
   const model = baseModel.bindTools(tools);
   console.log(`Model binding complete. Model has tools: ${!!(model as any).bound_tools || !!(model as any).tools}`);
   
@@ -478,7 +502,7 @@ async function callModel(
   console.log(`Response has tool_calls: ${!!response.tool_calls}`);
   console.log(`Tool calls count: ${response.tool_calls?.length || 0}`);
   if (response.tool_calls && response.tool_calls.length > 0) {
-    console.log(`Tool calls:`, response.tool_calls.map(tc => ({
+    console.log(`Tool calls:`, response.tool_calls.map((tc: any) => ({
       name: tc.name,
       id: tc.id,
       argsKeys: Object.keys(tc.args || {})
@@ -492,6 +516,8 @@ async function callModel(
       // Prefer provider-reported usage if available
       const usageMeta: any = (response as any).usage_metadata ||
         (response as any).response_metadata?.token_usage ||
+        (response as any).response_metadata?.usage ||
+        (response as any).response_metadata ||
         (response as any).additional_kwargs?.token_usage ||
         (response as any).additional_kwargs?.usage ||
         null;
@@ -500,10 +526,14 @@ async function callModel(
       let actualOutputTokens = 0;
 
       if (usageMeta) {
+        // Anthropic style: { input_tokens, output_tokens }
+        // OpenAI style: { prompt_tokens, completion_tokens }
+        // Gemini often uses { input, output } or nested under token_usage
+        const tokenUsage = usageMeta.token_usage || usageMeta;
         actualInputTokens =
-          usageMeta.input_tokens ?? usageMeta.prompt_tokens ?? usageMeta.total_input_tokens ?? 0;
+          tokenUsage.input_tokens ?? tokenUsage.prompt_tokens ?? tokenUsage.total_input_tokens ?? tokenUsage.input ?? 0;
         actualOutputTokens =
-          usageMeta.output_tokens ?? usageMeta.completion_tokens ?? usageMeta.total_output_tokens ?? 0;
+          tokenUsage.output_tokens ?? tokenUsage.completion_tokens ?? tokenUsage.total_output_tokens ?? tokenUsage.output ?? 0;
       }
 
       // Fallback to rough estimation (1 token ≈ 4 characters)
@@ -525,7 +555,7 @@ async function callModel(
         inputTokens: actualInputTokens,
         outputTokens: actualOutputTokens,
         timestamp: Date.now(),
-        model: configurable.model || "gpt-5",
+        model: (configurable.llm || configurable.model || "gpt-5") as string,
         sessionId: configurable.thread_id,
       };
       await rateLimiter.recordUsage(usage);

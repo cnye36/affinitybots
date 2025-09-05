@@ -154,9 +154,7 @@ export function TaskModalHeader({
             <div className="flex flex-wrap items-center gap-3 rounded-md border bg-muted/50 p-2">
               {assistant?.config?.configurable?.model && (
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-muted-foreground">
-                    Model:
-                  </span>
+                  <span className="text-xs font-medium text-muted-foreground">Model:</span>
                   <Badge variant="secondary" className="text-xs">
                     {assistant.config.configurable.model}
                   </Badge>
@@ -164,9 +162,7 @@ export function TaskModalHeader({
               )}
               {enabledQualifiedNames.length > 0 && (
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-muted-foreground">
-                    Tools:
-                  </span>
+                  <span className="text-xs font-medium text-muted-foreground">Tools:</span>
                   <div className="flex flex-wrap gap-1">
                     {enabledQualifiedNames.map((qualified) => (
                       <Badge key={qualified} variant="secondary" className="gap-1 text-xs">
@@ -179,9 +175,7 @@ export function TaskModalHeader({
               )}
               {assistant.config?.configurable?.memory?.enabled && (
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-muted-foreground">
-                    Memory:
-                  </span>
+                  <span className="text-xs font-medium text-muted-foreground">Memory:</span>
                   <Badge variant="secondary" className="text-xs">
                     {assistant.config.configurable.memory.enabled ? "Enabled" : "Disabled"}
                   </Badge>

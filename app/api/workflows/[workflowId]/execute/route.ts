@@ -11,6 +11,8 @@ export async function POST(
   const { workflowId } = await props.params;
   const supabase = await createClient();
 
+  // Track created workflow run for error handling
+  let createdWorkflowRunId: string | null = null;
   try {
     const {
       data: { user },
@@ -104,6 +106,7 @@ export async function POST(
         { status: 500 }
       );
     }
+    createdWorkflowRunId = workflowRun.run_id;
 
     // Update workflow status
     await supabase
@@ -289,11 +292,43 @@ export async function POST(
             }
           }
 
-          // Finish
+          // Mark workflow run completed with final result and update workflow status
+          try {
+            await supabase
+              .from("workflow_runs")
+              .update({
+                status: "completed",
+                completed_at: new Date().toISOString(),
+                result: previousOutput,
+              })
+              .eq("run_id", createdWorkflowRunId!);
+
+            await supabase
+              .from("workflows")
+              .update({ status: "completed", last_run_at: new Date().toISOString() })
+              .eq("workflow_id", workflowId);
+          } catch (e) {
+            console.error("Failed to finalize workflow run:", e);
+          }
+
           controller.enqueue(encoder.encode(`event: done\ndata: {"ok":true}\n\n`));
           controller.close();
         } catch (err) {
           console.error("Workflow SSE error:", err);
+          try {
+            if (createdWorkflowRunId) {
+              await supabase
+                .from("workflow_runs")
+                .update({
+                  status: "failed",
+                  completed_at: new Date().toISOString(),
+                  error: err instanceof Error ? err.message : String(err),
+                })
+                .eq("run_id", createdWorkflowRunId);
+            }
+          } catch (e) {
+            console.error("Failed to mark workflow run failed:", e);
+          }
           controller.enqueue(
             encoder.encode(
               `event: error\n` +
@@ -323,6 +358,22 @@ export async function POST(
         last_run_at: new Date().toISOString(),
       })
       .eq("workflow_id", workflowId);
+
+    // Attempt to mark the workflow run failed if created
+    if (createdWorkflowRunId) {
+      try {
+        await supabase
+          .from("workflow_runs")
+          .update({
+            status: "failed",
+            completed_at: new Date().toISOString(),
+            error: error instanceof Error ? error.message : String(error),
+          })
+          .eq("run_id", createdWorkflowRunId);
+      } catch (e) {
+        console.error("Failed to update workflow run after error:", e);
+      }
+    }
 
     return NextResponse.json(
       { error: "Failed to execute workflow" },

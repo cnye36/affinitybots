@@ -158,12 +158,12 @@ export function AgentConfigModal({
           <TabsContent value="general" className="flex-1 overflow-y-auto min-h-0">
             <GeneralConfig
               config={{
-                id: assistant.assistant_id,
-                name: assistant.name,
-                description: assistant.metadata.description || "",
-                metadata: assistant.metadata,
-              config: assistant.config.configurable as AssistantConfiguration,
-                agent_avatar: assistant.metadata.agent_avatar,
+                id: config.agent_id,
+                name: config.name,
+                description: config.description || "",
+                metadata: config.metadata,
+                config: config.config as AssistantConfiguration,
+                agent_avatar: config.agent_avatar,
               }}
               onChange={handleChange}
               onConfigurableChange={handleConfigurableChange}
