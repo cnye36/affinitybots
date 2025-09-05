@@ -18,7 +18,7 @@ export function QuickActions() {
         </div>
       </Link>
 
-      <Link href="/workflows/workflows-coming-soon" className="group">
+      <Link href="/workflows/new" className="group">
         <div className="relative p-6 rounded-lg overflow-hidden border group-hover:border-primary transition-colors">
           <div className="flex items-center space-x-4">
             <PlusCircle className="h-8 w-8 text-primary" />

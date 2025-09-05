@@ -64,7 +64,7 @@ const data = {
         },
         {
           title: "Create Workflow",
-          url: "/workflows/workflows/new",
+          url: "/workflows/new",
         },
       ],
     },
