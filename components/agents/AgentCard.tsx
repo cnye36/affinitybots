@@ -14,9 +14,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { mutate } from "swr";
 import { Assistant } from "@/types/assistant";
+import Image from "next/image";
+import { OFFICIAL_MCP_SERVERS } from "@/lib/mcp/officialMcpServers";
 
 interface AgentCardProps {
   assistant: Assistant;
@@ -92,6 +94,94 @@ export function AgentCard({ assistant, onDelete }: AgentCardProps) {
     return [];
   };
   
+  const formatModelName = (modelId?: string): string => {
+    if (!modelId) return "Not specified";
+    let cleaned = modelId.trim();
+    // Drop common date/version suffixes
+    cleaned = cleaned.replace(/-\d{4}-\d{2}-\d{2}$/i, ""); // -YYYY-MM-DD
+    cleaned = cleaned.replace(/-\d{8}$/i, ""); // -YYYYMMDD
+
+    // Explicit known mappings / prefixes
+    if (/^gpt-5/i.test(cleaned)) return "GPT 5";
+    if (/^gpt-4o/i.test(cleaned)) return "GPT 4o";
+    if (/^o3-mini/i.test(cleaned)) return "O3 Mini";
+    if (/^gemini-2\.5-pro/i.test(cleaned)) return "Gemini 2.5 Pro";
+    if (/^gemini-1\.5-pro/i.test(cleaned)) return "Gemini 1.5 Pro";
+    if (/^claude-3-7-sonnet/i.test(cleaned)) return "Claude 3.7 Sonnet";
+    if (/^claude-3-5-sonnet/i.test(cleaned)) return "Claude 3.5 Sonnet";
+
+    // Generic fallback: title-case tokens and known words
+    const tokenMap: Record<string, string> = {
+      gpt: "GPT",
+      gemini: "Gemini",
+      claude: "Claude",
+      sonnet: "Sonnet",
+      opus: "Opus",
+      haiku: "Haiku",
+      pro: "Pro",
+      mini: "Mini",
+      flash: "Flash",
+      turbo: "Turbo",
+    };
+    const tokens = cleaned.split("-");
+    const pretty = tokens
+      .filter(Boolean)
+      .map((t) => tokenMap[t.toLowerCase()] || (t.match(/^[a-z]/) ? t[0].toUpperCase() + t.slice(1) : t))
+      .join(" ");
+    return pretty;
+  };
+  
+  // Load logos for enabled tools (official mapping first, then Smithery bulk)
+  const [toolLogos, setToolLogos] = useState<Record<string, string>>({});
+  const enabledServers = getEnabledMcpServers();
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    async function loadLogos() {
+      // Start with official server logos
+      const initialLogos: Record<string, string> = {};
+      OFFICIAL_MCP_SERVERS.forEach((s) => {
+        if (enabledServers.includes(s.qualifiedName) && s.logoUrl) {
+          initialLogos[s.qualifiedName] = s.logoUrl as string;
+        }
+      });
+
+      if (!isCancelled) setToolLogos((prev) => ({ ...prev, ...initialLogos }));
+
+      if (enabledServers.length === 0) return;
+
+      try {
+        const response = await fetch("/api/smithery/bulk", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ qualifiedNames: enabledServers }),
+        });
+        if (response.ok) {
+          const data = await response.json();
+          const map: Record<string, string> = {};
+          Object.entries(data?.servers || {}).forEach(
+            ([qualifiedName, serverData]: [string, any]) => {
+              const url = (serverData as any)?.iconUrl || (serverData as any)?.logo;
+              if (url) map[qualifiedName] = url as string;
+            }
+          );
+          if (!isCancelled && Object.keys(map).length > 0) {
+            setToolLogos((prev) => ({ ...prev, ...map }));
+          }
+        }
+      } catch {
+        // non-fatal; fall back to no extra logos
+      }
+    }
+
+    loadLogos();
+    return () => {
+      isCancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assistant.assistant_id]);
+  
   return (
     <>
       <div
@@ -131,10 +221,42 @@ export function AgentCard({ assistant, onDelete }: AgentCardProps) {
         </div>
         <div className="flex flex-wrap gap-2 items-center text-xs sm:text-sm text-muted-foreground mt-3 sm:mt-4">
           <span className="flex items-center">
-            Model: {assistant.config?.configurable?.model || "Not specified"}
+            Model: {formatModelName(assistant.config?.configurable?.model)}
           </span>
-          <span className="hidden sm:inline">•</span>
-          <span>{getEnabledMcpServers().length} tools</span>
+          {enabledServers.length > 0 && (
+            <>
+              <span className="hidden sm:inline">•</span>
+              <div className="flex items-center gap-2">
+                {enabledServers.slice(0, 4).map((name) => {
+                  const src = toolLogos[name];
+                  return (
+                    <div
+                      key={name}
+                      className="w-5 h-5 rounded-full ring-2 ring-background overflow-hidden bg-muted flex items-center justify-center text-[10px]"
+                      title={name}
+                    >
+                      {src ? (
+                        <Image
+                          src={src}
+                          alt={name}
+                          width={20}
+                          height={20}
+                          className="object-cover"
+                        />
+                      ) : (
+                        <span>🛠️</span>
+                      )}
+                    </div>
+                  );
+                })}
+                {enabledServers.length > 4 && (
+                  <div className="w-5 h-5 rounded-full ring-2 ring-background bg-muted text-[10px] flex items-center justify-center">
+                    +{enabledServers.length - 4}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </div>
       </div>
 

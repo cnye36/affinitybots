@@ -18,6 +18,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { WorkflowCard } from "@/components/workflows/WorkflowCard";
 
 export default function WorkflowsPage() {
   const router = useRouter();
@@ -210,25 +211,7 @@ export default function WorkflowsPage() {
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </button>
                 </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <h2 className="text-xl font-semibold mb-1">
-                      {workflow.name}
-                    </h2>
-                    <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-                      <span>
-                        Created{" "}
-                        {new Date(workflow.created_at).toLocaleDateString()}
-                      </span>
-                      <span>•</span>
-                      <span>
-                        Updated{" "}
-                        {new Date(workflow.updated_at).toLocaleDateString()}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                <WorkflowCard workflow={workflow} />
               </div>
             ))}
           </div>
