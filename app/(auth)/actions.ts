@@ -119,13 +119,19 @@ export async function signOut() {
 
 async function getSiteUrl() {
   const hdrs = await headers();
-  const origin = hdrs.get("origin");
-  return process.env.NEXT_PUBLIC_URL ?? origin ?? "";
+  const forwardedProto = hdrs.get("x-forwarded-proto");
+  const host = hdrs.get("host");
+  const computedOrigin = forwardedProto && host ? `${forwardedProto}://${host}` : hdrs.get("origin");
+  // Prefer the current request origin (works for localhost and multi-domain)
+  // Fallback to env var if origin is not available
+  return computedOrigin ?? process.env.NEXT_PUBLIC_URL ?? "http://localhost:3000";
 }
 
 export async function signInWithGoogle() {
   const supabase = await createClient();
-  const redirectTo = `${await getSiteUrl()}/dashboard`;
+  // Route through our auth callback so we can exchange the code for a session
+  const next = encodeURIComponent(`/dashboard`);
+  const redirectTo = `${await getSiteUrl()}/auth/callback?next=${next}`;
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: { redirectTo },
@@ -140,7 +146,9 @@ export async function signInWithGoogle() {
 
 export async function signInWithGitHub() {
   const supabase = await createClient();
-  const redirectTo = `${await getSiteUrl()}/dashboard`;
+  // Route through our auth callback so we can exchange the code for a session
+  const next = encodeURIComponent(`/dashboard`);
+  const redirectTo = `${await getSiteUrl()}/auth/callback?next=${next}`;
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "github",
     options: { redirectTo },
@@ -162,7 +170,8 @@ export async function signUpWithGoogle(formData: FormData) {
   }
   
   // Store invite code in session storage for validation after OAuth
-  const redirectTo = `${await getSiteUrl()}/auth/validate-invite?inviteCode=${encodeURIComponent(inviteCode)}`;
+  const nextPath = `/auth/validate-invite?inviteCode=${encodeURIComponent(inviteCode)}`;
+  const redirectTo = `${await getSiteUrl()}/auth/callback?next=${encodeURIComponent(nextPath)}`;
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: { redirectTo },
@@ -184,7 +193,8 @@ export async function signUpWithGitHub(formData: FormData) {
   }
   
   // Store invite code in session storage for validation after OAuth
-  const redirectTo = `${await getSiteUrl()}/auth/validate-invite?inviteCode=${encodeURIComponent(inviteCode)}`;
+  const nextPath = `/auth/validate-invite?inviteCode=${encodeURIComponent(inviteCode)}`;
+  const redirectTo = `${await getSiteUrl()}/auth/callback?next=${encodeURIComponent(nextPath)}`;
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "github",
     options: { redirectTo },
