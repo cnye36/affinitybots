@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { signIn } from "../actions";
+import { signIn, signInWithGoogle, signInWithGitHub } from "../actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,18 +43,18 @@ function SignInForm() {
             <Button formAction={handleSignIn} className="w-full">
               Sign In
             </Button>
-            {/* Temporarily disabled OAuth while fixing production issues
+            
             <div className="relative my-2 text-center text-sm text-muted-foreground">
               <span className="px-2 bg-background relative z-10">or</span>
               <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-px bg-border" />
             </div>
             <Button variant="outline" formAction={signInWithGoogle} className="w-full">
-              Continue with Google
+              Sign in with Google
             </Button>
             <Button variant="outline" formAction={signInWithGitHub} className="w-full">
-              Continue with GitHub
+              Sign in with GitHub
             </Button>
-            */}
+           
           </div>
         </form>
         <p className="mt-4 text-center">

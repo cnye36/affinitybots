@@ -6,6 +6,17 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { Menu, X } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
 
 export function Header() {
   const [scrolled, setScrolled] = useState(false);
@@ -114,6 +125,37 @@ export function Header() {
             </Button>
           </Link>
 
+          {/* Sign In with invite confirmation (desktop) */}
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="ghost"
+                className={`hidden md:inline-flex transition-all duration-200 ${
+                  scrolled ? "text-sm py-1" : ""
+                }`}
+              >
+                Sign In
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Do you have an invite?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  AffinityBots is currently in closed beta. If you haven&apos;t
+                  been invited yet, request early access to join the waitlist.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel asChild>
+                  <Link href="/early-access">Request Early Access</Link>
+                </AlertDialogCancel>
+                <AlertDialogAction asChild>
+                  <Link href="/signin">I have an invite — Sign In</Link>
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
           <ThemeToggle />
 
           {/* Mobile Menu Button */}
@@ -165,6 +207,32 @@ export function Header() {
                   Request Access
                 </Button>
               </Link>
+
+              {/* Sign In with invite confirmation (mobile) */}
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="ghost" className="w-full">
+                    Sign In
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Do you have an invite?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      AffinityBots is currently in closed beta. If you haven&apos;t
+                      been invited yet, request early access to join the waitlist.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel asChild>
+                      <Link href="/early-access">Request Early Access</Link>
+                    </AlertDialogCancel>
+                    <AlertDialogAction asChild>
+                      <Link href="/signin">I have an invite — Sign In</Link>
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </nav>
           </div>
         )}

@@ -472,17 +472,38 @@ async function callModel(
     if (!modelProvider) {
       if (providerModel?.startsWith("gemini")) modelProvider = "google-genai" as any;
     }
-    baseModel = await initChatModel(providerModel, {
+    // Determine if target model is an OpenAI GPT-5 family model
+    const isGpt5 = /(^|:)gpt-5(?![a-zA-Z0-9-])/.test(providerModel || "") || /(^|:)gpt-5(?![a-zA-Z0-9-])/.test(String(modelProvider || ""));
+
+    // Build params conditionally: GPT-5 rejects temperature and expects reasoningEffort
+    const universalParams: Record<string, any> = {
       modelProvider: modelProvider as any,
-      temperature: (typeof configurable.temperature === 'number' ? configurable.temperature : 0.3),
-      reasoningEffort: configurable.reasoningEffort ?? "medium",
-    });
+    };
+    if (isGpt5) {
+      universalParams.reasoningEffort = configurable.reasoningEffort ?? "medium";
+    } else {
+      universalParams.temperature = (typeof configurable.temperature === 'number' ? configurable.temperature : 0.3);
+      if (configurable.reasoningEffort) universalParams.reasoningEffort = configurable.reasoningEffort;
+    }
+
+    baseModel = await initChatModel(providerModel, universalParams);
   } else {
-    baseModel = new ChatOpenAI({
-      model: configurable.model || "gpt-5",
-      temperature: (typeof configurable.temperature === 'number' ? configurable.temperature : 0.3),
-      reasoningEffort: configurable.reasoningEffort ?? "medium",
-    });
+    // ChatOpenAI direct path. Respect GPT-5 parameter constraints too.
+    const targetModel = configurable.model || "gpt-5";
+    const isGpt5 = /^gpt-5(?![a-zA-Z0-9-])/.test(targetModel);
+
+    const openAiParams: Record<string, any> = {
+      model: targetModel,
+    };
+    if (isGpt5) {
+      openAiParams.reasoningEffort = configurable.reasoningEffort ?? "medium";
+      // Do NOT set temperature for GPT-5
+    } else {
+      openAiParams.temperature = (typeof configurable.temperature === 'number' ? configurable.temperature : 0.3);
+      if (configurable.reasoningEffort) openAiParams.reasoningEffort = configurable.reasoningEffort;
+    }
+
+    baseModel = new ChatOpenAI(openAiParams as any);
   }
   
   console.log(`Binding ${tools.length} tools to model...`);
