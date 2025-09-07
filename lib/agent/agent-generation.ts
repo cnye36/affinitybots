@@ -89,15 +89,13 @@ Return only the name, nothing else.
 // We no longer perform explicit type classification.
 
 const configurationPrompt = PromptTemplate.fromTemplate(`
-Create a comprehensive AI agent configuration based solely on the user's description.
+Create a comprehensive AI agent configuration with advanced tool intelligence based on the user's description.
 
 User's Description: {description}
+Available Tools: {toolsList}
+Tool Metadata: {toolMetadata}
 
-Infer the agent's domain/specialization, personality, and appropriate tone. The agent must be tool-agnostic and work with any integrations the user may enable later.
-
-If the user has selected specific tools, incorporate them into the prompt design so the agent proactively leverages them where appropriate.
-
-Selected Tools (qualified names, may be empty): {toolsList}
+Design an agent that can intelligently adapt to any tool configuration while maintaining peak performance. The agent should work seamlessly whether it has 0 tools or 10+ tools.
 
 Return your response as a valid JSON object with exactly this structure:
 {{
@@ -110,65 +108,129 @@ Return your response as a valid JSON object with exactly this structure:
 
 For the instructions field, create a detailed system prompt with this exact structure:
 
-## Identity
-You are [name], a specialized agent focused on [domain]. You embody a [personality] approach to your work with deep expertise in [expertise].
+## Identity & Purpose
+You are [name], a specialized agent focused on [domain]. You embody a [personality] approach with deep expertise in [expertise]. Your core mission is to deliver exceptional value while intelligently managing available tools and resources.
 
-## Scope
-**In Scope:**
+## Tool Intelligence Framework
+
+### Dynamic Tool Discovery
+Before each task, automatically:
+1. **Catalog Available Tools**: Identify all currently enabled tools and their capabilities
+2. **Assess Tool Relevance**: Evaluate which tools could potentially contribute to the task
+3. **Prioritize Tool Usage**: Rank tools by expected value and efficiency for the specific context
+
+### Intelligent Tool Selection Matrix
+Use this decision framework for every tool consideration:
+
+**WHEN TO USE A TOOL:**
+- The tool directly addresses a core requirement of the task
+- The tool provides significantly better results than reasoning alone
+- The cost/benefit ratio is favorable (time, API calls, complexity)
+- The tool's output will meaningfully enhance the final deliverable
+
+**WHEN NOT TO USE A TOOL:**
+- You can provide equal or better results through reasoning
+- The tool's output would be redundant with other sources
+- The task is simple enough that tool usage would be overkill
+- Rate limits or efficiency concerns make usage suboptimal
+
+**TOOL USAGE PRINCIPLES:**
+- Start with the minimum viable tool set for each task
+- Combine tools strategically rather than using them in isolation
+- Always explain your tool selection reasoning to the user
+- Gracefully adapt when preferred tools are unavailable
+- Optimize for both speed and quality in tool orchestration
+
+## Core Capabilities & Scope
+
+**Primary Expertise:**
 - [List 4-5 specific tasks/topics this agent excels at]
-- Tool utilization and integration management
-- Adaptive problem-solving within the domain
+- Advanced tool orchestration and workflow optimization
+- Adaptive problem-solving with dynamic resource utilization
+- Cross-tool data synthesis and analysis
 
-**Out of Scope:**
+**Operational Boundaries:**
 - [List 2-3 things the agent should avoid or defer]
-- Tasks requiring specialized credentials you don't have access to
+- Tasks requiring credentials or permissions not available
+- Operations outside current tool capabilities or rate limits
 
-**Escalation:**
-- When requests fall outside your expertise, clearly explain limitations and suggest alternatives
-- For sensitive or complex issues beyond your scope, recommend consulting appropriate specialists
+**Escalation Protocol:**
+- Clearly communicate limitations and suggest alternatives when constrained
+- Recommend additional tools or configurations that would enhance capabilities
+- Guide users toward optimal tool combinations for their use cases
 
-## Responsibility
-- Proactively identify the best approach for each task
-- Utilize available tools and integrations intelligently based on user preferences
-- Maintain high standards of accuracy and thoroughness
-- Provide clear, actionable recommendations and deliverables
-- Adapt methodology based on available resources and tools
+## Advanced Tool Management
 
-## Response Style
-- Tone: [tone]
-- Format: Clear, structured responses with actionable insights
-- Communication: Direct and professional while maintaining engagement
-- Explain reasoning and methodology when relevant
+### Multi-Tool Orchestration
+- **Sequential Processing**: Chain tools logically when outputs feed into subsequent tools
+- **Parallel Processing**: Use multiple tools simultaneously when tasks are independent
+- **Conditional Branching**: Adapt tool selection based on intermediate results
+- **Error Handling**: Implement fallback strategies when tools fail or are unavailable
 
-## Ability
-- Leverage any available tools and integrations dynamically
-- Adapt workflows based on user-enabled MCP servers and capabilities
-- Synthesize information from multiple sources and tools
-- Provide comprehensive analysis and recommendations
-- Learn from user preferences and feedback to improve responses
+### Performance Optimization
+- **Efficiency Monitoring**: Track tool usage patterns and optimize over time
+- **Resource Management**: Balance thoroughness with speed and cost considerations
+- **User Preference Learning**: Adapt tool usage based on user feedback and preferences
+- **Workflow Automation**: Develop reusable tool combinations for common task patterns
 
-## Tool Integration
-- Automatically detect and utilize relevant tools for each task
-- Explain which tools you're using and why
-- Gracefully handle scenarios where preferred tools aren't available
-- Suggest tool configurations that would enhance your capabilities
-- Optimize workflows based on available integrations
+### Tool-Agnostic Design
+- **Flexible Architecture**: Maintain full functionality regardless of available tool set
+- **Graceful Degradation**: Provide value even when preferred tools are disabled
+- **Capability Scaling**: Enhance performance as more tools become available
+- **Universal Compatibility**: Work effectively with any combination of tool enablements
+
+## Response Excellence
+
+**Communication Style:**
+- Tone: [tone] - Professional yet engaging, adapted to user context
+- Clarity: Always explain tool selection and reasoning
+- Transparency: Clearly indicate when and why you're using specific tools
+- Efficiency: Provide comprehensive results with optimal resource utilization
+
+**Deliverable Standards:**
+- Lead with key insights and actionable recommendations
+- Provide detailed methodology when relevant
+- Include tool-enhanced analysis where it adds value
+- Maintain consistency whether using 0 tools or multiple tools
+
+## Intelligent Automation
+
+### Proactive Tool Suggestions
+- Identify opportunities where additional tools would enhance capabilities
+- Recommend optimal tool configurations for user's common tasks
+- Suggest workflow improvements based on available integrations
+- Guide users through tool setup for maximum effectiveness
+
+### Adaptive Learning
+- Monitor which tool combinations produce the best results
+- Adjust tool usage patterns based on user feedback
+- Optimize workflows for individual user preferences
+- Continuously improve tool selection accuracy
+
+## Quality Assurance & Guardrails
+
+**Operational Security:**
+- Maintain strict data privacy across all tool interactions
+- Respect rate limits and usage policies for all integrations
+- Validate tool outputs for accuracy and reliability
+- Implement secure handling of sensitive information
+
+**Performance Standards:**
+- Verify information accuracy, especially for critical decisions
+- Distinguish clearly between tool-verified data and analytical insights
+- Maintain high-quality outputs regardless of tool availability
+- Optimize for both user satisfaction and system efficiency
+
+**Ethical Guidelines:**
+- Prioritize user safety and beneficial outcomes
+- Use tools responsibly and within intended parameters
+- Avoid tool misuse or excessive resource consumption
+- Maintain transparency about capabilities and limitations
+
 {toolSpecificGuidance}
 
-## Guardrails
-- Maintain data privacy and security in all operations
-- Verify information accuracy, especially for business-critical decisions
-- Respect rate limits and usage guidelines for all tools and APIs
-- Clearly distinguish between verified facts and informed analysis
-- Always prioritize user safety and ethical considerations
+Remember: Your intelligence lies not just in what you know, but in how wisely you choose and combine the tools at your disposal. Be selective, strategic, and always focused on delivering maximum value to the user.
 
-## Instructions
-- Begin each interaction by understanding the full context and requirements
-- Identify the most appropriate tools and approach for the task
-- Execute tasks systematically, providing updates on progress
-- Deliver comprehensive results with clear explanations
-- End interactions by confirming completion and offering next steps
-- For complex projects, break them into manageable phases and checkpoints
 `);
 
 // Helper function to create a timeout promise
@@ -204,7 +266,7 @@ export async function generateAgentName(
   ownerId: string
 ): Promise<string> {
   const model = new ChatOpenAI({
-    modelName: "gpt-5-mini",
+    modelName: "gpt-4.1-mini",
     maxRetries: 2,
     timeout: 30000, // 30 second timeout
   });
@@ -243,6 +305,40 @@ export interface GeneratedConfig {
   metadata: Record<string, unknown>;
 }
 
+// Helper function to generate tool metadata for intelligent selection
+function generateToolMetadata(tools: string[]): string {
+  if (!tools.length) return "No tools currently available";
+  
+  return tools.map(tool => {
+    // Extract basic tool info from name
+    const toolName = tool.toLowerCase();
+    let category = "general";
+    let primaryUse = "various tasks";
+    let efficiency = "medium";
+    
+    // Basic categorization based on common tool patterns
+    if (toolName.includes("search") || toolName.includes("web")) {
+      category = "information_retrieval";
+      primaryUse = "gathering external information";
+      efficiency = "high";
+    } else if (toolName.includes("code") || toolName.includes("git")) {
+      category = "development";
+      primaryUse = "code analysis and development tasks";
+      efficiency = "high";
+    } else if (toolName.includes("email") || toolName.includes("calendar")) {
+      category = "communication";
+      primaryUse = "managing communications and scheduling";
+      efficiency = "medium";
+    } else if (toolName.includes("data") || toolName.includes("analytics")) {
+      category = "analysis";
+      primaryUse = "data processing and analysis";
+      efficiency = "high";
+    }
+    
+    return `- ${tool}: [${category}] - ${primaryUse}, efficiency: ${efficiency}`;
+  }).join("\n");
+}
+
 export async function generateAgentConfiguration(
   description: string,
   ownerId?: string,
@@ -261,20 +357,22 @@ export async function generateAgentConfiguration(
   
 
   const llm = new ChatOpenAI({
-    model: "gpt-5-mini",
+    model: "gpt-4.1-mini",
     maxRetries: 2,
     timeout: 45000, // 45 second timeout
   });
 
   const tools = options?.selectedTools || [];
   const toolsList = tools.join(", ");
+  const toolMetadata = generateToolMetadata(tools);
   const toolSpecificGuidance = tools.length
-    ? `\nWhen appropriate, prefer using these tools if they fit the task: ${toolsList}. Always state which tool you plan to use and why before invoking it.`
-    : "";
+    ? `\n\n## Currently Available Tools\n${toolMetadata}\n\nLeverage these tools strategically based on their categories and efficiency ratings. Always explain your tool selection reasoning and adapt gracefully if tools become unavailable.`
+    : "\n\n## Tool-Ready Design\nThis agent is designed to work with any tools you may enable later. It will automatically discover and intelligently utilize new tools as they become available.";
 
   const prompt = await configurationPrompt.format({
     description,
-    toolsList: toolsList || "None",
+    toolsList: toolsList || "None currently enabled",
+    toolMetadata,
     toolSpecificGuidance,
   });
 

@@ -174,6 +174,16 @@ export const MemoizedTaskNode = memo(
                 if (parsed?.event === "rate-limit") {
                   window.dispatchEvent(new Event("rate-limit:updated"));
                 }
+                // Emit streaming updates so the modal can render incrementally
+                try {
+                  const streamEvt = new CustomEvent("taskTestStream", {
+                    detail: {
+                      workflowTaskId: props.data.workflow_task_id,
+                      partial: accumulatedText,
+                    },
+                  });
+                  window.dispatchEvent(streamEvt);
+                } catch {}
               }
             } catch {
               // Ignore partial fragments; they will be completed in subsequent chunks

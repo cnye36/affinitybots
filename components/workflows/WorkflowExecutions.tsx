@@ -33,10 +33,17 @@ export function WorkflowExecutions({ workflowId }: WorkflowExecutionsProps) {
   const [loading, setLoading] = useState(false);
   const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
 
+  const isValidUuid = (value?: string | null) =>
+    typeof value === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      value
+    );
+
   // Load workflow graph (nodes/edges) once
   useEffect(() => {
     let mounted = true;
     (async () => {
+      if (!isValidUuid(workflowId)) return;
       const { data: wf, error } = await supabase
         .from("workflows")
         .select("nodes, edges")
@@ -58,6 +65,7 @@ export function WorkflowExecutions({ workflowId }: WorkflowExecutionsProps) {
   useEffect(() => {
     let mounted = true;
     (async () => {
+      if (!isValidUuid(workflowId)) return;
       const res = await fetch(`/api/workflows/${workflowId}/executions`);
       if (!res.ok) return;
       const data = (await res.json()) as RunListItem[];
@@ -75,6 +83,10 @@ export function WorkflowExecutions({ workflowId }: WorkflowExecutionsProps) {
     if (!selectedRunId) return;
     setLoading(true);
     (async () => {
+      if (!isValidUuid(workflowId)) {
+        setLoading(false);
+        return;
+      }
       const res = await fetch(`/api/workflows/${workflowId}/executions/${selectedRunId}`);
       if (!res.ok) {
         setLoading(false);

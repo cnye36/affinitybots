@@ -27,7 +27,7 @@ interface TaskConfigModalProps {
   onUpdate: (updatedTask: Task, updatedAssistant: Assistant | null) => void;
 }
 
-type OutputFormat = "json" | "markdown" | "text";
+type OutputFormat = "json" | "markdown";
 
 type TestOutput = {
   type?: string;
@@ -45,7 +45,8 @@ export function TaskConfigModal({
   onUpdate,
 }: TaskConfigModalProps) {
   const [currentTask, setCurrentTask] = useState<Task>(task);
-  const [outputFormat, setOutputFormat] = useState<OutputFormat>("json");
+  const [prevOutputFormat, setPrevOutputFormat] = useState<OutputFormat>("json");
+  const [testOutputFormat, setTestOutputFormat] = useState<OutputFormat>("json");
   const [isLoading, setIsLoading] = useState(false);
   const [testOutput, setTestOutput] = useState<TestOutput | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -56,6 +57,27 @@ export function TaskConfigModal({
   const [isAssistantSelectOpen, setIsAssistantSelectOpen] = useState(false);
   const [assistants, setAssistants] = useState<Assistant[]>([]);
   const [loadingAssistants, setLoadingAssistants] = useState(true);
+
+  useEffect(() => {
+    // Live-stream partial output into the TestOutputPanel
+    const onStream = (e: Event) => {
+      const evt = e as CustomEvent<{ workflowTaskId: string; partial: string }>;
+      if (evt.detail?.workflowTaskId !== currentTask.workflow_task_id) return;
+      setTestOutput({ type: "messages/partial", content: evt.detail.partial });
+    };
+    // Mark stream end on completion
+    const onComplete = (e: Event) => {
+      const evt = e as CustomEvent<{ workflowTaskId: string; output: { result: unknown } }>;
+      if (evt.detail?.workflowTaskId !== currentTask.workflow_task_id) return;
+      setIsStreaming(false);
+    };
+    window.addEventListener("taskTestStream", onStream as EventListener);
+    window.addEventListener("taskTestCompleted", onComplete as EventListener);
+    return () => {
+      window.removeEventListener("taskTestStream", onStream as EventListener);
+      window.removeEventListener("taskTestCompleted", onComplete as EventListener);
+    };
+  }, [currentTask.workflow_task_id]);
 
   useEffect(() => {
     // Only sync from props when opening or switching to a different task id
@@ -163,6 +185,7 @@ export function TaskConfigModal({
       });
     } finally {
       setIsLoading(false);
+      // allow streaming indicator to be cleared by completion event if provided
       setIsStreaming(false);
     }
   };
@@ -232,8 +255,8 @@ export function TaskConfigModal({
           <div className="grid grid-cols-3 gap-4 mt-4">
             <PreviousNodeOutputPanel
               data={previousNodeOutput || null}
-              outputFormat={outputFormat}
-              setOutputFormat={setOutputFormat}
+              outputFormat={prevOutputFormat}
+              setOutputFormat={setPrevOutputFormat}
             />
 
             {loadingAssistants ? (
@@ -260,8 +283,8 @@ export function TaskConfigModal({
 
             <TestOutputPanel
               testOutput={testOutput}
-              outputFormat={outputFormat === "markdown" ? "markdown" : "json"}
-              setOutputFormat={(fmt) => setOutputFormat(fmt)}
+              outputFormat={testOutputFormat}
+              setOutputFormat={(fmt) => setTestOutputFormat(fmt)}
               isStreaming={isStreaming}
             />
           </div>

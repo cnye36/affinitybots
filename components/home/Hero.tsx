@@ -57,7 +57,7 @@ export function Hero() {
             <div className="mt-8 md:mt-12 grid grid-cols-3 gap-2 md:gap-8">
               <div className="flex flex-col md:flex-row md:items-center">
                 <div className="text-3xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600">
-                  5min
+                  1min
                 </div>
                 <div className="mt-1 md:mt-0 md:ml-2 text-xs md:text-sm text-muted-foreground">
                   To Create

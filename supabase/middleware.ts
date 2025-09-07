@@ -52,6 +52,8 @@ export async function updateSession(request: NextRequest) {
       !user &&
       !request.nextUrl.pathname.startsWith("/signin") &&
       !request.nextUrl.pathname.startsWith("/signup") &&
+      // Allow OAuth callback to run unauthenticated so it can set the session
+      !request.nextUrl.pathname.startsWith("/auth/callback") &&
       request.nextUrl.pathname !== "/"
     ) {
       // no user, redirect to signin

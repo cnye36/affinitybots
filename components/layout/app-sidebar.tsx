@@ -55,12 +55,12 @@ const data = {
     },
     {
       title: "Workflows",
-      url: "/workflows/workflows",
+      url: "/workflows",
       icon: Sliders,
       items: [
         {
           title: "My Workflows",
-          url: "/workflows/workflows",
+          url: "/workflows",
         },
         {
           title: "Create Workflow",

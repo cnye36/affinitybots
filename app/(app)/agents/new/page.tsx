@@ -144,7 +144,7 @@ export default function NewAgentPage() {
               Tell us what you want your AI agent to do. We’ll infer the best agent profile, craft a strong system prompt, and set sensible defaults.
             </p>
             <Textarea
-              placeholder="Example: Analyze our revenue data monthly, build concise dashboards, and alert me to anomalies."
+              placeholder="Example: I need an agent that can help me with my marketing research."
               value={customPrompt}
               onChange={(e) => setCustomPrompt(e.target.value)}
               className="h-32 mb-4"

@@ -22,7 +22,7 @@ export const AGENT_TEMPLATES = [
     defaultModel: "gpt-4o",
     tools: ["web_search", "document_analysis", "data_extraction"],
     basePrompt:
-      "Act as a market research analyst. Synthesize industry trends, competitor moves, and market size; deliver concise insights with sources and prioritized recommendations.",
+      "I need an agent that can help me with my marketing research and synthesize industry trends, competitor moves, and market size; deliver concise insights with sources and prioritized recommendations.",
     keywords: [
       "market research",
       "competitor analysis",
@@ -41,7 +41,7 @@ export const AGENT_TEMPLATES = [
     defaultModel: "gpt-4o",
     tools: ["text_generation", "image_analysis", "content_optimization"],
     basePrompt:
-      "Act as a content strategist. Turn goals and audience data into channel plans, editorial calendars, and briefs; propose topics and CTAs with measurable KPIs.",
+      "I need an agent that can help me with my content strategy and turn goals and audience data into channel plans, editorial calendars, and briefs; propose topics and CTAs with measurable KPIs.",
     keywords: [
       "content strategy",
       "editorial",
@@ -59,7 +59,7 @@ export const AGENT_TEMPLATES = [
     defaultModel: "gpt-4o",
     tools: ["conversation", "knowledge_base", "task_management"],
     basePrompt:
-      "Act as a customer support representative. Resolve inquiries empathetically, ask clarifying questions, reference knowledge when needed, and escalate edge cases with clear summaries.",
+      "I need an agent that can help me with my customer support and resolve inquiries empathetically, ask clarifying questions, reference knowledge when needed, and escalate edge cases with clear summaries.",
     keywords: [
       "customer service",
       "support",
@@ -77,7 +77,7 @@ export const AGENT_TEMPLATES = [
     defaultModel: "gpt-4o",
     tools: ["data_analysis", "visualization", "reporting"],
     basePrompt:
-      "Act as a business analyst. Analyze datasets and processes, surface key metrics and anomalies, and recommend improvements with impact estimates.",
+      "I need an agent that can help me with my business analysis and analyze datasets and processes, surface key metrics and anomalies, and recommend improvements with impact estimates.",
     keywords: [
       "business analysis",
       "reporting",
@@ -96,7 +96,7 @@ export const AGENT_TEMPLATES = [
     defaultModel: "gpt-4o",
     tools: ["task_management", "email_handling", "scheduling"],
     basePrompt:
-      "Act as an executive virtual assistant. Manage schedules, email drafts, meeting notes, and task follow‑ups; always confirm details and propose next actions.",
+      "I need an agent that can help me with my executive virtual assistant and manage schedules, email drafts, meeting notes, and task follow‑ups; always confirm details and propose next actions.",
     keywords: [
       "administrative",
       "scheduling",
@@ -114,7 +114,7 @@ export const AGENT_TEMPLATES = [
     defaultModel: "gpt-4o",
     tools: ["content_creation", "social_media_tools", "analytics"],
     basePrompt:
-      "Act as a social media manager. Create platform‑specific posts, hooks, and calendars; suggest visuals and measure engagement with clear experiments.",
+      "I need an agent that can help me with my social media manager and create platform‑specific posts, hooks, and calendars; suggest visuals and measure engagement with clear experiments.",
     keywords: [
       "social media",
       "content creation",
@@ -132,7 +132,7 @@ export const AGENT_TEMPLATES = [
     defaultModel: "gpt-4o",
     tools: ["financial_analysis", "data_modeling", "reporting"],
     basePrompt:
-      "Act as a financial analyst. Build concise variance analyses and models, highlight drivers, and produce investor‑ready summaries with assumptions.",
+      "I need an agent that can help me with my financial analysis and build concise variance analyses and models, highlight drivers, and produce investor‑ready summaries with assumptions.",
     keywords: [
       "financial analysis",
       "investment",
@@ -141,23 +141,6 @@ export const AGENT_TEMPLATES = [
       "forecasting",
     ],
   },
-  {
-    id: "technical-writer",
-    name: "Technical Writer",
-    description:
-      "Creates technical documentation, user guides, and API documentation with clarity and precision",
-    icon: Code,
-    defaultModel: "gpt-4o",
-    tools: ["document_creation", "technical_analysis", "content_optimization"],
-    basePrompt:
-      "Act as a technical writer. Turn specs and APIs into clear docs, quickstarts, and FAQs; use consistent structure and runnable examples.",
-    keywords: [
-      "technical writing",
-      "documentation",
-      "user guides",
-      "API docs",
-      "technical communication",
-    ],
-  },
+  
  
 ];

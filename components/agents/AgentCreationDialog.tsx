@@ -49,7 +49,7 @@ export function AgentCreationDialog({
     if (isOpen) {
       const interval = setInterval(() => {
         setCurrentStep((prev) => (prev < steps.length - 1 ? prev + 1 : prev));
-      }, 3000); // Change step every 3 seconds
+      }, 4000); // Change step every 4 seconds
 
       return () => clearInterval(interval);
     } else {

@@ -66,6 +66,12 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
   const router = useRouter();
   const supabase = createClient();
 
+  const isValidUuid = (value?: string | null) =>
+    typeof value === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      value
+    );
+
   const [workflowName, setWorkflowName] = useState("Undefined Workflow");
   const [assistants, setAssistants] = useState<Assistant[]>([]);
   const [loadingAgents, setLoadingAgents] = useState(true);
@@ -373,6 +379,12 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
       if ((!workflowId && !initialWorkflowId) || loading) return;
 
       const idToLoad = workflowId || initialWorkflowId;
+      if (!isValidUuid(idToLoad)) {
+        // Avoid querying with an invalid UUID (prevents 22P02 errors)
+        setLoading(false);
+        setLoadingAgents(false);
+        return;
+      }
       setLoading(true);
       try {
         const [workflowResult, triggersResult] = await Promise.all([
@@ -547,7 +559,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
 
   // Autosave nodes and edges to workflows table (debounced)
   useEffect(() => {
-    if (!workflowId) return;
+    if (!workflowId || !isValidUuid(workflowId)) return;
 
     // Serialize only task nodes (avoid functions in data)
     const serializableNodes: StoredWorkflowNode[] = nodes

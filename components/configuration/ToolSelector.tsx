@@ -367,63 +367,65 @@ export function ToolSelector({
 
   return (
     <div className="space-y-6">
-      {/* Configured Tools Section */}
-      {configuredServers.length > 0 && (
-        <div>
-          <div className="flex items-center gap-2 mb-4">
-            <h3 className="text-lg font-semibold">Configured Tools</h3>
-            <Badge variant="secondary">{configuredServers.length}</Badge>
+      <div className="max-h-[520px] overflow-y-auto pr-1">
+        {/* Configured Tools Section */}
+        {configuredServers.length > 0 && (
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <h3 className="text-lg font-semibold">Configured Tools</h3>
+              <Badge variant="secondary">{configuredServers.length}</Badge>
+            </div>
+            <div className="grid grid-cols-1 gap-3">
+              {configuredServers.map((server) => (
+                <ServerCard 
+                  key={server.qualifiedName} 
+                  server={server} 
+                  isConfiguredSection={true}
+                />
+              ))}
+            </div>
           </div>
-          <div className="grid grid-cols-1 gap-3">
-            {configuredServers.map((server) => (
-              <ServerCard 
-                key={server.qualifiedName} 
-                server={server} 
-                isConfiguredSection={true}
-              />
-            ))}
-          </div>
-        </div>
-      )}
+        )}
 
-      {/* Separator */}
-      {configuredServers.length > 0 && unconfiguredServers.length > 0 && (
-        <Separator />
-      )}
+        {/* Separator */}
+        {configuredServers.length > 0 && unconfiguredServers.length > 0 && (
+          <Separator />
+        )}
 
-      {/* Available Tools Section */}
-      {unconfiguredServers.length > 0 && (
-        <div>
-          <div className="flex items-center gap-2 mb-4">
-            <h3 className="text-lg font-semibold">Available Tools</h3>
-            <Badge variant="outline">{unconfiguredServers.length}</Badge>
+        {/* Available Tools Section */}
+        {unconfiguredServers.length > 0 && (
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <h3 className="text-lg font-semibold">Available Tools</h3>
+              <Badge variant="outline">{unconfiguredServers.length}</Badge>
+            </div>
+            <div className="grid grid-cols-1 gap-3">
+              {unconfiguredServers.map((server) => (
+                <ServerCard 
+                  key={server.qualifiedName} 
+                  server={server} 
+                  isConfiguredSection={false}
+                />
+              ))}
+            </div>
           </div>
-          <div className="grid grid-cols-1 gap-3">
-            {unconfiguredServers.map((server) => (
-              <ServerCard 
-                key={server.qualifiedName} 
-                server={server} 
-                isConfiguredSection={false}
-              />
-            ))}
-          </div>
-        </div>
-      )}
+        )}
 
-      {/* Empty state */}
-      {allServers.length === 0 && (
-        <div className="text-center py-8 text-muted-foreground">
-          <p>No tools available at the moment.</p>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={fetchData}
-            className="mt-2"
-          >
-            Refresh
-          </Button>
-        </div>
-      )}
+        {/* Empty state */}
+        {allServers.length === 0 && (
+          <div className="text-center py-8 text-muted-foreground">
+            <p>No tools available at the moment.</p>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={fetchData}
+              className="mt-2"
+            >
+              Refresh
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

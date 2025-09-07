@@ -4,6 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 import ReactMarkdown from "react-markdown";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -124,7 +125,7 @@ export function TestOutputPanel({
               value={outputFormat}
               onValueChange={(value) => setOutputFormat(value as OutputFormat)}
             >
-              <SelectTrigger className="w-[100px]">
+              <SelectTrigger className="w-[130px]">
                 <SelectValue placeholder="Format" />
               </SelectTrigger>
               <SelectContent>
@@ -144,19 +145,33 @@ export function TestOutputPanel({
             </Button>
           </div>
           {outputFormat === "markdown" ? (
-            <div className={`prose prose-invert max-w-none ${isStreaming ? "animate-pulse" : ""}`}>
-              <ReactMarkdown>
-                {formatOutput(testOutput, outputFormat)}
-              </ReactMarkdown>
+            <div className="relative h-[400px] border rounded-md p-3 overflow-auto">
+              {isStreaming && (
+                <div className="absolute top-2 right-2 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                </div>
+              )}
+              <div className={`prose max-w-none text-foreground dark:prose-invert ${isStreaming ? "animate-pulse" : ""}`}>
+                <ReactMarkdown>
+                  {formatOutput(testOutput, outputFormat)}
+                </ReactMarkdown>
+              </div>
             </div>
           ) : (
-            <Textarea
-              value={formatOutput(testOutput, outputFormat)}
-              readOnly
-              className={`font-mono h-[400px] ${
-                isStreaming ? "animate-pulse" : ""
-              }`}
-            />
+            <div className="relative">
+              {isStreaming && (
+                <div className="absolute top-2 right-2 z-10 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                </div>
+              )}
+              <Textarea
+                value={formatOutput(testOutput, outputFormat)}
+                readOnly
+                className={`font-mono h-[400px] pr-8 ${
+                  isStreaming ? "animate-pulse" : ""
+                }`}
+              />
+            </div>
           )}
           {showAdvanced && (
             <div className="space-y-2 pt-2">
