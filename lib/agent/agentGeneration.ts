@@ -1,6 +1,6 @@
 import { ChatOpenAI } from "@langchain/openai";
 import { PromptTemplate } from "@langchain/core/prompts";
-import { generateAgentAvatar } from "@/lib/avatar-generation";
+import { generateAgentAvatar } from "@/lib/avatarGeneration";
 import type { AssistantConfiguration } from "@/types/assistant";
 
 // Store previously generated names per user with a maximum cache size

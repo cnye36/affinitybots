@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
 import { Client } from "@langchain/langgraph-sdk";
-import { generateChatName } from "@/lib/generate-title";
+import { generateChatName } from "@/lib/generateTitle";
 
 export async function POST(
   request: NextRequest,

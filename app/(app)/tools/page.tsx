@@ -252,26 +252,12 @@ export default function ToolsPage() {
     !isUserAddedServer(server.qualifiedName)
   );
 
-  // Helper to truncate description to 30 words
-  const truncateDescription = (description: string, maxWords: number = 30): string => {
-    if (!description) return "No description provided.";
-    
-    const words = description.split(' ');
-    if (words.length <= maxWords) {
-      return description;
-    }
-    
-    return words.slice(0, maxWords).join(' ') + '...';
-  };
+  // Truncation handled within card components
 
   return (
     <div className="max-w-5xl mx-auto py-10 px-4">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-center mb-8">
         <h1 className="text-4xl font-bold">Tools</h1>
-        <Button onClick={() => setAddOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Server
-        </Button>
       </div>
       
       {/* Search and Filter Bar */}

@@ -16,7 +16,7 @@ import { AgentSelectModal } from "./AgentSelectModal";
 import { WorkflowCanvas } from "./WorkflowCanvas";
 import { WorkflowHeader } from "./WorkflowHeader";
 import { executeWorkflow } from "./WorkflowExecutionManager";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/hooks/useToast";
 import { TaskSidebar } from "./tasks/TaskSidebar";
 import { WorkflowExecutions } from "./WorkflowExecutions";
 
@@ -1053,7 +1053,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
         mode={mode}
         onModeChange={setMode}
       />
-      <div className="flex-1 relative">
+      <div className="flex-1 relative min-h-0 overflow-hidden">
         {mode === "editor" ? (
           <>
             <WorkflowCanvas
@@ -1085,7 +1085,9 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
           </>
         ) : (
           workflowId ? (
-            <WorkflowExecutions workflowId={workflowId} />
+            <div className="h-full overflow-auto">
+              <WorkflowExecutions workflowId={workflowId} />
+            </div>
           ) : (
             <div className="absolute inset-0 grid place-items-center text-sm text-muted-foreground">
               Save the workflow first to view executions

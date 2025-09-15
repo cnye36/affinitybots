@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { formatRelativeTime } from "@/lib/utils";
-import { TutorialButton } from "@/components/onboarding/TutorialButton";
+// Removed TutorialButton (onboarding tours triggered programmatically only)
 
 // Helper to impose a maximum time for the entire server function.
 function createTimeoutPromise(timeoutMs: number): Promise<never> {
@@ -295,7 +295,6 @@ export default async function Dashboard() {
                 <RecentActivity activities={recentActivity} />
               </div>
             </div>
-            <TutorialButton />
           </div>
         );
       })(),

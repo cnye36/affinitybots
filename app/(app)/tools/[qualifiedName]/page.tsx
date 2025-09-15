@@ -41,6 +41,7 @@ interface ServerDetail {
 }
 
 export default function ServerDetailPage() {
+  const [imageError, setImageError] = useState(false);
   const params = useParams();
   const router = useRouter();
   const qualifiedName = params.qualifiedName as string;
@@ -142,7 +143,7 @@ export default function ServerDetailPage() {
         <div className="flex items-start gap-6 mb-6">
           {/* Icon */}
           <div className="flex-shrink-0">
-            {server.iconUrl || server.logo ? (
+            {(!imageError && (server.iconUrl || server.logo)) ? (
               <div className="w-16 h-16 rounded-full bg-white border overflow-hidden">
                 <Image
                   src={server.iconUrl || server.logo || ''}
@@ -150,6 +151,7 @@ export default function ServerDetailPage() {
                   width={64}
                   height={64}
                   className="w-full h-full object-cover"
+                  onError={() => setImageError(true)}
                 />
               </div>
             ) : (

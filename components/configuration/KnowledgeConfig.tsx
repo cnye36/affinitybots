@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { X, Upload } from "lucide-react";
 import { AssistantConfiguration } from "@/types/assistant";
 import { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/useToast";
 
 interface KnowledgeConfigProps {
   config: AssistantConfiguration;

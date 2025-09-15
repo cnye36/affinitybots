@@ -1,5 +1,5 @@
-import { MCPOAuthClient } from "./oauth-client";
-import { GitHubOAuthClient } from "./github-oauth-client";
+import { MCPOAuthClient } from "./oauthClient";
+import { GitHubOAuthClient } from "./githubOauthClient";
 
 // Simple in-memory session store for demo purposes
 // In production, use Redis, database, or proper session management

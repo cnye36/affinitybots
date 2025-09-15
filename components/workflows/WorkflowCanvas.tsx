@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import ReactFlow, {
   Edge,
   Controls,
@@ -19,10 +19,11 @@ import ReactFlow, {
   MarkerType,
   Connection,
   OnNodesDelete,
+  ReactFlowInstance,
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { CustomEdge } from "./CustomEdge";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/hooks/useToast";
 import { WorkflowNode } from "@/types/workflow";
 import { MemoizedTaskNode } from "./tasks/TaskNode";
 import { TriggerNode } from "./TriggerNode";
@@ -48,6 +49,8 @@ interface WorkflowCanvasProps {
   activeNodeId?: string | null;
   setActiveNodeId?: (id: string | null) => void;
   onAddTask?: (sourceNodeId: string) => void;
+  // When true, automatically fit all nodes into view on mount and when graph changes
+  autoFit?: boolean;
 }
 
 export function WorkflowCanvas({
@@ -59,7 +62,10 @@ export function WorkflowCanvas({
   activeNodeId,
   setActiveNodeId,
   onAddTask,
+  autoFit = false,
 }: WorkflowCanvasProps) {
+  const rfInstanceRef = useRef<ReactFlowInstance | null>(null);
+
   const onNodesDelete = useCallback(
     async (nodesToDelete: Parameters<OnNodesDelete>[0]) => {
       const deletedIds = new Set(nodesToDelete.map((n) => n.id));
@@ -109,19 +115,17 @@ export function WorkflowCanvas({
 
       if (!sourceNode || !targetNode) return;
 
-      // Check if trigger node already has a connection
-      if (sourceNode.type === "trigger") {
-        const existingTriggerConnection = edges.some(
-          (edge) => edge.source === sourceNode.id
-        );
-        if (existingTriggerConnection) {
-          toast({
-            title: "Invalid Connection",
-            description: "Trigger node can only connect to one task",
-            variant: "destructive",
-          });
-          return;
-        }
+      // Enforce single outgoing connection per node (trigger or task)
+      const hasExistingOutgoing = edges.some(
+        (edge) => edge.source === sourceNode.id
+      );
+      if (hasExistingOutgoing) {
+        toast({
+          title: "Invalid Connection",
+          description: "Each node can only connect to a single next task",
+          variant: "destructive",
+        });
+        return;
       }
 
       // Only allow trigger-to-task and task-to-task connections
@@ -167,22 +171,35 @@ export function WorkflowCanvas({
     // Check if any task nodes exist in the workflow
     const hasTaskNodes = nodes.some((node) => node.type === "task");
 
-    return nodes.map((node) => ({
-      ...node,
-      data: {
-        ...node.data,
-        isActive: node.id === activeNodeId,
-        onAddTask:
-          // Only allow adding tasks from task nodes if task nodes exist
-          // Otherwise, allow adding from the trigger node
-          node.type === "task"
-            ? () => onAddTask?.(node.id)
-            : node.type === "trigger" && !hasTaskNodes
-            ? () => onAddTask?.(node.id)
-            : undefined,
-      },
-    }));
-  }, [nodes, activeNodeId, onAddTask]);
+    return nodes.map((node) => {
+      const hasOutgoingEdge = edges.some((e) => e.source === node.id);
+      const canAddFromTask = node.type === "task" && !hasOutgoingEdge;
+      const canAddFromTrigger = node.type === "trigger" && !hasTaskNodes;
+
+      return {
+        ...node,
+        data: {
+          ...node.data,
+          isActive: node.id === activeNodeId,
+          onAddTask: canAddFromTask || canAddFromTrigger ? () => onAddTask?.(node.id) : undefined,
+        },
+      };
+    });
+  }, [nodes, edges, activeNodeId, onAddTask]);
+
+  // Auto-fit the viewport when requested
+  useEffect(() => {
+    if (!autoFit) return;
+    const inst = rfInstanceRef.current;
+    if (!inst) return;
+    // Small timeout ensures layout has applied
+    const id = setTimeout(() => {
+      try {
+        inst.fitView({ padding: 0.15, includeHiddenNodes: true, duration: 200 });
+      } catch {}
+    }, 0);
+    return () => clearTimeout(id);
+  }, [autoFit, nodesWithActiveState.length, edges.length]);
 
   return (
     <div className="absolute inset-0">
@@ -208,8 +225,16 @@ export function WorkflowCanvas({
         }}
         minZoom={0.2}
         maxZoom={4}
-        fitView={false}
+        fitView={autoFit}
         deleteKeyCode={["Backspace", "Delete"]}
+        onInit={(instance) => {
+          rfInstanceRef.current = instance;
+          if (autoFit) {
+            try {
+              instance.fitView({ padding: 0.15, includeHiddenNodes: true, duration: 200 });
+            } catch {}
+          }
+        }}
       >
         <Controls />
         <MiniMap />

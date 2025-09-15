@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { HelpCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { useOnboarding, dashboardTutorialSteps, newAgentTutorialSteps } from "@/hooks/use-onboarding"
+import { useOnboarding, dashboardTutorialSteps, newAgentTutorialSteps } from "@/hooks/useOnboarding"
 
 export function TutorialButton() {
   const { startTour, isActive } = useOnboarding()

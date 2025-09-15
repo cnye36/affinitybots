@@ -3,7 +3,7 @@
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 
 export type ServerType = "official" | "smithery" | "custom";
 
@@ -30,6 +30,14 @@ export function BaseServerCard({
   onClick,
   className = ""
 }: BaseServerCardProps) {
+  const [imageError, setImageError] = useState(false);
+  const getTruncatedDescription = (text: string, maxWords: number = 30): string => {
+    const safe = text || "";
+    const words = safe.split(/\s+/).filter(Boolean);
+    if (words.length === 0) return "No description provided.";
+    if (words.length <= maxWords) return safe;
+    return words.slice(0, maxWords).join(' ') + '...';
+  };
   const getServerTypeBadge = () => {
     const variants = {
       official: "default",
@@ -69,9 +77,12 @@ export function BaseServerCard({
       onClick={onClick}
     >
       {getServerTypeBadge()}
+      {isConfigured && (
+        <Badge variant="default" className="absolute top-2 left-2 text-xs">Configured</Badge>
+      )}
       
       <CardHeader className="flex flex-col items-center pb-2">
-        {logoUrl ? (
+        {logoUrl && !imageError ? (
           <div className="mb-2">
             <Image
               src={logoUrl}
@@ -79,6 +90,7 @@ export function BaseServerCard({
               width={48}
               height={48}
               className="object-contain"
+              onError={() => setImageError(true)}
             />
           </div>
         ) : (
@@ -93,7 +105,7 @@ export function BaseServerCard({
       
       <CardContent className="flex flex-col flex-1 justify-between">
         <div className="mb-4 text-sm text-muted-foreground min-h-[48px]">
-          {description}
+          {getTruncatedDescription(description, 30)}
         </div>
         {children}
       </CardContent>

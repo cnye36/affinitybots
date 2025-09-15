@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react"
 import Image from "next/image"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { useOnboarding, dashboardTutorialSteps } from "@/hooks/use-onboarding"
+import { useOnboarding, dashboardTutorialSteps } from "@/hooks/useOnboarding"
 
 export function WelcomeModal() {
   const { startTour, isActive } = useOnboarding()

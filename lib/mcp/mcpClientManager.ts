@@ -1,7 +1,7 @@
 import { MultiServerMCPClient } from "@langchain/mcp-adapters";
-import { MCPOAuthClient } from "@/lib/oauth-client";
-import { GitHubOAuthClient } from "@/lib/github-oauth-client";
-import { sessionStore } from "@/lib/session-store";
+import { MCPOAuthClient } from "@/lib/oauthClient";
+import { GitHubOAuthClient } from "@/lib/githubOauthClient";
+import { sessionStore } from "@/lib/sessionStore";
 import { getAvailableMcpServers } from "../agent/getAvailableMcpServers";
 
 export interface MCPServerInfo {

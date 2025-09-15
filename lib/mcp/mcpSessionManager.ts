@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { mcpClientFactory } from './mcpClientFactory';
-import { sessionStore } from '@/lib/session-store';
+import { sessionStore } from '@/lib/sessionStore';
 import { AssistantConfiguration } from '@/types/assistant';
 
 export interface SessionRefreshResult {

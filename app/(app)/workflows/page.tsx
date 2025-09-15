@@ -5,7 +5,7 @@ import Link from "next/link";
 import React, { useState, useEffect } from "react";
 import { Trash2, Plus } from "lucide-react";
 import { createClient } from "@/supabase/client";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/hooks/useToast";
 import { useRouter } from "next/navigation";
 import { Workflow } from "@/types/workflow";
 import {

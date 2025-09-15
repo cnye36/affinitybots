@@ -2,7 +2,7 @@ import { createClient } from "@/supabase/server";
 import { redirect } from "next/navigation";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/app-sidebar";
-import { OnboardingProvider } from "@/hooks/use-onboarding";
+import { OnboardingProvider } from "@/hooks/useOnboarding";
 import { TutorialOverlay } from "@/components/onboarding/TutorialOverlay";
 import { WelcomeModal } from "@/components/onboarding/WelcomeModal";
 

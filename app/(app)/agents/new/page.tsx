@@ -18,7 +18,8 @@ import {
   DropdownMenuContent,
 } from "@/components/ui/dropdown-menu";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
-import { useOnboarding, newAgentTutorialSteps } from "@/hooks/use-onboarding";
+import { useOnboarding, newAgentTutorialSteps } from "@/hooks/useOnboarding";
+import { createClient } from "@/supabase/client";
 
 export default function NewAgentPage() {
   const router = useRouter();
@@ -51,17 +52,35 @@ export default function NewAgentPage() {
     "text/xml",
   ];
 
-  // Auto-start the New Agent onboarding tour on first visit
+  // Auto-start the New Agent onboarding tour on first visit (per-user gated)
   useEffect(() => {
-    try {
-      const seen = localStorage.getItem('onboarding-new-agent-seen')
-      if (!seen && !isActive) {
-        localStorage.setItem('onboarding-new-agent-seen', 'true')
-        setTimeout(() => startTour(newAgentTutorialSteps), 300)
+    (async () => {
+      try {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        const seenLocal = localStorage.getItem('onboarding-new-agent-seen')
+        let completedDb = false
+        if (user) {
+          const { data } = await supabase
+            .from('profiles')
+            .select('preferences')
+            .eq('id', user.id)
+            .single()
+          completedDb = Boolean((data?.preferences as any)?.onboardingCompleted)
+        }
+        if (!completedDb && !seenLocal && !isActive) {
+          localStorage.setItem('onboarding-new-agent-seen', 'true')
+          setTimeout(() => startTour(newAgentTutorialSteps), 300)
+        }
+      } catch (e) {
+        // Local fallback
+        const seen = localStorage.getItem('onboarding-new-agent-seen')
+        if (!seen && !isActive) {
+          localStorage.setItem('onboarding-new-agent-seen', 'true')
+          setTimeout(() => startTour(newAgentTutorialSteps), 300)
+        }
       }
-    } catch (e) {
-      // no-op
-    }
+    })()
   }, [startTour, isActive])
 
   const handleCreateAgent = async (prompt: string) => {

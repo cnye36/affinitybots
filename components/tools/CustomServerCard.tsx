@@ -1,6 +1,4 @@
 "use client";
-
-import { Button } from "@/components/ui/button";
 import { BaseServerCard, BaseServerCardProps } from "./BaseServerCard";
 import Link from "next/link";
 
@@ -23,19 +21,7 @@ export function CustomServerCard({ server, isConfigured }: CustomServerCardProps
         description={server.description || "Custom MCP server"}
         isConfigured={isConfigured}
         onClick={undefined} // Remove onClick since we're using Link
-      >
-        <div className="mt-auto flex justify-center">
-          {isConfigured ? (
-            <Button variant="secondary" onClick={(e) => e.preventDefault()}>
-              View & Configure
-            </Button>
-          ) : (
-            <Button onClick={(e) => e.preventDefault()}>
-              Configure & Connect
-            </Button>
-          )}
-        </div>
-      </BaseServerCard>
+      />
     </Link>
   );
 }

@@ -9,6 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { Check, Copy } from "lucide-react";
 
 interface WorkflowExecutionsProps {
   workflowId: string;
@@ -121,6 +124,66 @@ export function WorkflowExecutions({ workflowId }: WorkflowExecutionsProps) {
     });
   }, [nodes, taskRunsByTaskId, activeNodeId]);
 
+  // Helpers for sidebar rendering
+  const extractMarkdownFrom = useMemo(() => {
+    const walk = (val: any): string | null => {
+      if (val == null) return null;
+      // Direct string
+      if (typeof val === "string" && val.trim().length > 0) return val;
+
+      // Arrays: search each element
+      if (Array.isArray(val)) {
+        for (const item of val) {
+          const found = walk(item);
+          if (found) return found;
+        }
+        return null;
+      }
+
+      // Objects: check common shapes, then recursively scan all fields
+      if (typeof val === "object") {
+        // Common content locations
+        if (typeof (val as any).content === "string" && (val as any).content.trim().length > 0) {
+          return (val as any).content as string;
+        }
+        if (Array.isArray((val as any).content)) {
+          const joined = ((val as any).content as any[])
+            .map((p) =>
+              typeof p === "string"
+                ? p
+                : typeof (p as any)?.text === "string"
+                ? (p as any).text
+                : typeof (p as any)?.content === "string"
+                ? (p as any).content
+                : ""
+            )
+            .filter(Boolean)
+            .join("\n\n");
+          if (joined.trim().length > 0) return joined;
+        }
+
+        // Specific shape observed: result.agent.messages[0].content
+        const maybeAgent = (val as any).agent;
+        if (maybeAgent && Array.isArray(maybeAgent.messages)) {
+          const foundInMessages = walk(maybeAgent.messages);
+          if (foundInMessages) return foundInMessages;
+        }
+
+        // Try common alternative keys
+        const alt = walk((val as any).output) || walk((val as any).result);
+        if (alt) return alt;
+
+        // Finally, deep-scan all properties
+        for (const key of Object.keys(val as Record<string, unknown>)) {
+          const found = walk((val as any)[key]);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+    return walk;
+  }, []);
+
   return (
     <div className="flex h-full">
       {/* Sidebar */}
@@ -169,6 +232,7 @@ export function WorkflowExecutions({ workflowId }: WorkflowExecutionsProps) {
           initialWorkflowId={workflowId}
           activeNodeId={activeNodeId}
           setActiveNodeId={setActiveNodeId}
+          autoFit
         />
       </div>
 
@@ -181,6 +245,11 @@ export function WorkflowExecutions({ workflowId }: WorkflowExecutionsProps) {
           const node = nodes.find((n) => n.id === activeNodeId);
           if (!node || node.type !== "task") return <div className="text-sm text-muted-foreground">Select a node to view details.</div>;
           const tr = taskRunsByTaskId[node.data.workflow_task_id];
+          const agentName = (node.data as any)?.assignedAssistant?.name || (node.data as any)?.config?.assigned_assistant?.name || "Agent";
+          const toolsUsed: string[] = (tr?.metadata?.toolsUsed || tr?.metadata?.tools || []) as string[];
+          const markdownText = extractMarkdownFrom(tr?.result);
+          const resultText = typeof tr?.result === "string" ? (tr?.result as string) : JSON.stringify(tr?.result ?? null, null, 2);
+          const [copied, setCopied] = [false, undefined] as any; // placeholder for inline TS satisfaction; we will handle copy via inline handler
           return (
             <Card>
               <CardHeader>
@@ -188,6 +257,15 @@ export function WorkflowExecutions({ workflowId }: WorkflowExecutionsProps) {
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="text-xs text-muted-foreground">Type: {node.data.task_type}</div>
+                <div className="text-xs">Agent: {agentName}</div>
+                {toolsUsed?.length > 0 && (
+                  <div className="text-xs flex flex-wrap gap-1 items-center">
+                    <span className="text-muted-foreground">Tools:</span>
+                    {toolsUsed.map((t) => (
+                      <span key={t} className="px-1.5 py-0.5 rounded bg-muted text-[10px] uppercase tracking-wide">{t}</span>
+                    ))}
+                  </div>
+                )}
                 <div className="text-xs">Status: <span className="uppercase">{tr?.status || "unknown"}</span></div>
                 {tr?.started_at && <div className="text-xs">Started: {new Date(tr.started_at).toLocaleString()}</div>}
                 {tr?.completed_at && <div className="text-xs">Completed: {new Date(tr.completed_at).toLocaleString()}</div>}
@@ -196,15 +274,60 @@ export function WorkflowExecutions({ workflowId }: WorkflowExecutionsProps) {
                 )}
                 <Separator />
                 <Tabs defaultValue="result">
-                  <TabsList className="grid grid-cols-2 w-full">
+                  <TabsList className="grid grid-cols-3 w-full">
                     <TabsTrigger value="result">Result</TabsTrigger>
+                    <TabsTrigger value="markdown">Markdown</TabsTrigger>
                     <TabsTrigger value="raw">Raw JSON</TabsTrigger>
                   </TabsList>
                   <TabsContent value="result">
-                    <pre className="text-xs whitespace-pre-wrap break-words bg-muted p-2 rounded-md max-h-[320px] overflow-auto">{typeof tr?.result === "string" ? tr.result : JSON.stringify(tr?.result ?? null, null, 2)}</pre>
+                    <div className="relative">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="absolute right-1 top-1 h-7 px-2"
+                        onClick={() => navigator.clipboard.writeText(resultText)}
+                        title="Copy"
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </Button>
+                      <pre className="text-xs whitespace-pre-wrap break-words bg-muted p-2 rounded-md max-h-[320px] overflow-auto">{resultText}</pre>
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="markdown">
+                    {markdownText ? (
+                      <div className="relative border rounded-md p-2 max-h-[320px] overflow-auto">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="absolute right-1 top-1 h-7 px-2"
+                          onClick={() => navigator.clipboard.writeText(markdownText)}
+                          title="Copy"
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                        </Button>
+                        <div className="prose max-w-none dark:prose-invert">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {markdownText}
+                          </ReactMarkdown>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-xs text-muted-foreground">No markdown text available.</div>
+                    )}
                   </TabsContent>
                   <TabsContent value="raw">
-                    <pre className="text-xs whitespace-pre bg-muted p-2 rounded-md max-h-[320px] overflow-auto">{JSON.stringify(tr ?? {}, null, 2)}</pre>
+                    <div className="relative">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="absolute right-1 top-1 h-7 px-2"
+                        onClick={() => navigator.clipboard.writeText(JSON.stringify(tr ?? {}, null, 2))}
+                        title="Copy"
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </Button>
+                      <pre className="text-xs whitespace-pre bg-muted p-2 rounded-md max-h-[320px] overflow-auto">{JSON.stringify(tr ?? {}, null, 2)}</pre>
+                    </div>
                   </TabsContent>
                 </Tabs>
               </CardContent>

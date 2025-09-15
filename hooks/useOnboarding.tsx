@@ -1,6 +1,7 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react"
+import { createClient } from "@/supabase/client"
 
 export interface TutorialStep {
   id: string
@@ -70,6 +71,28 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
     setCurrentStep(0)
     setSteps([])
     localStorage.setItem('onboarding-completed', 'true')
+
+    // Persist onboarding completion per-user in Supabase preferences
+    ;(async () => {
+      try {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('preferences')
+          .eq('id', user.id)
+          .single()
+        const currentPrefs = (profile?.preferences as any) || {}
+        const nextPrefs = { ...currentPrefs, onboardingCompleted: true }
+        await supabase
+          .from('profiles')
+          .update({ preferences: nextPrefs })
+          .eq('id', user.id)
+      } catch (e) {
+        // no-op
+      }
+    })()
   }, [])
 
   const getCurrentStep = useCallback((): TutorialStep | null => {
@@ -298,6 +321,73 @@ export const newAgentTutorialSteps: TutorialStep[] = [
     target: "[data-tutorial='agent-knowledge']",
     title: "Attach Knowledge (Optional)",
     description: "Upload files or data to give your agent context it can reference.",
+    placement: "left",
+    showNext: false,
+    showPrev: true,
+    showSkip: false
+  }
+]
+
+export const toolsTutorialSteps: TutorialStep[] = [
+  {
+    id: "tools-title",
+    target: "[data-tutorial='tools-title']",
+    title: "Explore Tools",
+    description: "This page lists MCP servers you can connect. We'll cover search, filters, and badges.",
+    placement: "bottom",
+    showNext: true,
+    showPrev: false,
+    showSkip: true
+  },
+  {
+    id: "tools-search",
+    target: "[data-tutorial='tools-search']",
+    title: "Search Servers",
+    description: "Use search to find servers by name or description.",
+    placement: "bottom",
+    align: "center",
+    sideOffset: 8,
+    showNext: true,
+    showPrev: true,
+    showSkip: true
+  },
+  {
+    id: "tools-filter",
+    target: "[data-tutorial='tools-filter']",
+    title: "Filter by Source",
+    description: "Filter between Official servers (published by the app) and Smithery servers (from Smithery).",
+    placement: "top",
+    align: "center",
+    sideOffset: 8,
+    showNext: true,
+    showPrev: true,
+    showSkip: true
+  },
+  {
+    id: "tools-badges",
+    target: "[data-tutorial='tools-grid']",
+    title: "Server Cards",
+    description: "Each card shows the server name, description, and a badge indicating its source.",
+    placement: "top",
+    showNext: true,
+    showPrev: true,
+    showSkip: true
+  },
+  {
+    id: "badge-official",
+    target: "[data-tutorial='badge-official']",
+    title: "Official Servers",
+    description: "Official means it's directly from the app it's connecting to.",
+    placement: "left",
+    showNext: true,
+    showPrev: true,
+    showSkip: true
+  },
+  {
+    id: "badge-smithery",
+    target: "[data-tutorial='badge-smithery']",
+    title: "Smithery Servers",
+    description: "Smithery servers are provided by Smithery. You'll need a Smithery account to use them.",
     placement: "left",
     showNext: false,
     showPrev: true,

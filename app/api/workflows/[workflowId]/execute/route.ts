@@ -169,12 +169,6 @@ export async function POST(
 
             // Mark run row running
             const taskRun = taskRuns.find((tr) => tr?.workflow_task_id === task.workflow_task_id);
-            if (taskRun?.run_id) {
-              await supabase
-                .from("workflow_task_runs")
-                .update({ status: "running" })
-                .eq("run_id", taskRun.run_id);
-            }
 
             // Determine thread for this node
             const mode: "workflow" | "new" | "from_node" = (task.config as any)?.context?.thread?.mode || "workflow";
@@ -204,6 +198,16 @@ export async function POST(
             }
 
             const assistantId = task.assistant_id || task.config?.assigned_assistant?.id;
+
+            if (taskRun?.run_id) {
+              // Attach assistant metadata when the run starts
+              try {
+                await supabase
+                  .from("workflow_task_runs")
+                  .update({ status: "running", metadata: { assistant_id: assistantId } })
+                  .eq("run_id", taskRun.run_id);
+              } catch {}
+            }
             const runStream = await client.runs.stream(threadIdForNode, assistantId as string, {
               input: { messages },
               streamMode: "updates",
@@ -259,7 +263,12 @@ export async function POST(
             if (taskRun?.run_id) {
               await supabase
                 .from("workflow_task_runs")
-                .update({ status: "completed", completed_at: new Date().toISOString(), result: previousOutput })
+                .update({
+                  status: "completed",
+                  completed_at: new Date().toISOString(),
+                  result: previousOutput,
+                  metadata: { assistant_id: assistantId, usage: { inputTokens, outputTokens } },
+                })
                 .eq("run_id", taskRun.run_id);
             }
 

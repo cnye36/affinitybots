@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
-import { useOnboarding } from "@/hooks/use-onboarding"
+import { useOnboarding } from "@/hooks/useOnboarding"
 import { HintPopover, HintPopoverContent, HintPopoverAnchor } from "@/components/ui/hint-popover"
 import { createPortal } from "react-dom"
 

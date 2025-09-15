@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Task } from "@/types/workflow";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/hooks/useToast";
 import { TaskModalHeader } from "./TaskModalHeader";
 import { PreviousNodeOutputPanel } from "./PreviousNodeOutputPanel";
 import { TaskConfigurationPanel } from "./TaskConfigurationPanel";

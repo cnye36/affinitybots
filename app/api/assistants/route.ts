@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
-import { generateAgentConfiguration } from "@/lib/agent/agent-generation";
+import { generateAgentConfiguration } from "@/lib/agent/agentGeneration";
 import { Client } from "@langchain/langgraph-sdk";
 
 // Helper function to create a timeout promise

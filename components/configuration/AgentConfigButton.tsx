@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { AgentConfigModal } from "./AgentConfigModal";
 import { Settings } from "lucide-react";
 import { Assistant } from "@/types/assistant";
-import { useOnboarding } from "@/hooks/use-onboarding";
+import { useOnboarding } from "@/hooks/useOnboarding";
 
 interface AgentConfigButtonProps {
   assistant: Assistant;

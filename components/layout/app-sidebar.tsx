@@ -11,6 +11,8 @@ import {
   SidebarFooter,
   SidebarHeader,
   SidebarRail,
+  SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import Image from "next/image";
 import { ResetOnboarding } from "@/components/onboarding/ResetOnboarding";
@@ -86,27 +88,38 @@ export function AppSidebar({
   user,
   ...props
 }: React.ComponentProps<typeof Sidebar> & { user?: User }) {
+  const { state } = useSidebar();
+  const isCollapsed = state === "collapsed";
+  const logoSize = isCollapsed ? 36 : 64;
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader className="border-b">
-        <div className="flex h-[60px] items-center px-6">
-          <Image
-            src="/images/AffinityBots-Icon-Dark-250px.png"
-            alt="AffinityBots Logo"
-            width={64}
-            height={64}
-            className="mr-2 group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:w-8 group-data-[collapsible=icon]:h-8"
-          />
-          <span className="font-semibold group-data-[collapsible=icon]:hidden">
-            AffinityBots
-          </span>
+        <div className="px-3 py-2">
+          {/* Top row: logo + brand + trigger (expanded only) */}
+          <div className="flex h-[44px] items-center">
+            <Image
+              src="/images/AffinityBots-Icon-Dark-250px.png"
+              alt="AffinityBots Logo"
+              width={logoSize}
+              height={logoSize}
+              className="mr-2 object-contain group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:mr-0"
+            />
+            <span className="font-semibold group-data-[collapsible=icon]:hidden">
+              AffinityBots
+            </span>
+            <SidebarTrigger className="ml-auto group-data-[collapsible=icon]:hidden" />
+          </div>
+          {/* Collapsed-only trigger centered below the logo */}
+          <div className="hidden group-data-[collapsible=icon]:flex justify-center mt-1">
+            <SidebarTrigger />
+          </div>
         </div>
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
       </SidebarContent>
       <SidebarFooter>
-        <div className="px-2 py-2 space-y-2">
+        <div className="px-2 py-2 space-y-2 group-data-[collapsible=icon]:hidden">
           <ResetOnboarding />
         </div>
         <NavUser user={user} />

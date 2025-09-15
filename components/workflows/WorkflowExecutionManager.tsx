@@ -1,5 +1,5 @@
 import { WorkflowNode } from "@/types/workflow";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/hooks/useToast";
 
 interface ExecuteWorkflowParams {
   workflowId: string;
