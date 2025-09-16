@@ -417,6 +417,7 @@ export class MCPClientManager {
     sessionId: string;
     requiresAuth?: boolean;
     authUrl?: string;
+    providerState?: any;
   }> {
     const sessionId = sessionStore.generateSessionId();
     let authUrl: string | null = null;
@@ -441,7 +442,14 @@ export class MCPClientManager {
         serverUrl,
         callbackUrl,
         (redirectUrl: string) => {
-          authUrl = redirectUrl;
+          // Ensure our sessionId is propagated via the OAuth state param
+          try {
+            const url = new URL(redirectUrl);
+            url.searchParams.set('state', sessionId);
+            authUrl = url.toString();
+          } catch {
+            authUrl = redirectUrl;
+          }
         }
       );
     }
@@ -456,11 +464,17 @@ export class MCPClientManager {
         // Store client for later use
         console.log(`Storing OAuth client in session store for sessionId: ${sessionId}`);
         sessionStore.setClient(sessionId, client);
+        // Capture provider state for rehydration on callback
+        let providerState: any = undefined;
+        if (client instanceof MCPOAuthClient) {
+          providerState = client.getProviderState();
+        }
         return {
           client,
           sessionId,
           requiresAuth: true,
-          authUrl
+          authUrl,
+          providerState
         };
       } else {
         throw error;

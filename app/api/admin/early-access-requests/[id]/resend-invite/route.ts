@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
 import { sendInviteEmail } from "@/lib/sendInviteEmail";
+import crypto from "crypto";
 
 export async function POST(request: Request, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
@@ -17,7 +18,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
   // Fetch the invite record
   const { data: invite, error: fetchError } = await supabase
     .from("early_access_invites")
-    .select("id, email, name, invite_code, status, expires_at")
+    .select("id, email, name, invite_code, status")
     .eq("id", id)
     .single();
 
@@ -32,14 +33,37 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     );
   }
 
+  // Generate a new invite code and update the record
+  const newInviteCode = crypto.randomBytes(8).toString("hex");
+  const invitedAt = new Date().toISOString();
+
+  const { data: updated, error: updateError } = await supabase
+    .from("early_access_invites")
+    .update({
+      invite_code: newInviteCode,
+      invited_at: invitedAt,
+      expires_at: null,
+      status: "invited",
+    })
+    .eq("id", id)
+    .select("email, name, invite_code")
+    .single();
+
+  if (updateError) {
+    console.error("Failed to update invite with new code:", updateError);
+    return NextResponse.json(
+      { error: "Failed to regenerate invite code." },
+      { status: 500 }
+    );
+  }
+
   try {
     await sendInviteEmail({
-      to: invite.email,
-      name: invite.name,
-      inviteCode: invite.invite_code,
-      expiresAt: invite.expires_at,
+      to: updated.email,
+      name: updated.name,
+      inviteCode: updated.invite_code,
     });
-    return NextResponse.json({ message: "Invite email resent successfully." });
+    return NextResponse.json({ message: "Invite email resent with new code." });
   } catch (error) {
     console.error("Failed to resend invite email:", error);
     return NextResponse.json(

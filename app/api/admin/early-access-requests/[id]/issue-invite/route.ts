@@ -57,10 +57,8 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     // 2. Generate a unique invite code
     const inviteCode = crypto.randomBytes(8).toString("hex"); // 16-character hex string
 
-    // 3. Calculate expiry date (e.g., 7 days from now)
+    // 3. Set invited timestamp; no expiration
     const invitedAt = new Date();
-    const expiresAt = new Date(invitedAt);
-    expiresAt.setDate(invitedAt.getDate() + 7);
 
     // 4. Update the record
     const { data: updatedRecord, error: updateError } = await supabase
@@ -69,7 +67,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
         status: "invited",
         invite_code: inviteCode,
         invited_at: invitedAt.toISOString(),
-        expires_at: expiresAt.toISOString(),
+        expires_at: null,
       })
       .eq("id", id)
       .select("id, email, name, invite_code, status, expires_at") // Add name for email
@@ -89,7 +87,6 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
         to: updatedRecord.email,
         name: updatedRecord.name,
         inviteCode: updatedRecord.invite_code,
-        expiresAt: updatedRecord.expires_at,
       });
     } catch (emailError) {
       console.error("Failed to send invite email:", emailError);

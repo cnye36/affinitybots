@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,6 +38,10 @@ interface ServerDetail {
   monthlyToolCalls?: number;
   successRate?: number;
   deployedFrom?: string;
+  // Custom fields for UI behavior
+  source?: "official" | "smithery";
+  authType?: "oauth" | "pat" | "api_key";
+  url?: string; // HTTP MCP endpoint, when known (e.g., Official)
 }
 
 export default function ServerDetailPage() {
@@ -48,6 +52,10 @@ export default function ServerDetailPage() {
   const [server, setServer] = useState<ServerDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [connecting, setConnecting] = useState<boolean>(false);
+  const [disconnecting, setDisconnecting] = useState<boolean>(false);
+  const isDisabled = server?.source === 'official' && (server as any)?.disabled;
 
   useEffect(() => {
     async function fetchServerDetail() {
@@ -70,6 +78,9 @@ export default function ServerDetailPage() {
             logo: official.logoUrl,
             homepage: official.docsUrl,
             isLocal: false,
+            source: "official",
+            authType: official.authType,
+            url: official.url,
           });
           return;
         }
@@ -81,7 +92,7 @@ export default function ServerDetailPage() {
         }
         
         const data = await response.json();
-        setServer(data.server);
+        setServer({ ...data.server, source: "smithery" });
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
@@ -91,6 +102,68 @@ export default function ServerDetailPage() {
 
     fetchServerDetail();
   }, [qualifiedName]);
+
+  // Load connection state for this server
+  useEffect(() => {
+    async function loadConnectionState() {
+      try {
+        const res = await fetch('/api/user-mcp-servers');
+        const data = await res.json();
+        const list = data.servers || [];
+        const exists = list.some((s: any) => s.qualified_name === decodeURIComponent(qualifiedName));
+        setIsConnected(exists);
+      } catch {
+        setIsConnected(false);
+      }
+    }
+    if (qualifiedName) {
+      loadConnectionState();
+    }
+  }, [qualifiedName]);
+
+  const callbackUrl = typeof window !== 'undefined' ? `${window.location.origin}/api/mcp/auth/callback` : '';
+
+  const handleConnect = useCallback(async () => {
+    if (!server || server.source !== 'official' || !server.url) return;
+    try {
+      setConnecting(true);
+      const res = await fetch('/api/mcp/auth/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ serverUrl: server.url, callbackUrl, serverName: server.qualifiedName })
+      });
+      const data = await res.json();
+      if (data?.requiresAuth && data.authUrl) {
+        window.location.href = data.authUrl;
+        return;
+      }
+      if (!res.ok) throw new Error(data.error || 'Failed to connect');
+      setIsConnected(true);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setConnecting(false);
+    }
+  }, [server, callbackUrl]);
+
+  const handleDisconnect = useCallback(async () => {
+    if (!server) return;
+    try {
+      setDisconnecting(true);
+      const res = await fetch('/api/mcp/auth/disconnect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ serverName: server.qualifiedName })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to disconnect');
+      setIsConnected(false);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setDisconnecting(false);
+    }
+  }, [server]);
 
   if (loading) {
     return (
@@ -206,8 +279,8 @@ export default function ServerDetailPage() {
               )}
             </div>
 
-            {/* Links */}
-            <div className="flex gap-3">
+            {/* Links and Actions */}
+            <div className="flex gap-3 flex-wrap">
               {server.homepage && (
                 <Button variant="outline" size="sm" asChild>
                   <a href={server.homepage} target="_blank" rel="noopener noreferrer">
@@ -224,7 +297,18 @@ export default function ServerDetailPage() {
                   </a>
                 </Button>
               )}
-              
+              {/* Connect/Disconnect for Official servers */}
+              {server.source === 'official' && (
+                isConnected ? (
+                  <Button variant="destructive" size="sm" onClick={handleDisconnect} disabled={disconnecting}>
+                    {disconnecting ? 'Disconnecting...' : 'Disconnect'}
+                  </Button>
+                ) : (
+                  <Button size="sm" onClick={handleConnect} disabled={connecting || isDisabled}>
+                    {isDisabled ? 'Coming soon' : (connecting ? 'Connecting...' : 'Connect')}
+                  </Button>
+                )
+              )}
             </div>
           </div>
         </div>
@@ -330,6 +414,23 @@ export default function ServerDetailPage() {
           </Card>
         </div>
       )}
+      {/* Fallback messaging when no configuration/metadata available */}
+      {(!server.connections || server.connections.length === 0) && (!server.tools || server.tools.length === 0) && (
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Settings className="w-5 h-5" />
+              Metadata Unavailable
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Detailed configuration data (tools, resources, prompts) is not available for this server from the registry.
+              {server.source === 'official' ? ' You can still connect your account to start using it.' : ' This information may appear after you add and configure the server.'}
+            </p>
+          </CardContent>
+        </Card>
+      )}
       
       {/* Tools Section */}
       {server.tools && server.tools.length > 0 && (
@@ -372,12 +473,27 @@ export default function ServerDetailPage() {
 
       {/* Action Buttons */}
       <div className="flex gap-4 justify-center">
-        <Button size="lg">
-          Add to Configuration
-        </Button>
-        <Button variant="outline" size="lg">
-          View on Smithery
-        </Button>
+        {server.source === 'official' ? (
+          isConnected ? (
+            <Button variant="destructive" size="lg" onClick={handleDisconnect} disabled={disconnecting}>
+              {disconnecting ? 'Disconnecting...' : 'Disconnect'}
+            </Button>
+          ) : (
+            <Button size="lg" onClick={handleConnect} disabled={connecting}>
+              {connecting ? 'Connecting...' : 'Connect'}
+            </Button>
+          )
+        ) : (
+          <>
+            <Button size="lg">
+              Add to Configuration
+            </Button>
+            {/* Only show Smithery link for Smithery-sourced servers */}
+            <Button variant="outline" size="lg" asChild>
+              <a href={server.homepage || '#'} target="_blank" rel="noopener noreferrer">View on Smithery</a>
+            </Button>
+          </>
+        )}
       </div>
     </div>
   );

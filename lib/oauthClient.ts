@@ -77,6 +77,21 @@ class InMemoryOAuthClientProvider implements OAuthClientProvider {
     }
     return this._codeVerifier;
   }
+
+  // Export minimal state necessary to resume OAuth after redirect
+  exportState(): { clientInformation?: OAuthClientInformationFull; codeVerifier?: string } {
+    return { clientInformation: this._clientInformation, codeVerifier: this._codeVerifier };
+  }
+
+  // Import previously saved state (rehydration)
+  importState(state: { clientInformation?: OAuthClientInformationFull; codeVerifier?: string }): void {
+    if (state.clientInformation) {
+      this._clientInformation = state.clientInformation;
+    }
+    if (state.codeVerifier) {
+      this._codeVerifier = state.codeVerifier;
+    }
+  }
 }
 
 export class MCPOAuthClient {
@@ -88,6 +103,40 @@ export class MCPOAuthClient {
     private callbackUrl: string,
     private onRedirect: (url: string) => void
   ) {}
+
+  /**
+   * Returns serializable provider state (client_id and PKCE verifier) for rehydration.
+   */
+  getProviderState(): { clientInformation?: OAuthClientInformationFull; codeVerifier?: string } | null {
+    if (!this.oauthProvider) return null;
+    return this.oauthProvider.exportState();
+  }
+
+  /**
+   * Prepare client/provider using previously saved state without initiating a network connect.
+   */
+  prepareWithState(state: { clientInformation?: OAuthClientInformationFull; codeVerifier?: string }): void {
+    const clientMetadata: OAuthClientMetadata = {
+      client_name: "Next.js MCP OAuth Client",
+      redirect_uris: [this.callbackUrl],
+      grant_types: ["authorization_code", "refresh_token"],
+      response_types: ["code"],
+      token_endpoint_auth_method: "client_secret_post",
+      scope: "mcp:tools",
+    };
+
+    this.oauthProvider = new InMemoryOAuthClientProvider(
+      this.callbackUrl,
+      clientMetadata,
+      () => {}
+    );
+    this.oauthProvider.importState(state);
+
+    this.client = new Client(
+      { name: "nextjs-oauth-client", version: "1.0.0" },
+      { capabilities: {} }
+    );
+  }
 
   async connect(): Promise<void> {
     const clientMetadata: OAuthClientMetadata = {

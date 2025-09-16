@@ -7,6 +7,7 @@ export interface OfficialMcpServerMeta {
   docsUrl?: string;
   authType: 'oauth' | 'pat' | 'api_key';
   requiresSetup?: boolean;
+  disabled?: boolean; // if true, hide Connect and show "coming soon"
 }
 
 // Curated list of official MCP servers maintained by source vendors.
@@ -32,10 +33,12 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     description:
       "Official Notion MCP server. Connect to access your Notion workspaces, pages, databases, and more using your Notion account via OAuth.",
     logoUrl: "https://www.notion.so/images/favicon.ico",
-    url: "https://mcp.notion.com/mcp/",
+    // Confirmed endpoint for Notion MCP
+    url: "https://mcp.notion.com/mcp",
     docsUrl: "https://developers.notion.com/docs",
     authType: "oauth",
     requiresSetup: true,
+    disabled: false,
   },
 ];
 

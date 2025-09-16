@@ -37,7 +37,7 @@ export async function signUp(formData: FormData) {
   // 1. Validate Invite Code
   const { data: invite, error: inviteError } = await supabase
     .from("early_access_invites")
-    .select("id, email, status, expires_at")
+    .select("id, email, status")
     .eq("invite_code", inviteCode)
     .single(); // Expecting a single, unique invite code
 
@@ -59,9 +59,7 @@ export async function signUp(formData: FormData) {
     };
   }
 
-  if (invite.expires_at && new Date(invite.expires_at) < new Date()) {
-    return { error: "This invite code has expired." };
-  }
+  // No expiration enforcement
 
   // 2. Sign up the user with Supabase Auth
   const { data: signUpData, error: signUpAuthError } =

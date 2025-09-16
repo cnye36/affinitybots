@@ -36,7 +36,7 @@ export async function GET(req: Request) {
   // Validate the invite code
   const { data: invite, error: inviteError } = await supabase
     .from("early_access_invites")
-    .select("id, email, status, expires_at")
+    .select("id, email, status")
     .eq("invite_code", inviteCode)
     .single();
 
@@ -74,15 +74,7 @@ export async function GET(req: Request) {
     );
   }
 
-  if (invite.expires_at && new Date(invite.expires_at) < new Date()) {
-    await supabase.auth.signOut();
-    return NextResponse.redirect(
-      new URL(
-        `/signup?error=${encodeURIComponent("This invite code has expired.")}`,
-        requestUrl.origin
-      )
-    );
-  }
+  // No expiration enforcement
 
   // Update the invite status
   await supabase

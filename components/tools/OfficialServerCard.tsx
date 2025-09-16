@@ -59,22 +59,7 @@ export function OfficialServerCard({ server, onConnected, isConfigured = false }
       {error && (
         <div className="mb-3 text-xs text-red-500 text-center">{error}</div>
       )}
-      <div className="flex items-center justify-end gap-2">
-        <Button
-          onClick={handleDisconnect}
-          disabled={disconnecting}
-          variant="outline"
-        >
-          {disconnecting ? "Disconnecting…" : "Disconnect"}
-        </Button>
-        {server.docsUrl && (
-          <Button variant="outline" asChild>
-            <a href={server.docsUrl} target="_blank" rel="noopener noreferrer">
-              <ExternalLink className="h-4 w-4" />
-            </a>
-          </Button>
-        )}
-      </div>
+      
     </BaseServerCard>
   );
 }

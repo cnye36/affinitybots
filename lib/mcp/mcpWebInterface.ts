@@ -1,4 +1,7 @@
 import { mcpClientFactory } from './mcpClientFactory';
+import { sessionStore } from '@/lib/sessionStore';
+import { MCPOAuthClient } from '@/lib/oauthClient';
+import { GitHubOAuthClient } from '@/lib/githubOauthClient';
 import { mcpSessionManager } from './mcpSessionManager';
 import { mcpDiagnostics } from './mcpDiagnostics';
 import { AssistantConfiguration } from '@/types/assistant';
@@ -91,7 +94,7 @@ export class MCPWebInterface {
         
         // Store the server connection attempt in database for later completion
         if (serverName) {
-          await this.storeOAuthAttempt(userId, serverName, result.sessionId, serverUrl, callbackUrl);
+          await this.storeOAuthAttempt(userId, serverName, result.sessionId, serverUrl, callbackUrl, (result as any).providerState);
         }
 
         return {
@@ -129,6 +132,39 @@ export class MCPWebInterface {
   async finishAuth(sessionId: string, authCode: string, userId: string): Promise<MCPServerConnectResponse> {
     try {
       console.log(`MCPWebInterface: Finishing OAuth for session ${sessionId}`);
+      // Rehydrate OAuth client if serverless/dev hot-reload dropped in-memory session
+      if (!sessionStore.getClient(sessionId)) {
+        try {
+          const { data: row, error } = await this.getSupabase()
+            .from('user_mcp_servers')
+            .select('url, config')
+            .eq('user_id', userId)
+            .eq('session_id', sessionId)
+            .single();
+          if (!error && row?.url) {
+            const callbackUrl = row.config?.callbackUrl || `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/mcp/auth/callback`;
+            const isGitHub = row.url.includes('githubcopilot.com') || row.url.includes('github.com');
+            let client: GitHubOAuthClient | MCPOAuthClient;
+            if (isGitHub) {
+              client = new GitHubOAuthClient(row.url, callbackUrl, () => {});
+            } else {
+              const mcpClient = new MCPOAuthClient(row.url, callbackUrl, () => {});
+              const state = row.config?.providerState;
+              if (state) {
+                try { mcpClient.prepareWithState(state); } catch {}
+              }
+              client = mcpClient;
+            }
+            // Store reconstructed client so finishOAuth can succeed
+            sessionStore.setClient(sessionId, client as any);
+            // Avoid calling connect() here to prevent new client_id registration. We'll finishAuth directly.
+          } else {
+            console.warn('No DB record found to rehydrate OAuth client for session', sessionId, error);
+          }
+        } catch (rehydrateError) {
+          console.warn('Failed to rehydrate OAuth client from DB', rehydrateError);
+        }
+      }
 
       await mcpClientFactory.completeOAuth(sessionId, authCode);
 
@@ -315,14 +351,14 @@ export class MCPWebInterface {
 
   // Private helper methods
 
-  private async storeOAuthAttempt(userId: string, serverName: string, sessionId: string, serverUrl: string, callbackUrl: string): Promise<void> {
+  private async storeOAuthAttempt(userId: string, serverName: string, sessionId: string, serverUrl: string, callbackUrl: string, providerState?: any): Promise<void> {
     const insertData = {
       user_id: userId,
       qualified_name: serverName,
       session_id: sessionId,
       url: serverUrl,
       // Persist callbackUrl so we can reconstruct the OAuth client on callback
-      config: { callbackUrl }, // satisfies not-null constraint
+      config: { callbackUrl, providerState }, // satisfies not-null constraint
       is_enabled: false, // Will be enabled after successful auth
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
