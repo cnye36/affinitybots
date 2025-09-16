@@ -2,7 +2,7 @@ import React, { memo } from "react";
 import { Handle, Position } from "reactflow";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Settings, Play, PlusCircle } from "lucide-react";
+import { Settings, Play, PlusCircle, AlarmClock, Globe2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -14,13 +14,14 @@ import {
 export interface TriggerNodeData {
   name: string;
   description?: string;
-  trigger_type: "manual" | "webhook" | "form" | "integration";
+  trigger_type: "manual" | "webhook" | "form" | "integration" | "schedule";
   trigger_id: string;
   workflow_id: string;
   config: Record<string, unknown>;
   status?: "idle" | "running" | "completed" | "error";
   onConfigureTrigger?: (triggerId: string) => void;
   onOpenTaskSidebar?: () => void;
+  onAddTask?: () => void;
   hasConnectedTask?: boolean;
   isActive?: boolean;
 }
@@ -42,10 +43,38 @@ export const TriggerNode = memo(({ data }: { data: TriggerNodeData }) => {
 
   const handleAddTask = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (data.onOpenTaskSidebar) {
-      data.onOpenTaskSidebar();
-    }
+    // Prefer onAddTask to set active node before opening the sidebar
+    if (data.onAddTask) data.onAddTask();
+    if (data.onOpenTaskSidebar) data.onOpenTaskSidebar();
   };
+
+  const triggerLabel = (() => {
+    switch (data.trigger_type) {
+      case "manual":
+        return "Manual Trigger";
+      case "webhook":
+        return "Webhook";
+      case "schedule":
+        return "Scheduled";
+      case "integration":
+        return "Integration";
+      case "form":
+        return "Form";
+      default:
+        return "Trigger";
+    }
+  })();
+
+  const triggerIcon = (() => {
+    switch (data.trigger_type) {
+      case "schedule":
+        return <AlarmClock className="h-4 w-4 text-primary" />;
+      case "webhook":
+        return <Globe2 className="h-4 w-4 text-primary" />;
+      default:
+        return <Play className="h-4 w-4 text-primary" />;
+    }
+  })();
 
   return (
     <div className="relative">
@@ -57,9 +86,7 @@ export const TriggerNode = memo(({ data }: { data: TriggerNodeData }) => {
         <CardHeader className="p-3 bg-primary/5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="p-1 rounded-md bg-primary/10">
-                <Play className="h-4 w-4 text-primary" />
-              </div>
+              <div className="p-1 rounded-md bg-primary/10">{triggerIcon}</div>
               <CardTitle className="text-sm font-medium">Start Here</CardTitle>
             </div>
             <div className="flex items-center gap-2">
@@ -100,7 +127,7 @@ export const TriggerNode = memo(({ data }: { data: TriggerNodeData }) => {
               variant="outline"
               className="text-xs bg-primary/5 hover:bg-primary/10"
             >
-              Manual Trigger
+              {triggerLabel}
             </Badge>
             {data.status && (
               <Badge
@@ -112,7 +139,24 @@ export const TriggerNode = memo(({ data }: { data: TriggerNodeData }) => {
             )}
           </div>
           <p className="text-xs text-muted-foreground mt-2">
-            This workflow will start when manually triggered.
+            {data.trigger_type === "manual" &&
+              "This workflow will start when manually triggered."}
+            {data.trigger_type === "webhook" &&
+              "This workflow starts when an authenticated webhook is received."}
+            {data.trigger_type === "schedule" && (
+              <span>
+                This workflow starts on schedule
+                {typeof (data.config as any)?.cron === "string"
+                  ? ` (${String((data.config as any).cron)})`
+                  : 
+                  ""}
+                .
+              </span>
+            )}
+            {data.trigger_type === "integration" &&
+              "This workflow starts when a configured integration event occurs."}
+            {data.trigger_type === "form" &&
+              "This workflow starts when your form is submitted."}
           </p>
         </CardContent>
       </Card>

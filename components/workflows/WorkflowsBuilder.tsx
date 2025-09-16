@@ -13,12 +13,14 @@ import {
 import { createClient } from "@/supabase/client";
 import { EmptyWorkflowState } from "./EmptyWorkflowState";
 import { AgentSelectModal } from "./AgentSelectModal";
+import { TriggerSelectModal } from "./TriggerSelectModal";
 import { WorkflowCanvas } from "./WorkflowCanvas";
 import { WorkflowHeader } from "./WorkflowHeader";
 import { executeWorkflow } from "./WorkflowExecutionManager";
 import { toast } from "@/hooks/useToast";
 import { TaskSidebar } from "./tasks/TaskSidebar";
 import { WorkflowExecutions } from "./WorkflowExecutions";
+import { TriggerConfigModal } from "./TriggerConfigModal";
 
 import { Assistant } from "@/types/assistant";
 
@@ -97,6 +99,8 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
   } | null>(null);
   const [isAgentSelectionLoading, setIsAgentSelectionLoading] = useState(false);
   const [mode, setMode] = useState<"editor" | "executions">("editor");
+  const [isTriggerConfigOpen, setIsTriggerConfigOpen] = useState(false);
+  const [selectedTriggerId, setSelectedTriggerId] = useState<string | null>(null);
 
   const createdWorkflowRef = useRef(false);
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -111,6 +115,13 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
     config?: any;
   };
 
+  const handleConfigureTrigger = useCallback((triggerId: string) => {
+    setSelectedTriggerId(triggerId);
+    setIsTriggerConfigOpen(true);
+  }, []);
+
+  const [isTriggerSelectOpen, setIsTriggerSelectOpen] = useState(false);
+
   const handleAddTrigger = useCallback(async () => {
     if (!workflowId) {
       toast({
@@ -120,20 +131,23 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
       });
       return;
     }
+    setIsTriggerSelectOpen(true);
+  }, [workflowId]);
 
+  const handleCreateTrigger = useCallback(async (payload: { trigger_type: TriggerType; name: string; description?: string; config: Record<string, unknown>; }) => {
+    if (!workflowId) return;
     try {
-      // For MVP, we only support manual triggers
       const { data: newTrigger, error } = await supabase
         .from("workflow_triggers")
         .insert({
           workflow_id: workflowId,
-          name: "Entrypoint",
-          description: "Manually trigger this workflow",
-          trigger_type: "manual",
+          name: payload.name,
+          description: payload.description,
+          trigger_type: payload.trigger_type,
+          config: payload.config,
         })
         .select()
         .single();
-
       if (error) throw error;
 
       const newNode: WorkflowNode = {
@@ -145,24 +159,16 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
           workflow_id: workflowId,
           hasConnectedTask: false,
           onOpenTaskSidebar: () => setIsTaskSidebarOpen(true),
+          onConfigureTrigger: handleConfigureTrigger,
         } as TriggerNodeData,
       };
-
       setNodes((nds) => [...nds, newNode]);
-
-      toast({
-        title: "Trigger added",
-        description: "Click the plus button to add your first task",
-        variant: "default",
-      });
+      toast({ title: "Trigger added", variant: "default" });
     } catch (err) {
-      console.error("Error adding trigger:", err);
-      toast({
-        title: "Failed to add entrypoint",
-        variant: "destructive",
-      });
+      console.error("Error creating trigger:", err);
+      toast({ title: "Failed to create trigger", variant: "destructive" });
     }
-  }, [workflowId]);
+  }, [workflowId, supabase, handleConfigureTrigger]);
 
   const handleAssignAgent = useCallback((taskId: string) => {
     setSelectedTaskForAgent(taskId);
@@ -428,6 +434,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
                         edge.source === `trigger-${trigger.trigger_id}`
                     ),
                   onOpenTaskSidebar: () => setIsTaskSidebarOpen(true),
+                  onConfigureTrigger: handleConfigureTrigger,
                 } as TriggerNodeData,
               })),
               ...storedNodes.map((node: StoredWorkflowNode) => ({
@@ -523,6 +530,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
                   workflow_id: workflow.workflow_id,
                   hasConnectedTask: sortedTaskNodes.length > 0,
                   onOpenTaskSidebar: () => setIsTaskSidebarOpen(true),
+                  onConfigureTrigger: handleConfigureTrigger,
                 } as TriggerNodeData,
               })
             );
@@ -555,7 +563,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
     };
 
     loadWorkflow();
-  }, [workflowId, initialWorkflowId, handleAssignAgent, handleConfigureTask]);
+  }, [workflowId, initialWorkflowId, handleAssignAgent, handleConfigureTask, handleConfigureTrigger]);
 
   // Autosave nodes and edges to workflows table (debounced)
   useEffect(() => {
@@ -666,12 +674,12 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
   // Handle adding task from an existing task
   const handleAddTaskFromNode = useCallback(
     (sourceNodeId: string) => {
-      setIsTaskSidebarOpen(true);
       // Store the source node ID to use when the task is created
       const sourceNode = nodes.find((n) => n.id === sourceNodeId);
       if (sourceNode) {
         setActiveNodeId(sourceNode.id);
       }
+      setIsTaskSidebarOpen(true);
     },
     [nodes]
   );
@@ -1104,6 +1112,19 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
         onSelect={handleAgentSelect}
         assistants={assistants}
         loading={loadingAgents || isAgentSelectionLoading}
+      />
+
+      <TriggerSelectModal
+        isOpen={isTriggerSelectOpen}
+        onClose={() => setIsTriggerSelectOpen(false)}
+        onCreate={handleCreateTrigger}
+      />
+
+      <TriggerConfigModal
+        open={isTriggerConfigOpen}
+        onOpenChange={(v) => setIsTriggerConfigOpen(v)}
+        workflowId={workflowId || ""}
+        triggerId={selectedTriggerId}
       />
     </div>
   );

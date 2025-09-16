@@ -36,6 +36,13 @@ export async function POST(
       );
     }
 
+    // Optionally accept initial payload from trigger invocation
+    let initialPayload: unknown = null;
+    try {
+      const parsed = await request.json();
+      initialPayload = (parsed && typeof parsed === 'object') ? (parsed as any).initialPayload ?? null : null;
+    } catch {}
+
     // Build DAG order from edges when available; fallback to position
     const allTasks = (workflow.workflow_tasks as Task[]) || [];
     const edges = (workflow.edges as Array<{ source: string; target: string }>) || [];
@@ -195,6 +202,12 @@ export async function POST(
             // Optionally include previous node output as additional context
             if (inputSource === "previous_output" && (previousOutput !== null && previousOutput !== undefined)) {
               messages.push({ role: "user", content: typeof previousOutput === 'string' ? previousOutput : JSON.stringify(previousOutput) });
+            }
+            // For the very first node, include initialPayload when provided
+            if (!previousOutput && initialPayload != null) {
+              try {
+                messages.push({ role: "user", content: typeof initialPayload === 'string' ? initialPayload : JSON.stringify(initialPayload) });
+              } catch {}
             }
 
             const assistantId = task.assistant_id || task.config?.assigned_assistant?.id;

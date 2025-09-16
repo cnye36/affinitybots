@@ -1,7 +1,7 @@
 export type TaskType =
   | "ai_task"
 
-export type TriggerType = "manual" | "webhook" | "form" | "integration";
+export type TriggerType = "manual" | "webhook" | "form" | "integration" | "schedule";
 
 export interface TaskNodeData {
   workflow_task_id: string;
@@ -39,6 +39,7 @@ export interface TriggerNodeData {
   status: "idle" | "running" | "completed" | "error";
   onConfigureTrigger?: (triggerId: string) => void;
   onOpenTaskSidebar?: () => void;
+  onAddTask?: () => void;
   hasConnectedTask?: boolean;
 }
 

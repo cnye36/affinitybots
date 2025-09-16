@@ -174,7 +174,8 @@ export function WorkflowCanvas({
     return nodes.map((node) => {
       const hasOutgoingEdge = edges.some((e) => e.source === node.id);
       const canAddFromTask = node.type === "task" && !hasOutgoingEdge;
-      const canAddFromTrigger = node.type === "trigger" && !hasTaskNodes;
+      // Always allow adding from trigger. If no tasks yet, clicking should add the first task.
+      const canAddFromTrigger = node.type === "trigger";
 
       return {
         ...node,
