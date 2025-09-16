@@ -48,12 +48,12 @@ function SignInForm() {
               <span className="px-2 bg-background relative z-10">or</span>
               <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-px bg-border" />
             </div>
-            <Button variant="outline" formAction={signInWithGoogle} className="w-full">
+            {/* <Button variant="outline" formAction={signInWithGoogle} className="w-full">
               Sign in with Google
             </Button>
             <Button variant="outline" formAction={signInWithGitHub} className="w-full">
               Sign in with GitHub
-            </Button>
+            </Button> */}
            
           </div>
         </form>

@@ -92,7 +92,7 @@ function SignUpForm() {
             <span className="px-2 bg-background relative z-10">or</span>
             <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-px bg-border" />
           </div>
-          <Button
+          {/* <Button
             variant="outline"
             formAction={signUpWithGoogle}
             className="w-full"
@@ -119,7 +119,7 @@ function SignUpForm() {
             }}
           >
             Sign up with GitHub
-          </Button>
+          </Button> */}
          
         </form>
         <p className="mt-4 text-center">
