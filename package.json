@@ -27,6 +27,7 @@
     "@assistant-ui/react-syntax-highlighter": "^0.10.9",
     "@assistant-ui/react-ui": "^0.1.8",
     "@edge-runtime/cookies": "^6.0.0",
+    "@hubspot/ui-extensions": "^0.10.1",
     "@langchain/anthropic": "^0.3.26",
     "@langchain/community": "^0.3.48",
     "@langchain/core": "^0.3.72",
