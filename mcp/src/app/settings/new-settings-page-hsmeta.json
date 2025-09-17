@@ -1,0 +1,7 @@
+{
+  "uid": "settings-affinitybots",
+  "type": "settings",
+  "config": {
+    "entrypoint": "/app/settings/NewSettingsPage.tsx"
+  }
+}

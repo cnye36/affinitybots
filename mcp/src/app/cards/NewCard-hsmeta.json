@@ -1,0 +1,12 @@
+{
+  "uid": "card-affinitybots",
+  "type": "card",
+  "config": {
+    "name": "Example Card",
+    "location": "crm.record.tab",
+    "entrypoint": "/app/cards/NewCard.jsx",
+    "objectTypes": [
+      "contacts"
+    ]
+  }
+}
