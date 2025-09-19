@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
-import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
-import { DocxLoader } from "@langchain/community/document_loaders/fs/docx";
-import { CSVLoader } from "@langchain/community/document_loaders/fs/csv";
+import { WebPDFLoader } from "@langchain/community/document_loaders/web/pdf";
+import mammoth from "mammoth";
 import { OpenAIEmbeddings } from "@langchain/openai";
 import { SupabaseVectorStore } from "@langchain/community/vectorstores/supabase";
 import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
@@ -37,6 +36,29 @@ export async function POST(req: Request) {
       "[Knowledge API] Trimmed assistantId to be used in metadata:",
       trimmedAssistantId
     );
+
+    // Validate critical environment variables
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      console.error("[Knowledge API] Missing NEXT_PUBLIC_SUPABASE_URL env var");
+      return NextResponse.json(
+        { error: "Server is misconfigured: missing Supabase URL" },
+        { status: 500 }
+      );
+    }
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.error("[Knowledge API] Missing SUPABASE_SERVICE_ROLE_KEY env var");
+      return NextResponse.json(
+        { error: "Server is misconfigured: missing Supabase service role key" },
+        { status: 500 }
+      );
+    }
+    if (!process.env.OPENAI_API_KEY) {
+      console.error("[Knowledge API] Missing OPENAI_API_KEY env var");
+      return NextResponse.json(
+        { error: "Server is misconfigured: missing OpenAI API key" },
+        { status: 500 }
+      );
+    }
 
     // Create a service role client to bypass RLS
     const serviceClient = createServiceClient(
@@ -75,6 +97,20 @@ export async function POST(req: Request) {
 
     const fileName = file.name.toLowerCase();
     const fileType = file.type;
+    const ext = fileName.substring(fileName.lastIndexOf("."));
+
+    // Block code files for now, even if they come in as text/plain
+    const blockedCodeExtensions = [
+      ".ts", ".tsx", ".js", ".jsx", ".py", ".java", ".go", ".rs",
+      ".php", ".rb", ".c", ".cpp", ".h", ".hpp", ".cs", ".sh",
+      ".bash", ".zsh", ".swift", ".kt", ".scala", ".sql", ".r",
+    ];
+    if (blockedCodeExtensions.includes(ext)) {
+      return NextResponse.json(
+        { error: `Unsupported file type for knowledge: ${ext}. Code files are not yet supported.` },
+        { status: 400 }
+      );
+    }
 
     // Determine file type by extension if MIME type isn't reliable
     if (
@@ -82,10 +118,16 @@ export async function POST(req: Request) {
       fileType === "text/csv" ||
       fileType === "application/csv"
     ) {
-      // CSV Processing
-      const csvLoader = new CSVLoader(file);
-      docs = await csvLoader.load();
-      docs = await textSplitter.splitDocuments(docs);
+      // CSV Processing - parse as raw text (avoid Node fs loader)
+      const csvText = await file.text();
+      const initialDoc = {
+        pageContent: csvText,
+        metadata: {
+          source: file.name,
+          filetype: "csv",
+        },
+      };
+      docs = await textSplitter.splitDocuments([initialDoc]);
     } else if (
       fileName.endsWith(".xls") ||
       fileName.endsWith(".xlsx") ||
@@ -153,21 +195,60 @@ export async function POST(req: Request) {
         },
       };
       docs = await textSplitter.splitDocuments([initialDoc]);
+    } else if (
+      fileName.endsWith(".docx") ||
+      fileType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    ) {
+      // DOCX Processing via mammoth
+      const arrayBuffer = await file.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      const result = await mammoth.extractRawText({ buffer });
+      const text = result.value || "";
+      const initialDoc = {
+        pageContent: text,
+        metadata: {
+          source: file.name,
+          filetype: "docx",
+        },
+      };
+      docs = await textSplitter.splitDocuments([initialDoc]);
+    } else if (
+      fileName.endsWith(".html") ||
+      fileName.endsWith(".htm") ||
+      fileType === "text/html"
+    ) {
+      // HTML Processing: naive tag strip for text content
+      const raw = await file.text();
+      const text = raw.replace(/<script[\s\S]*?<\/script>/gi, " ")
+                      .replace(/<style[\s\S]*?<\/style>/gi, " ")
+                      .replace(/<[^>]+>/g, " ")
+                      .replace(/\s+/g, " ")
+                      .trim();
+      const initialDoc = {
+        pageContent: text,
+        metadata: {
+          source: file.name,
+          filetype: "html",
+        },
+      };
+      docs = await textSplitter.splitDocuments([initialDoc]);
     } else {
-      // Handle existing file types
+      // Handle remaining file types
       switch (fileType) {
-        case "application/pdf":
-          const pdfLoader = new PDFLoader(file);
+        case "application/pdf": {
+          const pdfLoader = new WebPDFLoader(file);
           docs = await pdfLoader.load();
           docs = await textSplitter.splitDocuments(docs);
           break;
-        case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-        case "application/msword":
-          const docxLoader = new DocxLoader(file);
-          docs = await docxLoader.load();
-          docs = await textSplitter.splitDocuments(docs);
-          break;
-        case "text/plain":
+        }
+        case "application/msword": {
+          // Legacy .doc not supported reliably in this runtime
+          return NextResponse.json(
+            { error: `Legacy .doc files are not supported. Please convert to DOCX or PDF.` },
+            { status: 400 }
+          );
+        }
+        case "text/plain": {
           const text = await file.text();
           const initialDoc = {
             pageContent: text,
@@ -177,6 +258,7 @@ export async function POST(req: Request) {
           };
           docs = await textSplitter.splitDocuments([initialDoc]);
           break;
+        }
         default:
           return NextResponse.json(
             {
@@ -188,7 +270,7 @@ export async function POST(req: Request) {
     }
 
     // Create embeddings and store in Supabase
-    const embeddings = new OpenAIEmbeddings();
+    const embeddings = new OpenAIEmbeddings({ model: "text-embedding-3-small" });
 
     const documentsWithMetadata = docs.map((doc) => {
       const docMetadata = {
@@ -205,19 +287,25 @@ export async function POST(req: Request) {
       };
     });
 
-    await SupabaseVectorStore.fromDocuments(documentsWithMetadata, embeddings, {
-      client: serviceClient,
-      tableName: "document_vectors",
-      queryName: "match_documents",
-    });
+    try {
+      await SupabaseVectorStore.fromDocuments(documentsWithMetadata, embeddings, {
+        client: serviceClient,
+        tableName: "document_vectors",
+        queryName: "match_documents",
+      });
+    } catch (vectorErr) {
+      console.error("[Knowledge API] Error inserting vectors:", vectorErr);
+      return NextResponse.json(
+        { error: "Failed to store document embeddings. Please try again." },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({ success: true, filename: file.name });
   } catch (error) {
-    console.error("Error processing document:", error);
-    return NextResponse.json(
-      { error: "Error processing document" },
-      { status: 500 }
-    );
+    console.error("[Knowledge API] Error processing document:", error);
+    const message = error instanceof Error ? error.message : "Unknown server error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 

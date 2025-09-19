@@ -1,0 +1,10 @@
+import { toHaveRemoteProps } from './props.esnext';
+import { toContainRemoteComponent, toContainRemoteComponentTimes } from './components.esnext';
+import { toContainRemoteText } from './text.esnext';
+
+expect.extend({
+  toHaveRemoteProps,
+  toContainRemoteComponent,
+  toContainRemoteComponentTimes,
+  toContainRemoteText
+});

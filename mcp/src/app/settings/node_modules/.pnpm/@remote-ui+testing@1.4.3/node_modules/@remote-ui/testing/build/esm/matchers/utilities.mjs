@@ -1,0 +1,101 @@
+import { diff, RECEIVED_COLOR, INVERTED_COLOR, matcherErrorMessage, matcherHint, printWithType, printReceived, printExpected } from 'jest-matcher-utils';
+import { isNode } from '../mount.mjs';
+
+function assertIsNode(node, {
+  expectation,
+  isNot
+}) {
+  if (node == null) {
+    throw new Error(matcherErrorMessage(matcherHint(`.${expectation}`, undefined, undefined, {
+      isNot
+    }), `${RECEIVED_COLOR('received')} value must be an @shopify/react-testing Root or Element object`, `Received ${RECEIVED_COLOR('null')}.\nThis usually means that your \`.findX\` method failed to find any matching elements.`));
+  }
+
+  if (Array.isArray(node) && node.length > 1 && isNode(node[0])) {
+    throw new Error(matcherErrorMessage(matcherHint(`.${expectation}`, undefined, undefined, {
+      isNot
+    }), `${RECEIVED_COLOR('received')} value must be an @shopify/react-testing Root or Element object`, `Received an ${RECEIVED_COLOR('array of Root or Element objects')}.\nThis usually means that you passed in the result of \`.findAllX\`. Pass the result of \`.findX\` instead.`));
+  }
+
+  if (!isNode(node)) {
+    throw new Error(matcherErrorMessage(matcherHint(`.${expectation}`, undefined, undefined, {
+      isNot
+    }), `${RECEIVED_COLOR('received')} value must be an @shopify/react-testing Root or Element object`, printWithType('Received', node, printReceived)));
+  }
+}
+function assertIsType(type, {
+  expectation,
+  isNot
+}) {
+  if (type == null) {
+    throw new Error(matcherErrorMessage(matcherHint(`.${expectation}`, undefined, undefined, {
+      isNot
+    }), `${RECEIVED_COLOR('expected')} value must be a string or a valid React component.`, printWithType('Expected', type, printExpected)));
+  }
+}
+function diffs(element, props, expand) {
+  return element.reduce((diffs, element, index) => {
+    const separator = index === 0 ? '' : '\n\n';
+    return `${diffs}${separator}${normalizedDiff(element, props, {
+      expand,
+      showLegend: index === 0
+    })}`;
+  }, '');
+}
+
+function normalizedDiff(element, props, {
+  expand = false,
+  showLegend = false
+}) {
+  const result = diffPropsForNode(element, props, {
+    expand
+  }) || '';
+  return showLegend ? result : result.split('\n\n')[1];
+}
+
+function printType(type) {
+  if (typeof type === 'object' && '_context' in type) {
+    const context = type._context;
+    const componentName = type === context.Provider ? 'Provider' : 'Consumer';
+    const displayName = context.displayName || 'Context';
+    return `<${displayName}.${componentName} />`;
+  }
+
+  const displayName = typeof type === 'string' ? type : type.displayName || type.name || 'Component';
+  return `<${displayName} />`;
+}
+function diffPropsForNode(node, props, {
+  expand = false
+}) {
+  return diff(props, getObjectSubset(node.props, props), {
+    expand
+  });
+} // Original from https://github.com/facebook/jest/blob/master/packages/expect/src/utils.ts#L107
+
+function getObjectSubset(object, subset) {
+  if (Array.isArray(object)) {
+    if (Array.isArray(subset) && subset.length === object.length) {
+      return subset.map((sub, i) => getObjectSubset(object[i], sub));
+    }
+  } else if (object instanceof Date) {
+    return object;
+  } else if (typeof object === 'object' && object !== null && typeof subset === 'object' && subset !== null) {
+    const trimmed = {};
+    Object.keys(subset).filter(key => Reflect.has(object, key)).forEach(key => trimmed[key] = getObjectSubset(object[key], subset[key]));
+
+    if (Object.keys(trimmed).length > 0) {
+      return trimmed;
+    }
+  }
+
+  return object;
+}
+
+function pluralize(word, count) {
+  return count === 1 ? word : `${word}s`;
+}
+function printReceivedWithHighlight(text, start, length) {
+  return RECEIVED_COLOR(`"${text.slice(0, start)}${INVERTED_COLOR(text.slice(start, start + length))}${text.slice(start + length)}"`);
+}
+
+export { assertIsNode, assertIsType, diffPropsForNode, diffs, pluralize, printReceivedWithHighlight, printType };

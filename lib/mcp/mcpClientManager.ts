@@ -175,7 +175,9 @@ export class MCPClientManager {
         if (!this.isOAuthServer(serverConfig)) {
           mcpServers[qualifiedName] = {
             url: finalUrl,
-            automaticSSEFallback: false
+            automaticSSEFallback: false,
+            // pass through optional headers (e.g., Authorization Bearer)
+            headers: (serverConfig as any).headers
           };
           console.log(`✅ Added server ${qualifiedName} to mcpServers`);
         }
@@ -221,6 +223,10 @@ export class MCPClientManager {
    * First checks server config, then falls back to URL pattern detection
    */
   private isOAuthServer(serverConfig: any): boolean {
+    // Treat bearer-token servers as NON-OAuth (we inject headers directly)
+    if (serverConfig.config?.auth_type === 'bearer') {
+      return false;
+    }
     // Check explicit auth_type in config first
     if (serverConfig.config?.auth_type === 'oauth') {
       return true;

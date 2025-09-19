@@ -36,11 +36,11 @@ export default function NewAgentPage() {
   const [knowledgeFiles, setKnowledgeFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isEnhancing, setIsEnhancing] = useState(false);
+  const [knowledgeStatuses, setKnowledgeStatuses] = useState<Record<string, { status: 'queued'|'uploading'|'success'|'error'; error?: string }>>({});
 
   const allowedFileTypes = [
     "application/pdf",
     "text/plain",
-    "application/msword",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "text/csv",
     "application/csv",
@@ -50,6 +50,7 @@ export default function NewAgentPage() {
     "text/markdown",
     "application/xml",
     "text/xml",
+    "text/html",
   ];
 
   // Auto-start the New Agent onboarding tour on first visit (per-user gated)
@@ -107,17 +108,61 @@ export default function NewAgentPage() {
       }
 
       const data = await response.json();
-      // If user queued knowledge files, upload them now
+      // If user queued knowledge files, upload them now with status updates
       if (knowledgeFiles.length > 0 && data?.assistant?.assistant_id) {
+        // Initialize statuses for any missing
+        setKnowledgeStatuses(prev => {
+          const next = { ...prev };
+          for (const f of knowledgeFiles) {
+            if (!next[f.name]) next[f.name] = { status: 'queued' };
+          }
+          return next;
+        });
+
+        const successfulFiles: string[] = [];
+
         for (const file of knowledgeFiles) {
+          setKnowledgeStatuses(prev => ({ ...prev, [file.name]: { status: 'uploading' } }));
           const formData = new FormData();
           formData.append("file", file);
           formData.append("assistantId", data.assistant.assistant_id);
           try {
-            await fetch("/api/knowledge", { method: "POST", body: formData });
+            const resp = await fetch("/api/knowledge", { method: "POST", body: formData });
+            if (!resp.ok) {
+              let errMsg = `Upload failed (${resp.status})`;
+              try {
+                const errJson = await resp.json();
+                if (errJson?.error) errMsg = errJson.error;
+              } catch {}
+              setKnowledgeStatuses(prev => ({ ...prev, [file.name]: { status: 'error', error: errMsg } }));
+              continue;
+            }
+            setKnowledgeStatuses(prev => ({ ...prev, [file.name]: { status: 'success' } }));
+            successfulFiles.push(file.name);
           } catch (e) {
-            console.error("Knowledge upload failed for", file.name, e);
+            const errMsg = e instanceof Error ? e.message : 'Network error';
+            setKnowledgeStatuses(prev => ({ ...prev, [file.name]: { status: 'error', error: errMsg } }));
           }
+        }
+
+        // If any uploads succeeded, persist sources to assistant config now
+        if (successfulFiles.length > 0) {
+          try {
+            await fetch(`/api/assistants/${data.assistant.assistant_id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                config: {
+                  configurable: {
+                    knowledge_base: {
+                      isEnabled: true,
+                      config: { sources: successfulFiles }
+                    }
+                  }
+                }
+              })
+            });
+          } catch {}
         }
       }
 
@@ -210,9 +255,14 @@ export default function NewAgentPage() {
             <Accordion type="single" collapsible>
               <AccordionItem value="tools">
                 <AccordionTrigger className="px-4">
-                  <div className="flex items-center gap-2">
-                    <Plus className="h-4 w-4" />
-                    <h3 className="font-medium">Add Tools (Optional)</h3>
+                  <div className="flex items-center gap-2 w-full justify-between">
+                    <div className="flex items-center gap-2">
+                      <Plus className="h-4 w-4" />
+                      <h3 className="font-medium">Add Tools (Optional)</h3>
+                    </div>
+                    {enabledMCPServers.length > 0 && (
+                      <span className="text-xs text-muted-foreground">{enabledMCPServers.length} selected</span>
+                    )}
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="px-4">
@@ -227,53 +277,77 @@ export default function NewAgentPage() {
             </Accordion>
           </div>
 
-          {/* Knowledge (Dropdown) */}
-          <div className="gradient-border p-4 rounded-lg flex items-center justify-between" data-tutorial="agent-knowledge">
-            <div className="flex items-center gap-2">
-              <Upload className="h-4 w-4" />
-              <h3 className="font-medium">Add Knowledge (Optional)</h3>
-            </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">Upload</Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-[420px] p-4">
-                <div
-                  onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true); }}
-                  onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                  onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(false); }}
-                  onDrop={(e) => {
-                    e.preventDefault(); e.stopPropagation(); setIsDragging(false);
-                    const files = Array.from(e.dataTransfer.files || []);
-                    const valid = files.filter((file) => file.name.endsWith('.csv') || allowedFileTypes.includes(file.type));
-                    setKnowledgeFiles((prev) => [...prev, ...valid]);
-                  }}
-                  className={`border-2 border-dashed rounded-md p-6 text-center transition-colors ${isDragging ? 'border-primary bg-primary/5' : 'border-muted-foreground/25'}`}
-                >
-                  <input
-                    type="file"
-                    multiple
-                    accept=".pdf,.txt,.doc,.docx,.csv,.xls,.xlsx,.json,.md,.xml"
-                    className="hidden"
-                    id="kb-upload"
-                    onChange={(e) => {
-                      const files = e.target.files ? Array.from(e.target.files) : [];
-                      const valid = files.filter((file) => file.name.endsWith('.csv') || allowedFileTypes.includes(file.type));
-                      setKnowledgeFiles((prev) => [...prev, ...valid]);
-                    }}
-                  />
-                  <label htmlFor="kb-upload" className="cursor-pointer">
-                    <p>{isDragging ? 'Drop files here…' : 'Drag & drop files, or click to select'}</p>
-                    <p className="text-xs text-muted-foreground mt-1">Files upload after the agent is created.</p>
-                  </label>
-                </div>
-                {knowledgeFiles.length > 0 && (
-                  <div className="mt-3 text-xs text-muted-foreground">
-                    Queued: {knowledgeFiles.map((f) => f.name).join(', ')}
+          {/* Knowledge (Accordion) */}
+          <div className="gradient-border p-0 rounded-lg" data-tutorial="agent-knowledge">
+            <Accordion type="single" collapsible>
+              <AccordionItem value="knowledge">
+                <AccordionTrigger className="px-4">
+                  <div className="flex items-center gap-2 w-full justify-between">
+                    <div className="flex items-center gap-2">
+                      <Upload className="h-4 w-4" />
+                      <h3 className="font-medium">Add Knowledge (Optional)</h3>
+                    </div>
+                    {knowledgeFiles.length > 0 && (
+                      <span className="text-xs text-muted-foreground">{knowledgeFiles.length} file{knowledgeFiles.length>1?'s':''} queued</span>
+                    )}
                   </div>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                </AccordionTrigger>
+                <AccordionContent className="px-4">
+                  <div className="p-3 space-y-3">
+                    <div
+                      onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true); }}
+                      onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                      onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(false); }}
+                      onDrop={(e) => {
+                        e.preventDefault(); e.stopPropagation(); setIsDragging(false);
+                        const files = Array.from(e.dataTransfer.files || []);
+                        const dropped = files.filter((file) => file.name.endsWith('.csv') || file.name.endsWith('.docx') || file.name.endsWith('.html') || file.name.endsWith('.htm') || allowedFileTypes.includes(file.type));
+                        setKnowledgeFiles((prev) => [...prev, ...dropped]);
+                      }}
+                      className={`border-2 border-dashed rounded-md p-6 text-center transition-colors ${isDragging ? 'border-primary bg-primary/5' : 'border-muted-foreground/25'}`}
+                    >
+                      <input
+                        type="file"
+                        multiple
+                        accept=".pdf,.txt,.docx,.csv,.xls,.xlsx,.json,.md,.xml,.html,.htm"
+                        className="hidden"
+                        id="kb-upload"
+                        onChange={(e) => {
+                          const files = e.target.files ? Array.from(e.target.files) : [];
+                          const picked = files.filter((file) => file.name.endsWith('.csv') || file.name.endsWith('.docx') || file.name.endsWith('.html') || file.name.endsWith('.htm') || allowedFileTypes.includes(file.type));
+                          setKnowledgeFiles((prev) => [...prev, ...picked]);
+                        }}
+                      />
+                      <label htmlFor="kb-upload" className="cursor-pointer">
+                        <p>{isDragging ? 'Drop files here…' : 'Drag & drop files, or click to select'}</p>
+                        <p className="text-xs text-muted-foreground mt-1">Files upload after the agent is created.</p>
+                      </label>
+                    </div>
+
+                    {knowledgeFiles.length > 0 && (
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-1">Queued files</div>
+                        <ul className="space-y-1 max-h-40 overflow-auto pr-1">
+                          {knowledgeFiles.map((f) => {
+                            const st = knowledgeStatuses[f.name]?.status || 'queued';
+                            const err = knowledgeStatuses[f.name]?.error;
+                            return (
+                              <li key={f.name} className="text-xs flex items-start justify-between gap-2">
+                                <span className="truncate flex-1">{f.name}</span>
+                                <span className={`shrink-0 ${st==='success'?'text-green-600': st==='error'?'text-red-600': st==='uploading'?'text-amber-600':'text-muted-foreground'}`}>
+                                  {st}
+                                </span>
+                                {err && <span className="text-red-600 truncate max-w-[180px]" title={err}>: {err}</span>}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
           </div>
 
           {/* Templates as pills under prompt; click to populate */}

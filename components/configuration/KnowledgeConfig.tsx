@@ -49,7 +49,6 @@ export function KnowledgeConfig({ config, onChange, assistant_id }: KnowledgeCon
     const allowedFileTypes = [
       "application/pdf",
       "text/plain",
-      "application/msword",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       "text/csv",
       "application/csv",
@@ -59,13 +58,22 @@ export function KnowledgeConfig({ config, onChange, assistant_id }: KnowledgeCon
       "text/markdown",
       "application/xml",
       "text/xml",
+      "text/html",
     ];
 
     const invalidFiles = files.filter((file) => {
-      // Handle CSV files that might be misidentified
-      if (file.name.endsWith(".csv")) {
-        return false; // Accept CSV files based on extension
+      // Handle files that might be misidentified
+      if (file.name.endsWith(".csv") || file.name.endsWith(".docx") || file.name.endsWith(".html") || file.name.endsWith(".htm")) {
+        return false;
       }
+      // Block common code files even if text/plain
+      const blocked = [
+        ".ts", ".tsx", ".js", ".jsx", ".py", ".java", ".go", ".rs",
+        ".php", ".rb", ".c", ".cpp", ".h", ".hpp", ".cs", ".sh",
+        ".bash", ".zsh", ".swift", ".kt", ".scala", ".sql", ".r",
+      ];
+      const ext = file.name.slice(file.name.lastIndexOf('.'));
+      if (blocked.includes(ext)) return true;
       return !allowedFileTypes.includes(file.type);
     });
 
@@ -100,7 +108,12 @@ export function KnowledgeConfig({ config, onChange, assistant_id }: KnowledgeCon
         });
 
         if (!response.ok) {
-          throw new Error(`Failed to process ${file.name}`);
+          let detail = `Failed to process ${file.name}`;
+          try {
+            const data = await response.json();
+            if (data?.error) detail = data.error;
+          } catch {}
+          throw new Error(detail);
         }
 
         toast({
@@ -211,7 +224,7 @@ export function KnowledgeConfig({ config, onChange, assistant_id }: KnowledgeCon
           <input
             type="file"
             onChange={handleFileSelect}
-            accept=".pdf,.txt,.doc,.docx,.csv,.xls,.xlsx,.json,.md,.xml"
+            accept=".pdf,.txt,.docx,.csv,.xls,.xlsx,.json,.md,.xml,.html,.htm"
             className="hidden"
             multiple
             id="file-upload"
@@ -224,8 +237,7 @@ export function KnowledgeConfig({ config, onChange, assistant_id }: KnowledgeCon
                 : "Drag and drop files here, or click to select"}
             </p>
             <p className="text-sm text-muted-foreground mt-2">
-              Supported formats: PDF, TXT, DOC, DOCX, CSV, XLS, XLSX, JSON, MD,
-              XML
+              Supported: PDF, DOCX, TXT, CSV, XLS/XLSX, JSON, MD, XML, HTML
             </p>
           </label>
         </div>

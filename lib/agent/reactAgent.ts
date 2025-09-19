@@ -442,20 +442,22 @@ async function callModel(
     }
   }
 
-  // Load MCP tools only when the user explicitly enabled servers
+  // Always attempt to load MCP tools. If none explicitly enabled, the factory
+  // will fall back to all available servers for the user.
   let tools: any[] = [];
   const enabledServersForRun = configurable.enabled_mcp_servers || [];
-  if (enabledServersForRun.length > 0) {
-    let result = await createMcpClientAndTools(userId || assistantId || "default", configurable);
-    tools = result.tools;
-    if (tools.length === 0) {
-      console.log(`No tools loaded for enabled servers (${enabledServersForRun.join(", ")}). Forcing refresh once...`);
-      const refreshed = await createMcpClientAndTools(userId || assistantId || "default", {
-        ...configurable,
-        force_mcp_refresh: true,
-      } as any);
-      tools = refreshed.tools;
-    }
+  let result = await createMcpClientAndTools(userId || assistantId || "default", configurable);
+  tools = result.tools;
+  if (tools.length === 0) {
+    const contextMsg = enabledServersForRun.length > 0
+      ? `for enabled servers (${enabledServersForRun.join(", ")})`
+      : "from available servers";
+    console.log(`No tools loaded ${contextMsg}. Forcing refresh once...`);
+    const refreshed = await createMcpClientAndTools(userId || assistantId || "default", {
+      ...configurable,
+      force_mcp_refresh: true,
+    } as any);
+    tools = refreshed.tools;
   }
   console.log(`Assistant ${userId || assistantId}: Binding ${tools.length} tools to model`);
   console.log(`Enabled servers: ${enabledServersForRun.join(", ") || "none"}`);
@@ -510,13 +512,25 @@ async function callModel(
   const model = baseModel.bindTools(tools);
   console.log(`Model binding complete. Model has tools: ${!!(model as any).bound_tools || !!(model as any).tools}`);
   
-  // Combine system prompt with memory context
-  const enhancedSystemPrompt = `${systemPrompt}${memoryContext}`;
+  // Combine system prompt with memory context and any additional system messages
+  // Some providers (Anthropic, Gemini) only allow ONE system message and it must be first.
+  // We therefore merge any prior System messages (e.g., from knowledge retrieval) into the first one.
+  const additionalSystemText = state.messages
+    .filter((m: any) => m instanceof SystemMessage || (typeof (m as any).type === 'string' && (m as any).type === 'system'))
+    .map((m: any) => (typeof m.content === 'string' ? m.content : JSON.stringify(m.content)))
+    .join("\n\n");
+
+  const enhancedSystemPrompt = `${systemPrompt}${memoryContext}${additionalSystemText ? `\n\n${additionalSystemText}` : ''}`;
+
+  // Filter out any system messages to satisfy providers that only allow the first to be system
+  const nonSystemMessages = state.messages.filter(
+    (m: any) => !(m instanceof SystemMessage) && !((typeof (m as any).type === 'string') && (m as any).type === 'system')
+  );
   
   console.log(`Invoking model with ${tools.length} bound tools...`);
   const response = await model.invoke([
     new SystemMessage(enhancedSystemPrompt),
-    ...state.messages,
+    ...nonSystemMessages,
   ]);
   
   console.log(`Model response received. Type: ${response.constructor.name}`);

@@ -19,7 +19,7 @@ export async function retrieveRelevantDocuments(
   topK: number = 5,
   assistantId?: string
 ): Promise<Document[]> {
-  const embeddings = new OpenAIEmbeddings();
+  const embeddings = new OpenAIEmbeddings({ model: "text-embedding-3-small" });
 
   try {
     // Get traditional document vectors from knowledgebase ONLY

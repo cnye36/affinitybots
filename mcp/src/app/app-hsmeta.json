@@ -2,18 +2,23 @@
   "uid": "app-affinitybots",
   "type": "app",
   "config": {
-    "description": "An example to demonstrate how to build a marketplace app with developer projects.",
+    "description": "An app to connect AffinityBots to Hubspot through MCP",
     "name": "affinitybots-Application",
     "distribution": "marketplace",
+    "isUserLevel": true,
     "auth": {
       "type": "oauth",
       "redirectUrls": [
-        "http://localhost:3000"
+        "http://localhost:3000/api/hubspot/oauth/callback",
+        "https://affinitybots.com/api/hubspot/oauth/callback",
+        "https://www.affinitybots.com/api/hubspot/oauth/callback"
       ],
       "requiredScopes": [
         "crm.objects.contacts.read",
-        "crm.objects.contacts.write"
+        "crm.objects.companies.read"
+        
       ],
+      
       "optionalScopes": [],
       "conditionallyRequiredScopes": []
     },
@@ -25,10 +30,10 @@
       "img": []
     },
     "support": {
-      "supportEmail": "support@example.com",
-      "documentationUrl": "https://example.com/docs",
-      "supportUrl": "https://example.com/support",
-      "supportPhone": "+18005555555"
+      "supportEmail": "support@affinitybots.com",
+      "documentationUrl": "https://affinitybots.com/docs",
+      "supportUrl": "https://affinitybots.com",
+      "supportPhone": "+13852982222"
     }
   }
 }

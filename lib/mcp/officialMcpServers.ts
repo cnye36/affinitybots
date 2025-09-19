@@ -28,6 +28,19 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     requiresSetup: true,
   },
   {
+    qualifiedName: "hubspot",
+    displayName: "HubSpot",
+    description:
+      "Official HubSpot MCP server. Connect your HubSpot account via OAuth to access CRM data and actions.",
+    logoUrl:
+      "https://legal.hubspot.com/hubfs/guidelines_the-sprocket.svg",
+    // URL can be overridden at runtime using NEXT_PUBLIC_HUBSPOT_MCP_URL
+    url: "https://mcp.hubspot.com",
+    docsUrl: "https://developers.hubspot.com/docs",
+    authType: "oauth",
+    requiresSetup: true,
+  },
+  {
     qualifiedName: "notion",
     displayName: "Notion",
     description:
@@ -38,8 +51,8 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     docsUrl: "https://developers.notion.com/docs",
     authType: "oauth",
     requiresSetup: true,
-    disabled: false,
   },
+  
 ];
 
 export function findOfficialServer(qualifiedName: string): OfficialMcpServerMeta | undefined {

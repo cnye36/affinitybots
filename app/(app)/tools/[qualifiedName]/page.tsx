@@ -124,9 +124,17 @@ export default function ServerDetailPage() {
   const callbackUrl = typeof window !== 'undefined' ? `${window.location.origin}/api/mcp/auth/callback` : '';
 
   const handleConnect = useCallback(async () => {
-    if (!server || server.source !== 'official' || !server.url) return;
+    if (!server || server.source !== 'official') return;
     try {
       setConnecting(true);
+      if (server.qualifiedName === 'hubspot') {
+        // Use our HubSpot OAuth start route instead of MCP DCR
+        const startUrl = `/api/hubspot/oauth/start?state=tools&redirectTo=${encodeURIComponent('/tools/hubspot')}`;
+        window.location.href = startUrl;
+        return;
+      }
+      // Default behavior for other official servers
+      if (!server.url) return;
       const res = await fetch('/api/mcp/auth/connect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

@@ -37,12 +37,14 @@ export async function getAvailableMcpServers(userId: string) {
 
   for (const server of userServers || []) {
     let serverUrl = server.url;
+    // Allow bearer-token injection for servers like HubSpot MCP that expect standard OAuth tokens
+    const bearer = server.config?.bearer_token;
     if (server.oauth_token && server.url) {
       serverUrl = server.url;
     } else if (!serverUrl) {
       const apiKey = process.env.SMITHERY_API_KEY;
       if (isSmitheryServer(server) && apiKey) {
-        const profile = server.config?.smitheryProfileId || server.config?.profileId || 'eligible-bug-FblvFg';
+        const profile = server.config?.smitheryProfileId || server.config?.profileId;
         serverUrl = `https://server.smithery.ai/${server.qualified_name}/mcp?api_key=${apiKey}&profile=${profile}`;
       } else {
         continue;
@@ -57,7 +59,8 @@ export async function getAvailableMcpServers(userId: string) {
       session_id: server.session_id,
       expires_at: server.expires_at,
       refresh_token: server.refresh_token,
-      config: server.config
+      config: server.config,
+      headers: bearer ? { Authorization: `Bearer ${bearer}` } : undefined
     };
   }
 
