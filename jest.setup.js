@@ -1,5 +1,21 @@
 import '@testing-library/jest-dom'
 
+if (typeof global.Request === 'undefined' && typeof globalThis.Request !== 'undefined') {
+  global.Request = globalThis.Request
+}
+
+if (typeof global.Request === 'undefined') {
+  global.Request = class {}
+}
+
+if (typeof global.Response === 'undefined' && typeof globalThis.Response !== 'undefined') {
+  global.Response = globalThis.Response
+}
+
+if (typeof global.Response === 'undefined') {
+  global.Response = class {}
+}
+
 // Global test setup
 beforeEach(() => {
   // Reset any mocks between tests
@@ -51,16 +67,18 @@ global.ResizeObserver = jest.fn().mockImplementation(() => ({
 }))
 
 // Mock window.matchMedia for components that use responsive design
-Object.defineProperty(window, 'matchMedia', {
-  writable: true,
-  value: jest.fn().mockImplementation(query => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: jest.fn(), // deprecated
-    removeListener: jest.fn(), // deprecated
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
-    dispatchEvent: jest.fn(),
-  })),
-}) 
+if (typeof window !== 'undefined') {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: jest.fn().mockImplementation(query => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: jest.fn(), // deprecated
+      removeListener: jest.fn(), // deprecated
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+      dispatchEvent: jest.fn(),
+    })),
+  })
+}
