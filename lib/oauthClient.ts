@@ -23,6 +23,7 @@ import {
 class InMemoryOAuthClientProvider implements OAuthClientProvider {
   private _clientInformation?: OAuthClientInformationFull;
   private _tokens?: OAuthTokens;
+  private _tokenExpiresAt?: string;
   private _codeVerifier?: string;
 
   constructor(
@@ -61,6 +62,11 @@ class InMemoryOAuthClientProvider implements OAuthClientProvider {
 
   saveTokens(tokens: OAuthTokens): void {
     this._tokens = tokens;
+    if (typeof tokens.expires_in === "number") {
+      this._tokenExpiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString();
+    } else {
+      this._tokenExpiresAt = undefined;
+    }
   }
 
   redirectToAuthorization(authorizationUrl: URL): void {
@@ -76,6 +82,15 @@ class InMemoryOAuthClientProvider implements OAuthClientProvider {
       throw new Error("No code verifier saved");
     }
     return this._codeVerifier;
+  }
+
+  tokensExpireAt(): string | undefined {
+    return this._tokenExpiresAt;
+  }
+
+  restoreTokens(tokens: OAuthTokens, expiresAt?: string): void {
+    this._tokens = tokens;
+    this._tokenExpiresAt = expiresAt;
   }
 
   // Export minimal state necessary to resume OAuth after redirect
@@ -97,6 +112,9 @@ class InMemoryOAuthClientProvider implements OAuthClientProvider {
 export class MCPOAuthClient {
   private client: Client | null = null;
   private oauthProvider: InMemoryOAuthClientProvider | null = null;
+  private connected = false;
+  private cachedTokens?: OAuthTokens;
+  private cachedTokenExpiresAt?: string;
 
   constructor(
     private serverUrl: string,
@@ -179,7 +197,10 @@ export class MCPOAuthClient {
 
     try {
       await this.client.connect(transport);
+      this.connected = true;
+      this.cacheTokensFromProvider();
     } catch (error) {
+      this.connected = false;
       if (error instanceof UnauthorizedError) {
         throw new Error("OAuth authorization required");
       } else {
@@ -200,6 +221,8 @@ export class MCPOAuthClient {
 
     await transport.finishAuth(authCode);
     await this.client.connect(transport);
+    this.connected = true;
+    this.cacheTokensFromProvider();
   }
 
   async listTools(): Promise<ListToolsResult> {
@@ -237,5 +260,73 @@ export class MCPOAuthClient {
   disconnect(): void {
     this.client = null;
     this.oauthProvider = null;
+    this.connected = false;
+    this.cachedTokens = undefined;
+    this.cachedTokenExpiresAt = undefined;
+  }
+
+  getTokens(): OAuthTokens | undefined {
+    if (!this.cachedTokens && this.oauthProvider) {
+      this.cacheTokensFromProvider();
+    }
+    return this.cachedTokens;
+  }
+
+  getTokenExpiry(): string | undefined {
+    if (!this.cachedTokenExpiresAt && this.oauthProvider) {
+      this.cachedTokenExpiresAt = this.oauthProvider.tokensExpireAt();
+    }
+    return this.cachedTokenExpiresAt;
+  }
+
+  async connectWithStoredSession(options: {
+    tokens: OAuthTokens;
+    expiresAt?: string;
+    providerState?: { clientInformation?: OAuthClientInformationFull; codeVerifier?: string };
+  }): Promise<void> {
+    const clientMetadata: OAuthClientMetadata = {
+      client_name: "Next.js MCP OAuth Client",
+      redirect_uris: [this.callbackUrl],
+      grant_types: ["authorization_code", "refresh_token"],
+      response_types: ["code"],
+      token_endpoint_auth_method: "client_secret_post",
+      scope: "mcp:tools",
+    };
+
+    this.oauthProvider = new InMemoryOAuthClientProvider(
+      this.callbackUrl,
+      clientMetadata,
+      () => {}
+    );
+
+    if (options.providerState) {
+      this.oauthProvider.importState(options.providerState);
+    }
+
+    this.oauthProvider.restoreTokens(options.tokens, options.expiresAt);
+    this.client = new Client(
+      {
+        name: "nextjs-oauth-client",
+        version: "1.0.0",
+      },
+      { capabilities: {} }
+    );
+
+    this.cachedTokens = options.tokens;
+    this.cachedTokenExpiresAt = options.expiresAt;
+    await this.attemptConnection();
+  }
+
+  isConnected(): boolean {
+    return this.connected;
+  }
+
+  private cacheTokensFromProvider(): void {
+    if (!this.oauthProvider) return;
+    const tokens = this.oauthProvider.tokens();
+    if (tokens) {
+      this.cachedTokens = tokens;
+      this.cachedTokenExpiresAt = this.oauthProvider.tokensExpireAt();
+    }
   }
 }

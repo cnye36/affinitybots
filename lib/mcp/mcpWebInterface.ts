@@ -6,6 +6,7 @@ import { mcpSessionManager } from './mcpSessionManager';
 import { mcpDiagnostics } from './mcpDiagnostics';
 import { AssistantConfiguration } from '@/types/assistant';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { OAuthTokens } from "@modelcontextprotocol/sdk/shared/auth.js";
 
 export interface MCPServerConnectRequest {
   serverUrl: string;
@@ -128,28 +129,45 @@ export class MCPWebInterface {
 
   /**
    * Completes OAuth authentication for a server
-   */
+  */
   async finishAuth(sessionId: string, authCode: string, userId: string): Promise<MCPServerConnectResponse> {
     try {
       console.log(`MCPWebInterface: Finishing OAuth for session ${sessionId}`);
+
+      const supabase = this.getSupabase();
+      let serverRow: { url: string; config: any; qualified_name?: string } | null = null;
+
+      try {
+        const { data, error } = await supabase
+          .from('user_mcp_servers')
+          .select('url, config, qualified_name')
+          .eq('user_id', userId)
+          .eq('session_id', sessionId)
+          .single();
+        if (!error && data) {
+          serverRow = data;
+        } else if (error) {
+          console.warn('Failed to load MCP server row during OAuth finish:', error);
+        }
+      } catch (fetchError) {
+        console.warn('Unexpected error loading MCP server row during OAuth finish:', fetchError);
+      }
+
       // Rehydrate OAuth client if serverless/dev hot-reload dropped in-memory session
       if (!sessionStore.getClient(sessionId)) {
         try {
-          const { data: row, error } = await this.getSupabase()
-            .from('user_mcp_servers')
-            .select('url, config')
-            .eq('user_id', userId)
-            .eq('session_id', sessionId)
-            .single();
-          if (!error && row?.url) {
-            const callbackUrl = row.config?.callbackUrl || `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/mcp/auth/callback`;
-            const isGitHub = row.url.includes('githubcopilot.com') || row.url.includes('github.com');
+          if (serverRow?.url) {
+            const callbackUrl =
+              serverRow.config?.callbackUrl ||
+              `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/mcp/auth/callback`;
+            const isGitHub =
+              serverRow.url.includes('githubcopilot.com') || serverRow.url.includes('github.com');
             let client: GitHubOAuthClient | MCPOAuthClient;
             if (isGitHub) {
-              client = new GitHubOAuthClient(row.url, callbackUrl, () => {});
+              client = new GitHubOAuthClient(serverRow.url, callbackUrl, () => {});
             } else {
-              const mcpClient = new MCPOAuthClient(row.url, callbackUrl, () => {});
-              const state = row.config?.providerState;
+              const mcpClient = new MCPOAuthClient(serverRow.url, callbackUrl, () => {});
+              const state = serverRow.config?.providerState;
               if (state) {
                 try { mcpClient.prepareWithState(state); } catch {}
               }
@@ -159,7 +177,7 @@ export class MCPWebInterface {
             sessionStore.setClient(sessionId, client as any);
             // Avoid calling connect() here to prevent new client_id registration. We'll finishAuth directly.
           } else {
-            console.warn('No DB record found to rehydrate OAuth client for session', sessionId, error);
+            console.warn('No DB record found to rehydrate OAuth client for session', sessionId);
           }
         } catch (rehydrateError) {
           console.warn('Failed to rehydrate OAuth client from DB', rehydrateError);
@@ -168,8 +186,27 @@ export class MCPWebInterface {
 
       await mcpClientFactory.completeOAuth(sessionId, authCode);
 
-      // Update database with successful authentication
-      await this.updateOAuthCompletion(sessionId, userId);
+      // Update database with successful authentication and persist tokens/state
+      const client = sessionStore.getClient(sessionId);
+      let tokens: OAuthTokens | undefined;
+      let expiresAt: string | undefined;
+      let providerState = serverRow?.config?.providerState;
+
+      if (client instanceof MCPOAuthClient) {
+        tokens = client.getTokens();
+        expiresAt = client.getTokenExpiry();
+        providerState = client.getProviderState() || providerState;
+      } else if (client instanceof GitHubOAuthClient) {
+        tokens = client.getTokens();
+        expiresAt = client.getTokenExpiry();
+      }
+
+      await this.updateOAuthCompletion(sessionId, userId, {
+        tokens,
+        expiresAt,
+        providerState,
+        existingConfig: serverRow?.config || {},
+      });
 
       console.log(`OAuth completed successfully for session ${sessionId}`);
 
@@ -402,19 +439,70 @@ export class MCPWebInterface {
     }
   }
 
-  private async updateOAuthCompletion(sessionId: string, userId: string): Promise<void> {
-    const { error } = await this.getSupabase()
-      .from('user_mcp_servers')
-      .update({
+  private async updateOAuthCompletion(
+    sessionId: string,
+    userId: string,
+    options: {
+      tokens?: OAuthTokens;
+      expiresAt?: string;
+      providerState?: any;
+      existingConfig: Record<string, any>;
+    }
+  ): Promise<void> {
+    try {
+      const updates: Record<string, any> = {
         is_enabled: true,
-        oauth_token: 'present', // We don't store the actual token for security
-        updated_at: new Date().toISOString()
-      })
-      .eq('session_id', sessionId)
-      .eq('user_id', userId);
+        updated_at: new Date().toISOString(),
+      };
 
-    if (error) {
-      console.error('Failed to update OAuth completion:', error);
+      if (options.tokens) {
+        updates.oauth_token = options.tokens.access_token ?? null;
+        updates.refresh_token = options.tokens.refresh_token ?? null;
+      }
+      if (options.expiresAt) {
+        updates.expires_at = options.expiresAt;
+      } else if (options.tokens && !options.expiresAt) {
+        updates.expires_at = null;
+      }
+
+      const existingConfig = options.existingConfig || {};
+      const updatedConfig = { ...existingConfig };
+
+      if (options.providerState) {
+        updatedConfig.providerState = options.providerState;
+      }
+
+      if (existingConfig?.callbackUrl) {
+        updatedConfig.callbackUrl = existingConfig.callbackUrl;
+      }
+
+      if (options.tokens || options.expiresAt) {
+        const tokenMetadata = { ...(existingConfig.tokenMetadata || {}) };
+        if (options.tokens?.token_type) {
+          tokenMetadata.token_type = options.tokens.token_type;
+        }
+        if (options.tokens?.scope) {
+          tokenMetadata.scope = options.tokens.scope;
+        }
+        if (options.expiresAt) {
+          tokenMetadata.expires_at = options.expiresAt;
+        }
+        updatedConfig.tokenMetadata = tokenMetadata;
+      }
+
+      updates.config = updatedConfig;
+
+      const { error } = await this.getSupabase()
+        .from('user_mcp_servers')
+        .update(updates)
+        .eq('session_id', sessionId)
+        .eq('user_id', userId);
+
+      if (error) {
+        console.error('Failed to update OAuth completion:', error);
+      }
+    } catch (error) {
+      console.error('Unexpected error while updating OAuth completion:', error);
     }
   }
 

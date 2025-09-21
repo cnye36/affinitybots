@@ -19,7 +19,16 @@ export async function GET(request: NextRequest) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-  return NextResponse.json({ servers: data });
+  const sanitized = (data || []).map((server) => {
+    const { oauth_token, refresh_token, ...rest } = server as any;
+    return {
+      ...rest,
+      has_oauth_token: Boolean(oauth_token),
+      has_refresh_token: Boolean(refresh_token),
+    };
+  });
+
+  return NextResponse.json({ servers: sanitized });
 }
 
 // POST: Add a new MCP server config for the user

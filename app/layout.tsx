@@ -1,15 +1,65 @@
 import './globals.css'
 import { Inter } from 'next/font/google'
+import type { Metadata } from 'next'
 import { ThemeProvider } from '@/components/theme-provider'
+import { OrganizationJsonLd } from '@/components/seo/OrganizationJsonLd'
 import { Toaster } from "@/components/ui/toaster"
 import { CookieBanner } from "@/components/CookieBanner";
 import { Analytics } from "@vercel/analytics/next";
 
 const inter = Inter({ subsets: ["latin"] });
 
-export const metadata = {
-  title: "AffinityBots",
+const siteUrl = process.env.NEXT_PUBLIC_BASE_URL || (process.env.NODE_ENV === 'production' ? 'https://affinitybots.com' : 'http://localhost:3000')
+
+export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "AffinityBots",
+    template: "%s | AffinityBots",
+  },
   description: "Build and manage AI agent workflows",
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+  },
+  keywords: [
+    "AI agents",
+    "workflow automation",
+    "agent workflows",
+    "AI orchestration",
+    "AffinityBots",
+  ],
+  applicationName: "AffinityBots",
+  alternates: {
+    canonical: "/",
+  },
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
+  },
+  openGraph: {
+    type: "website",
+    url: "/",
+    title: "AffinityBots",
+    siteName: "AffinityBots",
+    description: "Build and manage AI agent workflows",
+    images: [
+      {
+        url: "/logo.png",
+        width: 1200,
+        height: 630,
+        alt: "AffinityBots",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "AffinityBots",
+    description: "Build and manage AI agent workflows",
+    images: ["/logo.png"],
+  },
+  robots: process.env.NODE_ENV === 'production'
+    ? { index: true, follow: true }
+    : { index: false, follow: false },
   icons: {
     icon: "/favicon.ico",
   },
@@ -29,6 +79,11 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          <OrganizationJsonLd
+            name="AffinityBots"
+            url={siteUrl}
+            logoUrl={`${siteUrl}/logo.png`}
+          />
           {children}
           <CookieBanner />
           <Toaster />

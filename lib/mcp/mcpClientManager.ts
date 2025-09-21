@@ -3,6 +3,7 @@ import { MCPOAuthClient } from "@/lib/oauthClient";
 import { GitHubOAuthClient } from "@/lib/githubOauthClient";
 import { sessionStore } from "@/lib/sessionStore";
 import { getAvailableMcpServers } from "../agent/getAvailableMcpServers";
+import { OAuthTokens } from "@modelcontextprotocol/sdk/shared/auth.js";
 
 export interface MCPServerInfo {
   qualified_name: string;
@@ -268,14 +269,36 @@ export class MCPClientManager {
         }
       }
 
-      // Check if this is a GitHub server with OAuth credentials
-      const isGitHubServer = qualifiedName === 'github' || serverConfig.url?.includes('githubcopilot.com') || serverConfig.url?.includes('github.com');
-      
-      if (isGitHubServer && serverConfig.oauth_token) {
-        console.log(`Creating GitHub OAuth client for ${qualifiedName}`);
-        
-        // Create a GitHub OAuth client
-        const callbackUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/mcp/auth/callback`;
+      const callbackUrl =
+        serverConfig.config?.callbackUrl ||
+        `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/mcp/auth/callback`;
+
+      const providerState = serverConfig.config?.providerState;
+      const storedTokenType = serverConfig.config?.tokenMetadata?.token_type || 'Bearer';
+      const storedScope = serverConfig.config?.tokenMetadata?.scope;
+      const hasStoredToken =
+        typeof serverConfig.oauth_token === 'string' &&
+        serverConfig.oauth_token !== '' &&
+        serverConfig.oauth_token !== 'present';
+
+      const tokens: OAuthTokens | null = hasStoredToken
+        ? {
+            access_token: serverConfig.oauth_token,
+            token_type: storedTokenType,
+            scope: storedScope,
+            refresh_token: serverConfig.refresh_token || undefined,
+          }
+        : null;
+
+      const expiresAt: string | undefined = serverConfig.expires_at || serverConfig.config?.tokenMetadata?.expires_at;
+
+      const isGitHubServer =
+        qualifiedName === 'github' ||
+        serverConfig.url?.includes('githubcopilot.com') ||
+        serverConfig.url?.includes('github.com');
+
+      if (isGitHubServer && tokens) {
+        console.log(`Rehydrating GitHub OAuth client for ${qualifiedName}`);
         const githubClient = new GitHubOAuthClient(
           serverConfig.url,
           callbackUrl,
@@ -284,38 +307,62 @@ export class MCPClientManager {
           }
         );
 
-        // Store the client in the session store if we have a session ID
         if (serverConfig.session_id) {
-          sessionStore.setClient(serverConfig.session_id, githubClient);
+          githubClient.setSessionId?.(serverConfig.session_id);
         }
 
-        // For GitHub servers, we need to append the OAuth token to the URL
-        // since MultiServerMCPClient doesn't support OAuth authentication directly
-        let finalUrl = serverConfig.url;
-        if (serverConfig.oauth_token && serverConfig.oauth_token !== 'present') {
-          // If we have the actual token, append it to the URL
-          const separator = finalUrl.includes('?') ? '&' : '?';
-          finalUrl = `${finalUrl}${separator}oauth_token=${encodeURIComponent(serverConfig.oauth_token)}`;
-        } else if (serverConfig.session_id) {
-          // If we have a session ID, append it to the URL
-          const separator = finalUrl.includes('?') ? '&' : '?';
-          finalUrl = `${finalUrl}${separator}session_id=${encodeURIComponent(serverConfig.session_id)}`;
+        try {
+          await githubClient.connectWithStoredSession({ tokens, expiresAt });
+          if (serverConfig.session_id) {
+            sessionStore.setClient(serverConfig.session_id, githubClient);
+          }
+          return {
+            url: serverConfig.url,
+            client: githubClient,
+            sessionId: serverConfig.session_id,
+          };
+        } catch (error) {
+          console.warn(`Failed to reconnect GitHub OAuth session for ${qualifiedName}:`, error);
         }
-
-        return {
-          url: finalUrl,
-          client: githubClient,
-          sessionId: serverConfig.session_id
-        };
       }
 
-      // For other OAuth servers, we need to use the session-based approach
-      // In a production environment, you'd initiate OAuth flow here
-      // For now, we'll assume OAuth sessions are managed externally
-      console.log(`OAuth server ${qualifiedName} requires external OAuth setup`);
-      
+      if (tokens) {
+        console.log(`Rehydrating OAuth client for ${qualifiedName}`);
+        const oauthClient = new MCPOAuthClient(
+          serverConfig.url,
+          callbackUrl,
+          (redirectUrl: string) => {
+            console.log(`OAuth redirect for ${qualifiedName}: ${redirectUrl}`);
+          }
+        );
+
+        try {
+          await oauthClient.connectWithStoredSession({
+            tokens,
+            expiresAt,
+            providerState,
+          });
+
+          if (serverConfig.session_id) {
+            sessionStore.setClient(serverConfig.session_id, oauthClient);
+          }
+
+          return {
+            url: serverConfig.url,
+            client: oauthClient,
+            sessionId: serverConfig.session_id,
+          };
+        } catch (error) {
+          console.warn(`Failed to reconnect OAuth session for ${qualifiedName}:`, error);
+        }
+      }
+
+      console.warn(
+        `OAuth server ${qualifiedName} is enabled but no reusable session tokens were found; agent may need to reauthorize.`
+      );
+
       return {
-        url: serverConfig.url // Use the URL as-is, assuming OAuth token is embedded
+        url: serverConfig.url,
       };
     } catch (error) {
       console.error(`Error handling OAuth server ${qualifiedName}:`, error);
@@ -442,7 +489,11 @@ export class MCPClientManager {
         }
       );
       // Store the session ID in the GitHub client for the OAuth flow
-      (client as any).sessionId = sessionId;
+      if (client instanceof GitHubOAuthClient && typeof client.setSessionId === "function") {
+        client.setSessionId(sessionId);
+      } else {
+        (client as any).sessionId = sessionId;
+      }
     } else {
       client = new MCPOAuthClient(
         serverUrl,
@@ -539,12 +590,11 @@ export class MCPClientManager {
         return [];
       }
 
-      // Try to connect the OAuth client if it's not already connected
-      try {
-        await oauthClient.connect();
-      } catch (error) {
-        console.warn(`Failed to connect OAuth client for ${serverName}:`, error);
-        // If connection fails, we might still be able to get tools if already connected
+      if ("isConnected" in oauthClient && typeof (oauthClient as any).isConnected === "function") {
+        if (!(oauthClient as any).isConnected()) {
+          console.warn(`OAuth client for ${serverName} is not connected; skipping tool discovery.`);
+          return [];
+        }
       }
 
       // Try to list tools from the OAuth client

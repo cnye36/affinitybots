@@ -108,7 +108,7 @@ export function NavUser({ user: initialUser }: { user?: UserData }) {
   return (
     <SidebarMenu>
       {/* Rate limit progress bar */}
-      <div className="px-3 py-2">
+      <div className="px-3 py-2 group-data-[collapsible=icon]:hidden">
         <RateLimitProgress userId={userId} />
       </div>
       

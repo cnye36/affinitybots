@@ -23,6 +23,7 @@ import {
 class GitHubOAuthClientProvider implements OAuthClientProvider {
   private _clientInformation?: OAuthClientInformationFull;
   private _tokens?: OAuthTokens;
+  private _tokenExpiresAt?: string;
   private _codeVerifier?: string;
 
   constructor(
@@ -71,6 +72,11 @@ class GitHubOAuthClientProvider implements OAuthClientProvider {
 
   saveTokens(tokens: OAuthTokens): void {
     this._tokens = tokens;
+    if (typeof tokens.expires_in === "number") {
+      this._tokenExpiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString();
+    } else {
+      this._tokenExpiresAt = undefined;
+    }
   }
 
   redirectToAuthorization(authorizationUrl: URL): void {
@@ -96,12 +102,24 @@ class GitHubOAuthClientProvider implements OAuthClientProvider {
     }
     return this._codeVerifier;
   }
+
+  tokensExpireAt(): string | undefined {
+    return this._tokenExpiresAt;
+  }
+
+  restoreTokens(tokens: OAuthTokens, expiresAt?: string): void {
+    this._tokens = tokens;
+    this._tokenExpiresAt = expiresAt;
+  }
 }
 
 export class GitHubOAuthClient {
   private client: Client | null = null;
   private oauthProvider: GitHubOAuthClientProvider | null = null;
   private sessionId: string | null = null;
+  private connected = false;
+  private cachedTokens?: OAuthTokens;
+  private cachedTokenExpiresAt?: string;
 
   constructor(
     private serverUrl: string,
@@ -151,7 +169,10 @@ export class GitHubOAuthClient {
 
     try {
       await this.client.connect(transport);
+      this.connected = true;
+      this.cacheTokensFromProvider();
     } catch (error) {
+      this.connected = false;
       if (error instanceof UnauthorizedError) {
         throw new Error("OAuth authorization required");
       } else {
@@ -172,6 +193,8 @@ export class GitHubOAuthClient {
 
     await transport.finishAuth(authCode);
     await this.client.connect(transport);
+    this.connected = true;
+    this.cacheTokensFromProvider();
   }
 
   async listTools(): Promise<ListToolsResult> {
@@ -209,5 +232,69 @@ export class GitHubOAuthClient {
   disconnect(): void {
     this.client = null;
     this.oauthProvider = null;
+    this.connected = false;
+    this.cachedTokens = undefined;
+    this.cachedTokenExpiresAt = undefined;
+  }
+
+  setSessionId(sessionId: string): void {
+    this.sessionId = sessionId;
+  }
+
+  getTokens(): OAuthTokens | undefined {
+    if (!this.cachedTokens && this.oauthProvider) {
+      this.cacheTokensFromProvider();
+    }
+    return this.cachedTokens;
+  }
+
+  getTokenExpiry(): string | undefined {
+    if (!this.cachedTokenExpiresAt && this.oauthProvider) {
+      this.cachedTokenExpiresAt = this.oauthProvider.tokensExpireAt();
+    }
+    return this.cachedTokenExpiresAt;
+  }
+
+  async connectWithStoredSession(options: {
+    tokens: OAuthTokens;
+    expiresAt?: string;
+  }): Promise<void> {
+    if (!process.env.GITHUB_CLIENT_ID || !process.env.GITHUB_CLIENT_SECRET) {
+      throw new Error(
+        "GitHub OAuth credentials not configured. Please set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET environment variables."
+      );
+    }
+
+    this.oauthProvider = new GitHubOAuthClientProvider(
+      this.callbackUrl,
+      () => {}
+    );
+
+    this.oauthProvider.restoreTokens(options.tokens, options.expiresAt);
+
+    this.client = new Client(
+      {
+        name: "AffinityBots-github-mcp-client",
+        version: "1.0.0",
+      },
+      { capabilities: {} }
+    );
+
+    this.cachedTokens = options.tokens;
+    this.cachedTokenExpiresAt = options.expiresAt;
+    await this.attemptConnection();
+  }
+
+  isConnected(): boolean {
+    return this.connected;
+  }
+
+  private cacheTokensFromProvider(): void {
+    if (!this.oauthProvider) return;
+    const tokens = this.oauthProvider.tokens();
+    if (tokens) {
+      this.cachedTokens = tokens;
+      this.cachedTokenExpiresAt = this.oauthProvider.tokensExpireAt();
+    }
   }
 }

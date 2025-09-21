@@ -123,10 +123,39 @@ export const MemoizedTaskNode = memo(
           throw new Error("No response body");
         }
 
+        const extractTextFromPayload = (payload: unknown): string => {
+          const items = Array.isArray(payload)
+            ? payload
+            : payload != null
+            ? [payload]
+            : [];
+          return items
+            .map((item: any) => {
+              if (typeof item === "string") return item;
+              if (typeof item?.delta === "string") return item.delta;
+              if (typeof item?.text === "string") return item.text;
+              if (typeof item?.token === "string") return item.token;
+              const content = item?.content;
+              if (typeof content === "string") return content;
+              if (Array.isArray(content)) {
+                return content
+                  .map((part) => {
+                    if (typeof part === "string") return part;
+                    if (typeof part?.text === "string") return part.text;
+                    return "";
+                  })
+                  .join("");
+              }
+              return "";
+            })
+            .join("");
+        };
+
         // Proper SSE parsing with buffering across chunks
         let buffer = "";
         let accumulatedText = "";
         let finalPayload: any = null;
+        let finalEventType: string | null = null;
 
         while (true) {
           const { done, value } = await reader.read();
@@ -152,49 +181,75 @@ export const MemoizedTaskNode = memo(
             const dataStr = dataLines.join("\n");
             try {
               const parsed = dataStr ? JSON.parse(dataStr) : null;
-              if (parsed) {
-                // Accumulate message content when available
-                if (
-                  parsed.event === "messages/partial" &&
-                  typeof parsed.data?.content === "string"
-                ) {
-                  accumulatedText += parsed.data.content;
+              const resolvedEventType =
+                eventType || (parsed && typeof parsed.event === "string" ? parsed.event : null);
+              const payload =
+                parsed && typeof parsed === "object" && "event" in parsed && "data" in parsed
+                  ? (parsed as any).data
+                  : parsed;
+
+              if (resolvedEventType === "metadata" && payload?.thread_id) {
+                (window as any).__lastTestThreadId = payload.thread_id;
+              }
+
+              if (resolvedEventType === "rate-limit") {
+                window.dispatchEvent(new Event("rate-limit:updated"));
+              }
+
+              if (resolvedEventType === "messages/partial") {
+                const textDelta = extractTextFromPayload(payload);
+                if (textDelta) {
+                  accumulatedText += textDelta;
                 }
-                if (parsed.event === "messages/complete") {
-                  // Prefer final output/content if available
-                  if (typeof parsed.data?.content === "string") {
-                    accumulatedText = parsed.data.content;
-                  }
-                  finalPayload = parsed;
-                }
-                if (eventType === "metadata" && parsed?.thread_id) {
-                  (window as any).__lastTestThreadId = parsed.thread_id;
-                }
-                // When backend signals rate-limit update, notify UI to refresh usage without polling
-                if (parsed?.event === "rate-limit") {
-                  window.dispatchEvent(new Event("rate-limit:updated"));
-                }
-                // Emit streaming updates so the modal can render incrementally
                 try {
-                  const streamEvt = new CustomEvent("taskTestStream", {
-                    detail: {
-                      workflowTaskId: props.data.workflow_task_id,
-                      partial: accumulatedText,
-                    },
-                  });
-                  window.dispatchEvent(streamEvt);
+                  window.dispatchEvent(
+                    new CustomEvent("taskTestStream", {
+                      detail: {
+                        workflowTaskId: props.data.workflow_task_id,
+                        partial: accumulatedText,
+                      },
+                    })
+                  );
                 } catch {}
               }
-            } catch {
+
+              if (resolvedEventType === "messages/complete") {
+                const finalText = extractTextFromPayload(payload);
+                if (finalText) {
+                  accumulatedText = finalText;
+                }
+                finalEventType = resolvedEventType;
+                finalPayload = { event: resolvedEventType, data: payload };
+                try {
+                  window.dispatchEvent(
+                    new CustomEvent("taskTestStream", {
+                      detail: {
+                        workflowTaskId: props.data.workflow_task_id,
+                        partial: accumulatedText,
+                      },
+                    })
+                  );
+                } catch {}
+              }
+
+              if (resolvedEventType === "error" && payload?.error) {
+                const streamError = new Error(payload.error);
+                (streamError as any).__fromStream = true;
+                throw streamError;
+              }
+            } catch (err) {
+              if (err instanceof Error && (err as any).__fromStream) {
+                throw err;
+              }
               // Ignore partial fragments; they will be completed in subsequent chunks
             }
           }
         }
 
         const testResult: StreamTestResult = {
-          type: finalPayload?.event || "messages/complete",
+          type: finalEventType || "messages/complete",
           content: accumulatedText,
-          result: finalPayload?.data || finalPayload || null,
+          result: finalPayload?.data ?? finalPayload ?? null,
         };
 
         // Broadcast completion so the next node can display it as previous output

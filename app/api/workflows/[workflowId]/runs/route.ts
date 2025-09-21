@@ -85,8 +85,9 @@ export async function POST(
 
     const { input, config } = await request.json();
 
-    // Create a new background run for the workflow
-    const run = await client.runs.create(
+    // Request a background run and immediately return the run descriptor
+    // Avoid polling or snapshot heuristics; rely on the platform to enqueue and return an id
+    const requested = await client.runs.create(
       workflow.assistant_id,
       workflow.thread_id || "",
       {
@@ -108,7 +109,17 @@ export async function POST(
       }
     );
 
-    return NextResponse.json(run);
+    // Normalize response to include id/status without waiting for materialization
+    // The SDK may return varying shapes; defensively pluck common identifiers
+    const runId = (requested as any)?.id || (requested as any)?.run_id || (requested as any)?.runId;
+    const status = (requested as any)?.status || (requested as any)?.state || "queued";
+
+    return NextResponse.json({
+      id: runId,
+      status,
+      assistant_id: workflow.assistant_id,
+      thread_id: workflow.thread_id || null,
+    });
   } catch (error) {
     console.error("Error creating run:", error);
     return NextResponse.json(

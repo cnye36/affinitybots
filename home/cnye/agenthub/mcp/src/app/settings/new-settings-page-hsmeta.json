@@ -1,7 +1,0 @@
-{
-  "uid": "settings-hubspot-mcp",
-  "type": "settings",
-  "config": {
-    "entrypoint": "/app/settings/NewSettingsPage.tsx"
-  }
-}
