@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/sidebar";
 import Image from "next/image";
 import { ResetOnboarding } from "@/components/onboarding/ResetOnboarding";
+import { FeedbackButton } from "@/components/feedback/FeedbackButton";
 
 // Navigation data structure
 const data = {
@@ -121,6 +122,7 @@ export function AppSidebar({
       <SidebarFooter>
         <div className="px-2 py-2 space-y-2 group-data-[collapsible=icon]:hidden">
           <ResetOnboarding />
+          <FeedbackButton />
         </div>
         <NavUser user={user} />
       </SidebarFooter>

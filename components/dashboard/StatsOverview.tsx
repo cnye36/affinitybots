@@ -18,6 +18,22 @@ export function StatsOverview({ stats }: StatsOverviewProps) {
           <div className="flex justify-between items-start">
             <div>
               <p className="text-sm font-medium text-muted-foreground">
+                Total Agents
+              </p>
+              <h3 className="text-2xl font-bold mt-2">{stats.totalAgents}</h3>
+            </div>
+            <div className="p-2 bg-primary/10 rounded-full">
+              <User className="h-4 w-4 text-primary" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardContent className="pt-4">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">
                 Total Workflows
               </p>
               <h3 className="text-2xl font-bold mt-2">
@@ -30,21 +46,7 @@ export function StatsOverview({ stats }: StatsOverviewProps) {
           </div>
         </CardContent>
       </Card>
-      <Card>
-        <CardContent className="pt-4">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">
-                Total Agents
-              </p>
-              <h3 className="text-2xl font-bold mt-2">{stats.totalAgents}</h3>
-            </div>
-            <div className="p-2 bg-primary/10 rounded-full">
-              <User className="h-4 w-4 text-primary" />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      
       <Card>
         <CardContent className="pt-4">
           <div className="flex justify-between items-start">
