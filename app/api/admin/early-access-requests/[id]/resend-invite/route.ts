@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
 import { sendInviteEmail } from "@/lib/sendInviteEmail";
-import crypto from "crypto";
 
 export async function POST(request: Request, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
@@ -33,14 +32,12 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     );
   }
 
-  // Generate a new invite code and update the record
-  const newInviteCode = crypto.randomBytes(8).toString("hex");
+  // Reuse existing invite code; only refresh invited_at and ensure no expiry
   const invitedAt = new Date().toISOString();
 
   const { data: updated, error: updateError } = await supabase
     .from("early_access_invites")
     .update({
-      invite_code: newInviteCode,
       invited_at: invitedAt,
       expires_at: null,
       status: "invited",
@@ -50,9 +47,9 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     .single();
 
   if (updateError) {
-    console.error("Failed to update invite with new code:", updateError);
+    console.error("Failed to update invite on resend:", updateError);
     return NextResponse.json(
-      { error: "Failed to regenerate invite code." },
+      { error: "Failed to update invite for resend." },
       { status: 500 }
     );
   }
@@ -63,7 +60,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
       name: updated.name,
       inviteCode: updated.invite_code,
     });
-    return NextResponse.json({ message: "Invite email resent with new code." });
+    return NextResponse.json({ message: "Invite email resent." });
   } catch (error) {
     console.error("Failed to resend invite email:", error);
     return NextResponse.json(

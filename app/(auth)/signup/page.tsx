@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useRef, useState, Suspense } from "react";
+import { useRef, useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 function SignUpForm() {
@@ -15,6 +15,21 @@ function SignUpForm() {
   const searchParams = useSearchParams();
   const queryError = searchParams.get("error");
   const inviteRef = useRef<HTMLInputElement | null>(null);
+
+  // Auto-fill invite code from URL and optionally copy to clipboard
+  useEffect(() => {
+    const code = searchParams.get("inviteCode");
+    const shouldCopy = searchParams.get("copy");
+    if (code && inviteRef.current) {
+      inviteRef.current.value = code;
+      // Optionally copy to clipboard if requested via query param
+      if (shouldCopy === "1" && typeof navigator !== "undefined" && navigator.clipboard) {
+        navigator.clipboard.writeText(code).catch(() => {
+          // best-effort; ignore clipboard errors
+        });
+      }
+    }
+  }, [searchParams]);
 
   async function handleSignUp(formData: FormData) {
     const password = formData.get("password") as string;

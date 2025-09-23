@@ -44,7 +44,7 @@ export async function GET(req: Request) {
     await supabase.auth.signOut();
     return NextResponse.redirect(
       new URL(
-        `/signup?error=${encodeURIComponent("Invalid or expired invite code.")}`,
+        `/signup?error=${encodeURIComponent("Invalid invite code.")}`,
         requestUrl.origin
       )
     );

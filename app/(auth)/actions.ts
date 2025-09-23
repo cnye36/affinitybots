@@ -45,7 +45,7 @@ export async function signUp(formData: FormData) {
     console.error("Invite code validation error:", inviteError);
     return {
       error:
-        "Invalid or expired invite code. Please check your code and try again.",
+        "Invalid invite code. Please check your code and try again.",
     };
   }
 
