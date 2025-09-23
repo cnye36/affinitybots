@@ -28,7 +28,9 @@ export async function signUp(formData: FormData) {
 
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
-  const inviteCode = formData.get("inviteCode") as string;
+  // Sanitize invite code server-side: alphanumeric only
+  const inviteCodeRaw = formData.get("inviteCode") as string;
+  const inviteCode = (inviteCodeRaw || "").replace(/[^a-zA-Z0-9]/g, "");
 
   if (!email || !password || !inviteCode) {
     return { error: "Email, password, and invite code are required." };

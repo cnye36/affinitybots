@@ -19,7 +19,8 @@ export async function sendInviteEmail({
   const signupUrl = `${
     process.env.NEXT_PUBLIC_BASE_URL || "https://AffinityBots.com"
   }/signup`;
-  const signupWithCodeUrl = `${signupUrl}?inviteCode=${encodeURIComponent(inviteCode)}&copy=1`;
+  // Use 'autocopy' flag instead of 'copy' to avoid HTML entity &copy; being parsed as ©
+  const signupWithCodeUrl = `${signupUrl}?inviteCode=${encodeURIComponent(inviteCode)}&autocopy=1`;
 
   const html = `
       <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto;">

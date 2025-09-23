@@ -18,9 +18,12 @@ function SignUpForm() {
 
   // Auto-fill invite code from URL and optionally copy to clipboard
   useEffect(() => {
-    const code = searchParams.get("inviteCode");
-    const shouldCopy = searchParams.get("copy");
-    if (code && inviteRef.current) {
+    const raw = searchParams.get("inviteCode");
+    // Support both 'copy' and 'autocopy' flags
+    const shouldCopy = searchParams.get("copy") ?? searchParams.get("autocopy");
+    if (raw && inviteRef.current) {
+      // Sanitize: remove any trailing query fragments mistakenly appended to the code (e.g., "=1")
+      const code = raw.replace(/[^a-zA-Z0-9]/g, "");
       inviteRef.current.value = code;
       // Optionally copy to clipboard if requested via query param
       if (shouldCopy === "1" && typeof navigator !== "undefined" && navigator.clipboard) {
@@ -34,7 +37,8 @@ function SignUpForm() {
   async function handleSignUp(formData: FormData) {
     const password = formData.get("password") as string;
     const confirmPassword = formData.get("confirmPassword") as string;
-    const inviteCode = formData.get("inviteCode") as string;
+    // Sanitize invite code on submit as well
+    const inviteCode = (formData.get("inviteCode") as string)?.replace(/[^a-zA-Z0-9]/g, "");
 
     if (password !== confirmPassword) {
       setError("Passwords do not match");

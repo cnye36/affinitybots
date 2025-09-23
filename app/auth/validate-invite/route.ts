@@ -3,7 +3,9 @@ import { createClient } from "@/supabase/server";
 
 export async function GET(req: Request) {
   const requestUrl = new URL(req.url);
-  const inviteCode = requestUrl.searchParams.get("inviteCode");
+  // Sanitize invite code from URL
+  const inviteCodeRaw = requestUrl.searchParams.get("inviteCode");
+  const inviteCode = inviteCodeRaw ? inviteCodeRaw.replace(/[^a-zA-Z0-9]/g, "") : null;
 
   const supabase = await createClient();
 
