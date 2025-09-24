@@ -10,75 +10,71 @@ interface StatsOverviewProps {
   };
 }
 
+const statCards = [
+  {
+    title: "Total Agents",
+    value: (stats: StatsOverviewProps['stats']) => stats.totalAgents.toString(),
+    icon: User,
+    color: "primary",
+    description: "Active AI agents"
+  },
+  {
+    title: "Total Workflows", 
+    value: (stats: StatsOverviewProps['stats']) => stats.totalWorkflows.toString(),
+    icon: Zap,
+    color: "primary", 
+    description: "Automation workflows"
+  },
+  {
+    title: "Success Rate",
+    value: (stats: StatsOverviewProps['stats']) => stats.successRate,
+    icon: CheckCircle2,
+    color: "green",
+    description: "Task completion rate"
+  },
+  {
+    title: "Avg Response Time",
+    value: (stats: StatsOverviewProps['stats']) => stats.averageResponseTime,
+    icon: Activity,
+    color: "blue",
+    description: "System performance"
+  }
+] as const;
+
 export function StatsOverview({ stats }: StatsOverviewProps) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-      <Card>
-        <CardContent className="pt-4">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">
-                Total Agents
-              </p>
-              <h3 className="text-2xl font-bold mt-2">{stats.totalAgents}</h3>
-            </div>
-            <div className="p-2 bg-primary/10 rounded-full">
-              <User className="h-4 w-4 text-primary" />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardContent className="pt-4">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">
-                Total Workflows
-              </p>
-              <h3 className="text-2xl font-bold mt-2">
-                {stats.totalWorkflows}
-              </h3>
-            </div>
-            <div className="p-2 bg-primary/10 rounded-full">
-              <Zap className="h-4 w-4 text-primary" />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardContent className="pt-4">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">
-                Success Rate
-              </p>
-              <h3 className="text-2xl font-bold mt-2">{stats.successRate}</h3>
-            </div>
-            <div className="p-2 bg-green-500/10 rounded-full">
-              <CheckCircle2 className="h-4 w-4 text-green-500" />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardContent className="pt-4">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">
-                Avg Response Time
-              </p>
-              <h3 className="text-2xl font-bold mt-2">
-                {stats.averageResponseTime}
-              </h3>
-            </div>
-            <div className="p-2 bg-blue-500/10 rounded-full">
-              <Activity className="h-4 w-4 text-blue-500" />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      {statCards.map((card, index) => {
+        const IconComponent = card.icon;
+        const colorClasses = {
+          primary: "bg-primary/10 text-primary",
+          green: "bg-emerald-500/10 text-emerald-600",
+          blue: "bg-blue-500/10 text-blue-600"
+        };
+        
+        return (
+          <Card key={index} className="relative overflow-hidden hover:shadow-md transition-shadow duration-200">
+            <CardContent className="p-6">
+              <div className="flex items-start justify-between">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground">
+                    {card.title}
+                  </p>
+                  <h3 className="text-3xl font-bold tracking-tight">
+                    {card.value(stats)}
+                  </h3>
+                </div>
+                <div className={`p-3 rounded-xl ${colorClasses[card.color]}`}>
+                  <IconComponent className="h-5 w-5" />
+                </div>
+              </div>
+              <div className="mt-4 pt-3 border-t border-border/50">
+                <p className="text-xs text-muted-foreground">{card.description}</p>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 }

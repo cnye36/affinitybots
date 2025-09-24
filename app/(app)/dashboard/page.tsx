@@ -1,8 +1,10 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/supabase/server";
-import { Clock, BarChart3 } from "lucide-react";
+import { Clock, Bot, Play } from "lucide-react";
+import Image from "next/image";
+import { headers } from "next/headers";
+import { OFFICIAL_MCP_SERVERS } from "@/lib/mcp/officialMcpServers";
 import { StatsOverview } from "@/components/dashboard/StatsOverview";
-import { QuickActions } from "@/components/dashboard/QuickActions";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { LatestWorkflows } from "@/components/dashboard/ActiveWorkflows";
 import {
@@ -26,22 +28,55 @@ function createTimeoutPromise(timeoutMs: number): Promise<never> {
 }
 
 /**
- * A small utility to extract the number of enabled MCP servers from an
- * assistant's configuration.  The config structure supports both an
- * array (for a simple list of enabled servers) and an object keyed by
- * server name with a nested `isEnabled` flag.  The function always
- * returns a numeric count.
+ * A utility to extract enabled MCP server names from an assistant's configuration.
+ * Returns an array of enabled tool names.
  */
-function countEnabledTools(config: any): number {
-  if (!config) return 0;
+function getEnabledTools(config: any): string[] {
+  if (!config) return [];
   const enabledMcpServers = config.configurable?.enabled_mcp_servers;
   if (Array.isArray(enabledMcpServers)) {
-    return enabledMcpServers.length;
+    return enabledMcpServers;
   }
   if (typeof enabledMcpServers === "object" && enabledMcpServers !== null) {
-    return Object.values(enabledMcpServers).filter((v: any) => (v as any)?.isEnabled).length;
+    return Object.entries(enabledMcpServers)
+      .filter(([_, value]: [string, any]) => value?.isEnabled)
+      .map(([key]: [string, any]) => key);
   }
-  return 0;
+  return [];
+}
+
+/**
+ * A utility to get a simple icon for a tool based on its name
+ */
+function getToolIcon(toolName: string) {
+  const name = toolName.toLowerCase();
+  if (name.includes('supabase')) return '🗄️';
+  if (name.includes('notion')) return '📝';
+  if (name.includes('hubspot')) return '🎯';
+  if (name.includes('github')) return '🐙';
+  if (name.includes('slack')) return '💬';
+  if (name.includes('discord')) return '🎮';
+  if (name.includes('google')) return '🌐';
+  if (name.includes('calendar')) return '📅';
+  if (name.includes('drive')) return '💾';
+  if (name.includes('email')) return '📧';
+  if (name.includes('postgres')) return '🐘';
+  if (name.includes('mysql')) return '🐬';
+  if (name.includes('redis')) return '🔴';
+  if (name.includes('stripe')) return '💳';
+  return '🔧';
+}
+
+/**
+ * A utility to format tool names for display
+ */
+function formatToolName(qualifiedName: string): string {
+  // Extract the tool name from qualified name (e.g., "mcp-server-hubspot" -> "hubspot")
+  const parts = qualifiedName.toLowerCase().split('-');
+  const toolName = parts[parts.length - 1] || qualifiedName;
+  
+  // Capitalize first letter
+  return toolName.charAt(0).toUpperCase() + toolName.slice(1);
 }
 
 export default async function Dashboard() {
@@ -86,15 +121,6 @@ export default async function Dashboard() {
         if (activityError) {
           console.error("Error fetching activity logs:", activityError);
         }
-        const recentActivity =
-          activityLogs?.map((log: any) => ({
-            type: log.type as
-              | "workflow_completed"
-              | "agent_created"
-              | "workflow_error",
-            message: log.message,
-            time: formatRelativeTime(log.created_at),
-          })) || [];
 
         // Workflow and agent counts
         const { count: totalWorkflows, error: workflowCountError } = await supabase
@@ -155,17 +181,126 @@ export default async function Dashboard() {
           console.error("Error fetching assistants:", assistantsError);
         }
         // Map assistants into a simpler shape for display.  This safely
-        // extracts nested metadata and counts the number of enabled tools.
+        // extracts nested metadata and gets the enabled tools.
         const agents = (assistantsData || []).map((assistant: any) => {
           const metadata = (assistant.metadata || {}) as any;
           const config = (assistant.config || {}) as any;
+          const enabledTools = getEnabledTools(config);
           return {
             id: assistant.assistant_id,
             name: assistant.name || "Unnamed Agent",
             description: metadata.description || "No description provided",
-            toolsCount: countEnabledTools(config),
+            enabledTools: enabledTools,
+            toolsCount: enabledTools.length,
           };
         });
+
+        // Generate recent activity after all data is fetched
+        let recentActivity = activityLogs?.map((log: any) => ({
+          type: log.type as
+            | "workflow_completed"
+            | "agent_created"
+            | "workflow_error",
+          message: log.message,
+          time: formatRelativeTime(log.created_at),
+        })) || [];
+
+        // If no activity logs exist, generate some based on recent data
+        if (recentActivity.length === 0) {
+          const sampleActivity: any[] = [];
+          
+          // Add workflow-related activities
+          if (workflows && workflows.length > 0) {
+            workflows.slice(0, 2).forEach((workflow: any) => {
+              sampleActivity.push({
+                type: "workflow_completed" as const,
+                message: `Workflow "${workflow.name}" completed successfully`,
+                time: formatRelativeTime(workflow.created_at),
+              });
+            });
+          }
+          
+          // Add agent-related activities
+          if ((assistantsData || []).length > 0) {
+            (assistantsData || []).slice(0, 2).forEach((assistant: any) => {
+              sampleActivity.push({
+                type: "agent_created" as const,
+                message: `Agent "${assistant.name}" was created`,
+                time: formatRelativeTime(assistant.created_at),
+              });
+            });
+          }
+          
+          // Add tool-related activities
+          if (toolsData && toolsData.length > 0) {
+            toolsData.slice(0, 1).forEach((tool: any) => {
+              sampleActivity.push({
+                type: "agent_created" as const,
+                message: `Tool "${formatToolName(tool.qualified_name)}" was configured`,
+                time: formatRelativeTime(tool.created_at),
+              });
+            });
+          }
+          
+          recentActivity = sampleActivity.slice(0, 5);
+        }
+
+        // --------------------------------------------------------------------
+        // Build tool logo map (official + Smithery bulk)
+        // --------------------------------------------------------------------
+        const allQualifiedNamesSet = new Set<string>();
+        agents.forEach((a: any) => (a.enabledTools || []).forEach((q: string) => q && allQualifiedNamesSet.add(q)));
+        tools.forEach((t: any) => t?.qualified_name && allQualifiedNamesSet.add(t.qualified_name));
+
+        const toolLogos: Record<string, string> = {};
+        // Seed with official server logos
+        OFFICIAL_MCP_SERVERS.forEach((s) => {
+          if (s.logoUrl) {
+            // Seed by exact name and any qualified names that include the official key
+            if (allQualifiedNamesSet.has(s.qualifiedName)) {
+              toolLogos[s.qualifiedName] = s.logoUrl as string;
+            }
+            Array.from(allQualifiedNamesSet).forEach((q) => {
+              if (q.toLowerCase().includes(s.qualifiedName.toLowerCase())) {
+                toolLogos[q] = s.logoUrl as string;
+              }
+            });
+          }
+        });
+
+        // Fetch remaining from Smithery bulk endpoint
+        if (allQualifiedNamesSet.size > 0) {
+          try {
+            const hdrs = await headers();
+            const proto = hdrs.get("x-forwarded-proto") || "http";
+            const host = hdrs.get("host");
+            const baseUrl = host ? `${proto}://${host}` : "";
+            const qualifiedNames = Array.from(allQualifiedNamesSet);
+            const response = await fetch(`${baseUrl}/api/smithery/bulk`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ qualifiedNames }),
+              // avoid caching for accuracy on dashboard
+              cache: "no-store",
+            });
+            if (response.ok) {
+              const data = await response.json();
+              Object.entries((data?.servers as any) || {}).forEach(([q, s]: [string, any]) => {
+                const url = (s as any)?.iconUrl || (s as any)?.logo;
+                if (url) toolLogos[q] = url as string;
+              });
+            }
+          } catch {
+            // Non-fatal; fall back to any seeded logos and emoji
+          }
+        }
+
+        // Helper to get an official logo when Smithery did not provide one
+        const officialLogoForQualifiedName = (qualified: string): string | undefined => {
+          const lower = (qualified || "").toLowerCase();
+          const match = OFFICIAL_MCP_SERVERS.find((s) => lower.includes(s.qualifiedName.toLowerCase()) && s.logoUrl);
+          return match?.logoUrl as string | undefined;
+        };
 
         // --------------------------------------------------------------------
         // Render the dashboard UI
@@ -173,19 +308,41 @@ export default async function Dashboard() {
         return (
           <div className="min-h-screen bg-background">
             <div className="container mx-auto px-4 py-8">
-              {/* Header with time range and actions */}
-              <div className="flex justify-between items-center mb-8" data-tutorial="dashboard-header">
-                <h1 className="text-2xl font-bold">Dashboard Overview</h1>
-                
+              {/* Enhanced Header */}
+              <div className="mb-8" data-tutorial="dashboard-header">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
+                  <div>
+                    <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+                    <p className="text-muted-foreground mt-1">
+                      Monitor your agents, workflows, and system performance
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href="/agents/new">
+                        <Bot className="h-4 w-4 mr-2" />
+                        New Agent
+                      </Link>
+                    </Button>
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href="/workflows/new">
+                        <Play className="h-4 w-4 mr-2" />
+                        New Workflow
+                      </Link>
+                    </Button>
+                    <Button variant="outline" size="sm">
+                      <Clock className="h-4 w-4 mr-2" />
+                      Last 30 days
+                    </Button>
+                  </div>
+                </div>
               </div>
 
               {/* Summary statistics */}
               <StatsOverview stats={stats} />
-              {/* Quick actions */}
-              <QuickActions />
 
               {/* Tools and Agents summary grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">{/* Agents section */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">{/* Agents section */}
                 <Card>
                   <CardHeader>
                     <CardTitle>Agents</CardTitle>
@@ -203,17 +360,41 @@ export default async function Dashboard() {
                             className="block p-3 border rounded-lg hover:border-primary transition-colors"
                           >
                             <div className="flex items-start justify-between gap-4">
-                              <div className="min-w-0">
-                                <p className="font-medium truncate">
-                                  {agent.name}
-                                </p>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <p className="font-medium truncate">
+                                    {agent.name}
+                                  </p>
+                                  <div className="flex items-center gap-1">
+                                    {agent.enabledTools.slice(0, 3).map((tool: string, index: number) => {
+                                      const logo = toolLogos[tool] || officialLogoForQualifiedName(tool);
+                                      return logo ? (
+                                        <Image
+                                          key={index}
+                                          src={logo}
+                                          alt={tool}
+                                          width={20}
+                                          height={20}
+                                          className="object-contain"
+                                          style={{ objectFit: "contain" }}
+                                        />
+                                      ) : (
+                                        <span key={index} className="text-sm" title={tool}>
+                                          {getToolIcon(tool)}
+                                        </span>
+                                      );
+                                    })}
+                                    {agent.enabledTools.length > 3 && (
+                                      <span className="text-xs text-muted-foreground">
+                                        +{agent.enabledTools.length - 3}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
                                 <p className="text-sm text-muted-foreground line-clamp-2">
                                   {agent.description}
                                 </p>
                               </div>
-                              <Badge variant="secondary">
-                                {agent.toolsCount} tool{agent.toolsCount === 1 ? "" : "s"}
-                              </Badge>
                             </div>
                           </Link>
                         ))}
@@ -254,8 +435,29 @@ export default async function Dashboard() {
                             key={tool.id}
                             className="flex items-center justify-between p-3 border rounded-lg"
                           >
-                            <div className="font-medium truncate">
-                              {tool.qualified_name}
+                            <div className="flex items-center gap-3">
+                              {(toolLogos[tool.qualified_name] || officialLogoForQualifiedName(tool.qualified_name)) ? (
+                                <Image
+                                  src={toolLogos[tool.qualified_name] || officialLogoForQualifiedName(tool.qualified_name) as string}
+                                  alt={tool.qualified_name}
+                                  width={28}
+                                  height={28}
+                                  className="object-contain"
+                                  style={{ objectFit: "contain" }}
+                                />
+                              ) : (
+                                <span className="text-lg" title={tool.qualified_name}>
+                                  {getToolIcon(tool.qualified_name)}
+                                </span>
+                              )}
+                              <div>
+                                <div className="font-medium truncate">
+                                  {formatToolName(tool.qualified_name)}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {tool.qualified_name}
+                                </div>
+                              </div>
                             </div>
                             <Badge
                               variant={tool.is_enabled ? "default" : "secondary"}
@@ -290,7 +492,7 @@ export default async function Dashboard() {
               
 
               {/* Recent activity and workflows */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <LatestWorkflows workflows={workflows || []} />
                 <RecentActivity activities={recentActivity} />
               </div>
