@@ -134,13 +134,23 @@ export function useOnboarding() {
 
 export const dashboardTutorialSteps: TutorialStep[] = [
   {
-    id: "create-agent",
-    target: "[data-tutorial='create-agent']",
+    id: "dashboard-new-agent",
+    target: "[data-tutorial='dashboard-new-agent']",
     title: "Create a New Agent",
-    description: "Use Quick Actions to create your first AI agent. You'll configure its capabilities and tools.",
-    placement: "right",
+    description: "Start here to create your first AI agent from anywhere on the dashboard.",
+    placement: "bottom",
     showNext: true,
     showPrev: false,
+    showSkip: true
+  },
+  {
+    id: "dashboard-new-workflow",
+    target: "[data-tutorial='dashboard-new-workflow']",
+    title: "Add a Workflow",
+    description: "Build a multi-step workflow to orchestrate agents and tools.",
+    placement: "bottom",
+    showNext: true,
+    showPrev: true,
     showSkip: true
   },
   {

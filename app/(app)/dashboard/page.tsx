@@ -319,13 +319,13 @@ export default async function Dashboard() {
                   </div>
                   <div className="flex items-center gap-3">
                     <Button variant="outline" size="sm" asChild>
-                      <Link href="/agents/new">
+                      <Link href="/agents/new" data-tutorial="dashboard-new-agent">
                         <Bot className="h-4 w-4 mr-2" />
                         New Agent
                       </Link>
                     </Button>
                     <Button variant="outline" size="sm" asChild>
-                      <Link href="/workflows/new">
+                      <Link href="/workflows/new" data-tutorial="dashboard-new-workflow">
                         <Play className="h-4 w-4 mr-2" />
                         New Workflow
                       </Link>
