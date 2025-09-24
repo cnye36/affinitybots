@@ -1,8 +1,17 @@
 import Link from "next/link";
-import { PlusCircle, Settings2, Wrench } from "lucide-react";
+import { PlusCircle, Settings2, Wrench, type LucideIcon } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
-const quickActions = [
+interface QuickAction {
+  href: string;
+  icon: LucideIcon;
+  title: string;
+  description: string;
+  color: "primary" | "blue" | "green" | "orange";
+  tutorial?: string;
+}
+
+const quickActions: QuickAction[] = [
   {
     href: "/agents/new",
     icon: PlusCircle,
@@ -16,7 +25,8 @@ const quickActions = [
     icon: PlusCircle,
     title: "New Workflow",
     description: "Build a multi-agent workflow from scratch",
-    color: "blue"
+    color: "blue",
+    tutorial: "dashboard-new-workflow"
   },
   {
     href: "/tools",
@@ -32,7 +42,7 @@ const quickActions = [
     description: "Configure your workspace and preferences",
     color: "orange"
   }
-] as const;
+] ;
 
 export function QuickActions() {
   return (
