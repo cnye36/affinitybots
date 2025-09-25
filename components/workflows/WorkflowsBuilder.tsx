@@ -21,6 +21,8 @@ import { toast } from "@/hooks/useToast";
 import { TaskSidebar } from "./tasks/TaskSidebar";
 import { WorkflowExecutions } from "./WorkflowExecutions";
 import { TriggerConfigModal } from "./TriggerConfigModal";
+import { WorkflowMobileWizard } from "./WorkflowMobileWizard";
+import { TaskSelectionSheet } from "./tasks/TaskSelectionSheet";
 
 import { Assistant } from "@/types/assistant";
 
@@ -101,10 +103,23 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
   const [mode, setMode] = useState<"editor" | "executions">("editor");
   const [isTriggerConfigOpen, setIsTriggerConfigOpen] = useState(false);
   const [selectedTriggerId, setSelectedTriggerId] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isTaskSheetOpen, setIsTaskSheetOpen] = useState(false);
 
   const createdWorkflowRef = useRef(false);
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedSnapshotRef = useRef<string>("");
+
+  useEffect(() => {
+    const updateIsMobile = () => {
+      if (typeof window === "undefined") return;
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    updateIsMobile();
+    window.addEventListener("resize", updateIsMobile);
+    return () => window.removeEventListener("resize", updateIsMobile);
+  }, []);
 
   type DbWorkflowTask = {
     workflow_task_id: string;
@@ -674,14 +689,17 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
   // Handle adding task from an existing task
   const handleAddTaskFromNode = useCallback(
     (sourceNodeId: string) => {
-      // Store the source node ID to use when the task is created
       const sourceNode = nodes.find((n) => n.id === sourceNodeId);
       if (sourceNode) {
         setActiveNodeId(sourceNode.id);
       }
-      setIsTaskSidebarOpen(true);
+      if (isMobile) {
+        setIsTaskSheetOpen(true);
+      } else {
+        setIsTaskSidebarOpen(true);
+      }
     },
-    [nodes]
+    [nodes, isMobile]
   );
 
   const handleSave = async () => {
@@ -1035,6 +1053,9 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
     };
     // Store in component state for later use
     setPendingTask(pendingTaskDetails);
+    if (isMobile) {
+      setIsTaskSheetOpen(false);
+    }
     // Open the agent selection modal
     setIsAgentSelectOpen(true);
   };
@@ -1063,34 +1084,52 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
       />
       <div className="flex-1 relative min-h-0 overflow-hidden">
         {mode === "editor" ? (
-          <>
-            <WorkflowCanvas
+          isMobile ? (
+            <WorkflowMobileWizard
               nodes={nodes}
-              setNodes={setNodes}
               edges={edges}
-              setEdges={setEdges}
-              initialWorkflowId={workflowId}
-              selectedTaskId={selectedTaskId}
-              onTaskConfigClose={handleTaskConfigClose}
-              activeNodeId={activeNodeId}
-              setActiveNodeId={setActiveNodeId}
+              onAddTrigger={handleAddTrigger}
               onAddTask={handleAddTaskFromNode}
-            />
-            {nodes.length === 0 && (
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="pointer-events-auto">
-                  <EmptyWorkflowState onAddTrigger={handleAddTrigger} />
-                </div>
-              </div>
-            )}
-            <TaskSidebar
-              isOpen={isTaskSidebarOpen}
-              onClose={() => {
-                setIsTaskSidebarOpen(false);
+              onAssignAgent={(taskId) => {
+                if (taskId) handleAssignAgent(taskId);
               }}
-              onTaskSelect={handleTaskSelect}
+              onConfigureTask={(taskId) => {
+                if (taskId) handleConfigureTask(taskId);
+              }}
+              onConfigureTrigger={(triggerId) => {
+                if (triggerId) handleConfigureTrigger(triggerId);
+              }}
             />
-          </>
+          ) : (
+            <>
+              <WorkflowCanvas
+                nodes={nodes}
+                setNodes={setNodes}
+                edges={edges}
+                setEdges={setEdges}
+                initialWorkflowId={workflowId}
+                selectedTaskId={selectedTaskId}
+                onTaskConfigClose={handleTaskConfigClose}
+                activeNodeId={activeNodeId}
+                setActiveNodeId={setActiveNodeId}
+                onAddTask={handleAddTaskFromNode}
+              />
+              {nodes.length === 0 && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="pointer-events-auto">
+                    <EmptyWorkflowState onAddTrigger={handleAddTrigger} />
+                  </div>
+                </div>
+              )}
+              <TaskSidebar
+                isOpen={isTaskSidebarOpen}
+                onClose={() => {
+                  setIsTaskSidebarOpen(false);
+                }}
+                onTaskSelect={handleTaskSelect}
+              />
+            </>
+          )
         ) : (
           workflowId ? (
             <div className="h-full overflow-auto">
@@ -1126,6 +1165,14 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
         workflowId={workflowId || ""}
         triggerId={selectedTriggerId}
       />
+
+      {isMobile && (
+        <TaskSelectionSheet
+          open={isTaskSheetOpen}
+          onOpenChange={setIsTaskSheetOpen}
+          onTaskSelect={handleTaskSelect}
+        />
+      )}
     </div>
   );
 }
