@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Edge, ReactFlowProvider } from "reactflow";
 import { useRouter } from "next/navigation";
 import {
@@ -9,6 +9,7 @@ import {
   TriggerNodeData,
   TaskNodeData,
   TriggerType,
+  Task,
 } from "@/types/workflow";
 import { createClient } from "@/supabase/client";
 import { EmptyWorkflowState } from "./EmptyWorkflowState";
@@ -21,6 +22,9 @@ import { toast } from "@/hooks/useToast";
 import { TaskSidebar } from "./tasks/TaskSidebar";
 import { WorkflowExecutions } from "./WorkflowExecutions";
 import { TriggerConfigModal } from "./TriggerConfigModal";
+import { WorkflowMobileWizard } from "./WorkflowMobileWizard";
+import { TaskSelectionSheet } from "./tasks/TaskSelectionSheet";
+import { TaskConfigModal } from "./tasks/TaskConfigModal";
 
 import { Assistant } from "@/types/assistant";
 
@@ -101,10 +105,26 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
   const [mode, setMode] = useState<"editor" | "executions">("editor");
   const [isTriggerConfigOpen, setIsTriggerConfigOpen] = useState(false);
   const [selectedTriggerId, setSelectedTriggerId] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isTaskSheetOpen, setIsTaskSheetOpen] = useState(false);
+  const [mobileTaskConfigId, setMobileTaskConfigId] = useState<string | null>(
+    null
+  );
 
   const createdWorkflowRef = useRef(false);
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedSnapshotRef = useRef<string>("");
+
+  useEffect(() => {
+    const updateIsMobile = () => {
+      if (typeof window === "undefined") return;
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    updateIsMobile();
+    window.addEventListener("resize", updateIsMobile);
+    return () => window.removeEventListener("resize", updateIsMobile);
+  }, []);
 
   type DbWorkflowTask = {
     workflow_task_id: string;
@@ -175,36 +195,314 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
     setIsAgentSelectOpen(true);
   }, []);
 
-  const handleConfigureTask = useCallback((taskId: string) => {
-    setNodes((nds: WorkflowNode[]) =>
-      nds.map((node: WorkflowNode) => {
-        if (node.type === "task" && node.data.workflow_task_id === taskId) {
-          return {
-            ...node,
-            data: {
-              ...node.data,
-              isConfigOpen: true,
-              onConfigClose: () => {
-                setSelectedTaskId(null);
-                setNodes((prevNodes: WorkflowNode[]) =>
-                  prevNodes.map((n: WorkflowNode) =>
-                    n.type === "task" && n.data.workflow_task_id === taskId
-                      ? { ...n, data: { ...n.data, isConfigOpen: false } }
-                      : n
-                  )
-                );
+  const handleConfigureTask = useCallback(
+    (taskId: string) => {
+      if (isMobile) {
+        setSelectedTaskId(taskId);
+        setMobileTaskConfigId(taskId);
+        return;
+      }
+      setNodes((nds: WorkflowNode[]) =>
+        nds.map((node: WorkflowNode) => {
+          if (node.type === "task" && node.data.workflow_task_id === taskId) {
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                isConfigOpen: true,
+                onConfigClose: () => {
+                  setSelectedTaskId(null);
+                  setNodes((prevNodes: WorkflowNode[]) =>
+                    prevNodes.map((n: WorkflowNode) =>
+                      n.type === "task" && n.data.workflow_task_id === taskId
+                        ? { ...n, data: { ...n.data, isConfigOpen: false } }
+                        : n
+                    )
+                  );
+                },
               },
-            },
-          };
-        }
-        return node;
-      })
-    );
-  }, []);
+            };
+          }
+          return node;
+        })
+      );
+    },
+    [isMobile]
+  );
 
   const handleTaskConfigClose = useCallback(() => {
     setSelectedTaskId(null);
+    setMobileTaskConfigId(null);
   }, []);
+
+  const mobileTaskNode = useMemo(() => {
+    if (!mobileTaskConfigId) return null;
+    return nodes.find(
+      (node) =>
+        node.type === "task" &&
+        node.data.workflow_task_id === mobileTaskConfigId
+    ) || null;
+  }, [mobileTaskConfigId, nodes]);
+
+  const mobileTaskConfig = useMemo(() => {
+    if (!mobileTaskNode || mobileTaskNode.type !== "task") return null;
+    const data = mobileTaskNode.data;
+    return {
+      task: {
+        owner_id: data.owner_id || "",
+        workflow_task_id: data.workflow_task_id,
+        workflow_id: data.workflow_id,
+        name: data.name,
+        description: data.description || "",
+        task_type: data.task_type,
+        position: data.position,
+        assignedAssistant: data.assignedAssistant,
+        config: data.config,
+        status: data.status,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        last_run_at: new Date().toISOString(),
+        metadata: {},
+      } as Task,
+      previousNodeOutput: data.previousNodeOutput,
+      previousNodeThreadId: data.previousNodeThreadId,
+    };
+  }, [mobileTaskNode]);
+
+  const handleMobileTaskUpdate = useCallback(
+    (updatedTask: Task, updatedAssistant: Assistant | null) => {
+      setNodes((nds: WorkflowNode[]) =>
+        nds.map((node: WorkflowNode) => {
+          if (
+            node.type === "task" &&
+            node.data.workflow_task_id === updatedTask.workflow_task_id
+          ) {
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                name: updatedTask.name,
+                description: updatedTask.description || "",
+                task_type: updatedTask.task_type || node.data.task_type,
+                assignedAssistant: updatedAssistant
+                  ? {
+                      id: updatedAssistant.assistant_id,
+                      name: updatedAssistant.name,
+                      avatar: updatedAssistant.metadata.agent_avatar,
+                    }
+                  : updatedTask.assignedAssistant || node.data.assignedAssistant,
+                config: updatedTask.config,
+              },
+            };
+          }
+          return node;
+        })
+      );
+    },
+    []
+  );
+
+  const handleMobileTaskTest = useCallback(
+    async (_overrideConfig?: Record<string, unknown>) => {
+      if (!mobileTaskNode || mobileTaskNode.type !== "task") {
+        return null;
+      }
+      const data = mobileTaskNode.data;
+      try {
+        const response = await fetch(
+          `/api/workflows/${data.workflow_id}/tasks/${data.workflow_task_id}/execute`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              thread_id: data.previousNodeThreadId || undefined,
+              input: {
+                messages: [
+                  {
+                    role: "user",
+                    content: data.config?.input?.prompt,
+                  },
+                ],
+              },
+              overrideConfig: {
+                context: {
+                  inputSource: data.previousNodeThreadId
+                    ? "previous_output"
+                    : (data as any)?.config?.context?.inputSource,
+                  thread: data.previousNodeThreadId
+                    ? { mode: "workflow" }
+                    : (data as any)?.config?.context?.thread,
+                },
+              },
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to execute task");
+        }
+
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
+        if (!reader) {
+          throw new Error("No response body");
+        }
+
+        const extractTextFromPayload = (payload: unknown): string => {
+          const items = Array.isArray(payload)
+            ? payload
+            : payload != null
+            ? [payload]
+            : [];
+          return items
+            .map((item: any) => {
+              if (typeof item === "string") return item;
+              if (typeof item?.delta === "string") return item.delta;
+              if (typeof item?.text === "string") return item.text;
+              if (typeof item?.token === "string") return item.token;
+              const content = item?.content;
+              if (typeof content === "string") return content;
+              if (Array.isArray(content)) {
+                return content
+                  .map((part) => {
+                    if (typeof part === "string") return part;
+                    if (typeof part?.text === "string") return part.text;
+                    return "";
+                  })
+                  .join("");
+              }
+              return "";
+            })
+            .join("");
+        };
+
+        let buffer = "";
+        let accumulatedText = "";
+        let finalPayload: any = null;
+        let finalEventType: string | null = null;
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+
+          const events = buffer.split("\n\n");
+          buffer = events.pop() || "";
+
+          for (const evt of events) {
+            const lines = evt.split("\n");
+            let eventType: string | null = null;
+            const dataLines: string[] = [];
+            for (const line of lines) {
+              if (line.startsWith("event:")) {
+                eventType = line.slice(6).trim();
+              } else if (line.startsWith("data:")) {
+                dataLines.push(line.slice(5).trimStart());
+              }
+            }
+            const dataStr = dataLines.join("\n");
+            try {
+              const parsed = dataStr ? JSON.parse(dataStr) : null;
+              const resolvedEventType =
+                eventType || (parsed && typeof parsed.event === "string" ? parsed.event : null);
+              const payload =
+                parsed && typeof parsed === "object" && "event" in parsed && "data" in parsed
+                  ? (parsed as any).data
+                  : parsed;
+
+              if (resolvedEventType === "metadata" && payload?.thread_id) {
+                (window as any).__lastTestThreadId = payload.thread_id;
+              }
+
+              if (resolvedEventType === "rate-limit") {
+                window.dispatchEvent(new Event("rate-limit:updated"));
+              }
+
+              if (resolvedEventType === "messages/partial") {
+                const textDelta = extractTextFromPayload(payload);
+                if (textDelta) {
+                  accumulatedText += textDelta;
+                }
+                try {
+                  window.dispatchEvent(
+                    new CustomEvent("taskTestStream", {
+                      detail: {
+                        workflowTaskId: data.workflow_task_id,
+                        partial: accumulatedText,
+                      },
+                    })
+                  );
+                } catch {}
+              }
+
+              if (resolvedEventType === "messages/complete") {
+                const finalText = extractTextFromPayload(payload);
+                if (finalText) {
+                  accumulatedText = finalText;
+                }
+                finalEventType = resolvedEventType;
+                finalPayload = { event: resolvedEventType, data: payload };
+                try {
+                  window.dispatchEvent(
+                    new CustomEvent("taskTestStream", {
+                      detail: {
+                        workflowTaskId: data.workflow_task_id,
+                        partial: accumulatedText,
+                      },
+                    })
+                  );
+                } catch {}
+              }
+
+              if (resolvedEventType === "error" && payload?.error) {
+                const streamError = new Error(payload.error);
+                (streamError as any).__fromStream = true;
+                throw streamError;
+              }
+            } catch (err) {
+              if (err instanceof Error && (err as any).__fromStream) {
+                throw err;
+              }
+            }
+          }
+        }
+
+        const testResult = {
+          type: finalEventType || "messages/complete",
+          content: accumulatedText,
+          result: finalPayload?.data ?? finalPayload ?? null,
+        };
+
+        try {
+          const event = new CustomEvent("taskTestCompleted", {
+            detail: {
+              workflowTaskId: data.workflow_task_id,
+              output: {
+                result: testResult?.result ?? accumulatedText ?? null,
+                metadata: { event: testResult?.type },
+              },
+            },
+          });
+          window.dispatchEvent(event);
+        } catch {}
+
+        return testResult;
+      } catch (error) {
+        console.error("Error testing task:", error);
+        throw error;
+      }
+    },
+    [mobileTaskNode]
+  );
+
+  useEffect(() => {
+    if (!isMobile) {
+      setMobileTaskConfigId(null);
+    }
+  }, [isMobile]);
 
   // Add event listener for task updates
   useEffect(() => {
@@ -674,14 +972,17 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
   // Handle adding task from an existing task
   const handleAddTaskFromNode = useCallback(
     (sourceNodeId: string) => {
-      // Store the source node ID to use when the task is created
       const sourceNode = nodes.find((n) => n.id === sourceNodeId);
       if (sourceNode) {
         setActiveNodeId(sourceNode.id);
       }
-      setIsTaskSidebarOpen(true);
+      if (isMobile) {
+        setIsTaskSheetOpen(true);
+      } else {
+        setIsTaskSidebarOpen(true);
+      }
     },
-    [nodes]
+    [nodes, isMobile]
   );
 
   const handleSave = async () => {
@@ -1035,6 +1336,9 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
     };
     // Store in component state for later use
     setPendingTask(pendingTaskDetails);
+    if (isMobile) {
+      setIsTaskSheetOpen(false);
+    }
     // Open the agent selection modal
     setIsAgentSelectOpen(true);
   };
@@ -1063,34 +1367,52 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
       />
       <div className="flex-1 relative min-h-0 overflow-hidden">
         {mode === "editor" ? (
-          <>
-            <WorkflowCanvas
+          isMobile ? (
+            <WorkflowMobileWizard
               nodes={nodes}
-              setNodes={setNodes}
               edges={edges}
-              setEdges={setEdges}
-              initialWorkflowId={workflowId}
-              selectedTaskId={selectedTaskId}
-              onTaskConfigClose={handleTaskConfigClose}
-              activeNodeId={activeNodeId}
-              setActiveNodeId={setActiveNodeId}
+              onAddTrigger={handleAddTrigger}
               onAddTask={handleAddTaskFromNode}
-            />
-            {nodes.length === 0 && (
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="pointer-events-auto">
-                  <EmptyWorkflowState onAddTrigger={handleAddTrigger} />
-                </div>
-              </div>
-            )}
-            <TaskSidebar
-              isOpen={isTaskSidebarOpen}
-              onClose={() => {
-                setIsTaskSidebarOpen(false);
+              onAssignAgent={(taskId) => {
+                if (taskId) handleAssignAgent(taskId);
               }}
-              onTaskSelect={handleTaskSelect}
+              onConfigureTask={(taskId) => {
+                if (taskId) handleConfigureTask(taskId);
+              }}
+              onConfigureTrigger={(triggerId) => {
+                if (triggerId) handleConfigureTrigger(triggerId);
+              }}
             />
-          </>
+          ) : (
+            <>
+              <WorkflowCanvas
+                nodes={nodes}
+                setNodes={setNodes}
+                edges={edges}
+                setEdges={setEdges}
+                initialWorkflowId={workflowId}
+                selectedTaskId={selectedTaskId}
+                onTaskConfigClose={handleTaskConfigClose}
+                activeNodeId={activeNodeId}
+                setActiveNodeId={setActiveNodeId}
+                onAddTask={handleAddTaskFromNode}
+              />
+              {nodes.length === 0 && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="pointer-events-auto">
+                    <EmptyWorkflowState onAddTrigger={handleAddTrigger} />
+                  </div>
+                </div>
+              )}
+              <TaskSidebar
+                isOpen={isTaskSidebarOpen}
+                onClose={() => {
+                  setIsTaskSidebarOpen(false);
+                }}
+                onTaskSelect={handleTaskSelect}
+              />
+            </>
+          )
         ) : (
           workflowId ? (
             <div className="h-full overflow-auto">
@@ -1126,6 +1448,25 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
         workflowId={workflowId || ""}
         triggerId={selectedTriggerId}
       />
+
+      {isMobile && (
+        <TaskSelectionSheet
+          open={isTaskSheetOpen}
+          onOpenChange={setIsTaskSheetOpen}
+          onTaskSelect={handleTaskSelect}
+        />
+      )}
+
+      {isMobile && mobileTaskConfig && (
+        <TaskConfigModal
+          isOpen={Boolean(mobileTaskConfigId)}
+          onClose={handleTaskConfigClose}
+          task={mobileTaskConfig.task}
+          previousNodeOutput={mobileTaskConfig.previousNodeOutput as any}
+          onTest={handleMobileTaskTest}
+          onUpdate={handleMobileTaskUpdate}
+        />
+      )}
     </div>
   );
 }

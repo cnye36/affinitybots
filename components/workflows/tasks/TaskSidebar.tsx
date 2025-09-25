@@ -5,13 +5,13 @@ import { SiOpenai } from "react-icons/si";
 import { Sidebar, SidebarContent } from "@/components/ui/sidebar";
 import { X } from "lucide-react";
 
-interface TaskOption {
+export interface TaskOption {
   type: TaskType;
   label: string;
   description: string;
 }
 
-const AI_TASKS: TaskOption[] = [
+export const TASK_OPTIONS: TaskOption[] = [
   {
     type: "ai_task",
     label: "AI Task",
@@ -51,15 +51,15 @@ export function TaskSidebar({
         <div className="px-4">
           <div
             className="flex cursor-pointer items-start gap-3 rounded-md border p-3 hover:bg-muted/50"
-            onClick={() => onTaskSelect(AI_TASKS[0])}
+            onClick={() => onTaskSelect(TASK_OPTIONS[0])}
           >
             <div className="h-8 w-8 rounded-md bg-primary/10 text-primary grid place-items-center">
               <SiOpenai className="h-4 w-4" />
             </div>
             <div className="flex flex-col">
-              <span className="text-sm font-medium">{AI_TASKS[0].label}</span>
+              <span className="text-sm font-medium">{TASK_OPTIONS[0].label}</span>
               <span className="text-xs text-muted-foreground">
-                {AI_TASKS[0].description}
+                {TASK_OPTIONS[0].description}
               </span>
             </div>
           </div>
