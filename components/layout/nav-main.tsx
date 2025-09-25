@@ -34,11 +34,17 @@ interface NavItem {
 
 export function NavMain({ items }: { items: NavItem[] }) {
   const pathname = usePathname() || ''
-  const { state } = useSidebar()
+  const { state, isMobile, setOpenMobile } = useSidebar()
   const isCollapsed = state === 'collapsed'
 
   const isActiveLink = (url: string) => {
     return pathname === url || pathname.startsWith(`${url}/`)
+  }
+
+  const handleNavigate = () => {
+    if (isMobile) {
+      setOpenMobile(false)
+    }
   }
 
   return (
@@ -49,7 +55,7 @@ export function NavMain({ items }: { items: NavItem[] }) {
           isCollapsed && item.items ? (
             // When collapsed, clicking parent should go to its main page
             <SidebarMenuItem key={item.title} data-tutorial={item.title === "Tools" ? "tools-sidebar" : undefined}>
-              <Link href={item.url}>
+              <Link href={item.url} onClick={handleNavigate}>
                 <SidebarMenuButton
                   tooltip={item.title}
                   className={isActiveLink(item.url) ? 'bg-accent' : ''}
@@ -76,7 +82,7 @@ export function NavMain({ items }: { items: NavItem[] }) {
                     </SidebarMenuButton>
                   </CollapsibleTrigger>
                 ) : (
-                  <Link href={item.url}>
+                  <Link href={item.url} onClick={handleNavigate}>
                     <SidebarMenuButton
                       tooltip={item.title}
                       className={isActiveLink(item.url) ? 'bg-accent' : ''}
@@ -95,7 +101,7 @@ export function NavMain({ items }: { items: NavItem[] }) {
                             asChild
                             className={isActiveLink(subItem.url) ? 'bg-accent' : ''}
                           >
-                            <Link href={subItem.url}>
+                            <Link href={subItem.url} onClick={handleNavigate}>
                               <span>{subItem.title}</span>
                             </Link>
                           </SidebarMenuSubButton>
