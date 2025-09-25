@@ -287,11 +287,12 @@ export default function ToolsPage() {
         </div>
 
         {/* Filter Buttons */}
-        <div className="flex justify-center gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
           <Button
             variant={serverFilter === "all" ? "default" : "outline"}
             size="sm"
             onClick={() => setServerFilter("all")}
+            className="w-full sm:w-auto"
           >
             All Servers
           </Button>
@@ -299,6 +300,7 @@ export default function ToolsPage() {
             variant={serverFilter === "official" ? "default" : "outline"}
             size="sm"
             onClick={() => setServerFilter("official")}
+            className="w-full sm:w-auto"
           >
             Official
           </Button>
@@ -306,6 +308,7 @@ export default function ToolsPage() {
             variant={serverFilter === "smithery" ? "default" : "outline"}
             size="sm"
             onClick={() => setServerFilter("smithery")}
+            className="w-full sm:w-auto"
           >
             Smithery
           </Button>
@@ -363,7 +366,7 @@ export default function ToolsPage() {
       
       {/* Enhanced Pagination */}
       {totalPages > 1 && (
-        <div className="flex justify-center items-center gap-2 mt-8">
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
           {/* First Page */}
           <Button
             variant="outline"
@@ -382,13 +385,14 @@ export default function ToolsPage() {
             onClick={() => handlePageChange(page - 1)}
             disabled={page === 1}
             title="Previous page"
+            className="gap-1"
           >
             <ChevronLeft className="h-4 w-4" />
             Previous
           </Button>
 
           {/* Page Numbers */}
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-center gap-2">
             {totalPages <= 7 ? (
               // Show all pages if 7 or fewer
               [...Array(totalPages)].map((_, i) => (
@@ -416,7 +420,7 @@ export default function ToolsPage() {
                 </Button>
                 
                 {/* Show ellipsis if current page is far from start */}
-                {page > 4 && <span className="px-2">...</span>}
+                {page > 4 && <span className="px-2 text-muted-foreground">...</span>}
                 
                 {/* Show pages around current page */}
                 {[...Array(5)].map((_, i) => {
@@ -436,7 +440,7 @@ export default function ToolsPage() {
                 })}
                 
                 {/* Show ellipsis if current page is far from end */}
-                {page < totalPages - 3 && <span className="px-2">...</span>}
+                {page < totalPages - 3 && <span className="px-2 text-muted-foreground">...</span>}
                 
                 {/* Always show last page */}
                 <Button
@@ -458,6 +462,7 @@ export default function ToolsPage() {
             onClick={() => handlePageChange(page + 1)}
             disabled={page === totalPages}
             title="Next page"
+            className="gap-1"
           >
             Next
             <ChevronRight className="h-4 w-4" />

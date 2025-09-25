@@ -177,8 +177,8 @@ export default function NewAgentPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-3xl mx-auto">
-        <div className="flex items-center mb-8">
-          <Link href="/agents" className="mr-4">
+        <div className="mb-8 flex flex-wrap items-center gap-3">
+          <Link href="/agents">
             <Button variant="ghost" size="icon">
               <ArrowLeft className="h-4 w-4" />
             </Button>
