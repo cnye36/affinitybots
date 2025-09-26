@@ -62,7 +62,7 @@ export function Footer() {
             <ul className="space-y-2">
               <li>
                 <Link
-                  href="/#features"
+                  href="/features"
                   className="text-muted-foreground hover:text-foreground"
                 >
                   Features
@@ -70,26 +70,26 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  href="/#how-it-works"
+                  href="/pricing"
                   className="text-muted-foreground hover:text-foreground"
                 >
-                  How It Works
+                  Pricing
                 </Link>
               </li>
               <li>
                 <Link
-                  href="/#benefits"
+                  href="/docs"
                   className="text-muted-foreground hover:text-foreground"
                 >
-                  Benefits
+                  Documentation
                 </Link>
               </li>
               <li>
                 <Link
-                  href="/pitch-deck"
+                  href="/blog"
                   className="text-muted-foreground hover:text-foreground"
                 >
-                  Pitch Deck
+                  Blog
                 </Link>
               </li>
             </ul>
@@ -101,7 +101,7 @@ export function Footer() {
             <ul className="space-y-2">
               <li>
                 <Link
-                  href="mailto:support@AffinityBots.click"
+                  href="mailto:support@affinitybots.com"
                   className="flex items-center text-muted-foreground hover:text-foreground"
                 >
                   <Mail className="h-4 w-4 mr-2" />

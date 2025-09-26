@@ -49,26 +49,10 @@ export function Header() {
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border transition-all duration-200 ${
-        scrolled ? "py-2" : "pt-0 pb-4 md:pb-6"
+        scrolled ? "py-2" : "py-4"
       }`}
     >
-      {showAnnouncement && (
-        <div className="w-full bg-primary/10 text-primary relative">
-          <div className="container mx-auto px-4 pr-8 py-2 text-center text-sm md:text-base whitespace-nowrap overflow-hidden text-ellipsis">
-            <span className="font-semibold">AgentHub is now AffinityBots</span>
-            <span className="mx-2 opacity-60">•</span>
-            <span>Same Awesome Agents, New Name</span>
-          </div>
-          <button
-            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-primary/15 focus:outline-none focus:ring-2 focus:ring-primary/40"
-            onClick={() => setShowAnnouncement(false)}
-            aria-label="Dismiss announcement"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      )}
-      <div className="container mx-auto px-4 flex justify-between items-center">
+      <div className="container mx-auto px-4 flex justify-between items-center h-full">
         <Link href="/" className="flex items-center">
           <Image
             src="/images/AffinityBots-Icon-Dark-250px.png"
@@ -94,22 +78,28 @@ export function Header() {
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center space-x-6">
           <Link
-            href="/#features"
+            href="/features"
             className="text-md font-medium hover:text-primary"
           >
             Features
           </Link>
           <Link
-            href="/#how-it-works"
+            href="/pricing"
             className="text-md font-medium hover:text-primary"
           >
-            How It Works
+            Pricing
           </Link>
           <Link
-            href="/#benefits"
+            href="/docs"
             className="text-md font-medium hover:text-primary"
           >
-            Benefits
+            Docs
+          </Link>
+          <Link
+            href="/blog"
+            className="text-md font-medium hover:text-primary"
+          >
+            Blog
           </Link>
         </nav>
 
@@ -178,25 +168,32 @@ export function Header() {
           <div className="md:hidden absolute top-full left-0 right-0 bg-background shadow-lg border-b border-border">
             <nav className="container mx-auto px-4 py-4 flex flex-col space-y-4">
               <Link
-                href="/#features"
+                href="/features"
                 className="text-md font-medium hover:text-primary py-2"
                 onClick={handleNavClick}
               >
                 Features
               </Link>
               <Link
-                href="/#how-it-works"
+                href="/pricing"
                 className="text-md font-medium hover:text-primary py-2"
                 onClick={handleNavClick}
               >
-                How It Works
+                Pricing
               </Link>
               <Link
-                href="/#benefits"
+                href="/docs"
                 className="text-md font-medium hover:text-primary py-2"
                 onClick={handleNavClick}
               >
-                Benefits
+                Docs
+              </Link>
+              <Link
+                href="/blog"
+                className="text-md font-medium hover:text-primary py-2"
+                onClick={handleNavClick}
+              >
+                Blog
               </Link>
               <Link
                 href="/early-access"
