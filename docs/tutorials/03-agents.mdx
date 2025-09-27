@@ -1,0 +1,54 @@
+# Building and Collaborating with Agents
+
+Agents are the heart of AffinityBots. This walkthrough covers the full lifecycle—from creating a new assistant with optional tooling and knowledge, to managing ongoing conversations and configuration updates.
+
+## Agents Home
+
+- Navigate to `/agents` to see every assistant you have access to.
+- The page lists cards containing avatar initials or custom imagery, description snippets, model labels, and the MCP servers enabled for that agent.
+- Hovering reveals a delete icon; deleting an agent removes it from all workflows, so confirm before proceeding.
+- Use the “Create Agent” button in the header to open the creation form.
+
+> **Screenshot prompt:** Capture a grid of agent cards to show how models and tool badges appear.
+
+## Creating a New Agent
+
+1. Click **Create Agent** to open the builder at `/agents/new`.
+2. Optionally supply a **Name**—if left blank, AffinityBots will auto-generate a creative title.
+3. In the **Describe Your AI Agent** box, explain what the assistant should do. This required description becomes the core of the system prompt.
+4. Use the **Enhance** button to run the description through the built-in prompt improvement API.
+5. Optionally pick a **template pill** to populate the description with a best-practice starting point.
+6. Expand **Add Tools** to open the Tool Selector. Toggle any MCP servers you have already configured. (You must configure a server before enabling it here.)
+7. Expand **Add Knowledge** to queue document uploads. Drag-and-drop or browse for PDFs, text, spreadsheets, HTML, JSON, or Markdown. Files upload after the agent is successfully created.
+8. Submit the form. The UI displays a creation dialog while the backend provisions the agent, uploads knowledge, and persists metadata.
+
+> **Screenshot prompt:** Showcase the Create Agent form with the Tools and Knowledge accordions expanded.
+
+## Knowledge Upload Status
+
+- After creation, queued files upload in sequence. Each file row displays queued, uploading, success, or error states.
+- Successful uploads are added to the agent’s knowledge base configuration; failures surface the error message so you can retry later.
+
+## Agent Detail Workspace
+
+- Selecting an agent opens a full-screen workspace with a header summary and a chat area.
+- The header displays the model badge, memory/knowledge badges when enabled, and tool pills with logos where available.
+- Use the **Configure** button to adjust prompt, tools, knowledge, and memory settings via dedicated tabs.
+- The back button returns you to the agent list without losing chat context.
+
+> **Screenshot prompt:** Include a header close-up highlighting badges and the Configure button.
+
+## Conversational Threads
+
+- The left sidebar lists conversation threads for the current agent. Start a **New Chat** to create a fresh thread.
+- Each thread can be renamed or deleted via the overflow menu. Deleting a thread asks for confirmation and, if it was active, switches to a new blank thread.
+- The main chat area supports streaming replies, attachments, and tutorial cues for first-time users.
+- Tours automatically highlight the chat viewport, attachment controls, new chat button, and Configure action the first time a user lands here.
+
+> **Screenshot prompt:** Capture the chat layout with sidebar open and a conversation in progress.
+
+## Configuration Best Practices
+
+- Keep the primary description focused on the agent’s responsibilities; use knowledge uploads for reference materials rather than giant prompts.
+- Enable memory when you want the agent to remember user-specific details between sessions, and disable it for compliance-sensitive roles.
+- Review tool access regularly. Disabling unused MCP servers reduces the chance of misfired actions and clarifies capabilities for teammates.

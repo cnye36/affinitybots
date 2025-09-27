@@ -1,0 +1,45 @@
+# Designing Automated Workflows
+
+Workflows orchestrate agents, triggers, and tasks into repeatable automations. This tutorial explains how to review existing workflows, build new graphs, and execute or maintain them over time.
+
+## Exploring Saved Workflows
+
+- Visit `/workflows` to see the workflows you own. Cards show the workflow name, last run time, node count, and avatars for assigned agents.
+- Hovering reveals a delete button—use it carefully because removal is permanent and cancels all downstream automations.
+- The page includes an empty state prompting you to create your first workflow, complete with a call-to-action button.
+
+> **Screenshot prompt:** Capture the workflows grid, including the card hover state if possible.
+
+## Creating or Editing a Workflow
+
+1. Click **Create New Workflow** (or open an existing workflow) to load the visual builder.
+2. The canvas uses React Flow, so you can drag nodes around freely. Pan and zoom to organize large graphs.
+3. Use the header to rename the workflow, switch between Editor and Executions modes, and trigger manual runs.
+4. Add nodes via the Task Sidebar or the mobile-friendly Task Selection Sheet. Nodes represent triggers, agent tasks, or tool actions.
+5. Connect nodes by dragging edges between handles to define execution order.
+6. Autosave keeps drafts up to date; the builder compares snapshots so redundant writes are avoided.
+
+> **Screenshot prompt:** Include the workflow canvas with a few nodes connected.
+
+## Assigning Agents and Configuring Tasks
+
+- Each task can be assigned to an agent via the **Assign Agent** action. A modal lists all available agents with avatars so you can pick the right teammate.
+- Task configuration panels let you customize inputs, outputs, and other settings depending on the task type.
+- Triggers can be added once a workflow is saved. Configure them to start the workflow on schedules, webhooks, or other events.
+
+## Executing a Workflow
+
+- Click **Run Workflow** from the header to execute manually.
+- The execution manager coordinates status updates and surfaces success or failure notifications via toast messages.
+- Switch to the **Executions** tab to review past runs once telemetry is persisted.
+
+## Mobile Builder Experience
+
+- The builder detects smaller screens and switches to a guided wizard (WorkflowMobileWizard) that steps through node creation without requiring drag-and-drop.
+- Tasks can still be assigned agents and configured through this wizard, making on-the-go edits possible.
+
+## Maintenance Tips
+
+- Revisit workflows periodically to ensure node configurations still align with business rules, especially after updating agent prompts or tools.
+- Use descriptive names for tasks and workflows so team members understand each automation at a glance.
+- Clean up unused workflows to keep the dashboard metrics accurate and reduce clutter in the activity feed.
