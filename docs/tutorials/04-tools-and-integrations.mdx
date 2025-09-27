@@ -1,0 +1,44 @@
+# Connecting Tools and Integrations
+
+Tools expand what agents and workflows can accomplish. AffinityBots ships with official MCP servers, supports the Smithery marketplace, and lets you add bespoke endpoints. This tutorial explains how to browse, configure, and attach tools to your agents.
+
+## Tools Catalog Overview
+
+1. Open `/tools` to browse available MCP servers.
+2. Use the search bar to filter by keyword; results update after a short debounce so you can iterate quickly.
+3. Filter chips let you switch between **All**, **Official**, and **Smithery** sources. Official servers are curated by the team, while Smithery entries come from the Smithery API.
+4. Pagination controls (first/prev/next/last) help you navigate large directories without overwhelming the UI.
+5. A floating **Add MCP Server** button opens the modal for adding your own integration.
+
+> **Screenshot prompt:** Capture the tools catalog with search, filters, and pagination visible.
+
+## Server Cards
+
+- **Official Server Card** – Displays brand logo, description, and a badge indicating the source. Connect buttons deep link into configuration pages.
+- **Smithery Server Card** – Pulls metadata from Smithery and fetches missing logos using the bulk icon endpoint. Cards show security badges when Smithery verifies a scan.
+- **Custom Server Card** – Lists servers you or your teammates added manually. Use these when no catalog entry exists.
+
+Each card indicates whether a server is already configured. Configured servers show a toggle so you can quickly enable or disable them for the workspace.
+
+## Adding a Custom MCP Server
+
+1. Click **Add MCP Server**.
+2. Enter the qualified name (e.g., `github`, `zapier`, or a custom slug) and the server URL.
+3. Click **Detect auth** to let AffinityBots discover whether the server requires OAuth. The app uses `/api/mcp/discover` with a callback URL to test the endpoint.
+4. If OAuth is required, use **Connect (OAuth)** to start the handshake. Otherwise choose **Save** to register the server with no additional auth.
+5. After saving, the server appears in your configured list and is eligible for agent enablement.
+
+> **Screenshot prompt:** Add a modal screenshot showing the custom server form.
+
+## Tool Selector Inside the Agent Builder
+
+- When you create or edit an agent, expand **Add Tools** to open the Tool Selector.
+- The selector groups servers into **Configured** and **Available** sections, ensuring you only enable services that have working credentials.
+- Status badges identify whether a server is official, from Smithery, or custom. Additional badges show configuration state, security verification, and whether the server is local or remote.
+- Switches next to each configured server toggle usage for the current agent.
+
+## Maintaining Integrations
+
+- Refresh the tools page if icons appear missing; cached logos expire after 24 hours to keep branding current.
+- For Smithery sources that require additional credentials, visit the linked configuration routes to enter API keys or secrets.
+- Disable unused servers to simplify the Tool Selector and help teammates understand which integrations are production-ready.

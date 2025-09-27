@@ -1,0 +1,42 @@
+# AffinityBots Platform Overview
+
+AffinityBots pairs a Next.js workspace with LangGraph automations so teams can create, launch, and refine AI agents without leaving the browser. This overview explains the product pillars, environments, and terminology that appear throughout the tutorials. Use it as a map before diving into specific workflows.
+
+## Product Pillars
+
+1. **Agents** – Custom AI teammates you describe once and redeploy across channels. Each agent inherits a system prompt, chosen model, optional memory, knowledge uploads, and a tool belt of MCP integrations. The agent dashboard and chat surfaces consolidate every conversation thread.
+2. **Workflows** – Visual automations that orchestrate triggers, agent tasks, and tool hand-offs. Flow diagrams are built with drag-and-drop nodes, then executed manually or through configured triggers.
+3. **Tools & Integrations** – Managed MCP servers that connect AffinityBots to services such as Google, Slack, HubSpot, or your own custom endpoints. Tools are configured once and selectively enabled per agent or workflow task.
+4. **Knowledge & Memory** – Domain files, notes, or structured data you upload to specialize an agent, plus optional long-term memory so recurring conversations stay contextual.
+5. **Analytics & Activity** – Dashboard cards summarize agent counts, workflow usage, response health, and recent activity so you can track adoption at a glance.
+
+> **Screenshot prompt:** Include your homepage or hero screenshot here to introduce the visual brand.
+
+## Application Surfaces
+
+- **Marketing site** – The landing page highlights the value proposition, feature list, and integrations prospects expect before signing in. Links jump to early access, pitch deck, and policy pages.
+- **Authenticated workspace** – Once a user signs in, navigation pivots to the dashboard, agents, workflows, and tools sections. Tutorial tours auto-launch the first time a user visits a key surface to accelerate onboarding.
+- **API endpoints** – Next.js server routes back features like early-access enrollment, agent CRUD, prompt enhancement, knowledge uploads, Smithery directory search, and MCP authentication. They ensure UI actions persist to Supabase and notify teams via Resend email.
+
+## Core Entities
+
+| Entity | Description | Where it appears |
+| --- | --- | --- |
+| Agent | A configured assistant with prompt, model, tools, memory, and knowledge settings. | Agent list, agent detail header, workflow task assignment. |
+| Thread | A conversation between a user and a specific agent. | Chat container sidebar. |
+| Workflow | A saved automation graph tying triggers to agent tasks. | Workflows list, builder, execution history. |
+| MCP Server | Integration endpoint conforming to the Model Context Protocol. | Tools page, Tool Selector, agent configuration. |
+| Knowledge Source | File or dataset uploaded for retrieval. | Agent creation knowledge queue, agent configuration knowledge tab. |
+
+## Key Roles & Permissions
+
+- **Workspace owners** control Supabase accounts, configure tools, create agents, and share workflows.
+- **Invited teammates** inherit the same workspace data (agents, tools, workflows) but respect Supabase row-level security to prevent cross-tenant access.
+- **Prospective users** begin on the public site and can submit an early-access request. Admin notifications and applicant confirmation emails are handled automatically.
+
+## Getting Help
+
+- **In-app tours** trigger the first time a user opens the dashboard, new agent form, agent chat, configuration drawer, or tools catalog. The tours outline the same steps documented here.
+- **Support** links in the footer direct people to contact support@affinitybots.com, legal policies, and social channels.
+
+Continue to the next tutorials for actionable walkthroughs of each surface.

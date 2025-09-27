@@ -1,0 +1,44 @@
+# Navigating the Workspace Dashboard
+
+The dashboard is the first screen signed-in users see. It summarizes activity and exposes shortcuts for building new agents, workflows, and tools. This guide walks through each panel so you can interpret metrics and launch deeper tasks confidently.
+
+## Access & Layout
+
+1. Sign in to AffinityBots and you will be redirected to `/dashboard`.
+2. The header contains quick actions for creating agents or workflows and selecting a date filter for the stats cards.
+3. Below the header, the page arranges four content zones: summary cards, recent agents, configured tools, and activity/workflow feeds.
+
+> **Screenshot prompt:** Add your full dashboard screenshot here to show the layout before diving into each card.
+
+## Summary Cards
+
+- **Total Agents** reports how many assistants exist in the workspace. The number is derived from Supabase `user_assistants` records and reflects shared ownership.
+- **Total Workflows** counts workflow graphs tied to the current user. Use it to confirm that automation coverage is growing.
+- **Success Rate** and **Avg Response Time** surface system health metrics. These are placeholders today but exist so future telemetry can slot in without redesigning the UI.
+
+## Agents Panel
+
+- Lists the three most recently created agents with avatar, model, description snippet, and enabled tool badges.
+- Clicking an agent opens its dedicated chat workspace.
+- The `Create Agent` button appears if the list is empty, while a “View all agents” link shows when more than three exist.
+- Tool badges display official logos when available, otherwise fall back to emoji so you can quickly scan which integrations each agent uses.
+
+## Tools Panel
+
+- Shows up to three MCP servers you have configured. Status badges indicate whether each integration is enabled for the workspace.
+- The “Configure Tools” button guides first-time users to the tools catalog, while a “View all tools” link appears when more integrations are connected.
+- Logo fetching combines official assets with Smithery lookups to keep cards recognizable even when screenshots are missing.
+
+## Activity & Workflow Feeds
+
+- **Latest Workflows** highlights recently created or updated graphs, including status chips (Active, Inactive) and last modified dates.
+- **Recent Activity** condenses logs into human-readable events (workflow completed, agent created, errors). Colored badges differentiate successful actions from warnings.
+- Empty states point users to create their first workflow or agent so the page never feels like a dead end.
+
+## Dashboard Tips
+
+- Use the “New Agent” or “New Workflow” buttons from the dashboard header—tutorial tours highlight them for onboarding.
+- If logos fail to load because of network issues, the UI still provides textual fallback names so you can continue configuring agents.
+- Sample activity is generated when a workspace has no history yet, helping stakeholders envision value from day one.
+
+> **Screenshot prompt:** Capture close-up screenshots of the Agents panel and Activity feed to illustrate real data.
