@@ -95,6 +95,7 @@ export async function POST(
     let outputTokensFromStream = 0;
     let sawUsageMetadata = false;
     let outputCharsEstimate = 0;
+    let pendingAssistantMessageId: string | null = null;
 
     // Convert AsyncIterable to proper SSE
     const encoder = new TextEncoder();
@@ -105,15 +106,57 @@ export async function POST(
         try {
           const allChunks: any[] = [];
           for await (const chunk of runStream as any) {
-            if (logFullResponse) {
-              allChunks.push(chunk);
+            const eventName = typeof chunk?.event === "string" ? chunk.event : "";
+            let data = chunk?.data ?? chunk;
+
+            if (eventName === "messages" && Array.isArray(data) && data.length > 0) {
+              const [messageCandidate] = data as Array<Record<string, unknown>>;
+              const chunkType = messageCandidate?.type;
+              if (chunkType === "AIMessageChunk") {
+                const chunkId = messageCandidate?.id;
+                pendingAssistantMessageId = typeof chunkId === "string" ? chunkId : null;
+              } else if (chunkType !== undefined) {
+                pendingAssistantMessageId = null;
+              }
             }
-            const eventName = chunk?.event;
-            const data = chunk?.data ?? chunk;
+
+            if (
+              (eventName === "messages/partial" || eventName === "messages/complete") &&
+              Array.isArray(data) &&
+              pendingAssistantMessageId
+            ) {
+              data = (data as Array<unknown>).map((message) => {
+                if (
+                  message &&
+                  typeof message === "object" &&
+                  "type" in message &&
+                  (message as { type?: unknown }).type === "ai"
+                ) {
+                  const typedMessage = message as Record<string, unknown>;
+                  const existingId = typeof typedMessage.id === "string" ? typedMessage.id : undefined;
+                  if (existingId !== pendingAssistantMessageId) {
+                    return {
+                      ...typedMessage,
+                      id: pendingAssistantMessageId,
+                    };
+                  }
+                }
+                return message;
+              });
+            }
+
+            if (eventName === "messages/complete") {
+              pendingAssistantMessageId = null;
+            }
+
+            if (logFullResponse) {
+              allChunks.push({ event: eventName, data });
+            }
+
             if (eventName) controller.enqueue(encoder.encode(`event: ${eventName}\n`));
             controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
 
-              
+
             // Check for token usage in messages/complete event (where LangGraph provides final usage)
             if (typeof eventName === "string" && eventName === "messages/complete") {
               if (Array.isArray(data) && data.length > 0) {
