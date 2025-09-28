@@ -35,11 +35,8 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
   const categories = getAllCategories();
   const popularTags = getAllTags();
 
-  // Get featured posts (up to 3)
-  const featuredPosts = allPosts.filter(post => post.featured).slice(0, 3);
-  
-  // Get other posts (excluding featured)
-  const blogPosts = allPosts.filter(post => !post.featured);
+  // Sort all posts by date (latest first)
+  const sortedPosts = allPosts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   // Get category counts
   const categoryCounts = categories.map(category => ({
@@ -91,34 +88,39 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
             </div>
           </div>
 
-          {/* Categories and Filters */}
+          {/* Sort Filter */}
           <div className="max-w-6xl mx-auto">
-            <div className="flex flex-wrap items-center justify-between mb-6">
-              <div className="flex flex-wrap gap-2 mb-4 md:mb-0">
-                {allCategories.map((category, index) => (
-                  <Button
-                    key={index}
-                    variant={category.active ? "default" : "outline"}
-                    className={`${
-                      category.active 
-                        ? "bg-blue-600 hover:bg-blue-700 text-white" 
-                        : "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
-                    }`}
-                  >
-                    {category.name}
-                    <Badge variant="secondary" className="ml-2 text-xs">
-                      {category.count}
-                    </Badge>
-                  </Button>
-                ))}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+              {/* Mobile Categories */}
+              <div className="lg:hidden w-full">
+                <h3 className="text-lg font-semibold text-foreground mb-3">Categories</h3>
+                <div className="flex flex-wrap gap-2">
+                  {allCategories.map((category, index) => (
+                    <Button
+                      key={index}
+                      variant={category.active ? "default" : "outline"}
+                      size="sm"
+                      className={`${
+                        category.active 
+                          ? "bg-blue-600 hover:bg-blue-700 text-white" 
+                          : "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300"
+                      }`}
+                    >
+                      {category.name}
+                      <Badge variant="secondary" className="ml-2 text-xs">
+                        {category.count}
+                      </Badge>
+                    </Button>
+                  ))}
+                </div>
               </div>
-              <div className="flex items-center pt-2 space-x-2">
+              
+              <div className="flex items-center space-x-2">
                 <Filter className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                 <span className="text-sm text-gray-600 dark:text-gray-400">Sort by:</span>
                 <select className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded px-3 py-1 text-sm">
-                  <option>Latest</option>
-                  <option>Popular</option>
-                  <option>Trending</option>
+                  <option>Newest</option>
+                  <option>Oldest</option>
                 </select>
               </div>
             </div>
@@ -126,81 +128,76 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
         </div>
       </section>
 
-      {/* Featured Articles */}
-      {featuredPosts.length > 0 && (
-        <section className="py-4 px-4">
-          <div className="container mx-auto">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-                Featured Articles
-              </h2>
-            </div>
-            
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {featuredPosts.map((post, index) => (
-                <Link key={index} href={`/blog/${post.slug}`} className="group">
-                  <Card className="bg-white dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-all duration-300 hover:shadow-xl group-hover:shadow-2xl h-full">
-                    <div className="relative aspect-video overflow-hidden bg-gray-100 dark:bg-gray-800">
-                      {post.coverImage ? (
-                        <Image
-                          src={post.coverImage}
-                          alt={post.title}
-                          fill
-                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                          className="object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                      ) : (
-                        <div className="bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 h-full flex items-center justify-center">
-                          <div className="text-center">
-                            <Sparkles className="h-12 w-12 text-blue-600 dark:text-blue-400 mx-auto mb-2" />
-                            <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">Featured</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    <CardHeader>
-                      <div className="flex items-center space-x-2 mb-3">
-                        <Badge className="bg-gradient-to-r from-blue-600 to-purple-600 text-white text-xs">
-                          <Sparkles className="h-3 w-3 mr-1" />
-                          Featured
-                        </Badge>
-                        <Badge variant="outline" className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-xs">
-                          {post.category}
-                        </Badge>
-                      </div>
-                      <CardTitle className="text-gray-900 dark:text-white text-lg group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-200 line-clamp-2">
-                        {post.title}
-                      </CardTitle>
-                      <CardDescription className="text-gray-600 dark:text-gray-300 text-sm line-clamp-3">
-                        {post.excerpt}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
-                        <div className="flex items-center space-x-1">
-                          <Calendar className="h-3 w-3" />
-                          <span>{post.date}</span>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <Clock className="h-3 w-3" />
-                          <span>{post.readTime}</span>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
-
       {/* Blog Posts Grid */}
       <section className="py-16 px-4">
         <div className="container mx-auto">
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {blogPosts.map((post, index) => (
+          <div className="flex gap-8">
+            {/* Sidebar */}
+            <div className="hidden lg:block w-64 flex-shrink-0">
+              {/* Categories */}
+              <div className="mb-8">
+                <h3 className="text-lg font-semibold text-foreground mb-4">Categories</h3>
+                <div className="space-y-2">
+                  {allCategories.map((category, index) => (
+                    <Button
+                      key={index}
+                      variant={category.active ? "default" : "ghost"}
+                      className={`w-full justify-start ${
+                        category.active 
+                          ? "bg-blue-600 hover:bg-blue-700 text-white" 
+                          : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                      }`}
+                    >
+                      {category.name}
+                      <Badge variant="secondary" className="ml-auto text-xs">
+                        {category.count}
+                      </Badge>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Tags */}
+              <div>
+                <h3 className="text-lg font-semibold text-foreground mb-4">Tags</h3>
+                <div className="flex flex-wrap gap-2">
+                  {popularTags.map((tag, index) => (
+                    <Button
+                      key={index}
+                      variant="outline"
+                      size="sm"
+                      className="text-xs border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                    >
+                      <Tag className="h-3 w-3 mr-1" />
+                      {tag}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Main Content */}
+            <div className="flex-1">
+              {/* Mobile Tags */}
+              <div className="lg:hidden mb-6">
+                <h3 className="text-lg font-semibold text-foreground mb-3">Tags</h3>
+                <div className="flex flex-wrap gap-2">
+                  {popularTags.map((tag, index) => (
+                    <Button
+                      key={index}
+                      variant="outline"
+                      size="sm"
+                      className="text-xs border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                    >
+                      <Tag className="h-3 w-3 mr-1" />
+                      {tag}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {sortedPosts.map((post, index) => (
               <Link key={index} href={`/blog/${post.slug}`} className="group">
                 <Card className="bg-white dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-all duration-300 hover:shadow-xl group-hover:shadow-2xl h-full">
                   <div className="relative aspect-[3/2] overflow-hidden bg-gray-100 dark:bg-gray-800">
@@ -246,35 +243,15 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
                 </Card>
               </Link>
             ))}
-          </div>
-          
-          {/* Load More */}
-          <div className="text-center mt-12">
-            <Button variant="outline" className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
-              Load More Articles
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      {/* Popular Tags */}
-      <section className="py-16 px-4 bg-gray-100 dark:bg-gray-900/50">
-        <div className="container mx-auto">
-          <div className="text-center mb-8">
-            <h3 className="text-2xl font-bold text-foreground mb-4">Popular Tags</h3>
-            <p className="text-gray-600 dark:text-gray-300">Explore articles by topic</p>
-          </div>
-          <div className="flex flex-wrap justify-center gap-2">
-            {popularTags.map((tag, index) => (
-              <Button
-                key={index}
-                variant="outline"
-                className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 hover:border-blue-500 dark:hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-200"
-              >
-                <Tag className="h-3 w-3 mr-1" />
-                {tag}
-              </Button>
-            ))}
+              </div>
+              
+              {/* Load More */}
+              <div className="text-center mt-12">
+                <Button variant="outline" className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                  Load More Articles
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       </section>

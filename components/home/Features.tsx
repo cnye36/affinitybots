@@ -26,9 +26,9 @@ export function Features() {
   return (
     <section id="features" className="py-20">
       <div className="container mx-auto px-4">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-5xl font-bold mb-4">Features</h2>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+        <div className="text-center mb-12 md:mb-16">
+          <h2 className="text-2xl sm:text-3xl md:text-5xl font-bold mb-4">Features</h2>
+          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto px-4">
             Everything you need to build and deploy AI agents that work for your business
           </p>
         </div>
@@ -36,9 +36,8 @@ export function Features() {
           {features.map((feature, index) => (
             <div
               key={index}
-              className="relative p-4 sm:p-6 rounded-lg overflow-hidden"
+              className="relative p-0.5 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 hover:from-purple-600 hover:to-blue-500 transition-all duration-300"
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 opacity-75 blur-lg"></div>
               <div className="relative bg-background rounded-lg p-4 sm:p-6 h-full">
                 <h3 className="text-lg sm:text-xl font-semibold mb-2">
                   {feature.title}

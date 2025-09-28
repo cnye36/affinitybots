@@ -162,12 +162,10 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
 
       {/* Article Content */}
       <section className="pb-16 px-4">
-        <div className="container mx-auto max-w-4xl">
-          <Card className="bg-white dark:bg-gray-800/50 border-gray-200 dark:border-gray-700">
-            <CardContent className="p-8 md:p-12">
-              <MDXContent mdxSource={mdxSource} />
-            </CardContent>
-          </Card>
+        <div className="max-w-4xl mx-auto">
+          <div className="prose prose-lg dark:prose-invert max-w-none">
+            <MDXContent mdxSource={mdxSource} />
+          </div>
         </div>
       </section>
 

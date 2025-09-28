@@ -4,6 +4,7 @@ import { Footer } from "@/components/home/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { 
   Check, 
   X, 
@@ -145,12 +146,12 @@ export default function PricingPage() {
       {/* Pricing Cards */}
       <section className="py-16 px-4">
         <div className="container mx-auto">
-          <div className="grid md:grid-cols-3 gap-8 max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 max-w-7xl mx-auto">
             {plans.map((plan, index) => (
               <Card 
                 key={index} 
                 className={`relative bg-card border-border hover:border-primary/20 transition-all duration-300 hover:shadow-xl ${
-                  plan.popular ? 'ring-2 ring-primary scale-105' : ''
+                  plan.popular ? 'ring-2 ring-primary lg:scale-105' : ''
                 } ${plan.name === "Professional" || plan.name === "Enterprise" ? 'opacity-75' : ''}`}
               >
                 {plan.popular && (
@@ -237,21 +238,19 @@ export default function PricingPage() {
             </p>
           </div>
           
-          <div className="max-w-4xl mx-auto">
-            <div className="grid md:grid-cols-2 gap-8">
+          <div className="max-w-3xl mx-auto">
+            <Accordion type="single" collapsible className="w-full">
               {faqs.map((faq, index) => (
-                <Card key={index} className="bg-card border-border">
-                  <CardHeader>
-                    <CardTitle className="text-card-foreground text-lg">{faq.question}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <CardDescription className="text-muted-foreground">
-                      {faq.answer}
-                    </CardDescription>
-                  </CardContent>
-                </Card>
+                <AccordionItem key={index} value={`item-${index}`} className="border-b border-border">
+                  <AccordionTrigger className="text-left text-lg font-semibold text-foreground hover:text-primary transition-colors">
+                    {faq.question}
+                  </AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground pt-4 pb-6">
+                    {faq.answer}
+                  </AccordionContent>
+                </AccordionItem>
               ))}
-            </div>
+            </Accordion>
           </div>
         </div>
       </section>

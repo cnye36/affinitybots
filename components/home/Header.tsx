@@ -118,14 +118,16 @@ export function Header() {
           {/* Sign In with invite confirmation (desktop) */}
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button
-                variant="ghost"
-                className={`hidden md:inline-flex transition-all duration-200 ${
-                  scrolled ? "text-sm py-1" : ""
-                }`}
-              >
-                Sign In
-              </Button>
+              <div className="relative p-0.5 rounded-md bg-gradient-to-r from-blue-500 to-purple-600">
+                <Button
+                  variant="ghost"
+                  className={`hidden md:inline-flex transition-all duration-200 bg-background hover:bg-background/80 ${
+                    scrolled ? "text-sm py-1" : ""
+                  }`}
+                >
+                  Sign In
+                </Button>
+              </div>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
@@ -208,9 +210,11 @@ export function Header() {
               {/* Sign In with invite confirmation (mobile) */}
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant="ghost" className="w-full">
-                    Sign In
-                  </Button>
+                  <div className="relative p-0.5 rounded-md bg-gradient-to-r from-blue-500 to-purple-600 w-full">
+                    <Button variant="ghost" className="w-full bg-background hover:bg-background/80">
+                      Sign In
+                    </Button>
+                  </div>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
