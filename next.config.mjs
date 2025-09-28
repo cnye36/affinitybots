@@ -3,7 +3,12 @@ const nextConfig = {
   experimental: {
     // Optimize bundle size
     optimizePackageImports: ['@radix-ui/react-icons', 'lucide-react'],
+    // Enable MDX support
+    mdxRs: true,
   },
+  
+  // Support MDX files as pages
+  pageExtensions: ['js', 'jsx', 'ts', 'tsx', 'md', 'mdx'],
   
   // Turbopack configuration (moved from experimental.turbo)
   turbopack: {

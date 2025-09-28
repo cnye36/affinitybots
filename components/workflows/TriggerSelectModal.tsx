@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -80,6 +80,17 @@ export function TriggerSelectModal({ isOpen, onClose, onCreate }: TriggerSelectM
     try { return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"; } catch { return "UTC"; }
   });
 
+  type ConfiguredServer = {
+    qualifiedName: string;
+    displayName?: string;
+    logoUrl?: string;
+    tools: Array<{ name: string; description?: string }>;
+  };
+  const [integrationLoading, setIntegrationLoading] = useState(false);
+  const [configuredServers, setConfiguredServers] = useState<ConfiguredServer[]>([]);
+  const [selectedServer, setSelectedServer] = useState<string>("");
+  const [selectedTool, setSelectedTool] = useState<string>("");
+
   const current = useMemo(() => TRIGGER_OPTIONS.find((o) => o.type === selected) || null, [selected]);
 
   const reset = () => {
@@ -91,6 +102,8 @@ export function TriggerSelectModal({ isOpen, onClose, onCreate }: TriggerSelectM
     setCronExpr("");
     setProvider("");
     setEvent("");
+    setSelectedServer("");
+    setSelectedTool("");
   };
 
   const handleClose = () => {
@@ -108,7 +121,51 @@ export function TriggerSelectModal({ isOpen, onClose, onCreate }: TriggerSelectM
     }
     if (selected === "integration") return !provider.trim() || !event.trim();
     return false;
-  }, [selected, cronExpr, provider, event]);
+  }, [selected, scheduleRepeat, scheduleDate, scheduleTime, scheduleWeekdays, provider, event]);
+
+  useEffect(() => {
+    if (selected !== "integration" || !isOpen) return;
+    let isMounted = true;
+    (async () => {
+      try {
+        setIntegrationLoading(true);
+        const res = await fetch('/api/user-mcp-servers');
+        const data = await res.json();
+        const raw: any[] = data?.servers || [];
+        const enabled = raw.filter((s) => s?.is_enabled);
+        const qualifiedNames = enabled.map((s) => s.qualified_name).filter(Boolean);
+        if (qualifiedNames.length === 0) {
+          if (isMounted) setConfiguredServers([]);
+          return;
+        }
+        const bulk = await fetch('/api/smithery/bulk', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ qualifiedNames })
+        }).then(r => r.json());
+        const servers: ConfiguredServer[] = qualifiedNames.map((q) => {
+          const entry = bulk?.servers?.[q] || {};
+          const tools = Array.isArray(entry?.tools) ? entry.tools : (entry?.server?.tools || []);
+          return {
+            qualifiedName: q,
+            displayName: entry.displayName || entry.name || entry.server?.displayName || q,
+            logoUrl: entry.logo || entry.iconUrl || entry.logoUrl || entry.server?.logo || entry.server?.iconUrl,
+            tools: (tools || []).map((t: any) => ({ name: t.name, description: t.description }))
+          };
+        });
+        if (isMounted) setConfiguredServers(servers);
+      } finally {
+        if (isMounted) setIntegrationLoading(false);
+      }
+    })();
+    return () => { isMounted = false; };
+  }, [selected, isOpen]);
+
+  useEffect(() => {
+    if (selected !== "integration") return;
+    setProvider(selectedServer || "");
+    setEvent(selectedTool || "");
+  }, [selected, selectedServer, selectedTool]);
 
   const handleCreate = async () => {
     if (!selected) return;
@@ -320,15 +377,75 @@ export function TriggerSelectModal({ isOpen, onClose, onCreate }: TriggerSelectM
                   )}
 
                   {selected === "integration" && (
-                    <div className="space-y-2 border rounded-md p-3">
+                    <div className="space-y-3 border rounded-md p-3">
+                      <div className="text-xs text-muted-foreground">Select a configured tool and one of its actions to trigger this workflow.</div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <Label>Tool</Label>
+                          <div className="border rounded-md">
+                            <ScrollArea className="h-40">
+                              <div className="p-1 space-y-1">
+                                {integrationLoading ? (
+                                  <div className="text-xs text-muted-foreground p-2">Loading tools…</div>
+                                ) : configuredServers.length === 0 ? (
+                                  <div className="text-xs text-muted-foreground p-2">No configured tools found. Configure tools in Tools settings.</div>
+                                ) : (
+                                  configuredServers.map((s) => (
+                                    <button
+                                      key={s.qualifiedName}
+                                      className={`w-full text-left px-2 py-1 rounded ${selectedServer===s.qualifiedName?"bg-primary/10":"hover:bg-muted"}`}
+                                      onClick={() => {
+                                        setSelectedServer(s.qualifiedName);
+                                        setSelectedTool("");
+                                      }}
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <div className="text-sm truncate">{s.displayName || s.qualifiedName}</div>
+                                      </div>
+                                    </button>
+                                  ))
+                                )}
+                              </div>
+                            </ScrollArea>
+                          </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label>Action</Label>
+                          <div className="border rounded-md">
+                            <ScrollArea className="h-40">
+                              <div className="p-1 space-y-1">
+                                {selectedServer ? (
+                                  (configuredServers.find(s=>s.qualifiedName===selectedServer)?.tools || []).length === 0 ? (
+                                    <div className="text-xs text-muted-foreground p-2">No actions found for this tool.</div>
+                                  ) : (
+                                    configuredServers.find(s=>s.qualifiedName===selectedServer)!.tools.map((t) => (
+                                      <button
+                                        key={t.name}
+                                        className={`w-full text-left px-2 py-1 rounded ${selectedTool===t.name?"bg-primary/10":"hover:bg-muted"}`}
+                                        onClick={() => setSelectedTool(t.name)}
+                                      >
+                                        <div className="text-sm truncate">{t.name}</div>
+                                        {t.description ? (<div className="text-[10px] text-muted-foreground truncate">{t.description}</div>) : null}
+                                      </button>
+                                    ))
+                                  )
+                                ) : (
+                                  <div className="text-xs text-muted-foreground p-2">Select a tool first.</div>
+                                )}
+                              </div>
+                            </ScrollArea>
+                          </div>
+                        </div>
+                      </div>
+
                       <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1.5">
                           <Label>Provider</Label>
-                          <Input placeholder="e.g. stripe, hubspot, sheets" value={provider} onChange={(e) => setProvider(e.target.value)} />
+                          <Input placeholder="e.g. stripe, hubspot" value={provider} onChange={(e) => setProvider(e.target.value)} />
                         </div>
                         <div className="space-y-1.5">
                           <Label>Event</Label>
-                          <Input placeholder="e.g. charge.succeeded, row.created" value={event} onChange={(e) => setEvent(e.target.value)} />
+                          <Input placeholder="e.g. charge.succeeded" value={event} onChange={(e) => setEvent(e.target.value)} />
                         </div>
                       </div>
                       <div className="text-xs text-muted-foreground">Providers should POST to /api/integrations/events with provider, event, and data.</div>

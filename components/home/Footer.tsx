@@ -34,6 +34,8 @@ export function Footer() {
             <div className="flex items-center space-x-4">
               <Link
                 href="https://x.com/Affinitybots"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="text-muted-foreground hover:text-foreground"
               >
                 <Twitter className="h-5 w-5" />
@@ -41,6 +43,8 @@ export function Footer() {
               </Link>
               <Link
                 href="https://github.com/cnye36/Affinitybots"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="text-muted-foreground hover:text-foreground"
               >
                 <Github className="h-5 w-5" />
@@ -48,6 +52,8 @@ export function Footer() {
               </Link>
               <Link
                 href="https://linkedin.com/company/Affinitybots"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="text-muted-foreground hover:text-foreground"
               >
                 <Linkedin className="h-5 w-5" />
@@ -62,7 +68,7 @@ export function Footer() {
             <ul className="space-y-2">
               <li>
                 <Link
-                  href="/#features"
+                  href="/features"
                   className="text-muted-foreground hover:text-foreground"
                 >
                   Features
@@ -70,26 +76,26 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  href="/#how-it-works"
+                  href="/pricing"
                   className="text-muted-foreground hover:text-foreground"
                 >
-                  How It Works
+                  Pricing
                 </Link>
               </li>
               <li>
                 <Link
-                  href="/#benefits"
+                  href="/docs"
                   className="text-muted-foreground hover:text-foreground"
                 >
-                  Benefits
+                  Documentation
                 </Link>
               </li>
               <li>
                 <Link
-                  href="/pitch-deck"
+                  href="/blog"
                   className="text-muted-foreground hover:text-foreground"
                 >
-                  Pitch Deck
+                  Blog
                 </Link>
               </li>
             </ul>
@@ -101,7 +107,7 @@ export function Footer() {
             <ul className="space-y-2">
               <li>
                 <Link
-                  href="mailto:support@AffinityBots.click"
+                  href="mailto:support@affinitybots.com"
                   className="flex items-center text-muted-foreground hover:text-foreground"
                 >
                   <Mail className="h-4 w-4 mr-2" />
