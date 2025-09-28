@@ -21,36 +21,16 @@ import Link from "next/link";
 export default function PricingPage() {
   const plans = [
     {
-      name: "Early Beta",
-      price: "Free",
-      description: "Full access to all features during our early beta phase",
-      icon: <Zap className="h-8 w-8 text-blue-500" />,
-      popular: true,
-      features: [
-        "Unlimited AI agents",
-        "Unlimited interactions",
-        "All templates and features",
-        "Priority support",
-        "All integrations",
-        "Advanced analytics",
-        "Full API access",
-        "Custom branding",
-        "Team collaboration",
-        "Direct feedback to our team"
-      ],
-      limitations: [],
-      cta: "Join Early Beta",
-      ctaLink: "/early-access"
-    },
-    {
-      name: "Future Professional",
-      price: "TBD",
+      name: "Professional",
+      price: "$29.99",
+      period: "/month",
       description: "Coming after beta - for growing businesses and teams",
       icon: <Star className="h-8 w-8 text-purple-500" />,
       popular: false,
       features: [
         "Up to 25 AI agents",
-        "10,000 interactions/month",
+        "Unlimited active workflows",
+        "10,000 AI credits per day",
         "Advanced templates",
         "Priority support",
         "All integrations",
@@ -64,14 +44,39 @@ export default function PricingPage() {
       ctaLink: "/early-access"
     },
     {
-      name: "Future Enterprise",
-      price: "TBD",
+      name: "Early Beta",
+      price: "Free",
+      description: "Limited access during our early beta phase",
+      icon: <Zap className="h-8 w-8 text-blue-500" />,
+      popular: true,
+      features: [
+        "Up to 5 AI agents",
+        "3 active workflows",
+        "100 AI credits per day",
+        "Basic templates",
+        "Email support",
+        "Standard integrations",
+        "Basic analytics",
+        "Community forum access"
+      ],
+      limitations: [
+        "Limited agent count",
+        "Workflow restrictions",
+        "Daily credit limits"
+      ],
+      cta: "Join Early Beta",
+      ctaLink: "/early-access"
+    },
+    {
+      name: "Enterprise",
+      price: "Custom",
       description: "Coming after beta - for large organizations",
       icon: <Crown className="h-8 w-8 text-yellow-500" />,
       popular: false,
       features: [
         "Unlimited AI agents",
-        "Unlimited interactions",
+        "Unlimited workflows",
+        "Unlimited AI credits",
         "Custom model training",
         "Dedicated support",
         "White-label solution",
@@ -89,28 +94,28 @@ export default function PricingPage() {
 
   const faqs = [
     {
-      question: "Can I change plans anytime?",
-      answer: "Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately, and we'll prorate any charges."
+      question: "What are AI credits?",
+      answer: "AI credits are used for each interaction with your agents. Simple text responses use 1 credit, while complex tasks with multiple steps may use 2-5 credits. You get 100 credits per day in the beta."
     },
     {
-      question: "What happens if I exceed my interaction limit?",
-      answer: "We'll notify you when you're approaching your limit. You can either upgrade your plan or purchase additional interactions as needed."
+      question: "What happens when I reach my daily credit limit?",
+      answer: "Your agents will pause until the next day when your credits reset. You can monitor your usage in the dashboard and plan your agent interactions accordingly."
     },
     {
-      question: "Do you offer refunds?",
-      answer: "We offer a 30-day money-back guarantee for all paid plans. If you're not satisfied, we'll refund your payment in full."
+      question: "Can I create more than 5 agents in the beta?",
+      answer: "The beta is limited to 5 agents to help us manage server load and gather focused feedback. You can delete and recreate agents as needed to test different configurations."
     },
     {
-      question: "Is there a free trial?",
-      answer: "Yes! All paid plans come with a 14-day free trial. No credit card required to get started."
+      question: "What's the difference between active and inactive workflows?",
+      answer: "Active workflows are currently running and processing tasks. Inactive workflows are saved but not executing. You can switch between your 3 active workflows as needed."
     },
     {
-      question: "What payment methods do you accept?",
-      answer: "We accept all major credit cards, PayPal, and for Enterprise customers, we can arrange invoicing and bank transfers."
+      question: "When will paid plans be available?",
+      answer: "We expect to launch paid plans in Q4 2025. Beta users will get early access and special pricing when we transition from beta to paid plans."
     },
     {
-      question: "Do you offer educational discounts?",
-      answer: "Yes! We offer 50% off for students and educators. Contact us with your educational credentials to get started."
+      question: "How long will the beta last?",
+      answer: "We're planning a 3-6 month beta period to gather feedback and refine the platform. We'll give all beta users at least 30 days notice before transitioning to paid plans."
     }
   ];
 
@@ -131,8 +136,8 @@ export default function PricingPage() {
             <span className="text-foreground">Free for Everyone</span>
           </h1>
           <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto">
-            We're in early beta and it's completely free for everyone! 
-            Get full access to all features and help shape the future of AI automation.
+            We're in early beta with limited free access! 
+            Get started with 5 agents, 3 workflows, and 100 AI credits per day to help shape the future of AI automation.
           </p>
         </div>
       </section>
@@ -146,7 +151,7 @@ export default function PricingPage() {
                 key={index} 
                 className={`relative bg-card border-border hover:border-primary/20 transition-all duration-300 hover:shadow-xl ${
                   plan.popular ? 'ring-2 ring-primary scale-105' : ''
-                }`}
+                } ${plan.name === "Professional" || plan.name === "Enterprise" ? 'opacity-75' : ''}`}
               >
                 {plan.popular && (
                   <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
@@ -163,7 +168,10 @@ export default function PricingPage() {
                   </div>
                   <CardTitle className="text-2xl text-card-foreground mb-2">{plan.name}</CardTitle>
                   <div className="mb-4">
-                    <span className="text-4xl font-bold text-card-foreground">{plan.price}</span>
+                    <span className={`text-4xl font-bold ${plan.name === "Professional" || plan.name === "Enterprise" ? "text-muted-foreground" : "text-card-foreground"}`}>
+                      {plan.price}
+                    </span>
+                    {plan.period && <span className="text-muted-foreground">{plan.period}</span>}
                   </div>
                   <CardDescription className="text-muted-foreground text-base">
                     {plan.description}

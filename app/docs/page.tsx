@@ -216,7 +216,7 @@ export default function DocsPage() {
                 </CardHeader>
                 <CardContent>
                   <Link href={step.link}>
-                    <Button variant="outline" className="w-full border-gray-600 text-white hover:bg-gray-700">
+                    <Button variant="outline" className="w-full">
                       Read Guide
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
@@ -303,7 +303,7 @@ export default function DocsPage() {
                 </CardHeader>
                 <CardContent>
                   <Link href={doc.link}>
-                    <Button variant="outline" className="w-full border-gray-600 text-white hover:bg-gray-700">
+                    <Button variant="outline" className="w-full">
                       View Docs
                       <ExternalLink className="ml-2 h-4 w-4" />
                     </Button>
@@ -346,7 +346,7 @@ export default function DocsPage() {
                     </Badge>
                   </div>
                   <Link href={resource.link}>
-                    <Button variant="outline" className="w-full border-gray-600 text-white hover:bg-gray-700">
+                    <Button variant="outline" className="w-full">
                       Explore
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>

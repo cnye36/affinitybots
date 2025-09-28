@@ -34,6 +34,8 @@ export function Footer() {
             <div className="flex items-center space-x-4">
               <Link
                 href="https://x.com/Affinitybots"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="text-muted-foreground hover:text-foreground"
               >
                 <Twitter className="h-5 w-5" />
@@ -41,6 +43,8 @@ export function Footer() {
               </Link>
               <Link
                 href="https://github.com/cnye36/Affinitybots"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="text-muted-foreground hover:text-foreground"
               >
                 <Github className="h-5 w-5" />
@@ -48,6 +52,8 @@ export function Footer() {
               </Link>
               <Link
                 href="https://linkedin.com/company/Affinitybots"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="text-muted-foreground hover:text-foreground"
               >
                 <Linkedin className="h-5 w-5" />

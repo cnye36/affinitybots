@@ -177,7 +177,7 @@ export default function FeaturesPage() {
               </Button>
             </Link>
             <Link href="/docs">
-              <Button size="lg" variant="outline" className="border-gray-600 text-white hover:bg-gray-800">
+              <Button size="lg" variant="outline">
                 View Documentation
               </Button>
             </Link>
