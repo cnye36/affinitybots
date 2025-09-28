@@ -1,6 +1,6 @@
-"use client";
-
-import { MDXRemote } from 'next-mdx-remote';
+import { MDXRemote } from 'next-mdx-remote/rsc';
+import remarkGfm from 'remark-gfm';
+import remarkFrontmatter from 'remark-frontmatter';
 import { components } from './MDXComponents';
 
 interface MDXContentProps {
@@ -12,5 +12,11 @@ export function MDXContent({ mdxSource }: MDXContentProps) {
     return <div className="text-red-400">Error: MDX content not found</div>;
   }
 
-  return <MDXRemote {...mdxSource} components={components} />;
+  return (
+    <MDXRemote 
+      source={mdxSource}
+      options={{ mdxOptions: { remarkPlugins: [remarkGfm, remarkFrontmatter], rehypePlugins: [] } }}
+      components={components}
+    />
+  );
 }

@@ -1,7 +1,6 @@
-"use client";
 
 import React from 'react';
-import { MDXProvider } from '@mdx-js/react';
+// MDX components mapping used by next-mdx-remote/rsc
 import Image from 'next/image';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -21,7 +20,7 @@ const components = {
   // Headings with custom styling
   h1: ({ children, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
     <h1 
-      className="text-4xl font-bold text-foreground mb-6 mt-8 first:mt-0 border-b border-gray-300 dark:border-gray-700 pb-4" 
+      className="text-3xl font-bold text-foreground mb-5 mt-8 first:mt-0 border-b border-gray-300 dark:border-gray-700 pb-3" 
       {...props}
     >
       {children}
@@ -29,7 +28,7 @@ const components = {
   ),
   h2: ({ children, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
     <h2 
-      className="text-3xl font-bold text-foreground mb-4 mt-8 first:mt-0" 
+      className="text-2xl font-bold text-blue-600 dark:text-blue-300 mb-3 mt-8 first:mt-0" 
       {...props}
     >
       {children}
@@ -37,7 +36,7 @@ const components = {
   ),
   h3: ({ children, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
     <h3 
-      className="text-2xl font-semibold text-foreground mb-3 mt-6 first:mt-0" 
+      className="text-xl font-semibold text-blue-600 dark:text-blue-300 mb-2.5 mt-6 first:mt-0" 
       {...props}
     >
       {children}
@@ -45,7 +44,7 @@ const components = {
   ),
   h4: ({ children, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
     <h4 
-      className="text-xl font-semibold text-foreground mb-2 mt-4 first:mt-0" 
+      className="text-lg font-semibold text-blue-600 dark:text-blue-300 mb-2 mt-4 first:mt-0" 
       {...props}
     >
       {children}
@@ -53,7 +52,7 @@ const components = {
   ),
   h5: ({ children, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
     <h5 
-      className="text-lg font-semibold text-foreground mb-2 mt-4 first:mt-0" 
+      className="text-base font-semibold text-blue-600 dark:text-blue-300 mb-2 mt-4 first:mt-0" 
       {...props}
     >
       {children}
@@ -61,7 +60,7 @@ const components = {
   ),
   h6: ({ children, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
     <h6 
-      className="text-base font-semibold text-foreground mb-2 mt-4 first:mt-0" 
+      className="text-sm font-semibold text-blue-600 dark:text-blue-300 mb-2 mt-4 first:mt-0" 
       {...props}
     >
       {children}
@@ -328,15 +327,5 @@ const components = {
   ),
 };
 
-// MDX Provider component
-export function MDXComponentsProvider({ children }: { children: React.ReactNode }) {
-  return (
-    <MDXProvider components={components}>
-      {children}
-    </MDXProvider>
-  );
-}
-
 // Export components for direct use
 export { components };
-export default components;

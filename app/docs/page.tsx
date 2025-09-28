@@ -7,149 +7,45 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { 
   BookOpen, 
-  Code, 
-  Play, 
+  Clock,
   ArrowRight, 
-  Search,
-  FileText,
-  Video,
-  Download,
-  ExternalLink,
+  Mail,
+  Sparkles,
+  CheckCircle,
   Zap,
   Users,
   Settings,
   Shield,
   Brain,
   Workflow,
-  MessageSquare,
-  BarChart3,
-  Sparkles
+  BarChart3
 } from "lucide-react";
-import Link from "next/link";
 
 export default function DocsPage() {
-  const quickStart = [
+  const comingSoonFeatures = [
     {
-      title: "Create Your First Agent",
-      description: "Learn how to build and deploy your first AI agent in under 5 minutes",
-      icon: <Zap className="h-6 w-6 text-blue-500" />,
-      time: "5 min read",
-      link: "/docs/quick-start"
-    },
-    {
-      title: "Agent Configuration",
-      description: "Configure your agent's personality, skills, and behavior",
-      icon: <Settings className="h-6 w-6 text-purple-500" />,
-      time: "10 min read",
-      link: "/docs/configuration"
-    },
-    {
-      title: "Deploy & Test",
-      description: "Deploy your agent and test it in a real environment",
-      icon: <Play className="h-6 w-6 text-green-500" />,
-      time: "8 min read",
-      link: "/docs/deployment"
-    }
-  ];
-
-  const guides = [
-    {
-      category: "Getting Started",
-      icon: <BookOpen className="h-5 w-5" />,
-      articles: [
-        { title: "Introduction to AffinityBots", time: "3 min", link: "/docs/introduction" },
-        { title: "Account Setup", time: "2 min", link: "/docs/account-setup" },
-        { title: "Your First Agent", time: "5 min", link: "/docs/first-agent" },
-        { title: "Understanding Workflows", time: "7 min", link: "/docs/workflows" }
-      ]
-    },
-    {
-      category: "Agent Development",
-      icon: <Brain className="h-5 w-5" />,
-      articles: [
-        { title: "Agent Architecture", time: "12 min", link: "/docs/agent-architecture" },
-        { title: "Custom Skills", time: "15 min", link: "/docs/custom-skills" },
-        { title: "Training Data", time: "10 min", link: "/docs/training-data" },
-        { title: "Testing & Debugging", time: "8 min", link: "/docs/testing" }
-      ]
-    },
-    {
-      category: "Integrations",
-      icon: <Workflow className="h-5 w-5" />,
-      articles: [
-        { title: "Slack Integration", time: "6 min", link: "/docs/slack" },
-        { title: "Teams Integration", time: "6 min", link: "/docs/teams" },
-        { title: "API Integration", time: "12 min", link: "/docs/api" },
-        { title: "Webhook Setup", time: "8 min", link: "/docs/webhooks" }
-      ]
-    },
-    {
-      category: "Advanced Features",
-      icon: <Shield className="h-5 w-5" />,
-      articles: [
-        { title: "Security Best Practices", time: "10 min", link: "/docs/security" },
-        { title: "Performance Optimization", time: "12 min", link: "/docs/performance" },
-        { title: "Custom Models", time: "20 min", link: "/docs/custom-models" },
-        { title: "Enterprise Features", time: "15 min", link: "/docs/enterprise" }
-      ]
-    }
-  ];
-
-  const apiDocs = [
-    {
-      title: "Authentication",
-      description: "Learn how to authenticate with our API",
-      icon: <Shield className="h-6 w-6 text-red-500" />,
-      link: "/docs/api/auth"
-    },
-    {
-      title: "Agent Management",
-      description: "Create, update, and manage agents via API",
+      title: "Building Your First Agent",
+      description: "Learn how to create and configure your first AI agent",
       icon: <Brain className="h-6 w-6 text-blue-500" />,
-      link: "/docs/api/agents"
+      status: "coming-soon"
     },
     {
-      title: "Workflow API",
-      description: "Build and execute complex workflows",
+      title: "Tool Configuration",
+      description: "Connect and configure tools to extend your agent's capabilities",
+      icon: <Settings className="h-6 w-6 text-purple-500" />,
+      status: "coming-soon"
+    },
+    {
+      title: "Workflow Creation",
+      description: "Build complex workflows to automate multi-step processes",
       icon: <Workflow className="h-6 w-6 text-green-500" />,
-      link: "/docs/api/workflows"
+      status: "coming-soon"
     },
     {
-      title: "Analytics API",
-      description: "Access performance metrics and analytics",
-      icon: <BarChart3 className="h-6 w-6 text-purple-500" />,
-      link: "/docs/api/analytics"
-    }
-  ];
-
-  const resources = [
-    {
-      title: "Video Tutorials",
-      description: "Step-by-step video guides for common tasks",
-      icon: <Video className="h-6 w-6 text-red-500" />,
-      count: "12 videos",
-      link: "/docs/videos"
-    },
-    {
-      title: "Code Examples",
-      description: "Ready-to-use code snippets and examples",
-      icon: <Code className="h-6 w-6 text-blue-500" />,
-      count: "50+ examples",
-      link: "/docs/examples"
-    },
-    {
-      title: "SDK Downloads",
-      description: "Official SDKs for popular programming languages",
-      icon: <Download className="h-6 w-6 text-green-500" />,
-      count: "5 languages",
-      link: "/docs/sdks"
-    },
-    {
-      title: "Community Forum",
-      description: "Get help from our community and support team",
-      icon: <Users className="h-6 w-6 text-purple-500" />,
-      count: "2.5k members",
-      link: "/community"
+      title: "Best Practices",
+      description: "Tips and tricks for getting the most out of your agents",
+      icon: <Sparkles className="h-6 w-6 text-yellow-500" />,
+      status: "coming-soon"
     }
   ];
 
@@ -161,199 +57,151 @@ export default function DocsPage() {
       <section className="pt-32 pb-16 px-4">
         <div className="container mx-auto text-center">
           <Badge variant="secondary" className="mb-6 text-sm">
-            <BookOpen className="h-4 w-4 mr-2" />
-            Complete Documentation
+            <Clock className="h-4 w-4 mr-2" />
+            Documentation Coming Soon
           </Badge>
           <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
-            Everything You Need
+            Documentation
             <br />
-            <span className="text-foreground">to Get Started</span>
+            <span className="text-foreground">Coming Soon</span>
           </h1>
           <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto">
-            Comprehensive guides, tutorials, and API documentation to help you build 
-            powerful AI agents with AffinityBots.
+            We're working hard to bring you step-by-step tutorials and guides 
+            to help you build, configure, and deploy powerful AI agents with our platform.
           </p>
           
-          {/* Search Bar */}
-          <div className="max-w-2xl mx-auto mb-8">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+          {/* Email Signup */}
+          <div className="max-w-md mx-auto mb-8">
+            <div className="flex gap-2">
               <Input 
-                placeholder="Search documentation..." 
-                className="pl-10 pr-4 py-3"
+                placeholder="Enter your email..." 
+                className="flex-1"
+                type="email"
               />
+              <Button className="px-6">
+                <Mail className="h-4 w-4 mr-2" />
+                Notify Me
+              </Button>
+            </div>
+            <p className="text-sm text-muted-foreground mt-2">
+              Get notified when our tutorials and guides are ready
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Coming Soon Features */}
+      <section className="py-16 px-4">
+        <div className="container mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+              What's Coming
+            </h2>
+            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
+              Here's what you can expect in our tutorial guides
+            </p>
+          </div>
+          
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+            {comingSoonFeatures.map((feature, index) => (
+              <Card key={index} className="bg-gray-800/50 border-gray-700 hover:border-gray-600 transition-all duration-300 hover:shadow-xl">
+                <CardHeader>
+                  <div className="flex items-center space-x-3 mb-4">
+                    {feature.icon}
+                    <Badge variant="outline" className="text-xs">
+                      Coming Soon
+                    </Badge>
+                  </div>
+                  <CardTitle className="text-white text-lg">{feature.title}</CardTitle>
+                  <CardDescription className="text-gray-300">
+                    {feature.description}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center text-sm text-gray-400">
+                    <Clock className="h-4 w-4 mr-2" />
+                    In Development
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Progress Section */}
+      <section className="py-16 px-4 bg-gray-900/50">
+        <div className="container mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+              Development Progress
+            </h2>
+            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
+              We're making great progress on our tutorial guides
+            </p>
+          </div>
+          
+          <div className="max-w-4xl mx-auto">
+            <div className="grid md:grid-cols-3 gap-8">
+              <Card className="bg-gray-800/30 border-gray-700">
+                <CardHeader>
+                  <div className="flex items-center space-x-3">
+                    <CheckCircle className="h-6 w-6 text-green-500" />
+                    <CardTitle className="text-white">Planning</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-300">Tutorial structure and content planning completed</p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gray-800/30 border-gray-700">
+                <CardHeader>
+                  <div className="flex items-center space-x-3">
+                    <Sparkles className="h-6 w-6 text-blue-500" />
+                    <CardTitle className="text-white">Writing</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-300">Currently writing step-by-step tutorials and guides</p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gray-800/30 border-gray-700">
+                <CardHeader>
+                  <div className="flex items-center space-x-3">
+                    <Clock className="h-6 w-6 text-yellow-500" />
+                    <CardTitle className="text-white">Review</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-300">Final review and testing phase coming soon</p>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Quick Start */}
+      {/* Contact Section */}
       <section className="py-16 px-4">
-        <div className="container mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Quick Start Guide
-            </h2>
-            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-              Get up and running in minutes with our step-by-step guide
+        <div className="container mx-auto text-center">
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+            Need Help Now?
+          </h2>
+            <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
+              While we're working on the tutorials, feel free to reach out to our support team
             </p>
-          </div>
           
-          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            {quickStart.map((step, index) => (
-              <Card key={index} className="bg-gray-800/50 border-gray-700 hover:border-gray-600 transition-all duration-300 hover:shadow-xl">
-                <CardHeader>
-                  <div className="flex items-center space-x-3 mb-4">
-                    {step.icon}
-                    <Badge variant="outline" className="text-xs">
-                      {step.time}
-                    </Badge>
-                  </div>
-                  <CardTitle className="text-white text-lg">{step.title}</CardTitle>
-                  <CardDescription className="text-gray-300">
-                    {step.description}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Link href={step.link}>
-                    <Button variant="outline" className="w-full">
-                      Read Guide
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Documentation Categories */}
-      <section className="py-16 px-4 bg-gray-900/50">
-        <div className="container mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Documentation Categories
-            </h2>
-            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-              Browse our comprehensive documentation by category
-            </p>
-          </div>
-          
-          <div className="grid lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
-            {guides.map((category, index) => (
-              <Card key={index} className="bg-gray-800/30 border-gray-700">
-                <CardHeader>
-                  <div className="flex items-center space-x-3 mb-4">
-                    <div className="text-blue-400">
-                      {category.icon}
-                    </div>
-                    <CardTitle className="text-white text-xl">{category.category}</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {category.articles.map((article, articleIndex) => (
-                      <Link 
-                        key={articleIndex} 
-                        href={article.link}
-                        className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-700/50 transition-colors duration-200"
-                      >
-                        <div className="flex items-center space-x-3">
-                          <FileText className="h-4 w-4 text-gray-400" />
-                          <span className="text-white">{article.title}</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <span className="text-sm text-gray-400">{article.time}</span>
-                          <ArrowRight className="h-4 w-4 text-gray-400" />
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* API Documentation */}
-      <section className="py-16 px-4">
-        <div className="container mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              API Documentation
-            </h2>
-            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-              Integrate AffinityBots into your applications with our powerful API
-            </p>
-          </div>
-          
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
-            {apiDocs.map((doc, index) => (
-              <Card key={index} className="bg-gray-800/50 border-gray-700 hover:border-gray-600 transition-all duration-300 hover:shadow-xl">
-                <CardHeader>
-                  <div className="flex items-center space-x-3 mb-4">
-                    {doc.icon}
-                    <CardTitle className="text-white text-lg">{doc.title}</CardTitle>
-                  </div>
-                  <CardDescription className="text-gray-300">
-                    {doc.description}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Link href={doc.link}>
-                    <Button variant="outline" className="w-full">
-                      View Docs
-                      <ExternalLink className="ml-2 h-4 w-4" />
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Resources */}
-      <section className="py-16 px-4 bg-gray-900/50">
-        <div className="container mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Additional Resources
-            </h2>
-            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-              Videos, examples, and community resources to help you succeed
-            </p>
-          </div>
-          
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
-            {resources.map((resource, index) => (
-              <Card key={index} className="bg-gray-800/30 border-gray-700 hover:border-gray-600 transition-all duration-300 hover:shadow-xl">
-                <CardHeader>
-                  <div className="flex items-center space-x-3 mb-4">
-                    {resource.icon}
-                    <CardTitle className="text-white text-lg">{resource.title}</CardTitle>
-                  </div>
-                  <CardDescription className="text-gray-300">
-                    {resource.description}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between mb-4">
-                    <Badge variant="secondary" className="text-xs">
-                      {resource.count}
-                    </Badge>
-                  </div>
-                  <Link href={resource.link}>
-                    <Button variant="outline" className="w-full">
-                      Explore
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button variant="outline" size="lg">
+              <Users className="h-4 w-4 mr-2" />
+              Contact Support
+            </Button>
+            <Button variant="outline" size="lg">
+              <Mail className="h-4 w-4 mr-2" />
+              Join Community
+            </Button>
           </div>
         </div>
       </section>

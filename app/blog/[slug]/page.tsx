@@ -14,13 +14,14 @@ import {
   ExternalLink
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { getBlogPostWithMDX, getAllBlogPosts } from "@/lib/blog";
 import { ShareButton } from '@/components/blog/ShareButton';
 import { MDXContent } from '@/components/blog/MDXContent';
 import { BlogPost } from '@/lib/blog';
 
 interface BlogPostPageProps {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }
 
 export async function generateStaticParams() {
@@ -31,7 +32,8 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: BlogPostPageProps) {
-  const result = await getBlogPostWithMDX(params.slug);
+  const { slug } = await params;
+  const result = await getBlogPostWithMDX(slug);
   
   if (!result) {
     return {
@@ -62,7 +64,8 @@ export async function generateMetadata({ params }: BlogPostPageProps) {
 }
 
 export default async function BlogPostPage({ params }: BlogPostPageProps) {
-  const result = await getBlogPostWithMDX(params.slug);
+  const { slug } = await params;
+  const result = await getBlogPostWithMDX(slug);
   
   if (!result) {
     notFound();
@@ -168,6 +171,29 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
         </div>
       </section>
 
+      {/* Inline CTA Banner */}
+      <section className="px-4">
+        <div className="container mx-auto max-w-6xl">
+          <div className="rounded-md border border-gray-300 dark:border-gray-700 bg-gradient-to-r from-blue-600/10 to-purple-600/10 dark:from-blue-500/10 dark:to-purple-500/10 px-4 py-3 md:px-6 md:py-4 flex flex-col md:flex-row items-center justify-between gap-3">
+            <p className="text-sm md:text-base text-foreground/90">
+              Ready to build with multi‑agent workflows?
+            </p>
+            <div className="flex items-center gap-2">
+              <Link href="/signup">
+                <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
+                  Try AffinityBots Now
+                </Button>
+              </Link>
+              <Link href="/contact">
+                <Button size="sm" variant="outline" className="border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400 hover:bg-blue-600/10">
+                  Request Access
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Related Posts */}
       {relatedPosts.length > 0 && (
         <section className="py-16 px-4 bg-gray-900/50">
@@ -184,8 +210,20 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
               {relatedPosts.map((relatedPost) => (
                 <Card key={relatedPost.slug} className="bg-gray-800/50 border-gray-700 hover:border-gray-600 transition-all duration-300 group">
-                  <div className="bg-gradient-to-br from-gray-700 to-gray-800 h-48 flex items-center justify-center">
-                    <BookOpen className="h-12 w-12 text-gray-400" />
+                  <div className="relative aspect-[3/2] overflow-hidden bg-gray-100 dark:bg-gray-800">
+                    {relatedPost.coverImage ? (
+                      <Image
+                        src={relatedPost.coverImage}
+                        alt={relatedPost.title}
+                        fill
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="bg-gradient-to-br from-gray-700 to-gray-800 h-full flex items-center justify-center">
+                        <BookOpen className="h-12 w-12 text-gray-400" />
+                      </div>
+                    )}
                   </div>
                   <CardContent className="p-6">
                     <div className="flex items-center space-x-2 mb-3">

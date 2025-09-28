@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { 
   Calendar, 
   Clock, 
-  User, 
   ArrowRight, 
   Search,
   Filter,
@@ -27,7 +26,7 @@ import { getAllBlogPosts, getAllCategories, getAllTags } from "@/lib/blog";
 import { BlogPost } from "@/lib/blog";
 
 interface BlogPageProps {
-  searchParams: { [key: string]: string | string[] | undefined };
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
 export default async function BlogPage({ searchParams }: BlogPageProps) {
@@ -179,8 +178,8 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
                     <CardContent>
                       <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
                         <div className="flex items-center space-x-1">
-                          <User className="h-3 w-3" />
-                          <span>{post.author}</span>
+                          <Calendar className="h-3 w-3" />
+                          <span>{post.date}</span>
                         </div>
                         <div className="flex items-center space-x-1">
                           <Clock className="h-3 w-3" />
@@ -204,7 +203,7 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
             {blogPosts.map((post, index) => (
               <Link key={index} href={`/blog/${post.slug}`} className="group">
                 <Card className="bg-white dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-all duration-300 hover:shadow-xl group-hover:shadow-2xl h-full">
-                  <div className="relative aspect-video overflow-hidden bg-gray-100 dark:bg-gray-800">
+                  <div className="relative aspect-[3/2] overflow-hidden bg-gray-100 dark:bg-gray-800">
                     {post.coverImage ? (
                       <Image
                         src={post.coverImage}
@@ -232,18 +231,18 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
                       {post.excerpt}
                     </CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
-                      <div className="flex items-center space-x-1">
-                        <User className="h-3 w-3" />
-                        <span>{post.author}</span>
+                    <CardContent>
+                      <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
+                        <div className="flex items-center space-x-1">
+                          <Calendar className="h-3 w-3" />
+                          <span>{post.date}</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <Clock className="h-3 w-3" />
+                          <span>{post.readTime}</span>
+                        </div>
                       </div>
-                      <div className="flex items-center space-x-1">
-                        <Clock className="h-3 w-3" />
-                        <span>{post.readTime}</span>
-                      </div>
-                    </div>
-                  </CardContent>
+                    </CardContent>
                 </Card>
               </Link>
             ))}

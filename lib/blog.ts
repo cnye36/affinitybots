@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
-import { serialize } from 'next-mdx-remote/serialize';
+// RSC MDX flow: no serialize at build time
 import remarkGfm from 'remark-gfm';
 import remarkFrontmatter from 'remark-frontmatter';
 
@@ -89,20 +89,10 @@ export async function getBlogPostWithMDX(slug: string): Promise<{
       return null;
     }
 
-    const mdxSource = await serialize(post.content, {
-      mdxOptions: {
-        remarkPlugins: [remarkGfm, remarkFrontmatter],
-        rehypePlugins: [],
-      },
-      parseFrontmatter: false,
-    });
+    // Return raw MDX string; render with next-mdx-remote/rsc at usage site
+    const mdxSource = post.content;
 
-    console.log('MDX Source for', slug, ':', mdxSource);
-
-    return {
-      post,
-      mdxSource,
-    };
+    return { post, mdxSource };
   } catch (error) {
     console.error(`Error processing MDX for ${slug}:`, error);
     return null;
@@ -133,12 +123,13 @@ export function getAllCategories(): string[] {
   // For now, return a static list based on our sample posts
   return [
     'AI & Automation',
-    'Tutorial',
+    'AI Agents',
     'Use Cases',
-    'Case Study',
     'Integration',
     'Security',
-    'Research'
+    'MCP',
+    'Chatbots',
+    'Multimodal Agents'
   ];
 }
 
