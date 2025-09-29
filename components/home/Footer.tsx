@@ -135,7 +135,7 @@ export function Footer() {
         </div>
 
         {/* Bottom section with legal links and copyright */}
-        <div className="mt-12 pt-8 border-t border-border flex flex-col md:flex-row justify-between items-center">
+        <div className="mt-8 pt-8 border-t border-border flex flex-col md:flex-row justify-between items-center">
           <div className="text-muted-foreground text-sm">
             © {currentYear} AffinityBots. All rights reserved.
           </div>

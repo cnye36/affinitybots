@@ -4,6 +4,7 @@ import { HowItWorks } from "@/components/home/HowItWorks";
 import { Benefits } from "@/components/home/Benefits";
 import { Features } from "@/components/home/Features";
 import { Integrations } from "@/components/home/Integrations";
+import { FeaturedIn } from "@/components/home/FeaturedIn";
 import { CTA } from "@/components/home/CTA";
 import { Footer } from "@/components/home/Footer";
 
@@ -17,6 +18,7 @@ export default function Home() {
         <Integrations />
         <HowItWorks />
         <Benefits />
+        <FeaturedIn />
         <CTA />
       </main>
       <Footer />
