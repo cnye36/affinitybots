@@ -26,7 +26,7 @@ import { CustomEdge } from "./CustomEdge";
 import { toast } from "@/hooks/useToast";
 import { WorkflowNode } from "@/types/workflow";
 import { MemoizedTaskNode } from "./tasks/TaskNode";
-import { TriggerNode } from "./TriggerNode";
+import { TriggerNode } from "./triggers/TriggerNode";
 
 // Define node and edge types outside the component
 const nodeTypes: NodeTypes = {

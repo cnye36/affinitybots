@@ -13,14 +13,14 @@ import {
 import { createClient } from "@/supabase/client";
 import { EmptyWorkflowState } from "../../EmptyWorkflowState";
 import { AgentSelectModal } from "./AgentSelectModal";
-import { TriggerSelectModal } from "./TriggerSelectModal";
+import { TriggerSelectModal } from "./triggers/TriggerSelectModal";
 import { WorkflowCanvas } from "./WorkflowCanvas";
 import { WorkflowHeader } from "./WorkflowHeader";
 import { executeWorkflow } from "./WorkflowExecutionManager";
 import { toast } from "@/hooks/useToast";
 import { TaskSidebar } from "./tasks/TaskSidebar";
 import { WorkflowExecutions } from "./WorkflowExecutions";
-import { TriggerConfigModal } from "./TriggerConfigModal";
+import { TriggerConfigModal } from "./triggers/TriggerConfigModal";
 import { WorkflowMobileWizard } from "./WorkflowMobileWizard";
 import { TaskSelectionSheet } from "./tasks/TaskSelectionSheet";
 

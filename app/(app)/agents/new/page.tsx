@@ -250,6 +250,29 @@ export default function NewAgentPage() {
             </div>
           </div>
 
+          {/* Templates as pills under prompt; click to populate */}
+          <div className="space-y-2" data-tutorial="agent-templates">
+            <div className="flex items-center gap-2">
+              <Wand2 className="h-4 w-4" />
+              <h3 className="text-lg font-semibold">Start from a template</h3>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {AGENT_TEMPLATES.map((template) => (
+                <Button
+                  key={template.id}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="rounded-full"
+                  onClick={() => setCustomPrompt(template.basePrompt)}
+                >
+                  <template.icon className="h-4 w-4 mr-2" />
+                  {template.name}
+                </Button>
+              ))}
+            </div>
+          </div>
+
           {/* Tools (Accordion) */}
           <div className="gradient-border p-0 rounded-lg" data-tutorial="agent-tools">
             <Accordion type="single" collapsible>
@@ -350,28 +373,7 @@ export default function NewAgentPage() {
             </Accordion>
           </div>
 
-          {/* Templates as pills under prompt; click to populate */}
-          <div className="space-y-2" data-tutorial="agent-templates">
-            <div className="flex items-center gap-2">
-              <Wand2 className="h-4 w-4" />
-              <h3 className="text-lg font-semibold">Start from a template</h3>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {AGENT_TEMPLATES.map((template) => (
-                <Button
-                  key={template.id}
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="rounded-full"
-                  onClick={() => setCustomPrompt(template.basePrompt)}
-                >
-                  <template.icon className="h-4 w-4 mr-2" />
-                  {template.name}
-                </Button>
-              ))}
-            </div>
-          </div>
+          
         </div>
 
         {error && (

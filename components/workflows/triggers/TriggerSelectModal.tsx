@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { AlarmClock, Globe2, Play, PlugZap } from "lucide-react";
+import { AlarmClock, Globe2, Play, PlugZap, FileText } from "lucide-react";
 import { TriggerType } from "@/types/workflow";
 
 type TriggerOption = {
@@ -17,6 +17,7 @@ type TriggerOption = {
   description: string;
   icon: React.ReactNode;
   color: string; // tailwind hue for icon bg
+  comingSoon?: boolean;
 };
 
 const TRIGGER_OPTIONS: TriggerOption[] = [
@@ -25,7 +26,7 @@ const TRIGGER_OPTIONS: TriggerOption[] = [
     title: "Manual",
     description: "Start this workflow manually from the UI or API.",
     icon: <Play className="h-4 w-4" />,
-  color: "primary",
+    color: "primary",
   },
   {
     type: "webhook",
@@ -47,6 +48,15 @@ const TRIGGER_OPTIONS: TriggerOption[] = [
     description: "Start when a connected app event occurs (e.g. Stripe charge).",
     icon: <PlugZap className="h-4 w-4" />,
     color: "violet",
+    comingSoon: true,
+  },
+  {
+    type: "form",
+    title: "Form",
+    description: "Trigger when a form is submitted.",
+    icon: <FileText className="h-4 w-4" />,
+    color: "green",
+    comingSoon: true,
   },
 ];
 
@@ -228,18 +238,24 @@ export function TriggerSelectModal({ isOpen, onClose, onCreate }: TriggerSelectM
               <div className="space-y-2">
                 {TRIGGER_OPTIONS.map((opt) => {
                   const isActive = selected === opt.type;
+                  const isDisabled = opt.comingSoon;
                   return (
                     <button
                       key={opt.type}
                       onClick={() => {
-                        setSelected(opt.type);
-                        setName(opt.title);
-                        setDescription(opt.description);
+                        if (!isDisabled) {
+                          setSelected(opt.type);
+                          setName(opt.title);
+                          setDescription(opt.description);
+                        }
                       }}
+                      disabled={isDisabled}
                       className={`w-full text-left rounded-md border p-3 transition-all ${
-                        isActive
-                          ? "bg-background ring-1 ring-primary/60 shadow-sm"
-                          : "bg-background/60 hover:bg-background"
+                        isDisabled
+                          ? "bg-background/40 opacity-60 cursor-not-allowed"
+                          : isActive
+                            ? "bg-background ring-1 ring-primary/60 shadow-sm"
+                            : "bg-background/60 hover:bg-background"
                       }`}
                     >
                       <div className="flex items-start gap-3">
@@ -247,7 +263,14 @@ export function TriggerSelectModal({ isOpen, onClose, onCreate }: TriggerSelectM
                           {opt.icon}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="font-medium text-sm">{opt.title}</div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-sm">{opt.title}</span>
+                            {opt.comingSoon && (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                Coming Soon
+                              </Badge>
+                            )}
+                          </div>
                           <div className="text-xs text-muted-foreground line-clamp-2">{opt.description}</div>
                         </div>
                       </div>
@@ -269,6 +292,9 @@ export function TriggerSelectModal({ isOpen, onClose, onCreate }: TriggerSelectM
                       <div className="flex items-center gap-2">
                         <h3 className="font-semibold leading-none">{current.title}</h3>
                         <Badge variant="secondary" className="uppercase text-[10px]">{selected}</Badge>
+                        {current.comingSoon && (
+                          <Badge variant="outline" className="text-[10px]">Coming Soon</Badge>
+                        )}
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">{current.description}</p>
                     </div>
@@ -276,7 +302,18 @@ export function TriggerSelectModal({ isOpen, onClose, onCreate }: TriggerSelectM
 
                   <Separator />
 
-                  <div className="grid grid-cols-2 gap-3">
+                  {current.comingSoon ? (
+                    <div className="h-[400px] grid place-items-center">
+                      <div className="text-center space-y-2 max-w-sm">
+                        <div className="text-lg font-medium">Coming Soon</div>
+                        <p className="text-sm text-muted-foreground">
+                          This trigger type is currently under development and will be available in a future release.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
                       <Label>Title</Label>
                       <Input value={name} onChange={(e) => setName(e.target.value)} />
@@ -456,6 +493,8 @@ export function TriggerSelectModal({ isOpen, onClose, onCreate }: TriggerSelectM
                     <Button variant="outline" onClick={handleClose}>Cancel</Button>
                     <Button onClick={handleCreate} disabled={saving || isCreateDisabled}>{saving ? "Creating…" : "Create Trigger"}</Button>
                   </div>
+                </>
+              )}
                 </>
               ) : (
                 <div className="h-[520px] grid place-items-center text-sm text-muted-foreground">Choose a trigger to configure.</div>

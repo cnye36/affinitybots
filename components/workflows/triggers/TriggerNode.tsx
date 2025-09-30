@@ -41,6 +41,13 @@ export const TriggerNode = memo(({ data }: { data: TriggerNodeData }) => {
     }
   };
 
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (data.onConfigureTrigger) {
+      data.onConfigureTrigger(data.trigger_id);
+    }
+  };
+
   const handleAddTask = (e: React.MouseEvent) => {
     e.stopPropagation();
     // Prefer onAddTask to set active node before opening the sidebar
@@ -79,9 +86,10 @@ export const TriggerNode = memo(({ data }: { data: TriggerNodeData }) => {
   return (
     <div className="relative">
       <Card
-        className={`min-w-[200px] max-w-[300px] ${
+        className={`min-w-[200px] max-w-[300px] cursor-pointer ${
           data.isActive ? "border-2 border-primary" : "border border-border"
         }`}
+        onDoubleClick={handleDoubleClick}
       >
         <CardHeader className="p-3 bg-primary/5">
           <div className="flex items-center justify-between">
