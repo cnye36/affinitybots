@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Dialog,
   DialogContent,
@@ -6,9 +8,10 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Assistant } from "@/types/assistant";
+import { cn } from "@/lib/utils";
 
 interface AgentSelectModalProps {
   isOpen: boolean;
@@ -16,6 +19,8 @@ interface AgentSelectModalProps {
   onSelect: (assistant: Assistant) => void | Promise<void>;
   assistants: Assistant[];
   loading: boolean;
+  onCreateAgent?: () => void;
+  highlightAssistantId?: string;
 }
 
 export function AgentSelectModal({
@@ -24,12 +29,26 @@ export function AgentSelectModal({
   onSelect,
   assistants,
   loading,
+  onCreateAgent,
+  highlightAssistantId,
 }: AgentSelectModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[700px]">
         <DialogHeader className="pb-4">
-          <DialogTitle className="text-xl">Select an Agent</DialogTitle>
+          <div className="flex items-center justify-between gap-2">
+            <DialogTitle className="text-xl">Select an Agent</DialogTitle>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onCreateAgent?.()}
+              disabled={!onCreateAgent}
+              aria-label="Create new agent"
+              title="Create new agent"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
         </DialogHeader>
         {loading ? (
           <div className="flex items-center justify-center py-8">
@@ -42,7 +61,14 @@ export function AgentSelectModal({
                 <Button
                   key={assistant.assistant_id}
                   variant="outline"
-                  className="w-full justify-start px-4 py-3 h-auto transition-all hover:bg-accent hover:shadow-sm group"
+                  className={cn(
+                    "w-full justify-start px-4 py-3 h-auto transition-all hover:bg-accent hover:shadow-sm group",
+                    highlightAssistantId === assistant.assistant_id &&
+                      "border-primary bg-primary/5"
+                  )}
+                  data-highlighted={
+                    highlightAssistantId === assistant.assistant_id || undefined
+                  }
                   onClick={() => onSelect(assistant)}
                 >
                   <div className="flex items-start gap-4 w-full">

@@ -31,10 +31,10 @@ export async function GET(
       );
     }
 
-    // Fetch run row
+    // Fetch run row with workflow snapshot
     const { data: run, error: runErr } = await supabase
       .from("workflow_runs")
-      .select("run_id, workflow_id, status, started_at, completed_at, error, result, metadata")
+      .select("run_id, workflow_id, status, started_at, completed_at, error, result, metadata, workflow_snapshot")
       .eq("run_id", runId)
       .eq("workflow_id", workflowId)
       .single();

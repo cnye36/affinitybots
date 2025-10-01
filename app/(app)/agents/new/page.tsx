@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from "next/link";
 import { AGENT_TEMPLATES } from "./templates";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,7 @@ import { createClient } from "@/supabase/client";
 
 export default function NewAgentPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { startTour, isActive } = useOnboarding();
   const [customPrompt, setCustomPrompt] = useState("");
   const [customName, setCustomName] = useState("");
@@ -163,6 +164,24 @@ export default function NewAgentPage() {
               })
             });
           } catch {}
+        }
+      }
+
+      const redirectParam = searchParams.get('redirect');
+      if (redirectParam && redirectParam.startsWith('/')) {
+        try {
+          const redirectUrl = new URL(redirectParam, window.location.origin);
+          redirectUrl.searchParams.set('agentModal', 'open');
+          redirectUrl.searchParams.set('returningFromAgentCreate', '1');
+          if (data?.assistant?.assistant_id) {
+            redirectUrl.searchParams.set('newAgentId', data.assistant.assistant_id);
+          } else {
+            redirectUrl.searchParams.delete('newAgentId');
+          }
+          router.push(`${redirectUrl.pathname}${redirectUrl.search}`);
+          return;
+        } catch {
+          // Fallback to default route if redirect URL is malformed
         }
       }
 
