@@ -72,9 +72,10 @@ async function executeScheduledWorkflow(job: Job<ScheduleJob>): Promise<void> {
     }
 
     // Get the workflow execution API URL
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 
-                   process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 
-                   'http://localhost:3000';
+    const appUrl =
+      process.env.NEXT_PUBLIC_APP_URL ||
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+    console.log('Using app URL for execution:', appUrl);
 
     // Execute the workflow via internal API
     const executeUrl = `${appUrl}/api/workflows/${workflowId}/execute`;
@@ -101,9 +102,36 @@ async function executeScheduledWorkflow(job: Job<ScheduleJob>): Promise<void> {
       throw new Error(`Workflow execution failed: ${response.status} - ${errorText}`);
     }
 
-    // Parse response to get run_id if available
-    const result = await response.json().catch(() => ({}));
-    const runId = result.run_id || result.runId;
+    // Prefer run id via response header to avoid parsing SSE body
+    const headerRunId = response.headers.get('x-workflow-run-id') || undefined;
+    let runId = headerRunId;
+    if (!runId) {
+      // Fallback: try parsing JSON if endpoint ever returns JSON synchronously
+      const result = await response.json().catch(() => ({} as any));
+      runId = (result as any).run_id || (result as any).runId;
+    }
+
+    // Consume SSE stream to completion so the API can finalize the run in DB
+    try {
+      if (response.body) {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let sawError = false;
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value, { stream: true });
+          if (chunk.includes('event: error')) {
+            sawError = true;
+          }
+        }
+        if (sawError) {
+          throw new Error('Workflow SSE stream reported error');
+        }
+      }
+    } catch (e) {
+      throw e;
+    }
 
     // Update trigger's last_fired_at (BullMQ manages next_run_at automatically)
     await supabase

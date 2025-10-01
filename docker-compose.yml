@@ -1,30 +1,29 @@
 services:
-    langgraph-redis:
-        image: redis:alpine
-        ports:
-            - "6379:6379"  # Expose Redis port for rate limiting
-        healthcheck:
-            test: redis-cli ping
-            interval: 5s
-            timeout: 1s
-            retries: 5
-        volumes:
-            - redis-data:/data  # Persist Redis data
-        command: redis-server --appendonly yes  # Enable AOF persistence
+    # Using external Redis (e.g., Upstash). Local Redis service disabled.
+    # langgraph-redis:
+    #     image: redis:alpine
+    #     ports:
+    #         - "6379:6379"  # Expose Redis port for rate limiting
+    #     healthcheck:
+    #         test: redis-cli ping
+    #         interval: 5s
+    #         timeout: 1s
+    #         retries: 5
+    #     volumes:
+    #         - redis-data:/data  # Persist Redis data
+    #     command: redis-server --appendonly yes  # Enable AOF persistence
 
     langgraph-api:
         image: "affinitybots:latest"
         ports:
             - "8123:8000"
-        depends_on:
-            langgraph-redis:
-                condition: service_healthy
         env_file:
             - .env
         environment:
 
-            REDIS_URI: redis://langgraph-redis:6379
-            REDIS_URL: redis://langgraph-redis:6379
+            # Point LangGraph to external Redis (same URL as your worker & Vercel)
+            REDIS_URL: ${REDIS_URL}
+            REDIS_URI: ${REDIS_URL}
             POSTGRES_URI: postgresql://postgres.lcnkzptzirdcvemvbjan:GMRjt41fMuDShNoV@aws-0-us-west-1.pooler.supabase.com:5432/postgres
             LANGSMITH_API_KEY: ${LANGSMITH_API_KEY}
             LANGSMITH_ENDPOINT: ${LANGSMITH_ENDPOINT}
@@ -33,24 +32,28 @@ services:
         extra_hosts:
             - "host.docker.internal:host-gateway"
     
-    schedule-worker:
-        build:
-            context: .
-            dockerfile: Dockerfile
-        command: pnpm run schedule:worker
-        depends_on:
-            langgraph-redis:
-                condition: service_healthy
-        env_file:
-            - .env
-        environment:
-            NODE_ENV: production
-            REDIS_URI: redis://langgraph-redis:6379
-            REDIS_URL: redis://langgraph-redis:6379
-            NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
-        restart: unless-stopped
-        extra_hosts:
-            - "host.docker.internal:host-gateway"
+    # Schedule worker - only needed if self-hosting (not needed for Vercel deployments)
+    # For local dev, run separately with: pnpm run schedule:worker:dev
+    # For production on Vercel, deploy worker to Railway/Render/Fly.io
+    # 
+    # schedule-worker:
+    #     build:
+    #         context: .
+    #         dockerfile: Dockerfile
+    #     command: pnpm run schedule:worker
+    #     depends_on:
+    #         langgraph-redis:
+    #             condition: service_healthy
+    #     env_file:
+    #         - .env
+    #     environment:
+    #         NODE_ENV: production
+    #         REDIS_URI: redis://langgraph-redis:6379
+    #         REDIS_URL: redis://langgraph-redis:6379
+    #         NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+    #     restart: unless-stopped
+    #     extra_hosts:
+    #         - "host.docker.internal:host-gateway"
 
 volumes:
     redis-data:

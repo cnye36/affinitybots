@@ -393,6 +393,8 @@ export async function POST(
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
         Connection: "keep-alive",
+        // Surface the created workflow run id for internal callers (e.g., scheduler worker)
+        ...(createdWorkflowRunId ? { "x-workflow-run-id": createdWorkflowRunId } : {}),
       },
     });
   } catch (error) {
