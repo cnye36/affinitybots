@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sessionStore } from "@/lib/sessionStore";
+import { sessionStore } from "@/lib/oauth/sessionStore";
 
 interface CallToolRequestBody {
   toolName: string;

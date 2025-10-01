@@ -1,7 +1,7 @@
 import { mcpClientFactory } from './mcpClientFactory';
-import { sessionStore } from '@/lib/sessionStore';
-import { MCPOAuthClient } from '@/lib/oauthClient';
-import { GitHubOAuthClient } from '@/lib/githubOauthClient';
+import { sessionStore } from '@/lib/oauth/sessionStore';
+import { MCPOAuthClient } from '@/lib/oauth/oauthClient';
+import { GitHubOAuthClient } from '@/lib/oauth/githubOauthClient';
 import { mcpSessionManager } from './mcpSessionManager';
 import { mcpDiagnostics } from './mcpDiagnostics';
 import { AssistantConfiguration } from '@/types/assistant';

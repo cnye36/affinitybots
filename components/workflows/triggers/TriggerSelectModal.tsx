@@ -8,8 +8,42 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { AlarmClock, Globe2, Play, PlugZap, FileText } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { AlarmClock, Globe2, Play, PlugZap, FileText, ChevronDown } from "lucide-react";
 import { TriggerType } from "@/types/workflow";
+
+// Common timezones
+const TIMEZONES = [
+  "UTC",
+  "America/New_York",
+  "America/Chicago",
+  "America/Denver",
+  "America/Los_Angeles",
+  "America/Toronto",
+  "America/Vancouver",
+  "America/Mexico_City",
+  "America/Sao_Paulo",
+  "Europe/London",
+  "Europe/Paris",
+  "Europe/Berlin",
+  "Europe/Madrid",
+  "Europe/Rome",
+  "Europe/Amsterdam",
+  "Europe/Stockholm",
+  "Europe/Moscow",
+  "Asia/Dubai",
+  "Asia/Kolkata",
+  "Asia/Bangkok",
+  "Asia/Singapore",
+  "Asia/Hong_Kong",
+  "Asia/Tokyo",
+  "Asia/Seoul",
+  "Asia/Shanghai",
+  "Australia/Sydney",
+  "Australia/Melbourne",
+  "Pacific/Auckland",
+];
 
 type TriggerOption = {
   type: TriggerType;
@@ -82,13 +116,15 @@ export function TriggerSelectModal({ isOpen, onClose, onCreate }: TriggerSelectM
   const [cronExpr, setCronExpr] = useState("");
   const [provider, setProvider] = useState("");
   const [event, setEvent] = useState("");
-  const [scheduleRepeat, setScheduleRepeat] = useState<"once" | "daily" | "weekly">("daily");
+  const [scheduleRepeat, setScheduleRepeat] = useState<"once" | "daily" | "weekly" | "monthly" | "custom">("daily");
   const [scheduleDate, setScheduleDate] = useState(""); // yyyy-mm-dd
   const [scheduleTime, setScheduleTime] = useState(""); // HH:MM
   const [scheduleWeekdays, setScheduleWeekdays] = useState<number[]>([1]); // 0=Sun
+  const [scheduleDayOfMonth, setScheduleDayOfMonth] = useState<number>(1); // 1-31
   const [timeZone, setTimeZone] = useState<string>(() => {
     try { return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"; } catch { return "UTC"; }
   });
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   type ConfiguredServer = {
     qualifiedName: string;
@@ -126,7 +162,7 @@ export function TriggerSelectModal({ isOpen, onClose, onCreate }: TriggerSelectM
     if (selected === "schedule") {
       if (!scheduleTime.trim() && scheduleRepeat !== "once") return true;
       if (scheduleRepeat === "once" && (!scheduleDate.trim() || !scheduleTime.trim())) return true;
-      if (scheduleRepeat === "weekly" && scheduleWeekdays.length === 0) return true;
+      if ((scheduleRepeat === "weekly" || scheduleRepeat === "custom") && scheduleWeekdays.length === 0) return true;
       return false;
     }
     if (selected === "integration") return !provider.trim() || !event.trim();
@@ -187,7 +223,7 @@ export function TriggerSelectModal({ isOpen, onClose, onCreate }: TriggerSelectM
       }
       if (selected === "schedule") {
         // Compute cron from friendly inputs
-        const [hh, mm] = (scheduleTime || "00:00").split(":").map((s) => parseInt(s || "0", 10));
+        const [hh, mm] = (scheduleTime || "09:00").split(":").map((s) => parseInt(s || "0", 10));
         const minute = isFinite(mm) ? Math.max(0, Math.min(59, mm)) : 0;
         const hour = isFinite(hh) ? Math.max(0, Math.min(23, hh)) : 0;
         let cron = `${minute} ${hour} * * *`;
@@ -197,6 +233,11 @@ export function TriggerSelectModal({ isOpen, onClose, onCreate }: TriggerSelectM
           const mon = d.getMonth() + 1;
           cron = `${minute} ${hour} ${dom} ${mon} *`;
         } else if (scheduleRepeat === "weekly") {
+          const dow = scheduleWeekdays.sort().join(","); // 0-6
+          cron = `${minute} ${hour} * * ${dow}`;
+        } else if (scheduleRepeat === "monthly") {
+          cron = `${minute} ${hour} ${scheduleDayOfMonth} * *`;
+        } else if (scheduleRepeat === "custom") {
           const dow = scheduleWeekdays.sort().join(","); // 0-6
           cron = `${minute} ${hour} * * ${dow}`;
         } else if (scheduleRepeat === "daily") {
@@ -209,6 +250,7 @@ export function TriggerSelectModal({ isOpen, onClose, onCreate }: TriggerSelectM
           date: scheduleDate,
           time: scheduleTime,
           weekdays: scheduleWeekdays,
+          dayOfMonth: scheduleDayOfMonth,
           timezone: timeZone,
         };
       }
@@ -246,7 +288,6 @@ export function TriggerSelectModal({ isOpen, onClose, onCreate }: TriggerSelectM
                         if (!isDisabled) {
                           setSelected(opt.type);
                           setName(opt.title);
-                          setDescription(opt.description);
                         }
                       }}
                       disabled={isDisabled}
@@ -258,20 +299,17 @@ export function TriggerSelectModal({ isOpen, onClose, onCreate }: TriggerSelectM
                             : "bg-background/60 hover:bg-background"
                       }`}
                     >
-                      <div className="flex items-start gap-3">
-                        <div className={`h-8 w-8 rounded-md grid place-items-center bg-${opt.color}/15 text-${opt.color}-600 dark:text-${opt.color}-400`}>
+                      <div className="flex items-center gap-3">
+                        <div className={`h-8 w-8 rounded-md grid place-items-center bg-${opt.color}/15 text-${opt.color}-600 dark:text-${opt.color}-400 shrink-0`}>
                           {opt.icon}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-sm">{opt.title}</span>
-                            {opt.comingSoon && (
-                              <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                                Coming Soon
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="text-xs text-muted-foreground line-clamp-2">{opt.description}</div>
+                        <div className="flex-1 min-w-0 flex items-center gap-2">
+                          <span className="font-medium text-sm">{opt.title}</span>
+                          {opt.comingSoon && (
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                              Coming Soon
+                            </Badge>
+                          )}
                         </div>
                       </div>
                     </button>
@@ -313,16 +351,10 @@ export function TriggerSelectModal({ isOpen, onClose, onCreate }: TriggerSelectM
                     </div>
                   ) : (
                     <>
-                      <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5">
-                      <Label>Title</Label>
-                      <Input value={name} onChange={(e) => setName(e.target.value)} />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>Description</Label>
-                      <Input value={description} onChange={(e) => setDescription(e.target.value)} />
-                    </div>
-                  </div>
+                      <div className="space-y-1.5">
+                        <Label>Title</Label>
+                        <Input value={name} onChange={(e) => setName(e.target.value)} />
+                      </div>
 
                   {selected === "webhook" && (
                     <div className="space-y-2 border rounded-md p-3">
@@ -340,10 +372,10 @@ export function TriggerSelectModal({ isOpen, onClose, onCreate }: TriggerSelectM
                     <div className="space-y-3 border rounded-md p-3">
                       <div className="space-y-1.5">
                         <Label>Repeat</Label>
-                        <div className="flex gap-2">
-                          {(["once","daily","weekly"] as const).map((opt) => (
+                        <div className="flex flex-wrap gap-2">
+                          {(["once","daily","weekly","monthly","custom"] as const).map((opt) => (
                             <Button key={opt} type="button" variant={scheduleRepeat===opt?"default":"outline"} size="sm" onClick={() => setScheduleRepeat(opt)}>
-                              {opt === "once" ? "Once" : opt === "daily" ? "Daily" : "Weekly"}
+                              {opt === "once" ? "Once" : opt === "daily" ? "Daily" : opt === "weekly" ? "Weekly" : opt === "monthly" ? "Monthly" : "Custom"}
                             </Button>
                           ))}
                         </div>
@@ -393,23 +425,106 @@ export function TriggerSelectModal({ isOpen, onClose, onCreate }: TriggerSelectM
                         </div>
                       )}
 
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1.5">
-                          <Label>Time Zone</Label>
-                          <Input value={timeZone} onChange={(e)=>setTimeZone(e.target.value)} />
+                      {scheduleRepeat === "monthly" && (
+                        <div className="space-y-2">
+                          <div className="space-y-1.5">
+                            <Label>Time</Label>
+                            <Input type="time" value={scheduleTime} onChange={(e) => setScheduleTime(e.target.value)} />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label>Day of Month</Label>
+                            <Select value={scheduleDayOfMonth.toString()} onValueChange={(v) => setScheduleDayOfMonth(parseInt(v, 10))}>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
+                                  <SelectItem key={day} value={day.toString()}>
+                                    {day}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
-                        <div className="space-y-1.5">
-                          <Label>Cron (preview)</Label>
-                          <Input value={(function(){
-                            const [hh, mm] = (scheduleTime||"00:00").split(":").map((s)=>parseInt(s||"0",10));
-                            const m = isFinite(mm)?Math.max(0,Math.min(59,mm)):0;
-                            const h = isFinite(hh)?Math.max(0,Math.min(23,hh)):0;
-                            if(scheduleRepeat==="once" && scheduleDate){ const d=new Date(`${scheduleDate}T${scheduleTime||"00:00"}:00`); return `${m} ${h} ${d.getDate()} ${d.getMonth()+1} *`; }
-                            if(scheduleRepeat==="weekly" && scheduleWeekdays.length>0){ return `${m} ${h} * * ${scheduleWeekdays.sort().join(',')}`; }
-                            return `${m} ${h} * * *`;
-                          })()} readOnly />
+                      )}
+
+                      {scheduleRepeat === "custom" && (
+                        <div className="space-y-2">
+                          <div className="space-y-1.5">
+                            <Label>Time</Label>
+                            <Input type="time" value={scheduleTime} onChange={(e) => setScheduleTime(e.target.value)} />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label>Select Days of Week</Label>
+                            <div className="flex flex-wrap gap-2">
+                              {[
+                                { k:0, l:"Sun" },{ k:1, l:"Mon" },{ k:2, l:"Tue" },{ k:3, l:"Wed" },{ k:4, l:"Thu" },{ k:5, l:"Fri" },{ k:6, l:"Sat" },
+                              ].map(({k,l}) => {
+                                const active = scheduleWeekdays.includes(k);
+                                return (
+                                  <Button key={k} type="button" size="sm" variant={active?"default":"outline"} onClick={() => {
+                                    setScheduleWeekdays((prev) => prev.includes(k) ? prev.filter((d) => d!==k) : [...prev, k]);
+                                  }}>{l}</Button>
+                                );
+                              })}
+                            </div>
+                          </div>
                         </div>
+                      )}
+
+                      <div className="space-y-1.5">
+                        <Label>Time Zone</Label>
+                        <Select value={timeZone} onValueChange={setTimeZone}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {TIMEZONES.map((tz) => (
+                              <SelectItem key={tz} value={tz}>
+                                {tz}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
+
+                      <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced}>
+                        <CollapsibleTrigger asChild>
+                          <Button type="button" variant="ghost" size="sm" className="w-full justify-between">
+                            <span className="text-xs">Advanced</span>
+                            <ChevronDown className={`h-4 w-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
+                          </Button>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="pt-2">
+                          <div className="space-y-1.5">
+                            <Label className="text-xs text-muted-foreground">Cron Expression (preview)</Label>
+                            <Input 
+                              className="font-mono text-xs"
+                              value={(function(){
+                                const [hh, mm] = (scheduleTime||"09:00").split(":").map((s)=>parseInt(s||"0",10));
+                                const m = isFinite(mm)?Math.max(0,Math.min(59,mm)):0;
+                                const h = isFinite(hh)?Math.max(0,Math.min(23,hh)):0;
+                                if(scheduleRepeat==="once" && scheduleDate){ 
+                                  const d=new Date(`${scheduleDate}T${scheduleTime||"09:00"}:00`); 
+                                  return `${m} ${h} ${d.getDate()} ${d.getMonth()+1} *`; 
+                                }
+                                if(scheduleRepeat==="weekly" && scheduleWeekdays.length>0){ 
+                                  return `${m} ${h} * * ${scheduleWeekdays.sort().join(',')}`; 
+                                }
+                                if(scheduleRepeat==="monthly"){ 
+                                  return `${m} ${h} ${scheduleDayOfMonth} * *`; 
+                                }
+                                if(scheduleRepeat==="custom" && scheduleWeekdays.length>0){ 
+                                  return `${m} ${h} * * ${scheduleWeekdays.sort().join(',')}`; 
+                                }
+                                return `${m} ${h} * * *`;
+                              })()} 
+                              readOnly 
+                            />
+                          </div>
+                        </CollapsibleContent>
+                      </Collapsible>
                     </div>
                   )}
 

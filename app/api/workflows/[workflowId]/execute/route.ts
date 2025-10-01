@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { Task } from "@/types/workflow";
 import { Client } from "@langchain/langgraph-sdk";
 import { rateLimiter } from "@/lib/rateLimiting";
@@ -9,17 +10,42 @@ export async function POST(
   props: { params: Promise<{ workflowId: string }> }
 ) {
   const { workflowId } = await props.params;
-  const supabase = await createClient();
 
   // Track created workflow run for error handling
   let createdWorkflowRunId: string | null = null;
+  let supabase: any; // Declare at function level for error handling
+  
   try {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    // Check for internal scheduled execution (from worker)
+    const internalSecret = request.headers.get('x-internal-secret');
+    const isScheduledExecution = internalSecret === process.env.INTERNAL_API_SECRET && internalSecret !== undefined;
 
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    let user;
+    let ownerId: string;
+
+    if (isScheduledExecution) {
+      // For scheduled executions, use admin client (bypasses RLS)
+      supabase = getSupabaseAdmin();
+      const { data: wf } = await supabase
+        .from("workflows")
+        .select("owner_id")
+        .eq("workflow_id", workflowId)
+        .single();
+      
+      if (!wf) {
+        return NextResponse.json({ error: "Workflow not found" }, { status: 404 });
+      }
+      ownerId = wf.owner_id;
+    } else {
+      // For user-initiated executions, use regular client and verify auth
+      supabase = await createClient();
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+
+      if (!authUser) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      user = authUser;
+      ownerId = authUser.id;
     }
 
     // Verify workflow ownership and get tasks
@@ -29,7 +55,7 @@ export async function POST(
       .eq("workflow_id", workflowId)
       .single();
 
-    if (!workflow || workflow.owner_id !== user.id) {
+    if (!workflow || workflow.owner_id !== ownerId) {
       return NextResponse.json(
         { error: "Workflow not found or access denied" },
         { status: 404 }
@@ -101,7 +127,7 @@ export async function POST(
         status: "running",
         started_at: new Date().toISOString(),
         metadata: {},
-        owner_id: user.id,
+        owner_id: ownerId,
       })
       .select("run_id")
       .single();
@@ -137,7 +163,7 @@ export async function POST(
             status: "pending",
             started_at: new Date().toISOString(),
             metadata: {},
-            owner_id: user.id,
+            owner_id: ownerId,
           })
           .select()
           .single();
@@ -227,7 +253,7 @@ export async function POST(
               config: {
                 configurable: {
                   ...(task.config || {}),
-                  user_id: user.id,
+                  user_id: ownerId,
                   assistant_id: assistantId,
                   ...(((task.config as any)?.outputOptions?.structuredJson)
                     ? { response_format: { type: "json_object" } }
@@ -302,7 +328,7 @@ export async function POST(
                 outputTokens = Math.ceil((outputStr?.length || 0) / 4);
               }
               await rateLimiter.recordUsage({
-                userId: user.id,
+                userId: ownerId,
                 inputTokens: inputTokens || 0,
                 outputTokens: outputTokens || 0,
                 timestamp: Date.now(),

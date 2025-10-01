@@ -4,7 +4,7 @@ import {
   exchangeCodeForTokens,
   getHubSpotClientId,
   getHubSpotClientSecret,
-} from "@/lib/hubspotOAuth";
+} from "@/lib/oauth/hubspotOAuth";
 import { createClient } from "@/supabase/server";
 
 export async function GET(req: NextRequest) {

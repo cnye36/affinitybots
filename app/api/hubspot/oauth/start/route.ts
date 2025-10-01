@@ -5,7 +5,7 @@ import {
   getHubSpotClientId,
   getHubSpotScopes,
   getHubSpotOptionalScopes,
-} from "@/lib/hubspotOAuth";
+} from "@/lib/oauth/hubspotOAuth";
 
 export async function GET(req: NextRequest) {
   const clientId = getHubSpotClientId();

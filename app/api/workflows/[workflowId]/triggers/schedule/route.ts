@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
-import { Client } from "@langchain/langgraph-sdk";
+import { registerSchedule } from "@/lib/scheduler/scheduler";
 
-// Create/update schedule for a workflow using LangGraph Platform cron
-// Body: { cron: string, triggerId?: string }
+// Create/update schedule for a workflow using BullMQ
+// Body: { cron: string, triggerId?: string, timezone?: string }
 export async function POST(
   request: Request,
   props: { params: Promise<{ workflowId: string }> }
@@ -14,7 +14,7 @@ export async function POST(
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { cron, triggerId } = await request.json();
+    const { cron, triggerId, timezone } = await request.json();
     if (!cron) return NextResponse.json({ error: "Missing cron" }, { status: 400 });
 
     // Verify workflow ownership
@@ -31,23 +31,35 @@ export async function POST(
     if (triggerId) {
       await supabase
         .from("workflow_triggers")
-        .update({ config: { cron }, trigger_type: "schedule" })
+        .update({ 
+          config: { cron, timezone: timezone || 'UTC' }, 
+          trigger_type: "schedule" 
+        })
         .eq("trigger_id", triggerId)
         .eq("workflow_id", workflowId);
+
+      // Register the schedule with BullMQ
+      await registerSchedule({
+        triggerId,
+        workflowId,
+        cronExpression: cron,
+        timezone: timezone || 'UTC',
+        enabled: true,
+      });
     }
 
-    // Schedule via LangGraph Platform: create a job that hits our execute endpoint
-    const client = new Client({
-      apiUrl: process.env.LANGGRAPH_API_URL,
-      apiKey: process.env.LANGSMITH_API_KEY,
+    return NextResponse.json({ 
+      ok: true, 
+      cron,
+      timezone: timezone || 'UTC',
+      message: 'Schedule created successfully'
     });
-    // Use platform jobs API; fallback: store cron in DB and rely on platform UI to bind
-    // Here, we simply return data and expect platform job to be configured externally if SDK lacks direct cron API in this env
-
-    return NextResponse.json({ ok: true, cron });
   } catch (e) {
     console.error("Schedule create error:", e);
-    return NextResponse.json({ error: "Failed to create schedule" }, { status: 500 });
+    return NextResponse.json({ 
+      error: "Failed to create schedule", 
+      details: e instanceof Error ? e.message : String(e)
+    }, { status: 500 });
   }
 }
 

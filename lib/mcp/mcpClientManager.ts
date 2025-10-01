@@ -1,7 +1,7 @@
 import { MultiServerMCPClient } from "@langchain/mcp-adapters";
-import { MCPOAuthClient } from "@/lib/oauthClient";
-import { GitHubOAuthClient } from "@/lib/githubOauthClient";
-import { sessionStore } from "@/lib/sessionStore";
+import { MCPOAuthClient } from "@/lib/oauth/oauthClient";
+import { GitHubOAuthClient } from "@/lib/oauth/githubOauthClient";
+import { sessionStore } from "@/lib/oauth/sessionStore";
 import { getAvailableMcpServers } from "../agent/getAvailableMcpServers";
 import { OAuthTokens } from "@modelcontextprotocol/sdk/shared/auth.js";
 

@@ -8,6 +8,9 @@ services:
             interval: 5s
             timeout: 1s
             retries: 5
+        volumes:
+            - redis-data:/data  # Persist Redis data
+        command: redis-server --appendonly yes  # Enable AOF persistence
 
     langgraph-api:
         image: "affinitybots:latest"
@@ -29,5 +32,26 @@ services:
             LANGSMITH_TRACING: ${LANGSMITH_TRACING}
         extra_hosts:
             - "host.docker.internal:host-gateway"
-            
+    
+    schedule-worker:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        command: pnpm run schedule:worker
+        depends_on:
+            langgraph-redis:
+                condition: service_healthy
+        env_file:
+            - .env
+        environment:
+            NODE_ENV: production
+            REDIS_URI: redis://langgraph-redis:6379
+            REDIS_URL: redis://langgraph-redis:6379
+            NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+        restart: unless-stopped
+        extra_hosts:
+            - "host.docker.internal:host-gateway"
+
+volumes:
+    redis-data:
 

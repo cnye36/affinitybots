@@ -165,6 +165,34 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
         .single();
       if (error) throw error;
 
+      // If it's a schedule trigger, register it with BullMQ
+      if (payload.trigger_type === "schedule" && payload.config?.cron) {
+        try {
+          const scheduleRes = await fetch(`/api/scheduler/register`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              triggerId: newTrigger.trigger_id,
+              workflowId: workflowId,
+              cronExpression: payload.config.cron as string,
+              timezone: payload.config.timezone as string || "UTC",
+              enabled: true,
+            }),
+          });
+          if (!scheduleRes.ok) {
+            const errData = await scheduleRes.json();
+            console.error("Failed to register schedule:", errData);
+            toast({ 
+              title: "Trigger created but schedule registration failed", 
+              description: "The worker will pick it up on next restart",
+              variant: "destructive" 
+            });
+          }
+        } catch (schedErr) {
+          console.error("Error registering schedule:", schedErr);
+        }
+      }
+
       const newNode: WorkflowNode = {
         id: `trigger-${newTrigger.trigger_id}`,
         type: "trigger" as const,
