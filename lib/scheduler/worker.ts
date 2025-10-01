@@ -111,26 +111,52 @@ async function executeScheduledWorkflow(job: Job<ScheduleJob>): Promise<void> {
       runId = (result as any).run_id || (result as any).runId;
     }
 
-    // Consume SSE stream to completion so the API can finalize the run in DB
+    // Consume SSE stream to completion and extract LangGraph run_id
+    let langgraphRunId: string | undefined;
     try {
       if (response.body) {
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let sawError = false;
+        let sawDone = false;
+        
         while (true) {
           const { value, done } = await reader.read();
           if (done) break;
           const chunk = decoder.decode(value, { stream: true });
+          
+          // Look for LangGraph run_id in the stream
+          const runIdMatch = chunk.match(/run_id["\s]*:["\s]*([a-f0-9-]+)/i);
+          if (runIdMatch) {
+            langgraphRunId = runIdMatch[1];
+            console.log(`🔗 Found LangGraph run_id in stream: ${langgraphRunId}`);
+          }
+          
           if (chunk.includes('event: error')) {
             sawError = true;
           }
+          if (chunk.includes('event: done')) {
+            sawDone = true;
+          }
         }
+        
         if (sawError) {
           throw new Error('Workflow SSE stream reported error');
+        }
+        if (!sawDone) {
+          throw new Error('Workflow SSE stream did not complete properly');
         }
       }
     } catch (e) {
       throw e;
+    }
+    
+    // Use LangGraph run_id if found, otherwise fall back to our workflow_run_id
+    const finalRunId = langgraphRunId || runId;
+    if (langgraphRunId) {
+      console.log(`✅ Using LangGraph run_id: ${langgraphRunId}`);
+    } else {
+      console.log(`⚠️ Using fallback run_id: ${runId}`);
     }
 
     // Update trigger's last_fired_at (BullMQ manages next_run_at automatically)
@@ -147,19 +173,22 @@ async function executeScheduledWorkflow(job: Job<ScheduleJob>): Promise<void> {
       workflowId,
       scheduledAt: scheduledAtDate,
       status: 'success',
-      runId,
+      runId: finalRunId,
       duration: Date.now() - executionStart,
       metadata: {
         ...metadata,
         jobId: job.id,
         attemptNumber: job.attemptsMade + 1,
+        langgraphRunId: langgraphRunId,
+        workflowRunId: runId,
       },
     });
 
     console.log(`✅ Workflow executed successfully:`, {
       triggerId,
       workflowId,
-      runId,
+      runId: finalRunId,
+      langgraphRunId: langgraphRunId,
       duration: `${Date.now() - executionStart}ms`,
     });
   } catch (error) {
