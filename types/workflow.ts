@@ -97,6 +97,10 @@ export interface TaskConfig {
     // - prompt_and_previous_output: send both
     inputSource?: "prompt" | "previous_output" | "prompt_and_previous_output";
   };
+  toolApproval?: {
+    mode?: "auto" | "manual";
+    rememberedTools?: string[];
+  };
   // When persisted, some tasks store assistant metadata in config
   assigned_assistant?: {
     id: string;
