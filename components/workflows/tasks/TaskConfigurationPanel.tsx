@@ -3,6 +3,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Task } from "@/types/workflow";
 import { Assistant } from "@/types/assistant";
 import {
@@ -125,9 +126,42 @@ export function TaskConfigurationPanel({
               required
             />
           </div>
-          
 
-          
+          {/* Tool Approval Mode */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              Tool Approvals
+              <span className="text-xs text-muted-foreground">Stay in control</span>
+            </Label>
+            <div className="rounded-lg border border-muted/40 bg-muted/20 p-3 text-xs text-muted-foreground">
+              <p className="mb-2">
+                Automated workflow runs require auto-approval so they never pause waiting for input. Disable auto-approve only when manually testing this task and you want to review every tool call.
+              </p>
+              <div className="flex items-center justify-between rounded-md bg-background/60 px-3 py-2">
+                <div>
+                  <p className="font-medium text-foreground">Auto-approve tools</p>
+                  <p className="text-xs text-muted-foreground">When off, you&apos;ll approve each tool invocation before it runs.</p>
+                </div>
+                <Switch
+                  checked={((currentTask as any)?.config?.toolApproval?.mode ?? "auto") !== "manual"}
+                  onCheckedChange={(checked) => {
+                    setCurrentTask({
+                      ...currentTask,
+                      config: {
+                        ...currentTask.config,
+                        toolApproval: {
+                          ...(currentTask as any)?.config?.toolApproval,
+                          mode: checked ? "auto" : "manual",
+                        },
+                      },
+                    });
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+
           {/* Output Options */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2">Output Options</Label>

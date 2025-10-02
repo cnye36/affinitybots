@@ -80,6 +80,7 @@ export async function POST(
             thread_id: threadId,
           },
         },
+        interruptBefore: ["tools"],
         streamMode: "messages",
       }
     );
