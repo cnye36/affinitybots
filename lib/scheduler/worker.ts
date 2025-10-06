@@ -72,9 +72,10 @@ async function executeScheduledWorkflow(job: Job<ScheduleJob>): Promise<void> {
     }
 
     // Get the workflow execution API URL
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 
-                   process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 
-                   'http://localhost:3000';
+    const appUrl =
+      process.env.NEXT_PUBLIC_URL ||
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+    console.log('Using app URL for execution:', appUrl);
 
     // Execute the workflow via internal API
     const executeUrl = `${appUrl}/api/workflows/${workflowId}/execute`;

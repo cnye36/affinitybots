@@ -33,24 +33,28 @@ services:
         extra_hosts:
             - "host.docker.internal:host-gateway"
     
-    schedule-worker:
-        build:
-            context: .
-            dockerfile: Dockerfile
-        command: pnpm run schedule:worker
-        depends_on:
-            langgraph-redis:
-                condition: service_healthy
-        env_file:
-            - .env
-        environment:
-            NODE_ENV: production
-            REDIS_URI: redis://langgraph-redis:6379
-            REDIS_URL: redis://langgraph-redis:6379
-            NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
-        restart: unless-stopped
-        extra_hosts:
-            - "host.docker.internal:host-gateway"
+    # Schedule worker - only needed if self-hosting (not needed for Vercel deployments)
+    # For local dev, run separately with: pnpm run schedule:worker:dev
+    # For production on Vercel, deploy worker to Railway/Render/Fly.io
+    # 
+    # schedule-worker:
+    #     build:
+    #         context: .
+    #         dockerfile: Dockerfile
+    #     command: pnpm run schedule:worker
+    #     depends_on:
+    #         langgraph-redis:
+    #             condition: service_healthy
+    #     env_file:
+    #         - .env
+    #     environment:
+    #         NODE_ENV: production
+    #         REDIS_URI: redis://langgraph-redis:6379
+    #         REDIS_URL: redis://langgraph-redis:6379
+    #         NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+    #     restart: unless-stopped
+    #     extra_hosts:
+    #         - "host.docker.internal:host-gateway"
 
 volumes:
     redis-data:

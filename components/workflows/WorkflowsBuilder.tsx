@@ -11,7 +11,7 @@ import {
   TriggerType,
 } from "@/types/workflow";
 import { createClient } from "@/supabase/client";
-import { EmptyWorkflowState } from "../../EmptyWorkflowState";
+import { EmptyWorkflowState } from "./EmptyWorkflowState";
 import { AgentSelectModal } from "./AgentSelectModal";
 import { TriggerSelectModal } from "./triggers/TriggerSelectModal";
 import { WorkflowCanvas } from "./WorkflowCanvas";
