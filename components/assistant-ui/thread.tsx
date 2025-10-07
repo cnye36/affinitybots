@@ -5,8 +5,10 @@ import {
   ActionBarPrimitive,
   BranchPickerPrimitive,
   ErrorPrimitive,
+  useThread,
+  useMessagePartText,
 } from "@assistant-ui/react";
-import type { FC } from "react";
+import { useEffect, useMemo, useRef, useState, type FC } from "react";
 import {
   ArrowDownIcon,
   ArrowUpIcon,
@@ -30,8 +32,12 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { MarkdownText } from "./markdown-text";
-import { useMessagePartText } from "@assistant-ui/react";
 import { ToolFallback } from "./tool-fallback";
+import {
+  useLangGraphInterruptState,
+  useLangGraphSendCommand,
+} from "@assistant-ui/react-langgraph";
+import ToolCallApproval from "@/components/chat/ToolCallApproval";
 
 export const Thread: FC = () => {
   return (
@@ -44,6 +50,7 @@ export const Thread: FC = () => {
     >
       <ThreadPrimitive.Viewport className="relative flex min-w-0 flex-1 flex-col gap-6 overflow-y-scroll" data-tutorial="agent-chat-viewport">
         <ThreadWelcome />
+        <ToolApprovalGate />
 
         <ThreadPrimitive.Messages
           components={{
@@ -60,6 +67,160 @@ export const Thread: FC = () => {
 
       <Composer />
     </ThreadPrimitive.Root>
+  );
+};
+
+type InterruptToolCall = {
+  id: string;
+  name: string;
+  args: Record<string, unknown>;
+  description?: string;
+};
+
+const ToolApprovalGate: FC = () => {
+  const interrupt = useLangGraphInterruptState();
+  const sendCommand = useLangGraphSendCommand();
+  const threadId = useThread(state => state.threadId);
+  const [rememberedByThread, setRememberedByThread] = useState<Record<string, Record<string, boolean>>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const autoApprovedRef = useRef<string | null>(null);
+  const [autoApprovedNotice, setAutoApprovedNotice] = useState<{ key: string; tools: string[] } | null>(null);
+  const [autoApprovalErrorKey, setAutoApprovalErrorKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!threadId) return;
+    setRememberedByThread(prev => (prev[threadId] ? prev : { ...prev, [threadId]: {} }));
+  }, [threadId]);
+
+  const rememberedTools = threadId ? rememberedByThread[threadId] ?? {} : {};
+
+  const resumeTarget = useMemo(() => {
+    if (typeof interrupt?.when === "string" && interrupt.when.length > 0) {
+      return interrupt.when;
+    }
+    return "tools";
+  }, [interrupt?.when]);
+
+  const toolCalls = useMemo<InterruptToolCall[]>(() => {
+    const pending = interrupt?.value as { messages?: Array<Record<string, unknown>> } | undefined;
+    const messages = pending?.messages;
+    if (!Array.isArray(messages) || messages.length === 0) return [];
+    const lastMessage = messages[messages.length - 1] as Record<string, unknown> | undefined;
+    const rawToolCalls = (lastMessage?.tool_calls || lastMessage?.toolCalls) as Array<Record<string, unknown>> | undefined;
+    if (!Array.isArray(rawToolCalls)) return [];
+    return rawToolCalls.map((rawCall, index) => {
+      const rawArgs = rawCall?.args;
+      let parsedArgs: Record<string, unknown> = {};
+      if (typeof rawArgs === "string") {
+        try {
+          parsedArgs = JSON.parse(rawArgs);
+        } catch {
+          parsedArgs = { raw: rawArgs };
+        }
+      } else if (rawArgs && typeof rawArgs === "object") {
+        parsedArgs = rawArgs as Record<string, unknown>;
+      }
+      return {
+        id: (rawCall?.id as string) || `${rawCall?.name ?? "tool"}-${index}`,
+        name: (rawCall?.name as string) || "tool",
+        args: parsedArgs,
+        description: (rawCall?.description as string) || (rawCall?.metadata as { description?: string })?.description,
+      };
+    });
+  }, [interrupt?.value]);
+
+  const interruptKey = useMemo(() => {
+    if (!toolCalls.length) return "";
+    return `${resumeTarget}:${toolCalls.map(call => call.id).join("|")}`;
+  }, [resumeTarget, toolCalls]);
+
+  const allRemembered = toolCalls.length > 0 && toolCalls.every(call => rememberedTools[call.name]);
+
+  useEffect(() => {
+    if (!autoApprovedNotice) return;
+    const timeout = window.setTimeout(() => setAutoApprovedNotice(null), 3000);
+    return () => window.clearTimeout(timeout);
+  }, [autoApprovedNotice]);
+
+  useEffect(() => {
+    if (!allRemembered || !interrupt || !interruptKey) return;
+    if (autoApprovedRef.current === interruptKey) return;
+    autoApprovedRef.current = interruptKey;
+    setIsSubmitting(true);
+    void sendCommand({ resume: resumeTarget })
+      .then(() => {
+        setAutoApprovedNotice({ key: interruptKey, tools: toolCalls.map(call => call.name) });
+        setAutoApprovalErrorKey(null);
+      })
+      .catch(err => {
+        console.error("Failed to auto-approve tool call:", err);
+        autoApprovedRef.current = null;
+        setAutoApprovalErrorKey(interruptKey);
+      })
+      .finally(() => {
+        setIsSubmitting(false);
+      });
+  }, [allRemembered, interrupt, interruptKey, resumeTarget, sendCommand, toolCalls]);
+
+  useEffect(() => {
+    if (toolCalls.length === 0) {
+      setIsSubmitting(false);
+      autoApprovedRef.current = null;
+      setAutoApprovalErrorKey(null);
+    }
+  }, [toolCalls.length]);
+
+  if (!toolCalls.length && !autoApprovedNotice) {
+    return null;
+  }
+
+  const handleRememberChange = (toolName: string, enabled: boolean) => {
+    if (!threadId) return;
+    setRememberedByThread(prev => ({
+      ...prev,
+      [threadId]: {
+        ...(prev[threadId] ?? {}),
+        [toolName]: enabled,
+      },
+    }));
+  };
+
+  const handleApprove = async () => {
+    if (!interrupt || !interruptKey) return;
+    autoApprovedRef.current = interruptKey;
+    setAutoApprovalErrorKey(null);
+    setIsSubmitting(true);
+    try {
+      await sendCommand({ resume: resumeTarget });
+    } catch (error) {
+      console.error("Failed to approve tool call:", error);
+      setAutoApprovalErrorKey(interruptKey);
+      autoApprovedRef.current = null;
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const shouldShowApprovalCard = toolCalls.length > 0 && (!allRemembered || autoApprovalErrorKey === interruptKey);
+
+  return (
+    <div className="mx-auto w-full max-w-[var(--thread-max-width)] px-[var(--thread-padding-x)]">
+      {autoApprovedNotice && (!toolCalls.length || autoApprovedNotice.key === interruptKey) && (
+        <div className="mb-3 rounded-lg border border-emerald-200/70 bg-emerald-50/70 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-100">
+          Auto-approved {autoApprovedNotice.tools.join(", ")} based on your preference.
+        </div>
+      )}
+      {shouldShowApprovalCard && (
+        <ToolCallApproval
+          toolCalls={toolCalls}
+          rememberedTools={rememberedTools}
+          onRememberChange={handleRememberChange}
+          onApprove={handleApprove}
+          isSubmitting={isSubmitting}
+          className="mb-2"
+        />
+      )}
+    </div>
   );
 };
 

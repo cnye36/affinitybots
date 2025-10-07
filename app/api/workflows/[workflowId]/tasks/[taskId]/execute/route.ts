@@ -110,6 +110,13 @@ export async function POST(
               }
 
               // 3. Stream the execution on the selected thread
+              const effectiveConfig = {
+                ...(task.config || {}),
+                ...(overrideConfig || {}),
+              } as Record<string, unknown>;
+              const shouldInterruptBeforeTools =
+                ((effectiveConfig?.toolApproval as { mode?: string } | undefined)?.mode === "manual");
+
               const payload = {
                 input: { messages },
                 metadata: {
@@ -119,8 +126,7 @@ export async function POST(
                 },
                 config: {
                   configurable: {
-                    ...(task.config || {}),
-                    ...(overrideConfig || {}),
+                    ...effectiveConfig,
                     user_id: user.id,
                     assistant_id: assistantId,
                     ...(((overrideConfig || task.config)?.outputOptions?.structuredJson)
@@ -128,6 +134,7 @@ export async function POST(
                       : {}),
                   },
                 },
+                ...(shouldInterruptBeforeTools ? { interruptBefore: ["tools"] as const } : {}),
                 streamMode: "messages" as const,
               };
 

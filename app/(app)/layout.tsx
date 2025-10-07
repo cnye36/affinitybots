@@ -6,6 +6,7 @@ import { AppMobileNav } from "@/components/layout/app-mobile-nav";
 import { OnboardingProvider } from "@/hooks/useOnboarding";
 import { TutorialOverlay } from "@/components/onboarding/TutorialOverlay";
 import { WelcomeModal } from "@/components/onboarding/WelcomeModal";
+import { AutoCollapseWrapper } from "@/components/layout/auto-collapse-wrapper";
 
 export default async function AuthenticatedLayout({
   children,
@@ -33,10 +34,12 @@ export default async function AuthenticatedLayout({
         <SidebarInset>
           <AppMobileNav />
           <TutorialOverlay>
-            <div className="flex flex-1 flex-col pb-24 md:pb-0">
-              {children}
-              <WelcomeModal />
-            </div>
+            <AutoCollapseWrapper>
+              <div className="flex flex-1 flex-col pb-24 md:pb-0">
+                {children}
+                <WelcomeModal />
+              </div>
+            </AutoCollapseWrapper>
           </TutorialOverlay>
         </SidebarInset>
       </SidebarProvider>

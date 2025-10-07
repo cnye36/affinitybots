@@ -117,6 +117,20 @@ export async function POST(
       );
     }
 
+    // Get triggers for the workflow snapshot
+    const { data: triggers } = await supabase
+      .from("workflow_triggers")
+      .select("*")
+      .eq("workflow_id", workflowId);
+
+    // Create a workflow snapshot to preserve the state at execution time
+    const workflowSnapshot = {
+      nodes: workflow.nodes || [],
+      edges: workflow.edges || [],
+      triggers: triggers || [],
+      timestamp: new Date().toISOString(),
+    };
+
     // Create a workflow run record
     const generatedWorkflowRunId = (globalThis as any).crypto?.randomUUID?.();
     const { data: workflowRun, error: workflowRunError } = await supabase
@@ -127,6 +141,7 @@ export async function POST(
         status: "running",
         started_at: new Date().toISOString(),
         metadata: {},
+        workflow_snapshot: workflowSnapshot,
         owner_id: ownerId,
       })
       .select("run_id")
@@ -393,6 +408,8 @@ export async function POST(
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
         Connection: "keep-alive",
+        // Surface the created workflow run id for internal callers (e.g., scheduler worker)
+        ...(createdWorkflowRunId ? { "x-workflow-run-id": createdWorkflowRunId } : {}),
       },
     });
   } catch (error) {

@@ -64,24 +64,23 @@ const userGeneratedNames = new UserNamesCache();
 // no longer maintain a static set of type configs.
 
 const nameGeneratorPrompt = PromptTemplate.fromTemplate(`
-Generate a creative, memorable, and unique name for an AI agent based on the description.
+Generate a simple, clear name for an AI agent based on what it does.
 
 Description: {description}
 Previously Generated Names: {previousNames}
 
 Requirements:
-- 1-3 words maximum
-- Professional yet engaging
-- Reflects the agent's purpose
-- NO words: "AI", "Bot", "Assistant"
-- Must be completely different from previously generated names
-- Should feel personal and distinctive
+- 1-2 words maximum
+- Should directly describe what the agent does or its domain
+- NO words: "AI", "Bot", "Assistant", "Agent"
+- Must be different from previously generated names
+- Keep it simple and functional
 
-Style options (choose one that fits best):
-1. Wordplay related to function (e.g., "Insight Navigator" for research)
-2. Human name + expertise (e.g., "Marcus Analytics", "Luna Content")
-3. Abstract concept (e.g., "Nexus", "Prism", "Catalyst")
-4. Mythological reference (e.g., "Apollo Research", "Athena Strategy")
+Examples:
+- For marketing research: "Marketing Helper" or "Market Insights"
+- For code review: "Code Reviewer" or "Review Assistant"
+- For data analysis: "Data Analyst" or "Analytics Pro"
+- For content writing: "Content Writer" or "Writing Assistant"
 
 Return only the name, nothing else.
 `);

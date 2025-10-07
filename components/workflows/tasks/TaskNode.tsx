@@ -82,7 +82,7 @@ export const MemoizedTaskNode = memo(
 
     type StreamTestResult = { type?: string; content?: string; result?: unknown };
 
-    const handleTestTask = async () => {
+    const handleTestTask = async (overrideConfig?: Record<string, unknown>) => {
       try {
         const response = await fetch(
           `/api/workflows/${props.data.workflow_id}/tasks/${props.data.workflow_task_id}/execute`,
@@ -102,13 +102,33 @@ export const MemoizedTaskNode = memo(
                   },
                 ],
               },
-              overrideConfig: {
-                context: {
-                  // If we have a previous node thread id, behave like previous_output path
-                  inputSource: props.data.previousNodeThreadId ? "previous_output" : (props.data as any)?.config?.context?.inputSource,
-                  thread: props.data.previousNodeThreadId ? { mode: "workflow" } : (props.data as any)?.config?.context?.thread,
-                },
-              },
+              overrideConfig: (() => {
+                const baseOverride = { ...(overrideConfig || {}) } as Record<string, unknown>;
+                const incomingContext = (baseOverride.context || {}) as Record<string, unknown>;
+                const resolvedContext = {
+                  ...incomingContext,
+                  inputSource: props.data.previousNodeThreadId
+                    ? "previous_output"
+                    : (incomingContext.inputSource as string) || (props.data as any)?.config?.context?.inputSource,
+                  thread: props.data.previousNodeThreadId
+                    ? { mode: "workflow" as const }
+                    : (incomingContext.thread as Record<string, unknown>) || (props.data as any)?.config?.context?.thread,
+                };
+
+                const overridePayload: Record<string, unknown> = {
+                  ...baseOverride,
+                  context: resolvedContext,
+                };
+
+                const toolApprovalPreference =
+                  (baseOverride.toolApproval as Record<string, unknown> | undefined) ||
+                  ((props.data as any)?.config?.toolApproval as Record<string, unknown> | undefined);
+                if (toolApprovalPreference) {
+                  overridePayload.toolApproval = toolApprovalPreference;
+                }
+
+                return overridePayload;
+              })(),
             }),
           }
         );

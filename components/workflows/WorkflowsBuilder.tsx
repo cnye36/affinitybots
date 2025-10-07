@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Edge, ReactFlowProvider } from "reactflow";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   TaskType,
   WorkflowNode,
@@ -66,8 +66,23 @@ interface StoredWorkflowNode {
   };
 }
 
+const AGENT_RETURN_CONTEXT_KEY = "workflow-agent-context";
+
+type WorkflowAgentReturnContext = {
+  workflowId?: string | undefined;
+  selectedTaskForAgent: string | null;
+  pendingTask: {
+    name: string;
+    description: string;
+    task_type: TaskType;
+  } | null;
+  timestamp: number;
+};
+
 function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
   const supabase = createClient();
 
   const isValidUuid = (value?: string | null) =>
@@ -99,6 +114,9 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
     description: string;
     task_type: TaskType;
   } | null>(null);
+  const [highlightAssistantId, setHighlightAssistantId] = useState<string | null>(
+    null
+  );
   const [isAgentSelectionLoading, setIsAgentSelectionLoading] = useState(false);
   const [mode, setMode] = useState<"editor" | "executions">("editor");
   const [isTriggerConfigOpen, setIsTriggerConfigOpen] = useState(false);
@@ -120,6 +138,67 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
     window.addEventListener("resize", updateIsMobile);
     return () => window.removeEventListener("resize", updateIsMobile);
   }, []);
+
+  useEffect(() => {
+    const agentModalParam = searchParams.get("agentModal");
+    const returningParam = searchParams.get("returningFromAgentCreate");
+    const newAgentIdParam = searchParams.get("newAgentId");
+    const shouldProcess =
+      agentModalParam === "open" || returningParam === "1" || !!newAgentIdParam;
+
+    if (!shouldProcess) {
+      return;
+    }
+
+    if (newAgentIdParam) {
+      setHighlightAssistantId(newAgentIdParam);
+    }
+
+    if (agentModalParam === "open" || returningParam === "1") {
+      let context: WorkflowAgentReturnContext | null = null;
+
+      if (typeof window !== "undefined") {
+        try {
+          const raw = window.sessionStorage.getItem(AGENT_RETURN_CONTEXT_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw) as WorkflowAgentReturnContext;
+            const isFresh =
+              typeof parsed.timestamp === "number" &&
+              Date.now() - parsed.timestamp < 10 * 60 * 1000;
+            const workflowMatches =
+              !parsed.workflowId || !workflowId || parsed.workflowId === workflowId;
+
+            if (isFresh && workflowMatches) {
+              context = parsed;
+            }
+          }
+        } catch {
+          // Ignore malformed storage entries
+        } finally {
+          window.sessionStorage.removeItem(AGENT_RETURN_CONTEXT_KEY);
+        }
+      }
+
+      if (context?.selectedTaskForAgent) {
+        setSelectedTaskForAgent(context.selectedTaskForAgent);
+        if (context.selectedTaskForAgent === "pending" && context.pendingTask) {
+          setPendingTask(context.pendingTask);
+        }
+      }
+
+      setIsAgentSelectOpen(true);
+    }
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("agentModal");
+    params.delete("returningFromAgentCreate");
+    params.delete("newAgentId");
+
+    const nextQuery = params.toString();
+    router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, {
+      scroll: false,
+    });
+  }, [pathname, router, searchParams, workflowId]);
 
   type DbWorkflowTask = {
     workflow_task_id: string;
@@ -704,6 +783,54 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
     loadAssistants();
   }, [supabase]);
 
+  const handleCreateAgentShortcut = useCallback(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("agentModal", "open");
+    params.set("returningFromAgentCreate", "1");
+    params.delete("newAgentId");
+
+    if (typeof window !== "undefined") {
+      const context: WorkflowAgentReturnContext = {
+        workflowId,
+        selectedTaskForAgent,
+        pendingTask,
+        timestamp: Date.now(),
+      };
+
+      try {
+        window.sessionStorage.setItem(
+          AGENT_RETURN_CONTEXT_KEY,
+          JSON.stringify(context)
+        );
+      } catch {
+        // Ignore storage failures (user can retry manually)
+      }
+    }
+
+    setIsAgentSelectOpen(false);
+    setHighlightAssistantId(null);
+
+    const nextQuery = params.toString();
+    const returnUrl = `${pathname}${nextQuery ? `?${nextQuery}` : ""}`;
+
+    router.push(`/agents/new?redirect=${encodeURIComponent(returnUrl)}`);
+  }, [
+    pathname,
+    pendingTask,
+    router,
+    searchParams,
+    selectedTaskForAgent,
+    workflowId,
+  ]);
+
+  useEffect(() => {
+    if (!highlightAssistantId) return;
+    toast({
+      title: "Agent created",
+      description: "Select your new agent to continue",
+    });
+  }, [highlightAssistantId]);
+
   // Set trigger as active when workflow is loaded
   useEffect(() => {
     if (nodes.length > 0 && !activeNodeId) {
@@ -964,6 +1091,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
 
         // Clean up
         setPendingTask(null);
+        setHighlightAssistantId(null);
         setIsAgentSelectOpen(false);
         setSelectedTaskForAgent(null);
 
@@ -1037,6 +1165,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
         })
       );
 
+      setHighlightAssistantId(null);
       setIsAgentSelectOpen(false);
       setSelectedTaskForAgent(null);
 
@@ -1175,10 +1304,13 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
         onClose={() => {
           setIsAgentSelectOpen(false);
           setSelectedTaskForAgent(null);
+          setHighlightAssistantId(null);
         }}
         onSelect={handleAgentSelect}
         assistants={assistants}
         loading={loadingAgents || isAgentSelectionLoading}
+        onCreateAgent={handleCreateAgentShortcut}
+        highlightAssistantId={highlightAssistantId || undefined}
       />
 
       <TriggerSelectModal

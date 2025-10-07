@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useLayoutEffect } from "react";
 import ReactFlow, {
   Edge,
   Controls,
@@ -20,6 +20,9 @@ import ReactFlow, {
   Connection,
   OnNodesDelete,
   ReactFlowInstance,
+  useReactFlow,
+  getNodesBounds,
+  getViewportForBounds,
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { CustomEdge } from "./CustomEdge";
@@ -51,6 +54,81 @@ interface WorkflowCanvasProps {
   onAddTask?: (sourceNodeId: string) => void;
   // When true, automatically fit all nodes into view on mount and when graph changes
   autoFit?: boolean;
+  // When true, shows execution-focused instructions instead of editor instructions
+  isExecutionsView?: boolean;
+}
+
+// Deterministic zoom component
+function DeterministicZoom({ autoFit }: { autoFit: boolean }) {
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const { getNodes, setViewport } = useReactFlow();
+
+  useLayoutEffect(() => {
+    if (!autoFit || !wrapperRef.current) return;
+
+    const refit = () => {
+      const nodes = getNodes().filter(n => !n.hidden);
+      if (!nodes.length) return;
+
+      const bounds = getNodesBounds(nodes);
+      const w = wrapperRef.current!.clientWidth;
+      const h = wrapperRef.current!.clientHeight;
+
+      // Choose padding & caps based on node count
+      const nodeCount = nodes.length;
+      const hasTrigger = nodes.some(n => n.type === 'trigger');
+      const hasTask = nodes.some(n => n.type === 'task');
+      
+      let padding: number;
+      let maxZoom: number;
+      
+      if (nodeCount === 1) {
+        // Single node: very generous padding, low zoom
+        padding = 0.5;
+        maxZoom = 0.7;
+      } else if (hasTrigger && hasTask && nodeCount === 2) {
+        // Trigger + single task: generous padding, moderate zoom
+        padding = 0.4;
+        maxZoom = 0.8;
+      } else if (nodeCount <= 4) {
+        // 3-4 nodes: moderate padding, higher zoom
+        padding = 0.3;
+        maxZoom = 0.9;
+      } else {
+        // 5+ nodes: tighter padding, allow full zoom
+        padding = 0.2;
+        maxZoom = 1.0;
+      }
+
+      const { x, y, zoom } = getViewportForBounds(
+        bounds,
+        w,
+        h,
+        padding,
+        0.1, // minZoom
+        maxZoom
+      );
+
+      setViewport({ x, y, zoom }, { duration: 220 });
+    };
+
+    // Refire on size changes (side panels, devtools, window resize, etc.)
+    const ro = new ResizeObserver(() => refit());
+    ro.observe(wrapperRef.current);
+
+    // Wait for any slide-out CSS transitions to finish once, then fit
+    const id = requestAnimationFrame(() => {
+      // a second RAF ensures layout has fully flushed
+      requestAnimationFrame(refit);
+    });
+
+    return () => { 
+      cancelAnimationFrame(id); 
+      ro.disconnect(); 
+    };
+  }, [autoFit, getNodes, setViewport]);
+
+  return <div ref={wrapperRef} className="absolute inset-0" />;
 }
 
 export function WorkflowCanvas({
@@ -63,6 +141,7 @@ export function WorkflowCanvas({
   setActiveNodeId,
   onAddTask,
   autoFit = false,
+  isExecutionsView = false,
 }: WorkflowCanvasProps) {
   const rfInstanceRef = useRef<ReactFlowInstance | null>(null);
 
@@ -188,19 +267,7 @@ export function WorkflowCanvas({
     });
   }, [nodes, edges, activeNodeId, onAddTask]);
 
-  // Auto-fit the viewport when requested
-  useEffect(() => {
-    if (!autoFit) return;
-    const inst = rfInstanceRef.current;
-    if (!inst) return;
-    // Small timeout ensures layout has applied
-    const id = setTimeout(() => {
-      try {
-        inst.fitView({ padding: 0.15, includeHiddenNodes: true, duration: 200 });
-      } catch {}
-    }, 0);
-    return () => clearTimeout(id);
-  }, [autoFit, nodesWithActiveState.length, edges.length]);
+  // Note: Auto-fit is now handled by DeterministicZoom component
 
   return (
     <div className="absolute inset-0">
@@ -224,17 +291,12 @@ export function WorkflowCanvas({
             height: 20,
           },
         }}
-        minZoom={0.2}
-        maxZoom={4}
-        fitView={autoFit}
+        minZoom={0.1}
+        maxZoom={2}
+        fitView={false}
         deleteKeyCode={["Backspace", "Delete"]}
         onInit={(instance) => {
           rfInstanceRef.current = instance;
-          if (autoFit) {
-            try {
-              instance.fitView({ padding: 0.15, includeHiddenNodes: true, duration: 200 });
-            } catch {}
-          }
         }}
       >
         <Controls />
@@ -245,10 +307,13 @@ export function WorkflowCanvas({
           className="bg-background/60 p-2 rounded-lg shadow-sm border"
         >
           <div className="text-sm text-muted-foreground">
-            Add tasks to define your workflow. Press Delete or Backspace to
-            remove nodes and edges.
+            {isExecutionsView 
+              ? "Click on a node to view execution details and results."
+              : "Add tasks to define your workflow. Press Delete or Backspace to remove nodes and edges."
+            }
           </div>
         </Panel>
+        <DeterministicZoom autoFit={autoFit} />
       </ReactFlow>
     </div>
   );
