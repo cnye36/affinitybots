@@ -18,13 +18,10 @@ import {
   DropdownMenuContent,
 } from "@/components/ui/dropdown-menu";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
-import { useOnboarding, newAgentTutorialSteps } from "@/hooks/useOnboarding";
-import { createClient } from "@/supabase/client";
 
 export default function NewAgentPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { startTour, isActive } = useOnboarding();
   const [customPrompt, setCustomPrompt] = useState("");
   const [customName, setCustomName] = useState("");
   // No explicit agent type; template clicks only prefill prompt
@@ -54,36 +51,6 @@ export default function NewAgentPage() {
     "text/html",
   ];
 
-  // Auto-start the New Agent onboarding tour on first visit (per-user gated)
-  useEffect(() => {
-    (async () => {
-      try {
-        const supabase = createClient()
-        const { data: { user } } = await supabase.auth.getUser()
-        const seenLocal = localStorage.getItem('onboarding-new-agent-seen')
-        let completedDb = false
-        if (user) {
-          const { data } = await supabase
-            .from('profiles')
-            .select('preferences')
-            .eq('id', user.id)
-            .single()
-          completedDb = Boolean((data?.preferences as any)?.onboardingCompleted)
-        }
-        if (!completedDb && !seenLocal && !isActive) {
-          localStorage.setItem('onboarding-new-agent-seen', 'true')
-          setTimeout(() => startTour(newAgentTutorialSteps), 300)
-        }
-      } catch (e) {
-        // Local fallback
-        const seen = localStorage.getItem('onboarding-new-agent-seen')
-        if (!seen && !isActive) {
-          localStorage.setItem('onboarding-new-agent-seen', 'true')
-          setTimeout(() => startTour(newAgentTutorialSteps), 300)
-        }
-      }
-    })()
-  }, [startTour, isActive])
 
   const handleCreateAgent = async (prompt: string) => {
     setIsSubmitting(true);
@@ -207,7 +174,7 @@ export default function NewAgentPage() {
 
         <div className="space-y-6">
           {/* Optional Name */}
-          <div className="gradient-border p-6 rounded-lg" data-tutorial="agent-name">
+          <div className="gradient-border p-6 rounded-lg">
             <Label className="mb-2 block">Name (Optional)</Label>
             <Input
               placeholder="e.g., Prism Atlas"
@@ -218,7 +185,7 @@ export default function NewAgentPage() {
           </div>
 
           {/* Prompt */}
-          <div className="gradient-border p-6 rounded-lg" data-tutorial="agent-description">
+          <div className="gradient-border p-6 rounded-lg">
             <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
               <Sparkles className="h-5 w-5" />
               Describe Your AI Agent (Required)
@@ -270,7 +237,7 @@ export default function NewAgentPage() {
           </div>
 
           {/* Templates as pills under prompt; click to populate */}
-          <div className="space-y-2" data-tutorial="agent-templates">
+          <div className="space-y-2">
             <div className="flex items-center gap-2">
               <Wand2 className="h-4 w-4" />
               <h3 className="text-lg font-semibold">Start from a template</h3>
@@ -293,7 +260,7 @@ export default function NewAgentPage() {
           </div>
 
           {/* Tools (Accordion) */}
-          <div className="gradient-border p-0 rounded-lg" data-tutorial="agent-tools">
+          <div className="gradient-border p-0 rounded-lg">
             <Accordion type="single" collapsible>
               <AccordionItem value="tools">
                 <AccordionTrigger className="px-4">
@@ -320,7 +287,7 @@ export default function NewAgentPage() {
           </div>
 
           {/* Knowledge (Accordion) */}
-          <div className="gradient-border p-0 rounded-lg" data-tutorial="agent-knowledge">
+          <div className="gradient-border p-0 rounded-lg">
             <Accordion type="single" collapsible>
               <AccordionItem value="knowledge">
                 <AccordionTrigger className="px-4">

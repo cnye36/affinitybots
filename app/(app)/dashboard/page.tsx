@@ -18,7 +18,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { formatRelativeTime } from "@/lib/utils";
-// Removed TutorialButton (onboarding tours triggered programmatically only)
 
 // Helper to impose a maximum time for the entire server function.
 function createTimeoutPromise(timeoutMs: number): Promise<never> {
@@ -309,7 +308,7 @@ export default async function Dashboard() {
           <div className="min-h-screen bg-background">
             <div className="container mx-auto px-4 py-8">
               {/* Enhanced Header */}
-              <div className="mb-8" data-tutorial="dashboard-header">
+              <div className="mb-8">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
                   <div>
                     <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
@@ -319,13 +318,13 @@ export default async function Dashboard() {
                   </div>
                   <div className="flex items-center gap-3">
                     <Button variant="outline" size="sm" asChild>
-                      <Link href="/agents/new" data-tutorial="dashboard-new-agent">
+                      <Link href="/agents/new">
                         <Bot className="h-4 w-4 mr-2" />
                         New Agent
                       </Link>
                     </Button>
                     <Button variant="outline" size="sm" asChild>
-                      <Link href="/workflows/new" data-tutorial="dashboard-new-workflow">
+                      <Link href="/workflows/new">
                         <Play className="h-4 w-4 mr-2" />
                         New Workflow
                       </Link>

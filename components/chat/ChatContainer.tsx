@@ -10,9 +10,6 @@ import { AssistantRuntimeProvider, useAssistantRuntime } from "@assistant-ui/rea
 import { Assistant } from "@/types/assistant";
 import { useAppLangGraphRuntime } from "./runtime-provider";
 import ThreadSidebar from "./ThreadSidebar";
-import { useEffect } from "react";
-import { useOnboarding, agentPageTutorialSteps } from "@/hooks/useOnboarding";
-import { createClient } from "@/supabase/client";
 
 interface ChatContainerProps {
   assistant: Assistant;
@@ -24,37 +21,6 @@ export default function ChatContainer({
 }: ChatContainerProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const runtime = useAppLangGraphRuntime(assistant.assistant_id);
-  const { startTour, isActive } = useOnboarding();
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const supabase = createClient()
-        const { data: { user } } = await supabase.auth.getUser()
-        const seenLocal = localStorage.getItem('onboarding-agent-page-seen')
-        let completedDb = false
-        if (user) {
-          const { data } = await supabase
-            .from('profiles')
-            .select('preferences')
-            .eq('id', user.id)
-            .single()
-          completedDb = Boolean((data?.preferences as any)?.onboardingCompleted)
-        }
-        if (!completedDb && !seenLocal && !isActive) {
-          localStorage.setItem('onboarding-agent-page-seen', 'true')
-          setTimeout(() => startTour(agentPageTutorialSteps), 400)
-        }
-      } catch (e) {
-        // Local fallback
-        const seen = localStorage.getItem('onboarding-agent-page-seen')
-        if (!seen && !isActive) {
-          localStorage.setItem('onboarding-agent-page-seen', 'true')
-          setTimeout(() => startTour(agentPageTutorialSteps), 400)
-        }
-      }
-    })()
-  }, [startTour, isActive])
 
   return (
     <TooltipProvider>

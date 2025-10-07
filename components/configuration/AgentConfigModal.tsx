@@ -147,12 +147,12 @@ export function AgentConfigModal({
         </DialogHeader>
 
         <Tabs defaultValue="general" className="flex-1 flex flex-col min-h-0">
-          <TabsList data-tutorial="config-tabs-list" className="flex-shrink-0">
-            <TabsTrigger value="general" data-tutorial="config-tab-general">General</TabsTrigger>
-            <TabsTrigger value="prompt" data-tutorial="config-tab-prompt">Prompt</TabsTrigger>
-            <TabsTrigger value="tools" data-tutorial="config-tab-tools">Tools</TabsTrigger>
-            <TabsTrigger value="knowledge" data-tutorial="config-tab-knowledge">Knowledge</TabsTrigger>
-            <TabsTrigger value="memory" data-tutorial="config-tab-memory">Memory</TabsTrigger>
+          <TabsList className="flex-shrink-0">
+            <TabsTrigger value="general">General</TabsTrigger>
+            <TabsTrigger value="prompt">Prompt</TabsTrigger>
+            <TabsTrigger value="tools">Tools</TabsTrigger>
+            <TabsTrigger value="knowledge">Knowledge</TabsTrigger>
+            <TabsTrigger value="memory">Memory</TabsTrigger>
           </TabsList>
 
           <TabsContent value="general" className="flex-1 overflow-y-auto min-h-0">

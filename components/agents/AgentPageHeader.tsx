@@ -225,7 +225,7 @@ export function AgentPageHeader({ assistant }: AgentPageHeaderProps) {
             </div>
           )}
 
-          <div data-tutorial="agent-configure">
+          <div>
             <AgentConfigButton assistant={assistant} />
           </div>
         </div>
