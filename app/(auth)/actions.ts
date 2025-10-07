@@ -124,7 +124,7 @@ async function getSiteUrl() {
   const computedOrigin = forwardedProto && host ? `${forwardedProto}://${host}` : hdrs.get("origin");
   // Prefer the current request origin (works for localhost and multi-domain)
   // Fallback to env var if origin is not available
-  return computedOrigin ?? process.env.NEXT_PUBLIC_URL ?? "http://localhost:3000";
+  return computedOrigin ?? process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 }
 
 export async function signInWithGoogle() {

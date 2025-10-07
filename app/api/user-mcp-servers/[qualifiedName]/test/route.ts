@@ -18,7 +18,7 @@ export async function POST(
 
     // Get server details to find the deployment URL
     const encodedName = encodeURIComponent(decodeURIComponent(qualifiedName));
-    const serverResponse = await fetch(`${process.env.NEXT_PUBLIC_URL}/api/smithery/${encodedName}`);
+    const serverResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/smithery/${encodedName}`);
     
     if (!serverResponse.ok) {
       return NextResponse.json({ error: 'Failed to fetch server details' }, { status: 500 });

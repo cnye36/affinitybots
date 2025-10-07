@@ -134,7 +134,7 @@ export async function POST(
                       : {}),
                   },
                 },
-                ...(shouldInterruptBeforeTools ? { interruptBefore: ["tools"] as const } : {}),
+                ...(shouldInterruptBeforeTools ? { interruptBefore: ["tools"] } : {}),
                 streamMode: "messages" as const,
               };
 
@@ -164,7 +164,7 @@ export async function POST(
 
               const runStream = incomingThreadId
                 ? await client.runs.stream(incomingThreadId, assistantId, payload)
-                : await client.runs.stream(null, assistantId, payload);
+                : await client.runs.stream(null, assistantId);
 
               const emitEvent = (name: string | undefined, data: unknown) => {
                 if (name) {
