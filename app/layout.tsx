@@ -1,6 +1,6 @@
 import './globals.css'
 import { Inter } from 'next/font/google'
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { ThemeProvider } from '@/components/theme-provider'
 import { OrganizationJsonLd } from '@/components/seo/OrganizationJsonLd'
 import { Toaster } from "@/components/ui/toaster"
@@ -18,10 +18,6 @@ export const metadata: Metadata = {
     template: "%s | AffinityBots",
   },
   description: "Build and manage AI agent workflows",
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-  },
   keywords: [
     "AI agents",
     "workflow automation",
@@ -60,6 +56,11 @@ export const metadata: Metadata = {
   icons: {
     icon: "/favicon.ico",
   },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({

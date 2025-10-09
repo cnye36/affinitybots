@@ -176,11 +176,12 @@ export class MCPClientManager {
         if (!this.isOAuthServer(serverConfig)) {
           mcpServers[qualifiedName] = {
             url: finalUrl,
-            automaticSSEFallback: false,
+            // Allow adapter to fall back to SSE on intermediary/network glitches (eg. CF 5xx)
+            automaticSSEFallback: true,
             // pass through optional headers (e.g., Authorization Bearer)
             headers: (serverConfig as any).headers
           };
-          console.log(`✅ Added server ${qualifiedName} to mcpServers`);
+          console.log(`✅ Added server ${qualifiedName} to mcpServers with headers:`, (serverConfig as any).headers);
         }
       }
 
@@ -189,17 +190,35 @@ export class MCPClientManager {
       if (Object.keys(mcpServers).length > 0) {
         console.log(`Creating MultiServerMCPClient with servers:`, Object.keys(mcpServers));
         
-        client = new MultiServerMCPClient({
-          mcpServers,
-          useStandardContentBlocks: true,
-          throwOnLoadError: false,
-          prefixToolNameWithServerName: false,
-          additionalToolNamePrefix: "",
-        });
+        // Retry client creation and tool discovery on transient upstream errors (eg. 502 Bad Gateway)
+        let mcpTools: any[] = [];
+        const maxAttempts = 3;
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+          try {
+            client = new MultiServerMCPClient({
+              mcpServers,
+              useStandardContentBlocks: true,
+              throwOnLoadError: false,
+              prefixToolNameWithServerName: false,
+              additionalToolNamePrefix: "",
+            });
 
-        // Get all tools from non-OAuth servers
-        console.log(`Getting tools from MCP client...`);
-        const mcpTools = await client.getTools();
+            // Get all tools from non-OAuth servers
+            console.log(`Getting tools from MCP client (attempt ${attempt}/${maxAttempts})...`);
+            mcpTools = await client.getTools();
+            break;
+          } catch (err: any) {
+            const msg = String(err?.message || err);
+            const isTransient = /\b(502|503|504|ECONNRESET|ETIMEDOUT|Transport is closed|Bad gateway)\b/i.test(msg);
+            console.warn(`MCP client creation/getTools attempt ${attempt}/${maxAttempts} failed${isTransient ? ' (transient)' : ''}:`, msg);
+            if (attempt === maxAttempts || !isTransient) {
+              throw err;
+            }
+            // Clear client on failure so we retry from scratch
+            client = null;
+            await new Promise(r => setTimeout(r, 1000 * attempt));
+          }
+        }
         allTools.push(...mcpTools);
         console.log(`MCP client returned ${mcpTools.length} tools`);
       }
@@ -228,12 +247,18 @@ export class MCPClientManager {
     if (serverConfig.config?.auth_type === 'bearer') {
       return false;
     }
+    
+    // Check for bearer_token in config - these use standard OAuth, not MCP DCR
+    if (serverConfig.config?.bearer_token) {
+      return false;
+    }
+    
     // Check explicit auth_type in config first
     if (serverConfig.config?.auth_type === 'oauth') {
       return true;
     }
     
-    // Check if OAuth token/session exists in database
+    // Check if OAuth token/session exists in database (MCP DCR OAuth)
     if (serverConfig.oauth_token || serverConfig.session_id) {
       return true;
     }
@@ -382,8 +407,11 @@ export class MCPClientManager {
     // Check if this is a Smithery server and we have an API key
     const apiKey = process.env.SMITHERY_API_KEY;
     if (apiKey && this.isSmitheryServer(qualifiedName, serverConfig)) {
-      // Extract profile ID from config (set by user in UI)
-      const profileId = serverConfig.config?.smitheryProfileId || serverConfig.config?.profileId || "eligible-bug-FblvFg";
+      // Extract profile ID from config (set by user in UI). Required; never default to a shared profile.
+      const profileId = serverConfig.config?.smitheryProfileId || serverConfig.config?.profileId;
+      if (!profileId) {
+        throw new Error(`Smithery server ${qualifiedName} is missing a per-user profileId in config`);
+      }
       const fallbackUrl = `https://server.smithery.ai/${qualifiedName}/mcp?api_key=${apiKey}&profile=${profileId}`;
       console.log(`🏗️  Built Smithery API key URL: ${fallbackUrl.replace(apiKey, 'HIDDEN_API_KEY')}`);
       return fallbackUrl;

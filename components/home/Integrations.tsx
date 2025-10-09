@@ -31,7 +31,7 @@ const ExaLogo = () => (
 );
 
 const integrations = [
-  { name: "Google", logo: <SiGoogle className="text-blue-500" /> },
+  { name: "Google", logo: <img src="/integration-icons/Google-logo.png" alt="Google" className="w-16 h-16 object-contain" /> },
   { name: "Notion", logo: <SiNotion className="text-gray-800 dark:text-white" /> },
   { name: "Slack", logo: <SiSlack className="text-purple-600" /> },
   { name: "X", logo: <SiX className="text-black dark:text-white" /> },
@@ -49,13 +49,53 @@ export function Integrations() {
           <h2 className="text-2xl sm:text-3xl md:text-5xl font-bold mb-3 md:mb-4">
             Connect to Anything
           </h2>
-          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
             Instantly connect your agents to the world's most popular APIs and
             tools. From <b>Google</b> to <b>Slack</b>, <b>Supabase</b>, <b>Redis</b>, and more,
             AffinityBots (beta) lets you automate workflows with the platforms you
             already use. Powered by <b>MCP servers</b> for limitless
             extensibility and reliability.
           </p>
+          <div className="mt-6 flex flex-wrap justify-center gap-4 text-sm">
+            <div className="flex items-center gap-2 px-4 py-2 bg-background rounded-full border">
+              <img 
+                src="/integration-icons/OpenAI-dark.png" 
+                alt="OpenAI Logo"
+                className="w-4 h-4 dark:hidden"
+              />
+              <img 
+                src="/integration-icons/OpenAI-light.png" 
+                alt="OpenAI Logo"
+                className="w-4 h-4 hidden dark:block"
+              />
+              <span className="font-medium">OpenAI GPT-5</span>
+            </div>
+            <div className="flex items-center gap-2 px-4 py-2 bg-background rounded-full border">
+              <img 
+                src="/integration-icons/Anthropic-dark.png" 
+                alt="Anthropic Logo"
+                className="w-4 h-4 dark:hidden"
+              />
+              <img 
+                src="/integration-icons/Anthropic-light.png" 
+                alt="Anthropic Logo"
+                className="w-4 h-4 hidden dark:block"
+              />
+              <span className="font-medium">Claude 4.5 Sonnet</span>
+            </div>
+            <div className="flex items-center gap-2 px-4 py-2 bg-background rounded-full border">
+              <img 
+                src="/integration-icons/Google-logo.png" 
+                alt="Google Logo"
+                className="w-4 h-4"
+              />
+              <span className="font-medium">Gemini 2.5 Pro</span>
+            </div>
+            <div className="flex items-center gap-2 px-4 py-2 bg-background rounded-full border">
+              <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
+              <span className="font-medium">More Coming Soon</span>
+            </div>
+          </div>
         </div>
         <MotionDiv
           initial={{ opacity: 0, y: 20 }}

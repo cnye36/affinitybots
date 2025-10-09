@@ -52,6 +52,37 @@ export function AgentConfigModal({
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   
+  // Sync enabled_mcp_servers with database when modal opens
+  React.useEffect(() => {
+    if (open) {
+      syncMCPServersWithDatabase();
+    }
+  }, [open]);
+
+  const syncMCPServersWithDatabase = async () => {
+    try {
+      const response = await fetch('/api/user-mcp-servers');
+      const data = await response.json();
+      if (data.servers) {
+        const enabledServerNames = data.servers
+          .filter((s: any) => s.is_enabled)
+          .map((s: any) => s.qualified_name);
+        
+        // Update local config with current database state
+        setConfig((prev) => ({
+          ...prev,
+          config: {
+            ...prev.config,
+            enabled_mcp_servers: enabledServerNames,
+          },
+        }));
+      }
+    } catch (err) {
+      console.error('Failed to sync MCP servers with database:', err);
+      // Don't show error to user, just log it
+    }
+  };
+  
 
 
 

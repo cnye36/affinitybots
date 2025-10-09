@@ -54,7 +54,7 @@ export function Hero() {
                 </Button>
               </Link>
             </div>
-            <div className="mt-8 md:mt-12 grid grid-cols-3 gap-2 md:gap-8">
+            <div className="mt-8 md:mt-12 grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-6">
               <div className="flex flex-col md:flex-row md:items-center">
                 <div className="text-3xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600">
                   1min
@@ -97,7 +97,7 @@ export function Hero() {
           >
             <div className="relative h-[400px] md:h-[500px] lg:h-[600px] w-full">
               <Image
-                src="/images/ai-agents-image-AffinityBots-website.png"
+                src="/images/Four-bots.png"
                 alt="AI Bot Assistant"
                 fill
                 className="object-contain"

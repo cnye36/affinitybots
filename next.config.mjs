@@ -105,6 +105,12 @@ const nextConfig = {
       },
       {
         protocol: "https",
+        hostname: "www.make.com",
+        port: "",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
         hostname: "legal.hubspot.com",
         port: "",
         pathname: "/**",

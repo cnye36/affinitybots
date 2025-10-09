@@ -41,6 +41,9 @@ async function createMcpClientAndTools(userId: string, agentConfig: AssistantCon
     console.log(`Using cached MCP factory result for ${userId}`);
     return { client: cached.client, tools: cached.tools };
   }
+  
+  // Clear cache for debugging
+  mcpFactoryCache.clear();
 
   try {
     console.log(`createMcpClientAndTools: userId=${userId}, enabledServers=${JSON.stringify(enabledServers)}`);
@@ -753,8 +756,8 @@ const workflow = new StateGraph(MessagesAnnotation)
 // ✅ Efficient - One deployment, multiple use cases
 // ============================================================================
 
-export const graph = workflow.compile(
-  process.env.NODE_ENV === "development"
-    ? { store: fallbackStore }
-    : {}
-);
+export const graph = workflow.compile({
+  // Always use fallbackStore in local development; LangGraph Platform injects its own store
+  store: fallbackStore,
+ 
+});

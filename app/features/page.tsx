@@ -30,7 +30,7 @@ export default function FeaturesPage() {
       title: "AI Agent Creation",
       description: "Create fully functional AI agents in under 1 minute with our intuitive drag-and-drop interface. No coding required.",
       details: [
-        "Visual workflow builder",
+        "1-Click Agent Creation",
         "Pre-built agent templates",
         "Custom skill configuration",
         "Real-time testing environment"
@@ -38,13 +38,13 @@ export default function FeaturesPage() {
     },
     {
       icon: <Brain className="h-8 w-8 text-purple-500" />,
-      title: "Advanced AI Capabilities",
-      description: "Powered by state-of-the-art language models with specialized training for business applications.",
+      title: "Model Agnostic AI Platform",
+      description: "Choose from leading AI providers including OpenAI, Anthropic, and Google Gemini with more models coming soon.",
       details: [
-        "Multi-modal understanding",
-        "Context-aware responses",
-        "Learning from interactions",
-        "Custom model fine-tuning"
+        "OpenAI GPT-5 & GPT-4o",
+        "Anthropic Claude 4.5 & Opus",
+        "Google Gemini 2.5 Pro & Flash",
+        "Easy model switching and comparison"
       ]
     },
     {
@@ -225,8 +225,116 @@ export default function FeaturesPage() {
         </div>
       </section>
 
-      {/* Technical Features */}
+      {/* AI Model Support */}
       <section className="py-16 px-4 bg-muted/50">
+        <div className="container mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+              Powered by Leading AI Models
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+              AffinityBots is model agnostic, giving you the flexibility to choose the best AI model for each task. 
+              Switch between providers seamlessly and compare performance across different models.
+            </p>
+          </div>
+          
+          <div className="grid md:grid-cols-3 gap-8 mb-16">
+            <div className="bg-card rounded-xl p-8 border border-border hover:border-primary/20 transition-all duration-300">
+              <div className="text-center">
+                <div className="flex items-center justify-center mx-auto mb-4">
+                  <img 
+                    src="/integration-icons/OpenAI-dark.png" 
+                    alt="OpenAI Logo"
+                    className="w-16 h-16 dark:hidden"
+                  />
+                  <img 
+                    src="/integration-icons/OpenAI-light.png" 
+                    alt="OpenAI Logo"
+                    className="w-16 h-16 hidden dark:block"
+                  />
+                </div>
+                <h3 className="text-xl font-bold text-card-foreground mb-2">OpenAI</h3>
+                <p className="text-muted-foreground mb-4">GPT-5, GPT-4.1, GPT-4o</p>
+                <ul className="text-sm text-muted-foreground space-y-1">
+                  <li>• Advanced reasoning capabilities</li>
+                  <li>• Multimodal understanding</li>
+                  <li>• Code generation and analysis</li>
+                </ul>
+              </div>
+            </div>
+            
+            <div className="bg-card rounded-xl p-8 border border-border hover:border-primary/20 transition-all duration-300">
+              <div className="text-center">
+                <div className="flex items-center justify-center mx-auto mb-4">
+                  <img 
+                    src="/integration-icons/Anthropic-dark.png" 
+                    alt="Anthropic Logo"
+                    className="w-16 h-16 dark:hidden"
+                  />
+                  <img 
+                    src="/integration-icons/Anthropic-light.png" 
+                    alt="Anthropic Logo"
+                    className="w-16 h-16 hidden dark:block"
+                  />
+                </div>
+                <h3 className="text-xl font-bold text-card-foreground mb-2">Anthropic</h3>
+                <p className="text-muted-foreground mb-4">Claude 4.5 Sonnet, Claude Opus, Claude 3.7 Sonnet</p>
+                <ul className="text-sm text-muted-foreground space-y-1">
+                  <li>• Exceptional safety and alignment</li>
+                  <li>• Long context understanding</li>
+                  <li>• Helpful and harmless responses</li>
+                </ul>
+              </div>
+            </div>
+            
+            <div className="bg-card rounded-xl p-8 border border-border hover:border-primary/20 transition-all duration-300">
+              <div className="text-center">
+                <div className="flex items-center justify-center mx-auto mb-4">
+                  <img 
+                    src="/integration-icons/Google-logo.png" 
+                    alt="Google Logo"
+                    className="w-16 h-16"
+                  />
+                </div>
+                <h3 className="text-xl font-bold text-card-foreground mb-2">Google Gemini</h3>
+                <p className="text-muted-foreground mb-4">Gemini 2.5 Pro, Gemini 2.5 Flash, Gemini 2.5 Flash Lite</p>
+                <ul className="text-sm text-muted-foreground space-y-1">
+                  <li>• Native multimodal understanding</li>
+                  <li>• Fast inference speeds</li>
+                  <li>• Cost-effective performance</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-gradient-to-r from-primary/5 to-purple-500/5 rounded-xl p-8 border border-primary/10">
+            <div className="text-center">
+              <h3 className="text-2xl font-bold text-foreground mb-4">Model Flexibility & Future</h3>
+              <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
+                Our model agnostic architecture means you're never locked into one provider. 
+                Switch models based on task requirements, cost optimization, or performance needs.
+              </p>
+              <div className="flex flex-wrap justify-center gap-4 text-sm">
+                <div className="flex items-center gap-2 px-4 py-2 bg-background rounded-full border">
+                  <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                  <span className="font-medium">More providers coming soon</span>
+                </div>
+                <div className="flex items-center gap-2 px-4 py-2 bg-background rounded-full border">
+                  <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                  <span className="font-medium">Model comparison tools</span>
+                </div>
+                <div className="flex items-center gap-2 px-4 py-2 bg-background rounded-full border">
+                  <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
+                  <span className="font-medium">Automatic model selection</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Technical Features */}
+      <section className="py-16 px-4">
         <div className="container mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">

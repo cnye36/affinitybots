@@ -2,6 +2,11 @@ import React from "react";
 
 const features = [
   {
+    title: "Model Agnostic AI",
+    description:
+      "Choose from OpenAI, Anthropic, Google Gemini, and more. Switch models anytime for optimal performance",
+  },
+  {
     title: "Customizable AI Agents",
     description:
       "Design AI employees with unique personalities, skills, and capabilities",
@@ -32,7 +37,7 @@ export function Features() {
             Everything you need to build and deploy AI agents that work for your business
           </p>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 md:gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-6 md:gap-8">
           {features.map((feature, index) => (
             <div
               key={index}

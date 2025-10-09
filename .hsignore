@@ -1,7 +1,0 @@
-node_modules
-.next
-.git
-dist
-build
-coverage
-**/*.log
