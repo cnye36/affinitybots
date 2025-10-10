@@ -142,13 +142,8 @@ export function ToolSelector({
 
   const handleToggleTool = (qualifiedName: string) => {
     const isEnabledForAgent = enabledMCPServers.includes(qualifiedName);
-    const userServer = userServers.find(s => s.qualified_name === qualifiedName);
     
-    // If enabling but not configured and enabled, don't allow toggle
-    if (!isEnabledForAgent && !userServer?.is_enabled) {
-      return;
-    }
-
+    // Allow toggling regardless of configuration status
     const updatedServers = isEnabledForAgent
       ? enabledMCPServers.filter(name => name !== qualifiedName)
       : [...enabledMCPServers, qualifiedName];
@@ -298,12 +293,10 @@ export function ToolSelector({
               
               {/* Toggle Switch */}
               <div className="flex items-center gap-2">
-                {configured && (
-                  <Switch
-                    checked={enabled}
-                    onCheckedChange={() => handleToggleTool(server.qualifiedName)}
-                  />
-                )}
+                <Switch
+                  checked={enabled}
+                  onCheckedChange={() => handleToggleTool(server.qualifiedName)}
+                />
               </div>
             </div>
 
@@ -342,6 +335,15 @@ export function ToolSelector({
                 )}
               </Badge>
             </div>
+
+            {/* Warning message for enabled but not configured servers */}
+            {enabled && !configured && (
+              <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
+                <p className="text-yellow-800">
+                  ⚠️ This server is enabled but not configured. Configure it to use its tools.
+                </p>
+              </div>
+            )}
 
             {/* Configure button */}
             {!configured && (

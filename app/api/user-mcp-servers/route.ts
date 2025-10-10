@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const { qualified_name, config, url, is_enabled = true } = await request.json();
+  const { qualified_name, config, url, is_enabled = false } = await request.json();
   if (!qualified_name) {
     return NextResponse.json({ error: "Missing qualified_name" }, { status: 400 });
   }

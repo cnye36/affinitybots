@@ -27,14 +27,20 @@ export async function GET(
 
     if (error) {
       if (error.code === 'PGRST116') {
-        return NextResponse.json({ error: 'Configuration not found' }, { status: 404 });
+        // No configuration found - return 200 with empty config instead of 404
+        return NextResponse.json({ 
+          server: null,
+          config: null,
+          configured: false
+        }, { status: 200 });
       }
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     return NextResponse.json({ 
       server: data,
-      config: data.config 
+      config: data.config,
+      configured: true
     });
   } catch (error) {
     console.error('Error fetching server configuration:', error);

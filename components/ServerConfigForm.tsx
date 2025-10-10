@@ -39,7 +39,7 @@ export function ServerConfigForm({
   serverDetails
 }: ServerConfigFormProps) {
   const [config, setConfig] = useState<Record<string, any>>({});
-  const [isEnabled, setIsEnabled] = useState(true);
+  const [isEnabled, setIsEnabled] = useState(false);
   const [loading, setLoading] = useState(false);
   const [testing, setTesting] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -75,12 +75,23 @@ export function ServerConfigForm({
         const response = await fetch(`/api/user-mcp-servers/${encodeURIComponent(qualifiedName)}`);
         if (response.ok) {
           const data = await response.json();
-          setConfig(data.config || {});
-          setIsEnabled(data.server.is_enabled);
-          setHasExistingConfig(true);
+          if (data.configured) {
+            // Server is configured
+            setConfig(data.config || {});
+            setIsEnabled(data.server.is_enabled);
+            setHasExistingConfig(true);
+          } else {
+            // Server not configured yet, start fresh
+            setHasExistingConfig(false);
+          }
+        } else {
+          // Other error, start fresh
+          console.warn(`Failed to load config for ${qualifiedName}: ${response.status}`);
+          setHasExistingConfig(false);
         }
       } catch (error) {
-        // No existing config, start fresh
+        // Network error or other exception, start fresh
+        console.warn(`Error loading config for ${qualifiedName}:`, error);
         setHasExistingConfig(false);
       }
     }
@@ -317,15 +328,15 @@ export function ServerConfigForm({
                 placeholder="e.g., eligible-bug-bgLHFe"
               />
               <p className="text-sm text-muted-foreground">
-                Your Smithery profile ID. If you don't have one, 
+                If you haven't configured this server in Smithery or don't have an account, 
                 <a 
-                  href="https://smithery.ai" 
+                  href={serverDetails?.homepage || `https://smithery.ai/server/${encodeURIComponent(qualifiedName)}`} 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="text-blue-500 hover:underline ml-1"
                 >
-                  create a profile on Smithery
-                </a> first.
+                  configure or create an account here
+                </a>.
               </p>
             </div>
           </div>

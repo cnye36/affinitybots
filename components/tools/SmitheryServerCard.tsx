@@ -9,8 +9,6 @@ interface SmitheryServerCardProps {
 }
 
 export function SmitheryServerCard({ server, logoUrl, isConfigured }: SmitheryServerCardProps) {
-
-
   return (
     <Link 
       href={`/tools/${encodeURIComponent(server.qualifiedName)}`}

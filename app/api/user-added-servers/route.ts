@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
         url,
         auth_type,
         config,
-        is_enabled: true
+        is_enabled: false
       })
       .select()
       .single();

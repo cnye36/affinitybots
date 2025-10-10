@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import Image from "next/image";
-import { ArrowLeft, ExternalLink, Shield, CheckCircle, XCircle, Globe, Server, Calendar, GitBranch, Users, Activity, Settings } from "lucide-react";
+import { ArrowLeft, ExternalLink, Shield, CheckCircle, XCircle, Globe, Server, Calendar, GitBranch, Users, Activity, Settings, ArrowUp } from "lucide-react";
 import { ServerConfigForm } from "@/components/ServerConfigForm";
 import { findOfficialServer } from "@/lib/mcp/officialMcpServers";
 
@@ -55,6 +55,7 @@ export default function ServerDetailPage() {
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [connecting, setConnecting] = useState<boolean>(false);
   const [disconnecting, setDisconnecting] = useState<boolean>(false);
+  const [showBackToTop, setShowBackToTop] = useState<boolean>(false);
   const isDisabled = server?.source === 'official' && (server as any)?.disabled;
 
   useEffect(() => {
@@ -120,6 +121,20 @@ export default function ServerDetailPage() {
       loadConnectionState();
     }
   }, [qualifiedName]);
+
+  // Back to top scroll listener
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowBackToTop(window.scrollY > 300);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const callbackUrl = typeof window !== 'undefined' ? `${window.location.origin}/api/mcp/auth/callback` : '';
 
@@ -492,17 +507,30 @@ export default function ServerDetailPage() {
             </Button>
           )
         ) : (
-          <>
-            <Button size="lg">
-              Add to Configuration
+          <div className="text-center">
+            <p className="text-muted-foreground mb-4">
+              To configure the server or create an account, visit the Smithery page:
+            </p>
+            <Button size="lg" asChild>
+              <a href={server.homepage || `https://smithery.ai/server/${encodeURIComponent(server.qualifiedName)}`} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="w-4 h-4 mr-2" />
+                Configure on Smithery
+              </a>
             </Button>
-            {/* Only show Smithery link for Smithery-sourced servers */}
-            <Button variant="outline" size="lg" asChild>
-              <a href={server.homepage || '#'} target="_blank" rel="noopener noreferrer">View on Smithery</a>
-            </Button>
-          </>
+          </div>
         )}
       </div>
+
+      {/* Back to Top Button */}
+      {showBackToTop && (
+        <Button
+          onClick={scrollToTop}
+          className="fixed bottom-6 right-6 rounded-full w-12 h-12 shadow-lg z-50"
+          size="sm"
+        >
+          <ArrowUp className="w-4 h-4" />
+        </Button>
+      )}
     </div>
   );
 }
