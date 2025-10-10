@@ -9,14 +9,25 @@ import { Download, Share2, FileText } from "lucide-react";
 export default function PitchDeckPage() {
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
-
-  const handleDownloadPDF = () => {
-    const link = document.createElement('a');
-    link.href = '/pitch-deck/affinitybots-pitch-deck.pdf';
-    link.download = 'affinitybots-pitch-deck.pdf';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  
+  const handleDownloadPDF = async () => {
+    try {
+      const response = await fetch('/affinitybots-pitch-deck.pdf');
+      if (!response.ok) throw new Error('PDF not found');
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'affinitybots-pitch-deck.pdf';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      alert('Unable to download PDF. Please try again or contact support.');
+    }
   };
 
   const handleViewPDF = () => {
