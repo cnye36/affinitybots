@@ -30,7 +30,7 @@ function PitchDeck() {
                 <img 
                   src="/images/Four-bots.png" 
                   alt="Four AI Agent Bots" 
-                  className="relative w-full max-w-md mx-auto drop-shadow-2xl animate-float"
+                  className="relative w-full max-w-md mx-auto drop-shadow-2xl"
                 />
               </div>
             </div>
@@ -129,7 +129,7 @@ function PitchDeck() {
                     <span className="text-2xl">🔗</span>
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-white mb-1">50+ Integrations</h3>
+                    <h3 className="text-xl font-bold text-white mb-1">70+ Integrations</h3>
                     <p className="text-gray-400">Connect to Slack, Google, GitHub, and more via MCP</p>
                   </div>
                 </div>
@@ -233,7 +233,7 @@ function PitchDeck() {
                   <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
                     <span className="text-xl">🔗</span>
                   </div>
-                  <h3 className="text-xl font-bold text-blue-300">50+ Integrations</h3>
+                  <h3 className="text-xl font-bold text-blue-300">70+ Integrations</h3>
                 </div>
                 <p className="text-gray-300">Powered by MCP servers for limitless extensibility</p>
               </div>
@@ -255,9 +255,10 @@ function PitchDeck() {
               <h3 className="text-xl font-bold mb-3 text-gray-300">ChatGPT/Claude</h3>
               <div className="text-sm space-y-2 text-gray-400">
                 <div>✅ Great for conversations</div>
+                <div>✅ Integration</div>
                 <div>❌ No automation</div>
-                <div>❌ No integration</div>
                 <div>❌ No deployment options</div>
+                <div>❌ Confined to providers models</div>
               </div>
             </div>
 
@@ -265,9 +266,10 @@ function PitchDeck() {
               <h3 className="text-xl font-bold mb-3 text-gray-300">Zapier/Make</h3>
               <div className="text-sm space-y-2 text-gray-400">
                 <div>✅ Good integrations</div>
+                <div>✅ Some AI reasoning</div>
                 <div>❌ Rule-based only</div>
-                <div>❌ No AI reasoning</div>
                 <div>❌ Limited by triggers</div>
+                <div>❌ Too complex for most</div>
               </div>
             </div>
 
@@ -275,16 +277,17 @@ function PitchDeck() {
               <h3 className="text-xl font-bold mb-3 text-gray-300">Custom Development</h3>
               <div className="text-sm space-y-2 text-gray-400">
                 <div>✅ Fully customizable</div>
-                <div>❌ Requires developers</div>
-                <div>❌ Expensive ($50K+)</div>
-                <div>❌ Slow to build/iterate</div>
+                <div>✅ Any Provider/Model</div>
+                <div>❌ Takes much longer</div>
+                <div>❌ Expensive ($10K+)</div>
+                <div>❌ Requires coding experience</div>
               </div>
             </div>
           </div>
 
           <div className="bg-gradient-to-br from-purple-900/40 via-cyan-900/30 to-pink-900/40 p-8 rounded-xl border-2 border-cyan-500/50">
             <h3 className="text-2xl font-bold mb-4 text-center text-white">AffinityBots: The Best of All Worlds</h3>
-            <div className="grid grid-cols-4 gap-4 text-center">
+            <div className="grid grid-cols-5 gap-4 text-center">
               <div>
                 <div className="text-3xl mb-2">🤖</div>
                 <div className="text-sm font-bold text-cyan-300">AI-Powered</div>
@@ -293,7 +296,12 @@ function PitchDeck() {
               <div>
                 <div className="text-3xl mb-2">🔗</div>
                 <div className="text-sm font-bold text-purple-300">Integrated</div>
-                <div className="text-xs text-gray-400">50+ platforms</div>
+                <div className="text-xs text-gray-400">70+ platforms</div>
+              </div>
+              <div>
+                <div className="text-3xl mb-2">🤝</div>
+                <div className="text-sm font-bold text-blue-300">Model Agnostic</div>
+                <div className="text-xs text-gray-400">Integrate with any model</div>
               </div>
               <div>
                 <div className="text-3xl mb-2">⚡</div>
@@ -369,10 +377,14 @@ function PitchDeck() {
               <div className="absolute -top-2 -right-2 bg-purple-500 text-white px-2 py-1 rounded-full text-xs font-bold">
                 FOUNDER
               </div>
-              <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full mx-auto mb-3 flex items-center justify-center">
-                <span className="text-4xl">👨‍💻</span>
+              <div className="w-20 h-20 rounded-full mx-auto mb-3 overflow-hidden">
+                <img 
+                  src="/images/curtis-profile-image-1.png" 
+                  alt="Curtis - Founder" 
+                  className="w-full h-full object-cover"
+                />
               </div>
-              <h3 className="text-lg font-bold text-center text-white mb-1">You</h3>
+              <h3 className="text-lg font-bold text-center text-white mb-1">Curtis</h3>
               <p className="text-center text-purple-300 mb-3 text-sm">Solo Founder & Developer</p>
               <div className="space-y-1 text-xs text-gray-300">
                 <div>✓ Full-stack developer</div>
@@ -386,10 +398,14 @@ function PitchDeck() {
               <div className="absolute -top-2 -right-2 bg-cyan-500 text-white px-2 py-1 rounded-full text-xs font-bold">
                 AI DEV
               </div>
-              <div className="w-20 h-20 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-full mx-auto mb-3 flex items-center justify-center">
-                <span className="text-4xl">🤖</span>
+              <div className="w-20 h-20 rounded-full mx-auto mb-3 flex items-center justify-center">
+                <img 
+                  src="/integration-icons/Cursor-logo.png" 
+                  alt="Cursor AI" 
+                  className="w-full h-full object-contain"
+                />
               </div>
-              <h3 className="text-lg font-bold text-center text-white mb-1">Claude/Cursor</h3>
+              <h3 className="text-lg font-bold text-center text-white mb-1">Cursor</h3>
               <p className="text-center text-cyan-300 mb-3 text-sm">AI Development Partner</p>
               <div className="space-y-1 text-xs text-gray-300">
                 <div>✓ 10x development speed</div>
@@ -403,10 +419,14 @@ function PitchDeck() {
               <div className="absolute -top-2 -right-2 bg-pink-500 text-white px-2 py-1 rounded-full text-xs font-bold">
                 AI ANALYST
               </div>
-              <div className="w-20 h-20 bg-gradient-to-br from-pink-500 to-purple-500 rounded-full mx-auto mb-3 flex items-center justify-center">
-                <span className="text-4xl">📊</span>
+              <div className="w-20 h-20 rounded-full mx-auto mb-3 flex items-center justify-center">
+                <img 
+                  src="/integration-icons/Perplexity-logo-turquoise.png" 
+                  alt="Perplexity" 
+                  className="w-full h-full object-contain"
+                />
               </div>
-              <h3 className="text-lg font-bold text-center text-white mb-1">Research AI</h3>
+              <h3 className="text-lg font-bold text-center text-white mb-1">Perplexity</h3>
               <p className="text-center text-pink-300 mb-3 text-sm">Market Intelligence</p>
               <div className="space-y-1 text-xs text-gray-300">
                 <div>✓ Market research</div>
@@ -483,7 +503,7 @@ function PitchDeck() {
 
                 <div className="bg-gradient-to-br from-pink-900/30 to-slate-800 p-4 rounded-xl border border-pink-500/30">
                   <div className="text-2xl font-bold text-pink-400 mb-1">100+</div>
-                  <p className="text-gray-300 text-sm">Pre-built agent templates</p>
+                  <p className="text-gray-300 text-sm">Pre-built workflow templates</p>
                 </div>
 
                 <div className="bg-gradient-to-br from-green-900/30 to-slate-800 p-4 rounded-xl border border-green-500/30">
@@ -513,9 +533,9 @@ function PitchDeck() {
                 <div className="text-gray-400 text-xs mb-3">per month</div>
               </div>
               <div className="space-y-1 text-xs text-gray-300">
-                <div>✓ 5 AI agents</div>
-                <div>✓ Basic integrations</div>
-                <div>✓ 10K messages/month</div>
+                <div>✓ 10 AI agents</div>
+                <div>✓ 25 active workflows</div>
+                <div>✓ 10K Credits/day</div>
                 <div>✓ Community support</div>
               </div>
             </div>
@@ -532,8 +552,8 @@ function PitchDeck() {
               </div>
               <div className="space-y-1 text-xs text-gray-300">
                 <div>✓ Unlimited agents</div>
-                <div>✓ All integrations</div>
-                <div>✓ 100K messages/month</div>
+                <div>✓ Unlimited active workflows</div>
+                <div>✓ 100K Credits/day</div>
                 <div>✓ Priority support</div>
                 <div>✓ Advanced analytics</div>
               </div>
@@ -558,7 +578,7 @@ function PitchDeck() {
 
           <div className="bg-gradient-to-r from-cyan-900/30 to-purple-900/30 p-4 rounded-xl border border-cyan-500/30">
             <h3 className="text-lg font-bold mb-2 text-white">Additional Revenue Streams</h3>
-            <div className="grid grid-cols-2 gap-3 text-xs text-gray-300">
+            <div className="grid grid-cols-2 gap-3 text-sm text-gray-300">
               <div>💎 Premium agent templates</div>
               <div>🔌 Integration marketplace</div>
               <div>📊 Usage-based pricing</div>
@@ -716,17 +736,21 @@ function PitchDeck() {
             <div className="bg-gradient-to-br from-purple-900/40 to-slate-800 p-8 rounded-xl border border-purple-500/30">
               <h3 className="text-2xl font-bold text-purple-300 mb-3">Partner With Us</h3>
               <p className="text-gray-300 mb-4">We&apos;re seeking strategic partners and investment to accelerate our growth trajectory</p>
-              <button className="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg transition">
-                Schedule Meeting
-              </button>
+              <a href="mailto:support@affinitybots.com" className="block w-full">
+                <button className="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg transition">
+                  Schedule Meeting
+                </button>
+              </a>
             </div>
 
             <div className="bg-gradient-to-br from-cyan-900/40 to-slate-800 p-8 rounded-xl border border-cyan-500/30">
               <h3 className="text-2xl font-bold text-cyan-300 mb-3">Request Demo</h3>
               <p className="text-gray-300 mb-4">Early adopters receive priority access to new features and dedicated support</p>
-              <button className="w-full bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-3 px-6 rounded-lg transition">
-                Get Early Access
-              </button>
+              <a href="https://affinitybots.com/early-access" className="block w-full" target="_blank" rel="noopener noreferrer">
+                <button className="w-full bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-3 px-6 rounded-lg transition">
+                  Get Early Access
+                </button>
+              </a>
             </div>
           </div>
 

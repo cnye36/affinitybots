@@ -130,6 +130,14 @@ export function Footer() {
                   Privacy Policy
                 </Link>
               </li>
+                <li>
+                  <Link
+                    href="/pitch-deck"
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    Pitch Deck
+                  </Link>
+                </li>
             </ul>
           </div>
         </div>

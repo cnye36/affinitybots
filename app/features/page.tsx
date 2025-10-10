@@ -4,6 +4,8 @@ import { Footer } from "@/components/home/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { MotionDiv } from "@/components/motion/MotionDiv";
+import Image from "next/image";
 import { 
   Bot, 
   Zap, 
@@ -28,7 +30,7 @@ export default function FeaturesPage() {
     {
       icon: <Bot className="h-8 w-8 text-blue-500" />,
       title: "AI Agent Creation",
-      description: "Create fully functional AI agents in under 1 minute with our intuitive drag-and-drop interface. No coding required.",
+      description: "Create fully functional AI agents in under 1 minute with our intuitive 1-click agent creation. No coding required.",
       details: [
         "1-Click Agent Creation",
         "Pre-built agent templates",
@@ -50,10 +52,10 @@ export default function FeaturesPage() {
     {
       icon: <Workflow className="h-8 w-8 text-green-500" />,
       title: "Workflow Automation",
-      description: "Automate complex business processes with intelligent agents that can handle multi-step tasks.",
+      description: "Automate complex business processes with an easy to understand drag-and-drop interface.",
       details: [
         "Conditional logic flows",
-        "Integration with 100+ tools",
+        "Integration with 70+ tools",
         "Error handling and recovery",
         "Performance monitoring"
       ]
@@ -71,7 +73,7 @@ export default function FeaturesPage() {
     },
     {
       icon: <BarChart3 className="h-8 w-8 text-cyan-500" />,
-      title: "Analytics & Insights",
+      title: "Analytics & Insights (Coming Soon)",
       description: "Comprehensive analytics to track agent performance and optimize your automation strategy.",
       details: [
         "Real-time performance metrics",
@@ -155,32 +157,61 @@ export default function FeaturesPage() {
       
       {/* Hero Section */}
       <section className="pt-32 pb-16 px-4">
-        <div className="container mx-auto text-center">
-          <Badge variant="secondary" className="mb-6 text-sm">
-            <Sparkles className="h-4 w-4 mr-2" />
-            Powerful AI Features
-          </Badge>
-          <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
-            Everything You Need to Build
-            <br />
-            <span className="text-foreground">Intelligent Agents</span>
-          </h1>
-          <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto">
-            From simple chatbots to complex workflow automation, AffinityBots provides all the tools 
-            you need to create, deploy, and manage AI agents that actually work.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/early-access">
-              <Button size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
-                Start Building Free
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            </Link>
-            <Link href="/docs">
-              <Button size="lg" variant="outline">
-                View Documentation
-              </Button>
-            </Link>
+        <div className="container mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            {/* Content Section */}
+            <MotionDiv
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8 }}
+              className="text-center lg:text-left"
+            >
+              <Badge variant="secondary" className="mb-6 text-sm">
+                <Sparkles className="h-4 w-4 mr-2" />
+                Powerful AI Features
+              </Badge>
+              <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
+                Everything You Need to Build
+                <br />
+                <span className="text-foreground">Intelligent Agents</span>
+              </h1>
+              <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto lg:mx-0">
+                From simple chatbots to complex workflow automation, AffinityBots provides all the tools 
+                you need to create, deploy, and manage AI agents that actually work.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+                <Link href="/early-access">
+                  <Button size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+                    Start Building Free
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                </Link>
+                <Link href="/docs">
+                  <Button size="lg" variant="outline">
+                    View Documentation
+                  </Button>
+                </Link>
+              </div>
+            </MotionDiv>
+
+            {/* Image Section */}
+            <MotionDiv
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8, delay: 0.3 }}
+              className="relative"
+            >
+              <div className="relative h-[400px] md:h-[500px] lg:h-[600px] w-full">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-600/10 rounded-2xl blur-3xl"></div>
+                <Image
+                  src="/images/Two-bots-2.png"
+                  alt="AI Bot Assistants"
+                  fill
+                  className="object-contain relative z-10"
+                  priority
+                />
+              </div>
+            </MotionDiv>
           </div>
         </div>
       </section>
