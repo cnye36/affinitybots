@@ -384,7 +384,7 @@ function PitchDeck() {
                   className="w-full h-full object-cover"
                 />
               </div>
-              <h3 className="text-lg font-bold text-center text-white mb-1">Curtis</h3>
+              <h3 className="text-lg font-bold text-center text-white mb-1">Curtis Nye</h3>
               <p className="text-center text-purple-300 mb-3 text-sm">Solo Founder & Developer</p>
               <div className="space-y-1 text-xs text-gray-300">
                 <div>✓ Full-stack developer</div>
