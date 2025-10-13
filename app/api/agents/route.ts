@@ -127,24 +127,24 @@ export async function POST(request: Request) {
 
 export async function GET() {
   const requestId = Math.random().toString(36).substring(7);
-  console.log(`[${requestId}] GET /api/assistants - Request started`);
+  console.log(`[${requestId}] GET /api/agents - Request started`);
   
   try {
     // Add timeout protection for GET request
     const result = await Promise.race([
       (async () => {
-        console.log(`[${requestId}] GET /api/assistants - Authenticating user`);
+        console.log(`[${requestId}] GET /api/agents - Authenticating user`);
         const supabase = await createClient();
         const {
           data: { user },
         } = await supabase.auth.getUser();
 
         if (!user) {
-          console.log(`[${requestId}] GET /api/assistants - Unauthorized`);
+          console.log(`[${requestId}] GET /api/agents - Unauthorized`);
           return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        console.log(`[${requestId}] GET /api/assistants - User authenticated: ${user.id}`);
+        console.log(`[${requestId}] GET /api/agents - User authenticated: ${user.id}`);
 
         // Get user's assistants directly from LangGraph platform (which uses same database)
         const langgraphClient = new Client({
@@ -153,14 +153,14 @@ export async function GET() {
         });
 
         try {
-          console.log(`[${requestId}] GET /api/assistants - Fetching from LangGraph API`);
+          console.log(`[${requestId}] GET /api/agents - Fetching from LangGraph API`);
           // Get assistants owned by this user
           const assistants = await langgraphClient.assistants.search({
             metadata: { owner_id: user.id },
             limit: 100,
           });
 
-          console.log(`[${requestId}] GET /api/assistants - Successfully fetched ${assistants?.length || 0} assistants`);
+          console.log(`[${requestId}] GET /api/agents - Successfully fetched ${assistants?.length || 0} assistants`);
           return NextResponse.json({
             assistants: assistants || [],
           });
@@ -169,7 +169,7 @@ export async function GET() {
           
           // Fallback: direct database query if LangGraph API is temporarily unavailable
           try {
-            console.log(`[${requestId}] GET /api/assistants - Using fallback database query`);
+            console.log(`[${requestId}] GET /api/agents - Using fallback database query`);
             const { data, error: queryError } = await supabase
               .from("assistant")
               .select(`
@@ -187,7 +187,7 @@ export async function GET() {
               );
             }
 
-            console.log(`[${requestId}] GET /api/assistants - Fallback query successful: ${data?.length || 0} assistants`);
+            console.log(`[${requestId}] GET /api/agents - Fallback query successful: ${data?.length || 0} assistants`);
             return NextResponse.json({
               assistants: data || [],
             });
@@ -203,10 +203,10 @@ export async function GET() {
       createTimeoutPromise(30000) // 30 second timeout for GET request
     ]);
 
-    console.log(`[${requestId}] GET /api/assistants - Request completed successfully`);
+    console.log(`[${requestId}] GET /api/agents - Request completed successfully`);
     return result;
   } catch (error) {
-    console.error(`[${requestId}] Error in GET /api/assistants:`, error);
+    console.error(`[${requestId}] Error in GET /api/agents:`, error);
     
     // Check if it's a timeout error
     if (error instanceof Error && error.message.includes('timed out')) {

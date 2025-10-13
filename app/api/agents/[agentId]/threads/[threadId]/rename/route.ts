@@ -5,10 +5,10 @@ import { generateChatName } from "@/lib/generateTitle";
 
 export async function POST(
   request: NextRequest,
-  props: { params: Promise<{ assistantId: string; threadId: string }> }
+  props: { params: Promise<{ agentId: string; threadId: string }> }
 ) {
   try {
-    const { assistantId, threadId } = await props.params;
+    const { agentId: assistantId, threadId } = await props.params;
     const supabase = await createClient();
     const {
       data: { user },
@@ -62,7 +62,7 @@ export async function POST(
     return NextResponse.json({ success: true, title });
   } catch (error) {
     console.error(
-      "Error in POST /api/assistants/[assistantId]/threads/[threadId]/rename:",
+      "Error in POST /api/agents/[agentId]/threads/[threadId]/rename:",
       error
     );
     return NextResponse.json(
@@ -74,10 +74,10 @@ export async function POST(
 
 export async function PUT(
   request: NextRequest,
-  props: { params: Promise<{ assistantId: string; threadId: string }> }
+  props: { params: Promise<{ agentId: string; threadId: string }> }
 ) {
   try {
-    const { assistantId, threadId } = await props.params;
+    const { agentId: assistantId, threadId } = await props.params;
     const supabase = await createClient();
     const {
       data: { user },
@@ -124,7 +124,7 @@ export async function PUT(
       );
     }
   } catch (error) {
-    console.error("Error in PUT /api/assistants/[assistantId]/threads/[threadId]/rename:", error);
+    console.error("Error in PUT /api/agents/[agentId]/threads/[threadId]/rename:", error);
     return NextResponse.json(
       { error: "Failed to rename thread" },
       { status: 500 }

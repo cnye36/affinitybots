@@ -61,6 +61,7 @@ export function ToolSelector({
   enabledMCPServers = [],
   onMCPServersChange,
 }: ToolSelectorProps) {
+  console.log('ToolSelector received enabledMCPServers:', enabledMCPServers);
   const [smitheryServers, setSmitheryServers] = useState<SmitheryServer[]>([]);
   const [userServers, setUserServers] = useState<UserMCPServer[]>([]);
   const [userAddedServers, setUserAddedServers] = useState<UserAddedServer[]>([]);

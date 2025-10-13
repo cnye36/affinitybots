@@ -29,7 +29,7 @@ export default function ConfiguredToolsPage() {
         setError(null);
         const [serversRes, assistantsRes, userAddedRes] = await Promise.all([
           fetch('/api/user-mcp-servers'),
-          fetch('/api/assistants'),
+          fetch('/api/agents'),
           fetch('/api/user-added-servers'),
         ]);
 
@@ -177,7 +177,7 @@ export default function ConfiguredToolsPage() {
         try {
           const [serversRes, assistantsRes, userAddedRes] = await Promise.all([
             fetch('/api/user-mcp-servers'),
-            fetch('/api/assistants'),
+            fetch('/api/agents'),
             fetch('/api/user-added-servers'),
           ]);
           const [serversJson, assistantsJson, userAddedJson] = await Promise.all([

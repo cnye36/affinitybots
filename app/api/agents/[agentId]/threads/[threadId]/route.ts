@@ -4,10 +4,10 @@ import { Client } from "@langchain/langgraph-sdk";
 
 export async function DELETE(
   request: NextRequest,
-  props: { params: Promise<{ assistantId: string; threadId: string }> }
+	props: { params: Promise<{ agentId: string; threadId: string }> }
 ) {
   try {
-    const { assistantId, threadId } = await props.params;
+    const { agentId: assistantId, threadId } = await props.params;
     const supabase = await createClient();
     const {
       data: { user },
@@ -39,7 +39,7 @@ export async function DELETE(
       );
     }
   } catch (error) {
-    console.error("Error in DELETE /api/assistants/[assistantId]/threads/[threadId]:", error);
+    console.error("Error in DELETE /api/agents/[agentId]/threads/[threadId]:", error);
     return NextResponse.json(
       { error: "Failed to delete thread" },
       { status: 500 }

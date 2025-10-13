@@ -7,10 +7,12 @@ export const runtime = "nodejs";
 
 export async function POST(
   request: NextRequest,
-  props: { params: Promise<{ assistantId: string }> }
+  props: { params: Promise<{ agentId: string }> }
 ) {
   try {
-    const { assistantId } = await props.params;
+    const { agentId: assistantId } = await props.params;
+    console.log(`[CHAT API] Processing chat request for assistant: ${assistantId}`);
+    
     const supabase = await createClient();
     
     // Get the current user
@@ -19,10 +21,14 @@ export async function POST(
     } = await supabase.auth.getUser();
 
     if (!user) {
+      console.log(`[CHAT API] No user found - unauthorized`);
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    console.log(`[CHAT API] User authenticated: ${user.id}`);
+
     // Verify user has access to this assistant
+    console.log(`[CHAT API] Checking user_assistants table for user ${user.id} and assistant ${assistantId}`);
     const { data: userAssistant, error: userAssistantError } = await supabase
       .from("user_assistants")
       .select("assistant_id")
@@ -30,7 +36,10 @@ export async function POST(
       .eq("assistant_id", assistantId)
       .single();
 
+    console.log(`[CHAT API] user_assistants query result:`, { userAssistant, userAssistantError });
+
     if (userAssistantError || !userAssistant) {
+      console.log(`[CHAT API] user_assistants check failed, trying assistant table fallback`);
       // Fallback: check if assistant exists and user is owner
       const { data: assistant, error: assistantError } = await supabase
         .from("assistant")
@@ -39,7 +48,10 @@ export async function POST(
         .eq("metadata->>owner_id", user.id)
         .single();
 
+      console.log(`[CHAT API] assistant table query result:`, { assistant, assistantError });
+
       if (assistantError || !assistant) {
+        console.log(`[CHAT API] Both user_assistants and assistant checks failed - access denied`);
         return NextResponse.json(
           { error: "Assistant not found or access denied" },
           { status: 404 }
@@ -47,11 +59,11 @@ export async function POST(
       }
     }
 
-    const { threadId, messages } = await request.json();
+    const { threadId, messages, attachments } = await request.json();
 
-    if (!threadId || !messages) {
+    if (!messages || !Array.isArray(messages)) {
       return NextResponse.json(
-        { error: "threadId and messages are required" },
+        { error: "messages array is required" },
         { status: 400 }
       );
     }
@@ -62,12 +74,18 @@ export async function POST(
       apiKey: process.env.LANGSMITH_API_KEY!,
     });
 
+    // Convert messages to LangGraph format
+    const langgraphMessages = messages.map((msg: any) => ({
+      type: msg.role === "user" ? "human" : msg.role === "assistant" ? "ai" : "system",
+      content: msg.content,
+    }));
+
     // Stream the response with proper user context using SDK (yields {event, data})
     const runStream = await client.runs.stream(
-      threadId,
+      threadId || "temp", // Use temp thread if none provided
       assistantId,
       {
-        input: { messages },
+        input: { messages: langgraphMessages },
         metadata: {
           user_id: user.id,
           assistant_id: assistantId,
@@ -81,7 +99,7 @@ export async function POST(
           },
         },
         interruptBefore: ["tools"],
-        streamMode: "messages",
+        streamMode: ["messages"],
       }
     );
 
@@ -105,10 +123,17 @@ export async function POST(
     const stream = new ReadableStream({
       async start(controller) {
         try {
+          // Send a test event to verify streaming is working
+          controller.enqueue(encoder.encode(`event: test\n`));
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ message: "Stream started" })}\n\n`));
+          
           const allChunks: any[] = [];
           for await (const chunk of runStream as any) {
             const eventName = typeof chunk?.event === "string" ? chunk.event : "";
             let data = chunk?.data ?? chunk;
+            
+            // Debug: Log all events being sent
+            console.log(`[API STREAM] Event: ${eventName}`, data);
 
             if (eventName === "messages" && Array.isArray(data) && data.length > 0) {
               const [messageCandidate] = data as Array<Record<string, unknown>>;
@@ -156,6 +181,11 @@ export async function POST(
 
             if (eventName) controller.enqueue(encoder.encode(`event: ${eventName}\n`));
             controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+            
+            // Force flush to ensure immediate streaming
+            if (typeof controller.desiredSize === "number") {
+              await new Promise(resolve => setTimeout(resolve, 0));
+            }
 
 
             // Check for token usage in messages/complete event (where LangGraph provides final usage)

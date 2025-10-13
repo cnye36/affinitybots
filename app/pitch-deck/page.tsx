@@ -70,40 +70,41 @@ export default function PitchDeckPage() {
       <Header />
       <main className="flex-1 flex items-center justify-center px-4 py-8 pt-24 md:pt-28">
         <div className="w-full max-w-6xl">
-          {/* Action Buttons */}
-          <div className="flex flex-wrap gap-3 mb-6 justify-center sm:justify-end">
+          {/* Mobile View - Centered Buttons Only */}
+          <div className="md:hidden flex flex-col items-center justify-center min-h-[50vh] space-y-4">
+            <h1 className="text-3xl font-bold text-center mb-8 bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">
+              AffinityBots Pitch Deck
+            </h1>
             <button
               onClick={handleViewPDF}
-              className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg transition-colors text-sm font-medium"
+              className="flex items-center gap-3 px-8 py-4 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg transition-colors text-base font-medium w-64 justify-center shadow-lg"
             >
-              <FileText className="w-4 h-4" />
-              <span className="hidden sm:inline">View PDF</span>
-              <span className="sm:hidden">View</span>
+              <FileText className="w-5 h-5" />
+              View PDF
             </button>
             
             <button
               onClick={handleDownloadPDF}
-              className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors text-sm font-medium"
+              className="flex items-center gap-3 px-8 py-4 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors text-base font-medium w-64 justify-center shadow-lg"
             >
-              <Download className="w-4 h-4" />
-              <span className="hidden sm:inline">Download PDF</span>
-              <span className="sm:hidden">Download</span>
+              <Download className="w-5 h-5" />
+              Download PDF
             </button>
             
             <div className="relative">
               <button
                 onClick={handleShare}
-                className="flex items-center gap-2 px-4 py-2 bg-pink-600 hover:bg-pink-700 text-white rounded-lg transition-colors text-sm font-medium"
+                className="flex items-center gap-3 px-8 py-4 bg-pink-600 hover:bg-pink-700 text-white rounded-lg transition-colors text-base font-medium w-64 justify-center shadow-lg"
               >
-                <Share2 className="w-4 h-4" />
+                <Share2 className="w-5 h-5" />
                 Share
               </button>
               
               {showShareMenu && !navigator.share && (
-                <div className="absolute right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50">
+                <div className="absolute left-1/2 transform -translate-x-1/2 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50">
                   <button
                     onClick={copyToClipboard}
-                    className="w-full px-4 py-3 text-left text-sm text-white hover:bg-slate-700 rounded-lg transition-colors"
+                    className="w-full px-4 py-3 text-center text-sm text-white hover:bg-slate-700 rounded-lg transition-colors"
                   >
                     {copySuccess ? '✓ Copied!' : 'Copy Link'}
                   </button>
@@ -112,7 +113,49 @@ export default function PitchDeckPage() {
             </div>
           </div>
 
-          <PitchDeck />
+          {/* Desktop View - Buttons and Deck */}
+          <div className="hidden md:block">
+            <div className="flex flex-wrap gap-3 mb-6 justify-end">
+              <button
+                onClick={handleViewPDF}
+                className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg transition-colors text-sm font-medium"
+              >
+                <FileText className="w-4 h-4" />
+                View PDF
+              </button>
+              
+              <button
+                onClick={handleDownloadPDF}
+                className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors text-sm font-medium"
+              >
+                <Download className="w-4 h-4" />
+                Download PDF
+              </button>
+              
+              <div className="relative">
+                <button
+                  onClick={handleShare}
+                  className="flex items-center gap-2 px-4 py-2 bg-pink-600 hover:bg-pink-700 text-white rounded-lg transition-colors text-sm font-medium"
+                >
+                  <Share2 className="w-4 h-4" />
+                  Share
+                </button>
+                
+                {showShareMenu && !navigator.share && (
+                  <div className="absolute right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50">
+                    <button
+                      onClick={copyToClipboard}
+                      className="w-full px-4 py-3 text-left text-sm text-white hover:bg-slate-700 rounded-lg transition-colors"
+                    >
+                      {copySuccess ? '✓ Copied!' : 'Copy Link'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <PitchDeck />
+          </div>
         </div>
       </main>
       <Footer />

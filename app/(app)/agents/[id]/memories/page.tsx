@@ -33,7 +33,7 @@ export default function MemoriesPage() {
     async function fetchMemories() {
       try {
         setLoading(true);
-        const response = await fetch(`/api/assistants/${id}/memories`);
+        const response = await fetch(`/api/agents/${id}/memories`);
 
         if (!response.ok) {
           throw new Error(`Failed to fetch memories: ${response.statusText}`);

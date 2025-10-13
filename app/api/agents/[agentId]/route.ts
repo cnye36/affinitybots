@@ -37,10 +37,10 @@ function mergeMetadata(currentMetadata: any, updateMetadata: any) {
 
 export async function GET(
   request: NextRequest,
-  props: { params: Promise<{ assistantId: string }> }
+  props: { params: Promise<{ agentId: string }> }
 ) {
   try {
-    const { assistantId } = await props.params;
+    const { agentId: assistantId } = await props.params;
     const supabase = await createClient();
     const {
       data: { user },
@@ -63,7 +63,7 @@ export async function GET(
 
     return NextResponse.json(assistant);
   } catch (error) {
-    console.error("Error in GET /api/assistants/[assistantId]:", error);
+    console.error("Error in GET /api/agents/[agentId]:", error);
     return NextResponse.json(
       { error: "Failed to fetch assistant" },
       { status: 500 }
@@ -73,10 +73,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  props: { params: Promise<{ assistantId: string }> }
+  props: { params: Promise<{ agentId: string }> }
 ) {
   try {
-    const { assistantId } = await props.params;
+    const { agentId: assistantId } = await props.params;
     const supabase = await createClient();
     const {
       data: { user },
@@ -159,7 +159,7 @@ export async function PUT(
       return NextResponse.json(updatedAssistant);
     }
   } catch (error) {
-    console.error("Error in PUT /api/assistants/[assistantId]:", error);
+    console.error("Error in PUT /api/agents/[agentId]:", error);
     return NextResponse.json(
       { error: "Failed to update assistant" },
       { status: 500 }
@@ -169,10 +169,10 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  props: { params: Promise<{ assistantId: string }> }
+  props: { params: Promise<{ agentId: string }> }
 ) {
   try {
-    const { assistantId } = await props.params;
+    const { agentId: assistantId } = await props.params;
     const supabase = await createClient();
     const {
       data: { user },
@@ -231,7 +231,7 @@ export async function DELETE(
       });
     }
   } catch (error) {
-    console.error("Error in DELETE /api/assistants/[assistantId]:", error);
+    console.error("Error in DELETE /api/agents/[agentId]:", error);
     return NextResponse.json(
       { error: "Failed to delete assistant" },
       { status: 500 }

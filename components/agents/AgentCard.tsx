@@ -50,7 +50,7 @@ export function AgentCard({ assistant, onDelete }: AgentCardProps) {
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      const response = await fetch(`/api/assistants/${assistant.assistant_id}`, {
+      const response = await fetch(`/api/agents/${assistant.assistant_id}`, {
         method: "DELETE",
       });
 
@@ -58,7 +58,7 @@ export function AgentCard({ assistant, onDelete }: AgentCardProps) {
         throw new Error("Failed to delete agent");
       }
 
-      await mutate("/api/assistants");
+      await mutate("/api/agents");
       onDelete(assistant.assistant_id);
       setIsDeleteDialogOpen(false);
       toast({

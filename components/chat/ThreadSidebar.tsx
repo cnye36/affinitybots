@@ -56,7 +56,7 @@ const ThreadSidebar = forwardRef<ThreadSidebarRef, ThreadSidebarProps>(({
     try {
       const controller = new AbortController();
       timeout = setTimeout(() => controller.abort("timeout"), 15000);
-      const response = await fetch(`/api/assistants/${assistantId}/threads`, { signal: controller.signal });
+      const response = await fetch(`/api/agents/${assistantId}/threads`, { signal: controller.signal });
       if (!response.ok) {
         const errorText = await response.text();
         console.error("Thread fetch failed:", response.status, errorText);
@@ -146,7 +146,7 @@ const ThreadSidebar = forwardRef<ThreadSidebarRef, ThreadSidebarProps>(({
       const controller = new AbortController();
       timeout = setTimeout(() => controller.abort("timeout"), 10000);
       const response = await fetch(
-        `/api/assistants/${assistantId}/threads/${threadToRename}/rename`,
+        `/api/agents/${assistantId}/threads/${threadToRename}/rename`,
         {
           method: "PUT",
           headers: {
@@ -190,7 +190,7 @@ const ThreadSidebar = forwardRef<ThreadSidebarRef, ThreadSidebarProps>(({
       const controller = new AbortController();
       timeout = setTimeout(() => controller.abort("timeout"), 10000);
       const response = await fetch(
-        `/api/assistants/${assistantId}/threads/${threadId}`,
+        `/api/agents/${assistantId}/threads/${threadId}`,
         {
           method: "DELETE",
           signal: controller.signal,

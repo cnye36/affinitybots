@@ -58,7 +58,7 @@ export default function NewAgentPage() {
     setShowCreationDialog(true);
 
     try {
-      const response = await fetch("/api/assistants", {
+      const response = await fetch("/api/agents", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -116,7 +116,7 @@ export default function NewAgentPage() {
         // If any uploads succeeded, persist sources to assistant config now
         if (successfulFiles.length > 0) {
           try {
-            await fetch(`/api/assistants/${data.assistant.assistant_id}`, {
+            await fetch(`/api/agents/${data.assistant.assistant_id}`, {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({

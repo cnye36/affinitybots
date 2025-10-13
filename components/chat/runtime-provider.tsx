@@ -134,7 +134,7 @@ export const useAppLangGraphRuntime = (assistantId: string) => {
             const timeout = setTimeout(() => controller.abort("timeout"), 10000);
 
             return fetch(
-          `/api/assistants/${assistantId}/threads/${threadIdRef.current}/rename`,
+          `/api/agents/${assistantId}/threads/${threadIdRef.current}/rename`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },

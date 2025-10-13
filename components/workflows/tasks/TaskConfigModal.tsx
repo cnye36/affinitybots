@@ -92,7 +92,7 @@ export function TaskConfigModal({
 
     const loadAssistants = async () => {
       try {
-        const response = await fetch("/api/assistants");
+        const response = await fetch("/api/agents");
         if (!response.ok) throw new Error("Failed to load assistants");
         const data = await response.json();
         if (isMounted) {

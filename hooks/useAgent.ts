@@ -8,7 +8,7 @@ export function useAgent(
 ) {
   const shouldFetch = (options?.enabled ?? true) && Boolean(assistantId);
   const { data, error, mutate } = useSWR(
-    shouldFetch ? `/api/assistants/${assistantId}` : null,
+    shouldFetch ? `/api/agents/${assistantId}` : null,
     fetcher
   );
 

@@ -9,7 +9,7 @@ type AssistantsResponse = {
 export function useAgents(options?: { enabled?: boolean }) {
   const shouldFetch = options?.enabled ?? true;
   const { data, error, mutate } = useSWR<AssistantsResponse>(
-    shouldFetch ? '/api/assistants' : null,
+    shouldFetch ? '/api/agents' : null,
     fetcher
   );
 

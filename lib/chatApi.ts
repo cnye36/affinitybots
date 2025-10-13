@@ -24,7 +24,7 @@ export const createThread = async (assistantId?: string): Promise<{ thread_id: s
   if (assistantId) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort("timeout"), 15000);
-    const res = await fetch(`/api/assistants/${assistantId}/threads`, {
+    const res = await fetch(`/api/agents/${assistantId}/threads`, {
       method: "POST",
       signal: controller.signal,
     });
@@ -75,7 +75,7 @@ export const sendMessage = async (params: {
 
   // Call our authenticated server endpoint which streams Server-Sent Events.
   // Convert the SSE stream into an AsyncGenerator that Assistant UI expects.
-  const response = await fetch(`/api/assistants/${assistantId}/chat`, {
+  const response = await fetch(`/api/agents/${assistantId}/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ threadId: params.threadId, messages: params.messages }),

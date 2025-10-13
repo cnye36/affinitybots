@@ -4,10 +4,10 @@ import { Client } from "@langchain/langgraph-sdk";
 
 export async function GET(
   request: NextRequest,
-  props: { params: Promise<{ assistantId: string }> }
+  props: { params: Promise<{ agentId: string }> }
 ) {
   try {
-    const { assistantId } = await props.params;
+    const { agentId: assistantId } = await props.params;
     const supabase = await createClient();
     const {
       data: { user },
@@ -46,7 +46,7 @@ export async function GET(
       });
     }
   } catch (error) {
-    console.error("Error in GET /api/assistants/[assistantId]/threads:", error);
+    console.error("Error in GET /api/agents/[agentId]/threads:", error);
     return NextResponse.json(
       { error: "Failed to fetch threads" },
       { status: 500 }
@@ -56,10 +56,10 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  props: { params: Promise<{ assistantId: string }> }
+  props: { params: Promise<{ agentId: string }> }
 ) {
   try {
-    const { assistantId } = await props.params;
+    const { agentId: assistantId } = await props.params;
     const supabase = await createClient();
     const {
       data: { user },
@@ -99,7 +99,7 @@ export async function POST(
       });
     }
   } catch (error) {
-    console.error("Error in POST /api/assistants/[assistantId]/threads:", error);
+    console.error("Error in POST /api/agents/[agentId]/threads:", error);
     return NextResponse.json(
       { error: "Failed to create thread" },
       { status: 500 }

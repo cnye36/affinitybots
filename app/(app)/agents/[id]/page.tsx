@@ -34,6 +34,9 @@ export default async function AgentPage(props: AgentPageProps) {
         }
 
         // Check if user has access to this assistant
+        let assistant = null;
+        
+        // First try user_assistants table
         const { data: userAssistant, error: userAssistantError } = await supabase
           .from("user_assistants")
           .select("assistant_id")
@@ -41,27 +44,34 @@ export default async function AgentPage(props: AgentPageProps) {
           .eq("assistant_id", params.id)
           .single();
 
-        if (userAssistantError || !userAssistant) {
+        if (!userAssistantError && userAssistant) {
+          // User has access via user_assistants, fetch the assistant
+          const { data: assistantData, error: assistantError } = await supabase
+            .from("assistant")
+            .select("*")
+            .eq("assistant_id", params.id)
+            .single();
+
+          if (assistantError || !assistantData) {
+            throw new Error("Failed to fetch agent details");
+          }
+          assistant = assistantData;
+        } else {
           // Fallback: check if assistant exists and user is owner
-          const { data: assistant, error: assistantError } = await supabase
+          const { data: assistantData, error: assistantError } = await supabase
             .from("assistant")
             .select("*")
             .eq("assistant_id", params.id)
             .eq("metadata->>owner_id", user.id)
             .single();
 
-          if (assistantError || !assistant) {
+          if (assistantError || !assistantData) {
             throw new Error("Agent not found or access denied");
           }
+          assistant = assistantData;
         }
 
-        const { data: assistant, error: assistantError } = await supabase
-          .from("assistant")
-          .select("*")
-          .eq("assistant_id", params.id)
-          .single();
-
-        if (assistantError || !assistant) {
+        if (!assistant) {
           throw new Error("Failed to fetch agent details");
         }
 
