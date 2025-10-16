@@ -1,5 +1,4 @@
 import { Client, ThreadState } from "@langchain/langgraph-sdk";
-import { LangChainMessage } from "@assistant-ui/react-langgraph";
 
 const createClient = () => {
   const apiUrl = process.env["NEXT_PUBLIC_LANGGRAPH_API_URL"] || "/api/chat";
@@ -44,7 +43,7 @@ export const createThread = async (assistantId?: string): Promise<{ thread_id: s
 
 export const getThreadState = async (
   threadId: string,
-): Promise<ThreadState<{ messages: LangChainMessage[] }>> => {
+): Promise<ThreadState<{ messages: any[] }>> => {
   const client = createClient();
   return client.threads.getState(threadId);
 };
@@ -65,7 +64,7 @@ export const updateState = async (
 
 export const sendMessage = async (params: {
   threadId: string;
-  messages: LangChainMessage[];
+  messages: any[];
   assistantId?: string;
   command?: { resume: any };
 }) => {
