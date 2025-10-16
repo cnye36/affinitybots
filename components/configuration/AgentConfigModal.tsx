@@ -52,39 +52,24 @@ export function AgentConfigModal({
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   
-  // Sync enabled_mcp_servers with database when modal opens
+  // Reset config state when modal opens to ensure we always start with fresh data from the assistant prop
   React.useEffect(() => {
     if (open) {
-      syncMCPServersWithDatabase();
+      setConfig({
+        agent_id: assistant.assistant_id,
+        description: assistant.metadata.description,
+        agent_avatar: assistant.metadata.agent_avatar,
+        graph_id: assistant.graph_id,
+        created_at: assistant.created_at,
+        updated_at: assistant.updated_at,
+        name: assistant.name,
+        metadata: {
+          owner_id: String(assistant.metadata.owner_id),
+        } as AssistantMetadata,
+        config: (assistant.config.configurable as AssistantConfiguration),
+      });
     }
-  }, [open]);
-
-  const syncMCPServersWithDatabase = async () => {
-    try {
-      const response = await fetch('/api/user-mcp-servers');
-      const data = await response.json();
-      if (data.servers) {
-        const enabledServerNames = data.servers
-          .filter((s: any) => s.is_enabled)
-          .map((s: any) => s.qualified_name);
-        
-        // Update local config with current database state
-        setConfig((prev) => ({
-          ...prev,
-          config: {
-            ...prev.config,
-            enabled_mcp_servers: enabledServerNames,
-          },
-        }));
-      }
-    } catch (err) {
-      console.error('Failed to sync MCP servers with database:', err);
-      // Don't show error to user, just log it
-    }
-  };
-  
-
-
+  }, [open, assistant]);
 
   const handleChange = (field: string, value: unknown) => {
     setConfig((prev) => ({
@@ -129,7 +114,7 @@ export function AgentConfigModal({
         configurable: config.config,
       });
 
-      const response = await fetch(`/api/assistants/${assistant.assistant_id}`, {
+      const response = await fetch(`/api/agents/${assistant.assistant_id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -151,8 +136,8 @@ export function AgentConfigModal({
       const updatedAgent = await response.json();
       console.log("✅ Agent updated successfully:", updatedAgent);
       
-      await mutate(`/api/assistants/${assistant.assistant_id}`, updatedAgent, false);
-      await mutate("/api/assistants");
+      await mutate(`/api/agents/${assistant.assistant_id}`, updatedAgent, false);
+      await mutate("/api/agents");
       onOpenChange(false);
       router.refresh();
     } catch (err) {

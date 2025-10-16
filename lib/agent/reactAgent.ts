@@ -118,6 +118,7 @@ async function writeMemory(state: AgentState, config: LangGraphRunnableConfig) {
     // Use the LLM to extract memories from the message
     const memoryExtractor = new ChatOpenAI({
       model: "gpt-5-mini",
+      streaming: false, // Memory extraction doesn't need streaming
     });
 
     const extractionPrompt = [
@@ -483,6 +484,7 @@ async function callModel(
     // Build params conditionally: GPT-5 rejects temperature and expects reasoningEffort
     const universalParams: Record<string, any> = {
       modelProvider: modelProvider as any,
+      streaming: true, // Enable token-by-token streaming
     };
     if (isGpt5) {
       universalParams.reasoningEffort = configurable.reasoningEffort ?? "medium";
@@ -499,6 +501,7 @@ async function callModel(
 
     const openAiParams: Record<string, any> = {
       model: targetModel,
+      streaming: true, // Enable token-by-token streaming
     };
     if (isGpt5) {
       openAiParams.reasoningEffort = configurable.reasoningEffort ?? "medium";

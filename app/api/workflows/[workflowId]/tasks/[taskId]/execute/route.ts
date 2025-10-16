@@ -135,7 +135,7 @@ export async function POST(
                   },
                 },
                 ...(shouldInterruptBeforeTools ? { interruptBefore: ["tools"] } : {}),
-                streamMode: "messages" as const,
+                streamMode: ["messages" as const],
               };
 
               const flattenMessageText = (payload: unknown): string => {

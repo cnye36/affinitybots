@@ -56,7 +56,7 @@ pnpm run schedule:worker     # Start production schedule worker
 
 **Key Domain Areas**:
 
-1. **Assistants** (`/lib/agent/`, `/app/api/assistants/`)
+1. **Assistants** (`/lib/agent/`, `/app/api/agents/`)
    - AI agents powered by Langgraph with configurable LLMs
    - Support for multiple models (GPT-4/5, Claude Opus/Sonnet, Gemini)
    - Memory system for persistent context across conversations
@@ -95,7 +95,7 @@ pnpm run schedule:worker     # Start production schedule worker
 ### Important Data Flow Patterns
 
 **Assistant Execution Flow**:
-1. User message → `/app/api/assistants/[assistantId]/chat/route.ts`
+1. User message → `/app/api/agents/[agentId]/chat/route.ts`
 2. Load assistant config from Supabase (includes MCP servers, memory settings, knowledge base)
 3. Create MCP clients via `mcpClientFactory` (handles OAuth sessions)
 4. Initialize Langgraph agent in `lib/agent/reactAgent.ts`

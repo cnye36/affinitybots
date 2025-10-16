@@ -292,13 +292,15 @@ export function ToolSelector({
                 </p>
               </div>
               
-              {/* Toggle Switch */}
-              <div className="flex items-center gap-2">
-                <Switch
-                  checked={enabled}
-                  onCheckedChange={() => handleToggleTool(server.qualifiedName)}
-                />
-              </div>
+              {/* Toggle Switch - only show for configured tools */}
+              {configured && (
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={enabled}
+                    onCheckedChange={() => handleToggleTool(server.qualifiedName)}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Status badges */}
@@ -337,27 +339,18 @@ export function ToolSelector({
               </Badge>
             </div>
 
-            {/* Warning message for enabled but not configured servers */}
-            {enabled && !configured && (
-              <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
-                <p className="text-yellow-800">
-                  ⚠️ This server is enabled but not configured. Configure it to use its tools.
-                </p>
-              </div>
-            )}
-
-            {/* Configure button */}
+            {/* Configure button for unconfigured servers */}
             {!configured && (
               <div className="mt-3">
                 <Button 
                   size="sm" 
-                  variant="outline" 
+                  variant="default" 
                   className="text-xs"
                   asChild
                 >
                   <Link href={`/tools/${encodeURIComponent(server.qualifiedName)}`}>
                     <Settings className="w-3 h-3 mr-1" />
-                    {requiresConfig ? 'Configure' : 'Connect'}
+                    Connect
                   </Link>
                 </Button>
               </div>

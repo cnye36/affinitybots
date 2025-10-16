@@ -105,7 +105,7 @@ export async function POST(
             assistant_id: workflow.assistant_id,
           },
         },
-        streamMode: ["values", "messages"],
+        streamMode: ["messages"],
       }
     );
 

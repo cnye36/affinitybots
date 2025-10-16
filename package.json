@@ -22,12 +22,6 @@
   "type": "module",
   "dependencies": {
     "@ai-sdk/openai": "^2.0.4",
-    "@assistant-ui/react": "^0.10.36",
-    "@assistant-ui/react-ai-sdk": "^0.11.1",
-    "@assistant-ui/react-langgraph": "^0.5.11",
-    "@assistant-ui/react-markdown": "^0.10.8",
-    "@assistant-ui/react-syntax-highlighter": "^0.10.9",
-    "@assistant-ui/react-ui": "^0.1.8",
     "@edge-runtime/cookies": "^6.0.0",
     "@hubspot/ui-extensions": "^0.10.1",
     "@langchain/anthropic": "^0.3.26",
@@ -66,6 +60,7 @@
     "@tanstack/react-query": "^5.63.0",
     "@types/node-fetch": "^2.6.12",
     "@types/uuid": "^10.0.0",
+    "@useparagon/connect": "^2.1.2",
     "@vercel/analytics": "^1.5.0",
     "ai": "^5.0.5",
     "autoprefixer": "^10.4.20",
@@ -150,7 +145,7 @@
     "tsx": "^4.20.6",
     "typescript": "^5.7.3"
   },
-  "packageManager": "pnpm@10.12.4",
+  "packageManager": "pnpm@10.18.3+sha512.bbd16e6d7286fd7e01f6b3c0b3c932cda2965c06a908328f74663f10a9aea51f1129eea615134bf992831b009eabe167ecb7008b597f40ff9bc75946aadfb08d",
   "pnpm": {
     "peerDependencyRules": {
       "allowedVersions": {

@@ -67,18 +67,22 @@ export const sendMessage = async (params: {
   threadId: string;
   messages: LangChainMessage[];
   assistantId?: string;
+  command?: { resume: any };
 }) => {
   const assistantId = params.assistantId;
   if (!assistantId) {
     throw new Error("assistantId is required for sending messages");
   }
 
-  // Call our authenticated server endpoint which streams Server-Sent Events.
-  // Convert the SSE stream into an AsyncGenerator that Assistant UI expects.
+  // Call our authenticated server endpoint which streams newline-delimited JSON
   const response = await fetch(`/api/agents/${assistantId}/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ threadId: params.threadId, messages: params.messages }),
+    body: JSON.stringify({ 
+      threadId: params.threadId, 
+      messages: params.messages,
+      command: params.command,
+    }),
   });
 
   if (!response.ok || !response.body) {
@@ -89,7 +93,7 @@ export const sendMessage = async (params: {
   const textDecoder = new TextDecoder();
   const reader = response.body.getReader();
 
-  async function* sseToEvents() {
+  async function* streamEvents() {
     let buffer = "";
     try {
       while (true) {
@@ -97,61 +101,28 @@ export const sendMessage = async (params: {
         if (done) break;
         buffer += textDecoder.decode(value, { stream: true });
 
-        // Split on SSE message boundary (blank line) and keep the tail in buffer
-        const parts = buffer.split("\n\n");
-        buffer = parts.pop() ?? "";
+        // Split on newline and process complete JSON objects
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? ""; // Keep incomplete line in buffer
 
-        for (const part of parts) {
-          // Parse lines like: "event: messages/token" and "data: {...}"
-          const lines = part.split("\n");
-          let eventName = "";
-          const dataLines: string[] = [];
-          for (const line of lines) {
-            if (line.startsWith("event:")) {
-              eventName = line.slice(6).trim();
-            } else if (line.startsWith("data:")) {
-              dataLines.push(line.slice(5).trim());
-            }
-          }
-
-          const dataRaw = dataLines.join("\n");
-          let data: unknown = dataRaw;
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          
           try {
-            data = dataRaw ? JSON.parse(dataRaw) : null;
-          } catch {
-            // non-JSON payloads are unlikely but pass through raw string
-          }
-
-          // Yield the exact shape produced by the LangGraph SDK stream
-          // { event: string, data: any }
-          yield { event: eventName, data } as any;
-
-          // When server emits a rate-limit event, trigger a client-side refresh notification
-          if (eventName === "rate-limit") {
-            if (typeof window !== "undefined") {
-              window.dispatchEvent(new Event("rate-limit:updated"));
-            }
+            const parsed = JSON.parse(line);
+            yield parsed;
+          } catch (error) {
+            console.warn("Failed to parse event line:", line, error);
           }
         }
       }
-      // Flush any remaining buffered message (best effort)
-      if (buffer.trim().length > 0) {
-        const lines = buffer.split("\n");
-        let eventName = "";
-        const dataLines: string[] = [];
-        for (const line of lines) {
-          if (line.startsWith("event:")) {
-            eventName = line.slice(6).trim();
-          } else if (line.startsWith("data:")) {
-            dataLines.push(line.slice(5).trim());
-          }
-        }
-        const dataRaw = dataLines.join("\n");
-        let data: unknown = dataRaw;
+      
+      // Process any remaining data in buffer
+      if (buffer.trim()) {
         try {
-          data = dataRaw ? JSON.parse(dataRaw) : null;
+          const parsed = JSON.parse(buffer);
+          yield parsed;
         } catch {}
-        yield { event: eventName, data } as any;
       }
     } finally {
       try {
@@ -160,5 +131,5 @@ export const sendMessage = async (params: {
     }
   }
 
-  return sseToEvents();
+  return streamEvents();
 };
