@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { useState, type FC } from "react";
 import { CopyIcon, CheckIcon } from "lucide-react";
-import { TooltipIconButton } from "@/components/assistant-ui/tooltip-icon-button";
+import { TooltipIconButton } from "./TooltipIconButton";
 import { AttachmentUI } from "./attachments/AttachmentUI";
 import type { Message as MessageType } from "@/hooks/useLangGraphChat";
 import ReactMarkdown from "react-markdown";
@@ -91,41 +91,38 @@ export const AssistantMessage: FC<MessageProps> = ({ message, isThinking = false
   const ThinkingDots = () => {
     const dotVariants = {
       animate: {
-        y: ["0%", "-50%", "0%"],
+        y: ["0%", "-100%", "0%"],
+        scale: [1, 1.2, 1],
         transition: {
-          duration: 0.8,
-          ease: "easeInOut",
+          duration: 0.6,
+          ease: "easeOut",
           repeat: Infinity,
         },
       },
     };
 
     return (
-      <div className="flex items-center gap-1">
-        <span className="text-muted-foreground">Thinking</span>
-        <motion.span
-          variants={dotVariants}
-          animate="animate"
-          className="inline-block text-muted-foreground"
-        >
-          .
-        </motion.span>
-        <motion.span
-          variants={dotVariants}
-          animate="animate"
-          transition={{ ...dotVariants.animate.transition, delay: 0.2 }}
-          className="inline-block text-muted-foreground"
-        >
-          .
-        </motion.span>
-        <motion.span
-          variants={dotVariants}
-          animate="animate"
-          transition={{ ...dotVariants.animate.transition, delay: 0.4 }}
-          className="inline-block text-muted-foreground"
-        >
-          .
-        </motion.span>
+      <div className="flex items-center gap-2">
+        <span className="text-muted-foreground font-medium">Thinking</span>
+        <div className="flex items-center gap-1">
+          <motion.div
+            variants={dotVariants}
+            animate="animate"
+            className="w-2 h-2 bg-blue-500 rounded-full"
+          />
+          <motion.div
+            variants={dotVariants}
+            animate="animate"
+            transition={{ ...dotVariants.animate.transition, delay: 0.2 }}
+            className="w-2 h-2 bg-blue-500 rounded-full"
+          />
+          <motion.div
+            variants={dotVariants}
+            animate="animate"
+            transition={{ ...dotVariants.animate.transition, delay: 0.4 }}
+            className="w-2 h-2 bg-blue-500 rounded-full"
+          />
+        </div>
       </div>
     );
   };
@@ -139,7 +136,12 @@ export const AssistantMessage: FC<MessageProps> = ({ message, isThinking = false
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="ring-border bg-background col-start-1 row-start-1 flex size-8 shrink-0 items-center justify-center rounded-full ring-1">
+      <div className={cn(
+        "bg-background col-start-1 row-start-1 flex size-8 shrink-0 items-center justify-center rounded-full ring-1",
+        isThinking 
+          ? "ring-blue-500 bg-blue-50 dark:bg-blue-950" 
+          : "ring-border"
+      )}>
         <StarIcon size={14} />
       </div>
 

@@ -2,7 +2,7 @@
 
 import { type FC, useRef } from "react";
 import { PaperclipIcon } from "lucide-react";
-import { TooltipIconButton } from "@/components/assistant-ui/tooltip-icon-button";
+import { TooltipIconButton } from "../TooltipIconButton";
 import { AttachmentUI } from "./AttachmentUI";
 import { Attachment } from "./types";
 

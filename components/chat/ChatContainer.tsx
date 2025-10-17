@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { TooltipProvider } from "@radix-ui/react-tooltip";
 import { Assistant } from "@/types/assistant";
 import { useLangGraphChat } from "@/hooks/useLangGraphChat";
-import ThreadSidebar from "@/components/chat/ThreadSidebar";
+import ThreadSidebar, { ThreadSidebarRef } from "@/components/chat/ThreadSidebar";
 import { Thread } from "./Thread";
 
 interface ChatContainerProps {
@@ -16,6 +16,7 @@ interface ChatContainerProps {
 
 export default function ChatContainer({ assistant }: ChatContainerProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const sidebarRef = useRef<ThreadSidebarRef>(null);
   
   const {
     threadId,
@@ -30,6 +31,10 @@ export default function ChatContainer({ assistant }: ChatContainerProps) {
     assistantId: assistant.assistant_id,
     onThreadCreated: (newThreadId) => {
       console.log("Thread created:", newThreadId);
+      // Force refresh the sidebar when a new thread is created
+      setTimeout(() => {
+        sidebarRef.current?.refreshThreads();
+      }, 200);
     },
   });
 
@@ -55,6 +60,7 @@ export default function ChatContainer({ assistant }: ChatContainerProps) {
         >
           <div className="h-full w-64 sm:w-80 lg:w-64">
             <ThreadSidebar
+              ref={sidebarRef}
               assistantId={assistant.assistant_id}
               currentThreadId={threadId || undefined}
               onThreadSelect={handleThreadSelect}

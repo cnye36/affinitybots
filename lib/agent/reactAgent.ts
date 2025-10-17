@@ -501,7 +501,7 @@ async function callModel(
 
     const openAiParams: Record<string, any> = {
       model: targetModel,
-      streaming: true, // Enable token-by-token streaming
+      streaming: true,
     };
     if (isGpt5) {
       openAiParams.reasoningEffort = configurable.reasoningEffort ?? "medium";

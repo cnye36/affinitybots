@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type FC } from "react";
 import { ArrowDownIcon } from "lucide-react";
-import { TooltipIconButton } from "@/components/assistant-ui/tooltip-icon-button";
+import { TooltipIconButton } from "./TooltipIconButton";
 import { Welcome } from "./Welcome";
 import { UserMessage, AssistantMessage } from "./Message";
 import { Composer } from "./Composer";
@@ -96,6 +96,19 @@ export const Thread: FC<ThreadProps> = ({
                 />
               );
             })}
+            
+            {/* Show thinking indicator when waiting for assistant response */}
+            {isRunning && messages.length > 0 && messages[messages.length - 1].role === "user" && (
+              <AssistantMessage 
+                message={{ 
+                  id: "thinking", 
+                  role: "assistant", 
+                  content: "",
+                  createdAt: new Date()
+                }} 
+                isThinking={true}
+              />
+            )}
             <div className="min-h-6 min-w-6 shrink-0" />
           </>
         )}
@@ -104,10 +117,10 @@ export const Thread: FC<ThreadProps> = ({
           <TooltipIconButton
             tooltip="Scroll to bottom"
             variant="outline"
-            className="dark:bg-background dark:hover:bg-accent absolute bottom-4 z-10 self-center rounded-full p-4"
+            className="dark:bg-background dark:hover:bg-accent absolute bottom-24 z-10 left-1/2 transform -translate-x-1/2 rounded-full p-3 shadow-lg"
             onClick={scrollToBottom}
           >
-            <ArrowDownIcon />
+            <ArrowDownIcon className="h-4 w-4" />
           </TooltipIconButton>
         )}
       </div>

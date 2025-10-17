@@ -33,6 +33,7 @@ export async function GET(
         },
       });
 
+      console.log(`Found ${threads?.length || 0} threads for assistant ${assistantId}`);
       return NextResponse.json({
         threads: threads || [],
       });

@@ -1,5 +1,5 @@
 import { createClient } from "@/supabase/server";
-import ChatContainer from "@/components/chat-v2/ChatContainer";
+import ChatContainer from "@/components/chat/ChatContainer";
 import { AgentPageHeader } from "@/components/agents/AgentPageHeader";
 import { redirect } from "next/navigation";
 

@@ -15,9 +15,10 @@ import {
   DialogPortal,
 } from "@/components/ui/dialog";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { TooltipIconButton } from "@/components/assistant-ui/tooltip-icon-button";
+
 import { DialogContent as DialogPrimitiveContent } from "@radix-ui/react-dialog";
 import { Attachment } from "./types";
+import { TooltipIconButton } from "../TooltipIconButton";
 
 const useFileSrc = (file: File | undefined) => {
   const [src, setSrc] = useState<string | undefined>(undefined);

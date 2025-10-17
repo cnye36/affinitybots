@@ -50,7 +50,7 @@ const ThreadSidebar = forwardRef<ThreadSidebarRef, ThreadSidebarProps>(({
   const [threadToRename, setThreadToRename] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState("");
 
-  const fetchThreads = useCallback(async () => {
+  const fetchThreads = useCallback(async (retryCount = 0) => {
     setIsLoading(true);
     let timeout: any;
     try {
@@ -71,9 +71,26 @@ const ThreadSidebar = forwardRef<ThreadSidebarRef, ThreadSidebarProps>(({
               thread.metadata?.assistant_id === assistantId
           )
         : [];
+      
+      console.log(`ThreadSidebar: Fetched ${validThreads.length} threads (attempt ${retryCount + 1})`);
       setThreads(validThreads);
+      
+      // If we got threads, clear any previous errors
+      if (validThreads.length > 0) {
+        setError(null);
+      }
     } catch (error) {
       console.error("Error fetching threads:", error);
+      
+      // Retry logic for network errors or empty results
+      if (retryCount < 2 && (error instanceof Error && error.message.includes("Failed to fetch"))) {
+        console.log(`Retrying thread fetch in ${1000 * (retryCount + 1)}ms...`);
+        setTimeout(() => {
+          fetchThreads(retryCount + 1);
+        }, 1000 * (retryCount + 1));
+        return;
+      }
+      
       setError(error instanceof Error ? error.message : "Failed to fetch threads");
       // Keep existing threads if available, don't clear them on error
       // This prevents the UI from showing "No chats yet" when there's a network error
@@ -102,7 +119,22 @@ const ThreadSidebar = forwardRef<ThreadSidebarRef, ThreadSidebarProps>(({
 
   // Listen for global refresh events triggered after auto-title
   useEffect(() => {
-    const handler = () => fetchThreads();
+    const handler = () => {
+      console.log("ThreadSidebar: Received threads:refresh event");
+      // Immediate refresh
+      fetchThreads();
+      
+      // Additional refreshes to handle eventual consistency
+      setTimeout(() => {
+        console.log("ThreadSidebar: Delayed refresh (1s)");
+        fetchThreads();
+      }, 1000);
+      
+      setTimeout(() => {
+        console.log("ThreadSidebar: Delayed refresh (3s)");
+        fetchThreads();
+      }, 3000);
+    };
     if (typeof window !== "undefined") {
       window.addEventListener("threads:refresh", handler as EventListener);
     }
@@ -258,6 +290,24 @@ const ThreadSidebar = forwardRef<ThreadSidebarRef, ThreadSidebarProps>(({
           </div>
         ) : (
           <div className="space-y-0.5">
+            {/* Show current thread even if not in threads list yet */}
+            {currentThreadId && !threads.find(t => t.thread_id === currentThreadId) && (
+              <div
+                key={`thread-${currentThreadId}`}
+                className="group flex items-center w-full rounded-lg transition-colors bg-accent"
+              >
+                <button
+                  onClick={() => onThreadSelect(currentThreadId)}
+                  className="flex-1 px-2 py-1.5 text-left min-w-0"
+                >
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <MessageSquare className="h-3.5 w-3.5 flex-shrink-0" />
+                    <span className="truncate text-sm">New Chat</span>
+                  </div>
+                </button>
+              </div>
+            )}
+            
             {threads.map((thread) => (
               <div
                 key={`thread-${thread.thread_id}`}

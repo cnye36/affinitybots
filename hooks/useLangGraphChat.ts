@@ -62,6 +62,10 @@ export function useLangGraphChat({ assistantId, onThreadCreated }: UseLangGraphC
       setThreadId(json.thread_id);
       hasAutoTitledRef.current = false;
       onThreadCreated?.(json.thread_id);
+
+      // Sidebar refresh will be triggered after title generation completes
+      // No need to refresh immediately since thread won't have a proper title yet
+
       return json.thread_id;
     } catch (err) {
       console.error("Failed to create thread:", err);
@@ -121,11 +125,23 @@ export function useLangGraphChat({ assistantId, onThreadCreated }: UseLangGraphC
     await loadThread(targetThreadId);
   }, [loadThread]);
 
-  // Auto-title logic (fire-and-forget)
-  const triggerAutoTitle = useCallback((firstUserText: string) => {
-    if (!threadId || hasAutoTitledRef.current) return;
+  // Auto-title logic with retry mechanism
+  const triggerAutoTitle = useCallback((firstUserText: string, targetThreadId?: string, retryCount = 0) => {
+    const effectiveThreadId = targetThreadId || threadId;
+    console.log("triggerAutoTitle called:", { effectiveThreadId, hasAutoTitled: hasAutoTitledRef.current, retryCount, firstUserText: firstUserText?.slice(0, 50) });
+
+    if (!effectiveThreadId) {
+      console.log("No threadId, skipping title generation");
+      return;
+    }
     
-    hasAutoTitledRef.current = true;
+    if (hasAutoTitledRef.current) {
+      console.log("Already titled, skipping title generation");
+      return;
+    }
+    
+    const maxRetries = 2;
+    const retryDelay = Math.min(1000 * Math.pow(2, retryCount), 5000); // Exponential backoff, max 5s
     
     try {
       // Abort any previous rename request
@@ -137,22 +153,46 @@ export function useLangGraphChat({ assistantId, onThreadCreated }: UseLangGraphC
       renameAbortRef.current = controller;
       const timeout = setTimeout(() => controller.abort("timeout"), 10000);
 
-      fetch(`/api/agents/${assistantId}/threads/${threadId}/rename`, {
+      // Set the flag only after starting the request
+      hasAutoTitledRef.current = true;
+      console.log("Starting title generation request...");
+
+      fetch(`/api/agents/${assistantId}/threads/${effectiveThreadId}/rename`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ conversation: firstUserText.slice(0, 160) }),
         signal: controller.signal,
       })
-        .then(() => {
+        .then((response) => {
+          console.log("Title generation response:", response.status, response.ok);
+          if (!response.ok) {
+            throw new Error(`Title generation failed: ${response.status}`);
+          }
+          console.log("Title generation successful!");
           if (typeof window !== "undefined") {
+            // Single refresh after title generation completes
+            // Delay slightly to ensure LangGraph has persisted the update
             setTimeout(() => {
+              console.log("Dispatching threads:refresh event (after title generation)");
               window.dispatchEvent(new CustomEvent("threads:refresh"));
-            }, 400);
+            }, 500);
           }
         })
         .catch((err) => {
           if (err?.name !== "AbortError") {
             console.error("Auto-title generation failed:", err);
+            
+            // Retry logic
+            if (retryCount < maxRetries) {
+              console.log(`Retrying title generation in ${retryDelay}ms (attempt ${retryCount + 1}/${maxRetries + 1})`);
+              hasAutoTitledRef.current = false;
+              setTimeout(() => {
+                triggerAutoTitle(firstUserText, effectiveThreadId, retryCount + 1);
+              }, retryDelay);
+            } else {
+              console.error("Auto-title generation failed after all retries");
+              hasAutoTitledRef.current = false;
+            }
           }
         })
         .finally(() => {
@@ -163,6 +203,8 @@ export function useLangGraphChat({ assistantId, onThreadCreated }: UseLangGraphC
         });
     } catch (err) {
       console.error("Auto-title scheduling failed:", err);
+      // Reset the flag on failure to allow retry
+      hasAutoTitledRef.current = false;
     }
   }, [assistantId, threadId]);
 
@@ -204,12 +246,34 @@ export function useLangGraphChat({ assistantId, onThreadCreated }: UseLangGraphC
         createdAt: new Date(),
       };
       
-      setMessages((prev) => [...prev, userMessage]);
-      
-      // Trigger auto-title for first message
+      setMessages((prev) => {
+        const newMessages = [...prev, userMessage];
+
+        // Trigger auto-title for first message in thread (regardless of when thread was created)
+        if (prev.length === 0) {
+          console.log("First message detected, triggering auto-title");
+          // Trigger title generation after a short delay to ensure thread is set
+          setTimeout(() => {
+            triggerAutoTitle(content, currentThreadId);
+          }, 100);
+        }
+
+        return newMessages;
+      });
+
+      // Set up a fallback check to ensure title is generated for first message
       if (messages.length === 0) {
-        triggerAutoTitle(content);
+        setTimeout(() => {
+          // Check if thread still needs a title after 5 seconds
+          if (currentThreadId && !hasAutoTitledRef.current) {
+            console.log("Fallback: Retrying title generation for thread", currentThreadId);
+            triggerAutoTitle(content, currentThreadId);
+          }
+        }, 5000);
       }
+
+      // Sidebar refresh is handled by title generation success
+      // No need to refresh here as title generation will trigger the refresh
       
       // Prepare streaming request
       const abortController = new AbortController();
@@ -391,6 +455,7 @@ export function useLangGraphChat({ assistantId, onThreadCreated }: UseLangGraphC
     cancel,
     switchToNewThread,
     switchToThread,
+    triggerAutoTitle, // Expose for manual triggering if needed
   };
 }
 
