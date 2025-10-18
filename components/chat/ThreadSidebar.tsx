@@ -20,6 +20,16 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Thread } from "@langchain/langgraph-sdk";
@@ -48,6 +58,7 @@ const ThreadSidebar = forwardRef<ThreadSidebarRef, ThreadSidebarProps>(({
   const [error, setError] = useState<string | null>(null);
   const [isRenaming, setIsRenaming] = useState(false);
   const [threadToRename, setThreadToRename] = useState<string | null>(null);
+  const [threadToDelete, setThreadToDelete] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState("");
 
   const fetchThreads = useCallback(async (retryCount = 0) => {
@@ -214,15 +225,19 @@ const ThreadSidebar = forwardRef<ThreadSidebarRef, ThreadSidebarProps>(({
     }
   };
 
-  const handleDelete = async (threadId: string) => {
-    if (!confirm("Are you sure you want to delete this thread?")) return;
+  const handleDelete = (threadId: string) => {
+    setThreadToDelete(threadId);
+  };
+
+  const confirmDelete = async () => {
+    if (!threadToDelete) return;
 
     let timeout: any;
     try {
       const controller = new AbortController();
       timeout = setTimeout(() => controller.abort("timeout"), 10000);
       const response = await fetch(
-        `/api/agents/${assistantId}/threads/${threadId}`,
+        `/api/agents/${assistantId}/threads/${threadToDelete}`,
         {
           method: "DELETE",
           signal: controller.signal,
@@ -232,15 +247,16 @@ const ThreadSidebar = forwardRef<ThreadSidebarRef, ThreadSidebarProps>(({
       if (!response.ok) throw new Error("Failed to delete thread");
 
       setThreads((prevThreads) =>
-        prevThreads.filter((t) => t.thread_id !== threadId)
+        prevThreads.filter((t) => t.thread_id !== threadToDelete)
       );
-      if (currentThreadId === threadId) {
+      if (currentThreadId === threadToDelete) {
         onNewThread();
       }
     } catch (error) {
       console.error("Error deleting thread:", error);
     } finally {
       clearTimeout(timeout);
+      setThreadToDelete(null);
     }
   };
 
@@ -388,6 +404,29 @@ const ThreadSidebar = forwardRef<ThreadSidebarRef, ThreadSidebarProps>(({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog
+        open={!!threadToDelete}
+        onOpenChange={() => setThreadToDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete this thread. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete Thread
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 });
