@@ -94,12 +94,15 @@ export function useLangGraphChat({ assistantId, onThreadCreated }: UseLangGraphC
       const threadMessages = state.values?.messages || [];
       
       // Convert LangGraph messages to our format
-      const convertedMessages: Message[] = threadMessages.map((msg: any, index: number) => ({
-        id: msg.id || `msg-${index}`,
-        role: msg.type === "human" ? "user" : "assistant",
-        content: typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content),
-        createdAt: new Date(),
-      }));
+      // Filter out system messages (internal context like knowledge base) - only show human and ai messages
+      const convertedMessages: Message[] = threadMessages
+        .filter((msg: any) => msg.type === "human" || msg.type === "ai")
+        .map((msg: any, index: number) => ({
+          id: msg.id || `msg-${index}`,
+          role: msg.type === "human" ? "user" : "assistant",
+          content: typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content),
+          createdAt: new Date(),
+        }));
       
       setThreadId(targetThreadId);
       setMessages(convertedMessages);
@@ -279,13 +282,12 @@ export function useLangGraphChat({ assistantId, onThreadCreated }: UseLangGraphC
       const abortController = new AbortController();
       abortControllerRef.current = abortController;
       
-      const langGraphMessages = [
-        ...messages.map((msg) => ({
-          type: msg.role === "user" ? "human" : "ai",
-          content: msg.content,
-        })),
+      // Send messages in application format (role: "user"/"assistant")
+      // The API will convert them to LangGraph format (type: "human"/"ai")
+      const messagesToSend = [
+        ...messages,
         {
-          type: "human",
+          role: "user",
           content: messageContent,
         },
       ];
@@ -295,7 +297,7 @@ export function useLangGraphChat({ assistantId, onThreadCreated }: UseLangGraphC
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           threadId: currentThreadId,
-          messages: langGraphMessages,
+          messages: messagesToSend,
         }),
         signal: abortController.signal,
       });

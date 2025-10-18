@@ -52,24 +52,26 @@ const CopyButton: FC<{ text: string }> = ({ text }) => {
 
 export const UserMessage: FC<MessageProps> = ({ message }) => {
   return (
-    <motion.div
-      className="mx-auto grid w-full max-w-[var(--thread-max-width)] auto-rows-auto grid-cols-[minmax(72px,1fr)_auto] gap-y-1 px-[var(--thread-padding-x)] py-4 [&:where(>*)]:col-start-2"
-      initial={{ y: 5, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      data-role="user"
-    >
-      {message.attachments && message.attachments.length > 0 && (
-        <div className="flex w-full flex-row gap-3 col-span-full col-start-1 row-start-1 justify-end">
-          {message.attachments.map((attachment) => (
-            <AttachmentUI key={attachment.id} attachment={attachment} />
-          ))}
-        </div>
-      )}
+    <div className="w-full flex justify-end px-[var(--thread-padding-x)] py-4">
+      <motion.div
+        className="max-w-[80%] flex flex-col items-end gap-3"
+        initial={{ y: 5, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        data-role="user"
+      >
+        {message.attachments && message.attachments.length > 0 && (
+          <div className="flex w-full flex-row gap-3 justify-end">
+            {message.attachments.map((attachment) => (
+              <AttachmentUI key={attachment.id} attachment={attachment} />
+            ))}
+          </div>
+        )}
 
-      <div className="bg-muted text-foreground col-start-2 rounded-3xl px-5 py-2.5 break-words">
-        {message.content}
-      </div>
-    </motion.div>
+        <div className="bg-muted text-foreground rounded-3xl px-5 py-2.5 break-words">
+          {message.content}
+        </div>
+      </motion.div>
+    </div>
   );
 };
 
