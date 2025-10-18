@@ -39,7 +39,7 @@ export const AttachmentComposer: FC<AttachmentComposerProps> = ({
   };
 
   return (
-    <div className="flex items-center gap-2 flex-1 min-w-0">
+    <div className="flex items-center gap-2 flex-shrink-0">
       <input
         ref={fileInputRef}
         type="file"

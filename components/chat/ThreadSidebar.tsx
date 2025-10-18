@@ -249,7 +249,7 @@ const ThreadSidebar = forwardRef<ThreadSidebarRef, ThreadSidebarProps>(({
       <div className="p-2 sm:p-4 border-b" data-tutorial="agent-new-chat">
         <Button
           onClick={onNewThread}
-          className="w-full py-2 px-3 sm:px-4 bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground border border-border hover:border-border/80 rounded-lg flex items-center justify-center gap-2 transition-all text-sm sm:text-base shadow-sm"
+          className="w-full py-2 px-3 sm:px-4 bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg flex items-center justify-center gap-2 transition-all text-sm sm:text-base shadow-sm hover:shadow-md hover:ring-2 hover:ring-blue-500/50 hover:ring-offset-2 font-medium"
         >
           <PlusCircle className="h-4 w-4 sm:h-5 sm:w-5" />
           <span>New Chat</span>

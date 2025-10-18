@@ -206,18 +206,9 @@ export async function POST(
       }
     );
 
-    // Prepare usage tracking helpers
-    const estimatedInputTokens = Array.isArray(messages)
-      ? messages.reduce((sum: number, m: any) => {
-          const c = typeof m?.content === "string" ? m.content : JSON.stringify(m?.content ?? "");
-          return sum + Math.ceil(c.length / 4);
-        }, 0)
-      : 0;
-    let inputTokensFromStream = 0;
-    let outputTokensFromStream = 0;
-    let sawUsageMetadata = false;
-    let outputCharsEstimate = 0;
-    let pendingAssistantMessageId: string | null = null;
+    // Track the actual thread ID and run ID for fetching metadata later
+    let actualThreadId: string | null = threadId;
+    let runId: string | null = null;
 
     // Stream LangGraph events directly as newline-delimited JSON (simpler and faster)
     const encoder = new TextEncoder();
@@ -227,28 +218,15 @@ export async function POST(
           for await (const chunk of runStream as any) {
             const eventName = typeof chunk?.event === "string" ? chunk.event : "";
             const data = chunk?.data ?? chunk;
-            
-            // Track usage metadata
-            if (eventName === "messages/complete" && Array.isArray(data) && data.length > 0) {
-              const message = data[0];
-              const usage = message?.response_metadata?.usage || message?.usage_metadata;
-              if (usage) {
-                const inTok = usage.prompt_tokens ?? usage.input_tokens ?? 0;
-                const outTok = usage.completion_tokens ?? usage.output_tokens ?? 0;
-                if (Number.isFinite(inTok) && Number.isFinite(outTok)) {
-                  inputTokensFromStream = inTok;
-                  outputTokensFromStream = outTok;
-                  sawUsageMetadata = true;
-                }
+
+            // Capture thread_id and run_id from metadata events
+            if (eventName === "metadata" && data) {
+              if (data.thread_id && !actualThreadId) {
+                actualThreadId = data.thread_id;
               }
-            }
-            
-            // Track output for estimation if no usage metadata
-            if (/messages\/(delta|partial|token)/i.test(eventName)) {
-              const deltaText = typeof data?.delta === "string" ? data.delta :
-                                typeof data?.token === "string" ? data.token :
-                                typeof data?.text === "string" ? data.text : "";
-              outputCharsEstimate += deltaText.length;
+              if (data.run_id && !runId) {
+                runId = data.run_id;
+              }
             }
 
             // Stream the event as JSON
@@ -256,20 +234,54 @@ export async function POST(
             controller.enqueue(encoder.encode(line));
           }
 
-          // Record usage after stream finishes
+          // After stream completes, fetch accurate usage metadata from the thread state
           try {
-            const inputTokens = sawUsageMetadata ? inputTokensFromStream : estimatedInputTokens;
-            const outputTokens = sawUsageMetadata ? outputTokensFromStream : Math.ceil(outputCharsEstimate / 4);
-            console.log(`[chat stream] Final usage - input: ${inputTokens}, output: ${outputTokens}, sawMetadata: ${sawUsageMetadata}`);
-            if (user?.id) {
+            let inputTokens = 0;
+            let outputTokens = 0;
+
+            if (actualThreadId && runId) {
+              console.log(`[chat stream] Fetching usage metadata for thread ${actualThreadId}, run ${runId}`);
+
+              try {
+                // Get the state and extract from the latest AI message
+                const state = await client.threads.getState(actualThreadId);
+
+                const messages = (state?.values as any)?.messages;
+                if (messages && Array.isArray(messages)) {
+                  // Get the last AI message (most recent response)
+                  for (let i = messages.length - 1; i >= 0; i--) {
+                    const message = messages[i];
+                    if (message?.type === "ai" || message?.role === "assistant") {
+                      // Extract usage from response_metadata.usage (OpenAI format)
+                      const usage = message?.response_metadata?.usage;
+                      if (usage) {
+                        inputTokens = usage.prompt_tokens ?? usage.input_tokens ?? 0;
+                        outputTokens = usage.completion_tokens ?? usage.output_tokens ?? 0;
+                        console.log(`[chat stream] Got usage from AI message - input: ${inputTokens}, output: ${outputTokens}`);
+                        break;
+                      }
+                    }
+                  }
+                }
+              } catch (stateError) {
+                console.error(`[chat stream] Error fetching thread state:`, stateError);
+              }
+            } else {
+              console.warn(`[chat stream] Missing thread_id or run_id, cannot fetch accurate usage`);
+            }
+
+            // Record the usage
+            if (user?.id && (inputTokens > 0 || outputTokens > 0)) {
               await rateLimiter.recordUsage({
                 userId: user.id,
                 inputTokens,
                 outputTokens,
                 timestamp: Date.now(),
                 model: "gpt-5",
-                sessionId: threadId,
+                sessionId: actualThreadId || threadId,
               });
+            } else {
+              console.warn(`[chat stream] No usage to record - input: ${inputTokens}, output: ${outputTokens}`);
             }
           } catch (e) {
             console.error("Failed to record usage:", e);

@@ -59,12 +59,18 @@ export const Composer: FC<ComposerProps> = ({
   };
 
   return (
-    <div className="bg-background relative mx-auto flex w-full max-w-[var(--thread-max-width)] flex-col gap-4 px-[var(--thread-padding-x)] pb-4 md:pb-6" data-tutorial="agent-composer">
-      <div className="focus-within:ring-offset-2 relative flex w-full flex-col rounded-2xl focus-within:ring-2 focus-within:ring-black dark:focus-within:ring-white">
+    <div className="bg-background relative mx-auto flex w-full max-w-[var(--thread-max-width)] flex-col gap-2 px-[var(--thread-padding-x)] pb-4 md:pb-6" data-tutorial="agent-composer">
+      <div className="focus-within:ring-offset-2 relative flex w-full items-center gap-2 rounded-full focus-within:ring-2 focus-within:ring-blue-500 dark:focus-within:ring-blue-500 bg-muted border-border dark:border-muted-foreground/15 border px-4 py-2">
+        <AttachmentComposer
+          attachments={attachments}
+          onAddAttachment={addAttachment}
+          onRemoveAttachment={removeAttachment}
+        />
+
         <textarea
           ref={textareaRef}
           placeholder="Send a message..."
-          className="bg-muted border-border dark:border-muted-foreground/15 focus:outline-primary placeholder:text-muted-foreground max-h-[calc(50dvh)] min-h-16 w-full resize-none rounded-t-2xl border-x border-t px-4 pt-2 pb-3 text-base outline-none"
+          className="bg-transparent placeholder:text-muted-foreground placeholder:text-left flex-1 resize-none text-base outline-none max-h-[120px] min-h-[24px] text-left align-top"
           rows={1}
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -73,37 +79,29 @@ export const Composer: FC<ComposerProps> = ({
           autoFocus
           aria-label="Message input"
         />
-        
-        <div className="bg-muted border-border dark:border-muted-foreground/15 relative flex items-center justify-between rounded-b-2xl border-x border-b p-2" data-tutorial="agent-attachments">
-          <AttachmentComposer
-            attachments={attachments}
-            onAddAttachment={addAttachment}
-            onRemoveAttachment={removeAttachment}
-          />
 
-          {!isRunning ? (
-            <Button
-              type="submit"
-              variant="default"
-              className="dark:border-muted-foreground/90 border-muted-foreground/60 hover:bg-primary/75 size-8 rounded-full border"
-              aria-label="Send message"
-              onClick={handleSend}
-              disabled={disabled || (!input.trim() && attachments.length === 0)}
-            >
-              <ArrowUpIcon className="size-5" />
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              variant="default"
-              className="dark:border-muted-foreground/90 border-muted-foreground/60 hover:bg-primary/75 size-8 rounded-full border"
-              aria-label="Stop generating"
-              onClick={handleCancel}
-            >
-              <Square className="size-3.5 fill-white dark:size-4 dark:fill-black" />
-            </Button>
-          )}
-        </div>
+        {!isRunning ? (
+          <Button
+            type="submit"
+            variant="default"
+            className="dark:border-muted-foreground/90 border-muted-foreground/60 hover:bg-primary/75 size-8 rounded-full border flex-shrink-0"
+            aria-label="Send message"
+            onClick={handleSend}
+            disabled={disabled || (!input.trim() && attachments.length === 0)}
+          >
+            <ArrowUpIcon className="size-5" />
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            variant="default"
+            className="dark:border-muted-foreground/90 border-muted-foreground/60 hover:bg-primary/75 size-8 rounded-full border flex-shrink-0"
+            aria-label="Stop generating"
+            onClick={handleCancel}
+          >
+            <Square className="size-3.5 fill-white dark:size-4 dark:fill-black" />
+          </Button>
+        )}
       </div>
     </div>
   );

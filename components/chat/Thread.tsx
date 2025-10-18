@@ -45,10 +45,11 @@ export const Thread: FC<ThreadProps> = ({
     const handleScroll = () => {
       const { scrollTop, scrollHeight, clientHeight } = viewport;
       const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-      
-      // Show button if more than 200px from bottom
-      setShowScrollButton(distanceFromBottom > 200);
-      
+      const hasScroll = scrollHeight > clientHeight;
+
+      // Show button only if content is scrollable AND user has scrolled up more than 200px from bottom
+      setShowScrollButton(hasScroll && distanceFromBottom > 200);
+
       // Enable auto-scroll if near bottom
       autoScrollRef.current = distanceFromBottom < 100;
     };
@@ -57,7 +58,7 @@ export const Thread: FC<ThreadProps> = ({
     handleScroll(); // Initial check
 
     return () => viewport.removeEventListener("scroll", handleScroll);
-  }, []);
+  }, [messages]);
 
   const scrollToBottom = () => {
     if (!viewportRef.current) return;
@@ -67,7 +68,7 @@ export const Thread: FC<ThreadProps> = ({
 
   return (
     <div
-      className="bg-background flex h-full flex-col"
+      className="bg-background flex h-full flex-col relative"
       style={{
         ["--thread-max-width" as string]: "48rem",
         ["--thread-padding-x" as string]: "1rem",
@@ -75,7 +76,7 @@ export const Thread: FC<ThreadProps> = ({
     >
       <div
         ref={viewportRef}
-        className="relative flex min-w-0 flex-1 flex-col gap-6 overflow-y-scroll"
+        className="flex min-w-0 flex-1 flex-col gap-6 overflow-y-scroll"
         data-tutorial="agent-chat-viewport"
       >
         {messages.length === 0 ? (
@@ -85,45 +86,45 @@ export const Thread: FC<ThreadProps> = ({
             {messages.map((message, index) => {
               const isLastMessage = index === messages.length - 1;
               const isThinking = isLastMessage && message.role === "assistant" && isRunning;
-              
+
               return message.role === "user" ? (
                 <UserMessage key={message.id} message={message} />
               ) : (
-                <AssistantMessage 
-                  key={message.id} 
-                  message={message} 
+                <AssistantMessage
+                  key={message.id}
+                  message={message}
                   isThinking={isThinking}
                 />
               );
             })}
-            
+
             {/* Show thinking indicator when waiting for assistant response */}
             {isRunning && messages.length > 0 && messages[messages.length - 1].role === "user" && (
-              <AssistantMessage 
-                message={{ 
-                  id: "thinking", 
-                  role: "assistant", 
+              <AssistantMessage
+                message={{
+                  id: "thinking",
+                  role: "assistant",
                   content: "",
                   createdAt: new Date()
-                }} 
+                }}
                 isThinking={true}
               />
             )}
             <div className="min-h-6 min-w-6 shrink-0" />
           </>
         )}
-
-        {showScrollButton && (
-          <TooltipIconButton
-            tooltip="Scroll to bottom"
-            variant="outline"
-            className="dark:bg-background dark:hover:bg-accent absolute bottom-24 z-10 left-1/2 transform -translate-x-1/2 rounded-full p-3 shadow-lg"
-            onClick={scrollToBottom}
-          >
-            <ArrowDownIcon className="h-4 w-4" />
-          </TooltipIconButton>
-        )}
       </div>
+
+      {showScrollButton && (
+        <TooltipIconButton
+          tooltip="Scroll to bottom"
+          variant="outline"
+          className="dark:bg-background dark:hover:bg-accent absolute bottom-24 z-10 left-1/2 transform -translate-x-1/2 rounded-full p-2 shadow-lg border"
+          onClick={scrollToBottom}
+        >
+          <ArrowDownIcon className="h-4 w-4" />
+        </TooltipIconButton>
+      )}
 
       <Composer
         onSend={onSendMessage}
