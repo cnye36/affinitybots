@@ -1,6 +1,7 @@
 import { MultiServerMCPClient } from "@langchain/mcp-adapters";
 import { MCPOAuthClient } from "@/lib/oauth/oauthClient";
 import { GitHubOAuthClient } from "@/lib/oauth/githubOauthClient";
+import { GoogleDriveMCPClient, createGoogleDriveClient } from "./googleDriveMcpClient";
 import { sessionStore } from "@/lib/oauth/sessionStore";
 import { getAvailableMcpServers } from "../agent/getAvailableMcpServers";
 import { OAuthTokens } from "@modelcontextprotocol/sdk/shared/auth.js";
@@ -24,14 +25,21 @@ export interface MCPClientConfig {
 export interface MCPClientResult {
   client: MultiServerMCPClient | null;
   tools: any[];
-  oauthClients: Map<string, MCPOAuthClient | GitHubOAuthClient>;
+  oauthClients: Map<string, MCPOAuthClient | GitHubOAuthClient | GoogleDriveMCPClient>;
   sessions: Map<string, string>; // serverName -> sessionId
 }
 
 // Cache for MCP clients and tools to avoid recreating them on every call
 const mcpClientCache = new Map<string, { result: MCPClientResult; timestamp: number }>();
-const oauthClientCache = new Map<string, MCPOAuthClient | GitHubOAuthClient>();
+const oauthClientCache = new Map<string, MCPOAuthClient | GitHubOAuthClient | GoogleDriveMCPClient>();
 const CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes for HTTP sessions
+
+// Clear cache function for debugging
+export function clearMcpCache() {
+  mcpClientCache.clear();
+  oauthClientCache.clear();
+  console.log("MCP cache cleared");
+}
 
 export class MCPClientManager {
   private static instance: MCPClientManager;
@@ -125,7 +133,7 @@ export class MCPClientManager {
       }
       
       const mcpServers: Record<string, any> = {};
-      const oauthClients = new Map<string, MCPOAuthClient | GitHubOAuthClient>();
+      const oauthClients = new Map<string, MCPOAuthClient | GitHubOAuthClient | GoogleDriveMCPClient>();
       const sessions = new Map<string, string>();
       let allTools: any[] = [];
 
@@ -143,7 +151,7 @@ export class MCPClientManager {
         
         // Check if this server uses OAuth
         if (this.isOAuthServer(serverConfig)) {
-          const oauthResult = await this.handleOAuthServer(qualifiedName, serverConfig);
+          const oauthResult = await this.handleOAuthServer(qualifiedName, serverConfig, userId);
           if (oauthResult) {
             // For OAuth servers, we'll use our OAuth client wrapper
             finalUrl = oauthResult.url;
@@ -275,14 +283,18 @@ export class MCPClientManager {
   /**
    * Handles OAuth server setup and authentication
    */
-  private async handleOAuthServer(qualifiedName: string, serverConfig: any): Promise<{
+  private async handleOAuthServer(qualifiedName: string, serverConfig: any, userId: string): Promise<{
     url: string;
-    client?: MCPOAuthClient | GitHubOAuthClient;
+    client?: MCPOAuthClient | GitHubOAuthClient | GoogleDriveMCPClient;
     sessionId?: string;
   } | null> {
     try {
-      // Check if we have an existing OAuth session
-      if (serverConfig.session_id) {
+      // Check if we have an existing OAuth session (but skip for Google Drive - use custom client)
+      const isGoogleDriveServer =
+        qualifiedName === 'google-drive' ||
+        serverConfig.config?.provider === 'google-drive';
+
+      if (serverConfig.session_id && !isGoogleDriveServer) {
         const existingClient = sessionStore.getClient(serverConfig.session_id);
         if (existingClient) {
           console.log(`Using existing OAuth session for ${qualifiedName}`);
@@ -316,6 +328,33 @@ export class MCPClientManager {
         : null;
 
       const expiresAt: string | undefined = serverConfig.expires_at || serverConfig.config?.tokenMetadata?.expires_at;
+
+      console.log(`🔍 Google Drive Debug - qualifiedName: ${qualifiedName}, isGoogleDriveServer: ${isGoogleDriveServer}, hasStoredToken: ${hasStoredToken}`);
+      console.log(`🔍 Google Drive Debug - serverConfig.oauth_token: ${serverConfig.oauth_token ? 'PRESENT' : 'MISSING'}`);
+
+      // Handle Google Drive servers with custom client FIRST
+      if (isGoogleDriveServer) {
+        console.log(`🔍 Google Drive Debug - Attempting to create client regardless of token status`);
+        console.log(`Creating Google Drive MCP client for ${qualifiedName}`);
+        try {
+          const googleClient = await createGoogleDriveClient(userId, serverConfig);
+          
+          // Test health check
+          const isHealthy = await googleClient.healthCheck();
+          if (!isHealthy) {
+            console.warn(`Google Drive MCP server health check failed at ${serverConfig.url}`);
+          }
+          
+          return {
+            url: serverConfig.url,
+            client: googleClient as any,
+            sessionId: serverConfig.session_id,
+          };
+        } catch (error) {
+          console.error(`Failed to create Google Drive client:`, error);
+          return null;
+        }
+      }
 
       const isGitHubServer =
         qualifiedName === 'github' ||
@@ -404,55 +443,30 @@ export class MCPClientManager {
       return serverConfig.url;
     }
 
-    // Check if this is a Smithery server and we have an API key
-    const apiKey = process.env.SMITHERY_API_KEY;
-    if (apiKey && this.isSmitheryServer(qualifiedName, serverConfig)) {
-      // Extract profile ID from config (set by user in UI). Required; never default to a shared profile.
-      const profileId = serverConfig.config?.smitheryProfileId || serverConfig.config?.profileId;
-      if (!profileId) {
-        throw new Error(`Smithery server ${qualifiedName} is missing a per-user profileId in config`);
-      }
-      const fallbackUrl = `https://server.smithery.ai/${qualifiedName}/mcp?api_key=${apiKey}&profile=${profileId}`;
-      console.log(`🏗️  Built Smithery API key URL: ${fallbackUrl.replace(apiKey, 'HIDDEN_API_KEY')}`);
-      return fallbackUrl;
-    }
-
-    // For non-Smithery servers without URLs, this is an error
-    console.error(`❌ Server ${qualifiedName} has no URL configured and is not a Smithery server`);
+    // Servers without URLs cannot be used
+    console.error(`❌ Server ${qualifiedName} has no URL configured`);
     throw new Error(`Server ${qualifiedName} requires a URL to be configured`);
   }
 
-  /**
-   * Checks if a server is a Smithery-hosted server
-   */
-  private isSmitheryServer(qualifiedName: string, serverConfig: any): boolean {
-    // Check if explicitly marked as Smithery server
-    if (serverConfig.config?.provider === 'smithery') {
-      return true;
-    }
-    
-    // Check if URL is a Smithery URL
-    if (serverConfig.url?.includes('server.smithery.ai')) {
-      return true;
-    }
-    
-    // For legacy support, assume servers without URLs but with Smithery config are Smithery servers
-    if (!serverConfig.url && (serverConfig.config?.smitheryProfileId || serverConfig.config?.profileId)) {
-      return true;
-    }
-    
-    return false;
-  }
 
   /**
    * Validates that OAuth sessions are still active
    */
-  private async validateOAuthSessions(oauthClients: Map<string, MCPOAuthClient | GitHubOAuthClient>): Promise<boolean> {
+  private async validateOAuthSessions(oauthClients: Map<string, MCPOAuthClient | GitHubOAuthClient | GoogleDriveMCPClient>): Promise<boolean> {
     try {
       // For each OAuth client, try to list tools to verify it's still active
       for (const [serverName, client] of oauthClients) {
         try {
-          await client.listTools();
+          // Google Drive clients use healthCheck instead of listTools
+          if (client instanceof GoogleDriveMCPClient) {
+            const isHealthy = await client.healthCheck();
+            if (!isHealthy) {
+              console.warn(`Google Drive MCP server for ${serverName} is unhealthy`);
+              return false;
+            }
+          } else {
+            await client.listTools();
+          }
         } catch (error) {
           console.warn(`OAuth session for ${serverName} is no longer valid:`, error);
           return false;
@@ -466,7 +480,7 @@ export class MCPClientManager {
   }
 
   /**
-   * Validates that HTTP MCP sessions are still active (for Smithery servers)
+   * Validates that HTTP MCP sessions are still active
    */
   private async validateHttpSessions(client: MultiServerMCPClient | null): Promise<boolean> {
     // If there is no HTTP client, we may still have OAuth-only tools available.
@@ -597,8 +611,8 @@ export class MCPClientManager {
   /**
    * Gets cached OAuth clients for debugging
    */
-  getCachedOAuthClients(): Map<string, MCPOAuthClient | GitHubOAuthClient> {
-    const allClients = new Map<string, MCPOAuthClient | GitHubOAuthClient>();
+  getCachedOAuthClients(): Map<string, MCPOAuthClient | GitHubOAuthClient | GoogleDriveMCPClient> {
+    const allClients = new Map<string, MCPOAuthClient | GitHubOAuthClient | GoogleDriveMCPClient>();
     for (const cachedEntry of mcpClientCache.values()) {
       for (const [name, client] of cachedEntry.result.oauthClients) {
         allClients.set(name, client);
@@ -610,12 +624,28 @@ export class MCPClientManager {
   /**
    * Gets tools from an OAuth client
    */
-  private async getToolsFromOAuthClient(oauthClient: MCPOAuthClient | GitHubOAuthClient, serverName: string): Promise<any[]> {
+  private async getToolsFromOAuthClient(oauthClient: MCPOAuthClient | GitHubOAuthClient | GoogleDriveMCPClient, serverName: string): Promise<any[]> {
     try {
       // Ensure the OAuth client is connected
       if (!oauthClient) {
         console.warn(`No OAuth client available for ${serverName}`);
         return [];
+      }
+
+      // Handle Google Drive MCP client separately
+      if (oauthClient instanceof GoogleDriveMCPClient) {
+        console.log(`Getting tools from Google Drive MCP client for ${serverName}`);
+        const googleTools = await oauthClient.listTools();
+        
+        return googleTools.map((tool: any) => ({
+          name: tool.name,
+          description: tool.description,
+          schema: tool.inputSchema,
+          invoke: async (args: any) => {
+            const result = await oauthClient.executeTool(tool.name, args);
+            return result;
+          }
+        }));
       }
 
       if ("isConnected" in oauthClient && typeof (oauthClient as any).isConnected === "function") {

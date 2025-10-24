@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { findOfficialServer } from "@/lib/mcp/officialMcpServers";
+import { createClient } from "@supabase/supabase-js";
 
 export async function POST(
   request: NextRequest,
@@ -11,106 +13,49 @@ export async function POST(
     const body = await request.json();
     const { config = {} } = body;
 
-    const apiKey = process.env.SMITHERY_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: 'Smithery API key not configured' }, { status: 500 });
-    }
-
-    // Get server details to find the deployment URL
-    const encodedName = encodeURIComponent(decodeURIComponent(qualifiedName));
-    const serverResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/smithery/${encodedName}`);
+    // Try to find the server URL from official servers or user-added servers
+    let deploymentUrl: string | null = null;
     
-    if (!serverResponse.ok) {
-      return NextResponse.json({ error: 'Failed to fetch server details' }, { status: 500 });
-    }
-
-    const serverData = await serverResponse.json();
-    const server = serverData.server;
-
-    // console.log('Server data for', qualifiedName, ':', JSON.stringify(server, null, 2));
-
-    // Strategy 1: Look for HTTP connections first (most secure)
-    let deploymentUrl = null;
-    let connection = null;
-
-    if (server.connections && server.connections.length > 0) {
-      // Prioritize HTTP connections with deploymentUrl
-      connection = server.connections.find((conn: any) => 
-        conn.type === 'http' && conn.deploymentUrl
+    // Check official servers first
+    const officialServer = findOfficialServer(decodeURIComponent(qualifiedName));
+    if (officialServer && officialServer.url) {
+      deploymentUrl = officialServer.url;
+    } else {
+      // Check user-added servers
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
       );
       
-      if (connection) {
-        deploymentUrl = connection.deploymentUrl;
+      const { data: userServer } = await supabase
+        .from('user_mcp_servers')
+        .select('url')
+        .eq('qualified_name', decodeURIComponent(qualifiedName))
+        .single();
+      
+      if (userServer && userServer.url) {
+        deploymentUrl = userServer.url;
       }
     }
 
-    // Strategy 2: Fall back to root-level deploymentUrl if no HTTP connection found
-    if (!deploymentUrl && server.deploymentUrl) {
-      deploymentUrl = server.deploymentUrl;
-      console.log('Using root-level deploymentUrl as fallback');
-    }
-
-    // Strategy 3: If still no deploymentUrl, reject stdio/other connection types for security
     if (!deploymentUrl) {
-      const availableConnections = server.connections?.map((c: any) => ({ 
-        type: c.type, 
-        hasDeploymentUrl: !!c.deploymentUrl 
-      })) || [];
-      
       return NextResponse.json({ 
-        error: 'No secure HTTP connection found for this server', 
+        error: 'No URL configured for this server', 
         details: { 
-          server: server.name || server.qualifiedName || 'unknown',
-          availableConnections,
-          message: 'Only HTTP connections are supported for security reasons'
+          server: qualifiedName,
+          message: 'Server must have a URL to test the connection'
         }
       }, { status: 400 });
     }
 
-    console.log('Testing MCP server:', deploymentUrl.includes('smithery.ai') ? 'Smithery hosted' : 'Self-hosted');
-
-    // Check if this is a Smithery server
-    const isSmitheryServer = deploymentUrl.includes('server.smithery.ai');
+    console.log('Testing MCP server:', deploymentUrl);
 
     // Test the connection using a simple HTTP request to the MCP server
     try {
-      let testUrl: string;
-      
-      if (isSmitheryServer) {
-        // For Smithery servers, use api_key + profile pattern
-        const smitheryUrl = new URL(deploymentUrl);
-        smitheryUrl.searchParams.set('api_key', apiKey);
-        
-        // Check if user has provided a profile ID
-        const profileId = config.smitheryProfileId || config.profileId;
-        if (profileId) {
-          smitheryUrl.searchParams.set('profile', profileId);
-        } else {
-          return NextResponse.json({ 
-            success: false,
-            error: 'Smithery profile required',
-            details: {
-              message: 'This server requires a Smithery profile. Please set up your profile on Smithery first.',
-              isSmitheryServer: true,
-              needsProfile: true
-            }
-          });
-        }
-        
-        testUrl = smitheryUrl.toString();
-      } else {
-        // For non-Smithery servers, use the old approach
-        const serverUrl = new URL(deploymentUrl);
-        serverUrl.searchParams.set('apiKey', apiKey);
-        
-        if (Object.keys(config).length > 0) {
-          serverUrl.searchParams.set('config', JSON.stringify(config));
-        }
-        
-        testUrl = serverUrl.toString();
-      }
+      // Use the deployment URL directly
+      const testUrl = deploymentUrl;
 
-      console.log('Testing MCP connection with', isSmitheryServer ? `profile: ${config.smitheryProfileId || config.profileId}` : 'direct config');
+      console.log('Testing MCP connection to:', testUrl);
 
       // Step 1: Initialize the MCP server
       console.log('Making MCP initialize request...');

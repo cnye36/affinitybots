@@ -1,12 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
 
-function isSmitheryServer(server: any): boolean {
-  if (server.config?.provider === 'smithery') return true;
-  if (server.url?.includes('server.smithery.ai')) return true;
-  if (!server.url && (server.config?.smitheryProfileId || server.config?.profileId)) return true;
-  return false;
-}
-
 /**
  * Loads available MCP servers for a user by merging:
  * - User-specific servers (`user_mcp_servers` where `is_enabled = true`)
@@ -44,24 +37,18 @@ export async function getAvailableMcpServers(userId: string) {
       url: serverUrl,
       hasBearerToken: !!bearer,
       bearerTokenLength: bearer?.length || 0,
+      oauth_token: server.oauth_token ? 'PRESENT' : 'MISSING',
+      oauth_token_length: server.oauth_token?.length || 0,
+      session_id: server.session_id,
       config: server.config
     });
     
     if (server.oauth_token && server.url) {
       serverUrl = server.url;
     } else if (!serverUrl) {
-      const apiKey = process.env.SMITHERY_API_KEY;
-      if (isSmitheryServer(server) && apiKey) {
-        // Require a per-user Smithery profile; never fall back to a shared/global profile
-        const profile = server.config?.smitheryProfileId || server.config?.profileId;
-        if (!profile) {
-          console.warn(`Skipping Smithery server ${server.qualified_name} for user ${userId}: missing profileId in config`);
-          continue;
-        }
-        serverUrl = `https://server.smithery.ai/${server.qualified_name}/mcp?api_key=${apiKey}&profile=${profile}`;
-      } else {
-        continue;
-      }
+      // Skip servers without URLs
+      console.warn(`Skipping server ${server.qualified_name} for user ${userId}: missing URL`);
+      continue;
     }
     
     // Preserve the full server configuration including OAuth tokens and session IDs

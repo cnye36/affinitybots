@@ -63,7 +63,7 @@ export default function ConfiguredToolsPage() {
         }
         setEnabledCounts(counts);
 
-        // 3) Build metadata map from Official + Smithery + User-added
+        // 3) Build metadata map from Official + User-added
         const meta: Record<string, ToolMeta> = {};
         for (const s of OFFICIAL_MCP_SERVERS) {
           meta[s.qualifiedName] = {
@@ -81,33 +81,6 @@ export default function ConfiguredToolsPage() {
             description: s.description || meta[q]?.description,
             logoUrl: s.logo_url || meta[q]?.logoUrl,
           };
-        }
-        // Augment logos for Smithery registry servers via bulk API
-        try {
-          const namesNeedingLogos = filtered
-            .map((s: any) => s.qualified_name as string)
-            .filter((name: string) => !meta[name]?.logoUrl);
-          if (namesNeedingLogos.length > 0) {
-            const bulkResponse = await fetch('/api/smithery/bulk', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ qualifiedNames: namesNeedingLogos }),
-            });
-            if (bulkResponse.ok) {
-              const bulkData = await bulkResponse.json();
-              const serversMap = bulkData?.servers || {};
-              for (const [q, sv] of Object.entries(serversMap) as any) {
-                const logoUrl = sv?.iconUrl || sv?.logo;
-                const displayName = sv?.displayName || sv?.name || sv?.title;
-                if (!meta[q]) meta[q] = {};
-                if (displayName && !meta[q].displayName) meta[q].displayName = displayName;
-                if (!meta[q].description && sv?.description) meta[q].description = sv.description;
-                if (logoUrl) meta[q].logoUrl = logoUrl;
-              }
-            }
-          }
-        } catch {
-          // Non-fatal if Smithery bulk fails; cards will just show initials
         }
         setMetaByName(meta);
       } catch (e: any) {
@@ -219,30 +192,6 @@ export default function ConfiguredToolsPage() {
               logoUrl: s.logo_url || meta[q]?.logoUrl,
             };
           }
-          try {
-            const namesNeedingLogos = filtered
-              .map((s: any) => s.qualified_name as string)
-              .filter((name: string) => !meta[name]?.logoUrl);
-            if (namesNeedingLogos.length > 0) {
-              const bulkResponse = await fetch('/api/smithery/bulk', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ qualifiedNames: namesNeedingLogos }),
-              });
-              if (bulkResponse.ok) {
-                const bulkData = await bulkResponse.json();
-                const serversMap = bulkData?.servers || {};
-                for (const [q, sv] of Object.entries(serversMap) as any) {
-                  const logoUrl = sv?.iconUrl || sv?.logo;
-                  const displayName = sv?.displayName || sv?.name || sv?.title;
-                  if (!meta[q]) meta[q] = {};
-                  if (displayName && !meta[q].displayName) meta[q].displayName = displayName;
-                  if (!meta[q].description && sv?.description) meta[q].description = sv.description;
-                  if (logoUrl) meta[q].logoUrl = logoUrl;
-                }
-              }
-            }
-          } catch {}
           setMetaByName(meta);
         } catch {}
       }} />

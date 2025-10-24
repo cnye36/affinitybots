@@ -114,6 +114,12 @@ const nextConfig = {
         hostname: "legal.hubspot.com",
         port: "",
         pathname: "/**",
+        },
+      {
+        protocol: "https",
+        hostname: "ssl.gstatic.com",
+        port: "",
+        pathname: "/**",
       },
     ],
   },

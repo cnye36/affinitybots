@@ -21,7 +21,7 @@ export function AddMCPServerModal({ open, onOpenChange, onAdded }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const callbackUrl = `${window.location.origin}/api/mcp/auth/callback`;
+  const callbackUrl = typeof window !== 'undefined' ? `${window.location.origin}/api/mcp/auth/callback` : '';
 
   async function discover() {
     setError(null);

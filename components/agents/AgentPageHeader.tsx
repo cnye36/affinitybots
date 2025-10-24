@@ -86,29 +86,7 @@ export function AgentPageHeader({ assistant }: AgentPageHeaderProps) {
         }
       });
       if (!cancelled && Object.keys(initial).length > 0) {
-        setToolLogos((prev) => ({ ...prev, ...initial }));
-      }
-
-      if (enabledQualifiedNames.length === 0) return;
-      try {
-        const response = await fetch("/api/smithery/bulk", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ qualifiedNames: enabledQualifiedNames }),
-        });
-        if (response.ok) {
-          const data = await response.json();
-          const map: Record<string, string> = {};
-          Object.entries(data?.servers || {}).forEach(([q, s]: [string, any]) => {
-            const url = (s as any)?.iconUrl || (s as any)?.logo;
-            if (url) map[q] = url as string;
-          });
-          if (!cancelled && Object.keys(map).length > 0) {
-            setToolLogos((prev) => ({ ...prev, ...map }));
-          }
-        }
-      } catch {
-        // ignore
+        setToolLogos(initial);
       }
     }
     loadLogos();

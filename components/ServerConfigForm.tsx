@@ -27,7 +27,7 @@ interface ServerConfigFormProps {
   onSave?: (config: any) => void;
   onDelete?: () => void;
   className?: string;
-  serverDetails?: any; // Add server details to check if it's Smithery
+  serverDetails?: any;
 }
 
 export function ServerConfigForm({ 
@@ -46,12 +46,6 @@ export function ServerConfigForm({
   const [testResult, setTestResult] = useState<{ success: boolean; message?: string; error?: string; details?: any } | null>(null);
   const [saveResult, setSaveResult] = useState<{ success: boolean; message: string } | null>(null);
   const [hasExistingConfig, setHasExistingConfig] = useState(false);
-
-  // Check if this is a Smithery server
-  const isSmitheryServer = serverDetails?.deploymentUrl?.includes('server.smithery.ai') || 
-                          serverDetails?.connections?.some((conn: any) => 
-                            conn.deploymentUrl?.includes('server.smithery.ai')
-                          );
 
   // Parse the config schema to extract fields
   const configFields: ConfigField[] = [];
@@ -308,70 +302,34 @@ export function ServerConfigForm({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {isSmitheryServer ? (
-          <div className="space-y-4">
-            <Alert>
-              <AlertDescription>
-                This server is hosted on Smithery. You need to set up a profile on Smithery to store your API keys securely.
-              </AlertDescription>
-            </Alert>
-            
-            <div className="space-y-2">
-              <Label htmlFor="smitheryProfileId" className="flex items-center gap-2">
-                Smithery Profile ID
-                <Badge variant="destructive" className="text-xs">Required</Badge>
-              </Label>
-              <Input
-                id="smitheryProfileId"
-                value={config.smitheryProfileId || ''}
-                onChange={(e) => handleFieldChange('smitheryProfileId', e.target.value)}
-                placeholder="e.g., eligible-bug-bgLHFe"
-              />
-              <p className="text-sm text-muted-foreground">
-                If you haven't configured this server in Smithery or don't have an account, 
-                <a 
-                  href={serverDetails?.homepage || `https://smithery.ai/server/${encodeURIComponent(qualifiedName)}`} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-blue-500 hover:underline ml-1"
-                >
-                  configure or create an account here
-                </a>.
-              </p>
-            </div>
-          </div>
+        {configFields.length === 0 ? (
+          <Alert>
+            <AlertDescription>
+              This server doesn't require any configuration. You can test the connection directly.
+            </AlertDescription>
+          </Alert>
         ) : (
-          <>
-            {configFields.length === 0 ? (
-              <Alert>
-                <AlertDescription>
-                  This server doesn't require any configuration. You can test the connection directly.
-                </AlertDescription>
-              </Alert>
-            ) : (
-              <div className="space-y-4">
-                {configFields.map((field) => (
-                  <div key={field.name} className="space-y-2">
-                    <Label htmlFor={field.name} className="flex items-center gap-2">
-                      {field.name}
-                      {field.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
-                    </Label>
-                    {renderField(field)}
-                    {field.description && (
-                      <p className="text-sm text-muted-foreground">{field.description}</p>
-                    )}
-                  </div>
-                ))}
+          <div className="space-y-4">
+            {configFields.map((field) => (
+              <div key={field.name} className="space-y-2">
+                <Label htmlFor={field.name} className="flex items-center gap-2">
+                  {field.name}
+                  {field.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
+                </Label>
+                {renderField(field)}
+                {field.description && (
+                  <p className="text-sm text-muted-foreground">{field.description}</p>
+                )}
               </div>
-            )}
-          </>
+            ))}
+          </div>
         )}
 
         {/* Test Connection */}
         <div className="space-y-2">
           <Button
             onClick={handleTestConnection}
-            disabled={testing || (isSmitheryServer ? !config.smitheryProfileId : (hasRequiredFields && !requiredFieldsFilled))}
+            disabled={testing || (hasRequiredFields && !requiredFieldsFilled)}
             className="w-full"
             variant="outline"
           >
@@ -408,7 +366,7 @@ export function ServerConfigForm({
         <div className="flex gap-2">
           <Button
             onClick={handleSave}
-            disabled={saving || (isSmitheryServer ? !config.smitheryProfileId : (hasRequiredFields && !requiredFieldsFilled))}
+            disabled={saving || (hasRequiredFields && !requiredFieldsFilled)}
             className="flex-1"
           >
             {saving ? (

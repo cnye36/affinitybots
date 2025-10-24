@@ -1,27 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
 
-/**
- * Checks if a server is a Smithery-hosted server
- */
-function isSmitheryServer(server: any): boolean {
-  // Check if explicitly marked as Smithery server
-  if (server.config?.provider === 'smithery') {
-    return true;
-  }
-  
-  // Check if URL is a Smithery URL
-  if (server.url?.includes('server.smithery.ai')) {
-    return true;
-  }
-  
-  // For legacy support, assume servers without URLs but with Smithery config are Smithery servers
-  if (!server.url && (server.config?.smitheryProfileId || server.config?.profileId)) {
-    return true;
-  }
-  
-  return false;
-}
-
 export async function getUserMcpServers(userId: string) {
   // Use service role client for LangGraph Studio (no cookies needed)
   const supabase = createClient(
@@ -94,20 +72,10 @@ export async function getUserMcpServers(userId: string) {
       else if (serverUrl) {
         console.log(`📁 Using configured URL: ${serverUrl}`);
       }
-      // Fallback for Smithery servers without explicit URLs (legacy support)
+      // Skip servers without URLs
       else {
-        const apiKey = process.env.SMITHERY_API_KEY;
-        const isSmitheryServerResult = isSmitheryServer(server);
-        
-        if (isSmitheryServerResult && apiKey) {
-          // Build fallback URL for Smithery servers
-          const profile = server.config?.smitheryProfileId || server.config?.profileId || "eligible-bug-FblvFg";
-          serverUrl = `https://server.smithery.ai/${server.qualified_name}/mcp?api_key=${apiKey}&profile=${profile}`;
-          console.log(`🏗️  Built Smithery fallback URL: ${serverUrl.replace(apiKey, 'HIDDEN_API_KEY')}`);
-        } else {
-          console.warn(`❌ Server ${server.qualified_name} has no URL configured and cannot connect`);
-          continue;
-        }
+        console.warn(`❌ Server ${server.qualified_name} has no URL configured and cannot connect`);
+        continue;
       }
       
       mcpServers[server.qualified_name] = {

@@ -61,18 +61,9 @@ export function validateMCPServerConfig(serverConfig: MCPServerConfig): MCPServe
       result.isValid = false;
     }
   } else {
-    // No clear auth method - check if it's a Smithery server
-    if (isSmitheryServerConfig(serverConfig)) {
-      result.authType = 'api_key';
-      
-      if (!process.env.SMITHERY_API_KEY) {
-        result.errors.push('Smithery server requires SMITHERY_API_KEY environment variable');
-        result.isValid = false;
-      }
-    } else {
-      result.errors.push('Server must have either a URL or OAuth configuration');
-      result.isValid = false;
-    }
+    // No clear auth method
+    result.errors.push('Server must have either a URL or OAuth configuration');
+    result.isValid = false;
   }
 
   // Check for deprecated or unsafe configurations
@@ -101,27 +92,6 @@ function isValidUrl(url: string): boolean {
   }
 }
 
-/**
- * Checks if a server configuration is for a Smithery server
- */
-function isSmitheryServerConfig(serverConfig: MCPServerConfig): boolean {
-  // Check explicit provider
-  if (serverConfig.config?.provider === 'smithery') {
-    return true;
-  }
-  
-  // Check URL domain
-  if (serverConfig.url?.includes('server.smithery.ai')) {
-    return true;
-  }
-  
-  // Check for Smithery-specific config keys
-  if (serverConfig.config?.smitheryProfileId || serverConfig.config?.profileId) {
-    return true;
-  }
-  
-  return false;
-}
 
 /**
  * Validates multiple server configurations and returns a summary
@@ -135,7 +105,6 @@ export function validateMCPServerConfigs(serverConfigs: MCPServerConfig[]): {
     valid: number;
     oauth: number;
     apiKey: number;
-    smithery: number;
   };
 } {
   const valid: MCPServerConfig[] = [];
@@ -144,7 +113,6 @@ export function validateMCPServerConfigs(serverConfigs: MCPServerConfig[]): {
   
   let oauthCount = 0;
   let apiKeyCount = 0;
-  let smitheryCount = 0;
 
   for (const config of serverConfigs) {
     const validation = validateMCPServerConfig(config);
@@ -154,8 +122,6 @@ export function validateMCPServerConfigs(serverConfigs: MCPServerConfig[]): {
       
       if (validation.authType === 'oauth') oauthCount++;
       else if (validation.authType === 'api_key') apiKeyCount++;
-      
-      if (isSmitheryServerConfig(config)) smitheryCount++;
     } else {
       invalid.push(config);
     }
@@ -171,8 +137,7 @@ export function validateMCPServerConfigs(serverConfigs: MCPServerConfig[]): {
       total: serverConfigs.length,
       valid: valid.length,
       oauth: oauthCount,
-      apiKey: apiKeyCount,
-      smithery: smitheryCount
+      apiKey: apiKeyCount
     }
   };
 }
@@ -198,10 +163,6 @@ export function generateMCPServerRecommendations(serverConfig: MCPServerConfig):
   
   if (!serverConfig.config || Object.keys(serverConfig.config).length === 0) {
     recommendations.push('💡 Add configuration parameters specific to this server type');
-  }
-  
-  if (isSmitheryServerConfig(serverConfig) && !serverConfig.config?.smitheryProfileId) {
-    recommendations.push('💡 Set a specific Smithery profile ID for better server isolation');
   }
   
   return recommendations;

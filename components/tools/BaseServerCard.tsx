@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
 import { ReactNode, useState } from "react";
 
-export type ServerType = "official" | "smithery" | "custom";
+export type ServerType = "official" | "custom";
 
 export interface BaseServerCardProps {
   qualifiedName: string;
@@ -41,13 +41,11 @@ export function BaseServerCard({
   const getServerTypeBadge = () => {
     const variants = {
       official: "default",
-      smithery: "secondary", 
       custom: "outline"
     } as const;
 
     const labels = {
       official: "Official",
-      smithery: "Smithery",
       custom: "Custom"
     };
 

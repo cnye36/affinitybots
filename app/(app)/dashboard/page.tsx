@@ -245,14 +245,14 @@ export default async function Dashboard() {
         }
 
         // --------------------------------------------------------------------
-        // Build tool logo map (official + Smithery bulk)
+        // Build tool logo map from official servers
         // --------------------------------------------------------------------
         const allQualifiedNamesSet = new Set<string>();
         agents.forEach((a: any) => (a.enabledTools || []).forEach((q: string) => q && allQualifiedNamesSet.add(q)));
         tools.forEach((t: any) => t?.qualified_name && allQualifiedNamesSet.add(t.qualified_name));
 
         const toolLogos: Record<string, string> = {};
-        // Seed with official server logos
+        // Build logo map from official servers
         OFFICIAL_MCP_SERVERS.forEach((s) => {
           if (s.logoUrl) {
             // Seed by exact name and any qualified names that include the official key
@@ -267,34 +267,7 @@ export default async function Dashboard() {
           }
         });
 
-        // Fetch remaining from Smithery bulk endpoint
-        if (allQualifiedNamesSet.size > 0) {
-          try {
-            const hdrs = await headers();
-            const proto = hdrs.get("x-forwarded-proto") || "http";
-            const host = hdrs.get("host");
-            const baseUrl = host ? `${proto}://${host}` : "";
-            const qualifiedNames = Array.from(allQualifiedNamesSet);
-            const response = await fetch(`${baseUrl}/api/smithery/bulk`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ qualifiedNames }),
-              // avoid caching for accuracy on dashboard
-              cache: "no-store",
-            });
-            if (response.ok) {
-              const data = await response.json();
-              Object.entries((data?.servers as any) || {}).forEach(([q, s]: [string, any]) => {
-                const url = (s as any)?.iconUrl || (s as any)?.logo;
-                if (url) toolLogos[q] = url as string;
-              });
-            }
-          } catch {
-            // Non-fatal; fall back to any seeded logos and emoji
-          }
-        }
-
-        // Helper to get an official logo when Smithery did not provide one
+        // Helper to get an official logo by qualified name
         const officialLogoForQualifiedName = (qualified: string): string | undefined => {
           const lower = (qualified || "").toLowerCase();
           const match = OFFICIAL_MCP_SERVERS.find((s) => lower.includes(s.qualifiedName.toLowerCase()) && s.logoUrl);

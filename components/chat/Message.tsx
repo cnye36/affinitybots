@@ -110,19 +110,22 @@ export const AssistantMessage: FC<MessageProps> = ({ message, isThinking = false
           <motion.div
             variants={dotVariants}
             animate="animate"
-            className="w-2 h-2 bg-blue-500 rounded-full"
+            className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"
+            style={{ animationDelay: "0ms" }}
           />
           <motion.div
             variants={dotVariants}
             animate="animate"
             transition={{ ...dotVariants.animate.transition, delay: 0.2 }}
-            className="w-2 h-2 bg-blue-500 rounded-full"
+            className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"
+            style={{ animationDelay: "150ms" }}
           />
           <motion.div
             variants={dotVariants}
             animate="animate"
             transition={{ ...dotVariants.animate.transition, delay: 0.4 }}
-            className="w-2 h-2 bg-blue-500 rounded-full"
+            className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"
+            style={{ animationDelay: "300ms" }}
           />
         </div>
       </div>

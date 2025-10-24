@@ -12,23 +12,6 @@ import Link from "next/link";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { OFFICIAL_MCP_SERVERS } from "@/lib/mcp/officialMcpServers";
 
-interface SmitheryServer {
-  qualifiedName: string;
-  displayName?: string;
-  description?: string;
-  iconUrl?: string;
-  logo?: string;
-  isLocal?: boolean;
-  security?: {
-    scanPassed?: boolean;
-    provider?: string;
-  };
-  connections?: Array<{
-    configSchema?: any;
-    deploymentUrl?: string;
-    type?: string;
-  }>;
-}
 
 interface UserMCPServer {
   id: string;
@@ -62,12 +45,10 @@ export function ToolSelector({
   onMCPServersChange,
 }: ToolSelectorProps) {
   console.log('ToolSelector received enabledMCPServers:', enabledMCPServers);
-  const [smitheryServers, setSmitheryServers] = useState<SmitheryServer[]>([]);
   const [userServers, setUserServers] = useState<UserMCPServer[]>([]);
   const [userAddedServers, setUserAddedServers] = useState<UserAddedServer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [logos, setLogos] = useState<Record<string, string>>({});
 
   // Fetch data on component mount
   useEffect(() => {
@@ -79,16 +60,11 @@ export function ToolSelector({
     setError(null);
     
     try {
-      // Fetch Smithery servers, user configurations, and user-added servers in parallel
-      const [smitheryRes, userRes, userAddedRes] = await Promise.all([
-        fetch('/api/smithery?pageSize=100').then(r => r.json()),
+      // Fetch user configurations and user-added servers in parallel
+      const [userRes, userAddedRes] = await Promise.all([
         fetch('/api/user-mcp-servers').then(r => r.json()),
         fetch('/api/user-added-servers').then(r => r.json())
       ]);
-
-      if (smitheryRes.error) {
-        throw new Error(smitheryRes.error);
-      }
 
       if (userRes.error) {
         throw new Error(userRes.error);
@@ -98,41 +74,8 @@ export function ToolSelector({
         throw new Error(userAddedRes.error);
       }
 
-      const servers = smitheryRes.servers?.servers || [];
-      setSmitheryServers(servers);
       setUserServers(userRes.servers || []);
       setUserAddedServers(userAddedRes.servers || []);
-
-      // Fetch logos using Smithery bulk endpoint to ensure we get icons even if not included in the list payload
-      try {
-        const qualifiedNames = (servers || []).map((s: any) => s.qualifiedName).filter(Boolean);
-        if (qualifiedNames.length > 0) {
-          const bulkResponse = await fetch('/api/smithery/bulk', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ qualifiedNames })
-          });
-          if (bulkResponse.ok) {
-            const bulkData = await bulkResponse.json();
-            const logoMap: Record<string, string> = {};
-            Object.entries(bulkData?.servers || {}).forEach(([qualifiedName, serverData]: [string, any]) => {
-              const url = (serverData as any)?.iconUrl || (serverData as any)?.logo;
-              if (url) {
-                logoMap[qualifiedName] = url as string;
-              }
-            });
-            if (Object.keys(logoMap).length > 0) setLogos(logoMap);
-          }
-        }
-      } catch {
-        // Non-fatal; fall back to any inline iconUrl/logo present in list
-        const fallbackMap: Record<string, string> = {};
-        servers.forEach((s: any) => {
-          const url = s?.iconUrl || s?.logo;
-          if (url) fallbackMap[s.qualifiedName] = url;
-        });
-        if (Object.keys(fallbackMap).length > 0) setLogos(fallbackMap);
-      }
 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch tools');
@@ -160,11 +103,6 @@ export function ToolSelector({
 
   const isEnabledForAgent = (qualifiedName: string) => {
     return enabledMCPServers.includes(qualifiedName);
-  };
-
-  const needsConfiguration = (server: SmitheryServer) => {
-    return server.connections?.[0]?.configSchema && 
-           Object.keys(server.connections[0].configSchema.properties || {}).length > 0;
   };
 
   if (loading) {
@@ -196,7 +134,7 @@ export function ToolSelector({
   }
 
   // Combine all server types (deduplicated by qualifiedName).
-  // Priority: custom > official > smithery
+  // Priority: custom > official
   const allServersMap: Record<string, any> = {};
   userAddedServers.forEach(server => {
     allServersMap[server.qualified_name] = {
@@ -217,14 +155,6 @@ export function ToolSelector({
       };
     }
   });
-  smitheryServers.forEach(server => {
-    if (!allServersMap[server.qualifiedName]) {
-      allServersMap[server.qualifiedName] = {
-        ...server,
-        serverType: 'smithery' as const
-      };
-    }
-  });
   const allServers = Object.values(allServersMap);
 
   // Separate configured and unconfigured servers
@@ -234,18 +164,15 @@ export function ToolSelector({
   const ServerCard = ({ server, isConfiguredSection }: { server: any; isConfiguredSection: boolean }) => {
     const configured = isConfigured(server.qualifiedName);
     const enabled = isEnabledForAgent(server.qualifiedName);
-    const requiresConfig = server.serverType === 'smithery' ? needsConfiguration(server) : false;
     
     const getServerTypeBadge = () => {
       const variants = {
         official: "default",
-        smithery: "secondary", 
         custom: "outline"
       } as const;
 
       const labels = {
         official: "Official",
-        smithery: "Smithery",
         custom: "Custom"
       };
 
@@ -263,9 +190,9 @@ export function ToolSelector({
           <div className="flex items-start gap-3">
             {/* Icon */}
             <div className="flex-shrink-0 mt-1">
-              {server.logoUrl || logos[server.qualifiedName] ? (
+              {server.logoUrl ? (
                 <Image
-                  src={server.logoUrl || logos[server.qualifiedName]}
+                  src={server.logoUrl}
                   alt={server.displayName || server.qualifiedName}
                   width={32}
                   height={32}

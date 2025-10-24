@@ -69,7 +69,7 @@ pnpm run schedule:worker     # Start production schedule worker
    - Client management with session caching and validation
    - Factory pattern for creating and managing MCP clients (`mcpClientFactory.ts`)
    - Session store for OAuth tokens with expiration handling
-   - Both user-added and globally available MCP servers
+   - Both user-added and official MCP servers
 
 3. **Workflows** (`/app/(app)/workflows/`, `/app/api/workflows/`)
    - Visual workflow builder using ReactFlow
@@ -124,7 +124,7 @@ pnpm run schedule:worker     # Start production schedule worker
 
 - `user_assistants` - Assistant configurations owned by users
 - `user_mcp_servers` - User-specific MCP server configs with OAuth sessions
-- `global_mcp_servers` - Globally available MCP servers (Smithery registry)
+- `global_mcp_servers` - Globally available MCP servers (optional, for organization-wide servers)
 - `workflows` - Workflow definitions
 - `workflow_tasks` - Tasks within workflows (AI agent nodes)
 - `workflow_triggers` - Workflow trigger configurations
@@ -143,11 +143,18 @@ pnpm run schedule:worker     # Start production schedule worker
 
 ### Environment Configuration
 
-Key environment variables (see `.env.example`):
+Key environment variables:
 - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Supabase config
-- `REDIS_URL` / `REDIS_URI` - Redis for BullMQ and OAuth sessions
+- `REDIS_URL` / `REDIS_URI` - Local Redis for BullMQ scheduler (uses Docker langgraph-redis service)
+- `RATE_LIMIT_REDIS_URL` - Separate cloud Redis for rate limiting (Upstash or similar)
 - `LANGSMITH_API_KEY`, `LANGSMITH_PROJECT` - Langgraph tracing
 - `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY` - LLM providers
+
+**Redis Architecture:**
+- **LangGraph Platform**: Uses built-in `langgraph-redis` Docker service (configured in docker-compose.yml)
+- **Rate Limiting**: Uses separate cloud Redis via `RATE_LIMIT_REDIS_URL` (recommended: Upstash free tier)
+- **BullMQ Scheduler**: Uses local Docker Redis via `REDIS_URL` (same as general Redis connection)
+- **OAuth Sessions**: Currently in-memory (not using Redis)
 
 ### Code Style (from AGENT.md)
 
@@ -177,7 +184,7 @@ Key environment variables (see `.env.example`):
 
 **MCP Server Registration**:
 - User-added servers go to `user_mcp_servers` table
-- Discoverable servers fetched from Smithery API and cached in `global_mcp_servers`
+- Official MCP servers are defined in the codebase (`officialMcpServers.ts`)
 - OAuth sessions stored separately in `sessionStore` (Redis)
 
 **Workflow Scheduling**:
@@ -193,7 +200,6 @@ Key environment variables (see `.env.example`):
 
 ### Known Integration Points
 
-- **Smithery**: MCP server discovery and registry
 - **HubSpot**: OAuth integration for CRM access
 - **GitHub**: OAuth for repository/code access
 - **Langgraph Platform**: Remote agent execution and state management

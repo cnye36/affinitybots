@@ -131,7 +131,7 @@ export function AgentCard({ assistant, onDelete }: AgentCardProps) {
     return pretty;
   };
   
-  // Load logos for enabled tools (official mapping first, then Smithery bulk)
+  // Load logos for enabled tools from official servers
   const [toolLogos, setToolLogos] = useState<Record<string, string>>({});
   const enabledServers = getEnabledMcpServers();
 
@@ -139,40 +139,15 @@ export function AgentCard({ assistant, onDelete }: AgentCardProps) {
     let isCancelled = false;
 
     async function loadLogos() {
-      // Start with official server logos
-      const initialLogos: Record<string, string> = {};
+      // Load official server logos
+      const logos: Record<string, string> = {};
       OFFICIAL_MCP_SERVERS.forEach((s) => {
         if (enabledServers.includes(s.qualifiedName) && s.logoUrl) {
-          initialLogos[s.qualifiedName] = s.logoUrl as string;
+          logos[s.qualifiedName] = s.logoUrl as string;
         }
       });
 
-      if (!isCancelled) setToolLogos((prev) => ({ ...prev, ...initialLogos }));
-
-      if (enabledServers.length === 0) return;
-
-      try {
-        const response = await fetch("/api/smithery/bulk", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ qualifiedNames: enabledServers }),
-        });
-        if (response.ok) {
-          const data = await response.json();
-          const map: Record<string, string> = {};
-          Object.entries(data?.servers || {}).forEach(
-            ([qualifiedName, serverData]: [string, any]) => {
-              const url = (serverData as any)?.iconUrl || (serverData as any)?.logo;
-              if (url) map[qualifiedName] = url as string;
-            }
-          );
-          if (!isCancelled && Object.keys(map).length > 0) {
-            setToolLogos((prev) => ({ ...prev, ...map }));
-          }
-        }
-      } catch {
-        // non-fatal; fall back to no extra logos
-      }
+      if (!isCancelled) setToolLogos(logos);
     }
 
     loadLogos();

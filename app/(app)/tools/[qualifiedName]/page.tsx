@@ -39,7 +39,7 @@ interface ServerDetail {
   successRate?: number;
   deployedFrom?: string;
   // Custom fields for UI behavior
-  source?: "official" | "smithery";
+  source?: "official";
   authType?: "oauth" | "pat" | "api_key";
   url?: string; // HTTP MCP endpoint, when known (e.g., Official)
 }
@@ -85,15 +85,8 @@ export default function ServerDetailPage() {
           });
           return;
         }
-        const encodedName = encodeURIComponent(decodedName);
-        const response = await fetch(`/api/smithery/${encodedName}`);
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch server details');
-        }
-        
-        const data = await response.json();
-        setServer({ ...data.server, source: "smithery" });
+        // Server not found in official registry
+        throw new Error('Server not found');
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
@@ -146,6 +139,11 @@ export default function ServerDetailPage() {
         // Use our HubSpot OAuth start route instead of MCP DCR
         const startUrl = `/api/hubspot/oauth/start?state=tools&redirectTo=${encodeURIComponent('/tools/hubspot')}`;
         window.location.href = startUrl;
+        return;
+      }
+      if (server.qualifiedName === 'google-drive') {
+        // Use our Google Drive OAuth connect route
+        window.location.href = '/api/google/oauth/connect';
         return;
       }
       // Default behavior for other official servers
@@ -496,28 +494,14 @@ export default function ServerDetailPage() {
 
       {/* Action Buttons */}
       <div className="flex gap-4 justify-center">
-        {server.source === 'official' ? (
-          isConnected ? (
-            <Button variant="destructive" size="lg" onClick={handleDisconnect} disabled={disconnecting}>
-              {disconnecting ? 'Disconnecting...' : 'Disconnect'}
-            </Button>
-          ) : (
-            <Button size="lg" onClick={handleConnect} disabled={connecting}>
-              {connecting ? 'Connecting...' : 'Connect'}
-            </Button>
-          )
+        {isConnected ? (
+          <Button variant="destructive" size="lg" onClick={handleDisconnect} disabled={disconnecting}>
+            {disconnecting ? 'Disconnecting...' : 'Disconnect'}
+          </Button>
         ) : (
-          <div className="text-center">
-            <p className="text-muted-foreground mb-4">
-              To configure the server or create an account, visit the Smithery page:
-            </p>
-            <Button size="lg" asChild>
-              <a href={server.homepage || `https://smithery.ai/server/${encodeURIComponent(server.qualifiedName)}`} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="w-4 h-4 mr-2" />
-                Configure on Smithery
-              </a>
-            </Button>
-          </div>
+          <Button size="lg" onClick={handleConnect} disabled={connecting}>
+            {connecting ? 'Connecting...' : 'Connect'}
+          </Button>
         )}
       </div>
 

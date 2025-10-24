@@ -73,12 +73,17 @@ class RateLimiter {
   private connecting: Promise<void> | null = null;
 
   constructor() {
-    // Use the same Redis as LangGraph but with database 1 for rate limiting
-    // In Docker environment, use the container name; otherwise fallback to localhost
-    // Support both REDIS_URL (Next.js env) and REDIS_URI (LangGraph compose env)
-    const configuredUrl = process.env.REDIS_URL || process.env.REDIS_URI;
-    const redisUrl = configuredUrl ||
+    // Use dedicated Redis for rate limiting (separate from LangGraph)
+    // This allows rate limiting to use cloud Redis while LangGraph uses local Docker Redis
+    const rateLimitRedisUrl = process.env.RATE_LIMIT_REDIS_URL;
+    
+    if (!rateLimitRedisUrl) {
+      console.warn('⚠️ RATE_LIMIT_REDIS_URL not set. Rate limiting will be disabled.');
+    }
+    
+    const redisUrl = rateLimitRedisUrl || 
                     (process.env.NODE_ENV === 'production' ? 'redis://langgraph-redis:6379' : 'redis://localhost:6379');
+    
     this.redis = new Redis(redisUrl, {
       maxRetriesPerRequest: 3,
       lazyConnect: true,
