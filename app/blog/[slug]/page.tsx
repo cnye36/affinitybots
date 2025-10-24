@@ -43,6 +43,8 @@ export async function generateMetadata({ params }: BlogPostPageProps) {
 
   const { post } = result;
 
+  const siteUrl = process.env.NEXT_PUBLIC_BASE_URL || (process.env.NODE_ENV === 'production' ? 'https://affinitybots.com' : 'http://localhost:3000');
+  
   return {
     title: post.title,
     description: post.excerpt,
@@ -51,14 +53,33 @@ export async function generateMetadata({ params }: BlogPostPageProps) {
       title: post.title,
       description: post.excerpt,
       type: 'article',
+      url: `${siteUrl}/blog/${slug}`,
       publishedTime: post.date,
       authors: [post.author],
       tags: post.tags,
+      images: post.coverImage ? [
+        {
+          url: post.coverImage.startsWith('http') ? post.coverImage : `${siteUrl}${post.coverImage}`,
+          width: 1200,
+          height: 630,
+          alt: post.title,
+        },
+      ] : [
+        {
+          url: `${siteUrl}/logo.png`,
+          width: 1200,
+          height: 630,
+          alt: post.title,
+        },
+      ],
     },
     twitter: {
       card: 'summary_large_image',
       title: post.title,
       description: post.excerpt,
+      images: post.coverImage ? [
+        post.coverImage.startsWith('http') ? post.coverImage : `${siteUrl}${post.coverImage}`
+      ] : [`${siteUrl}/logo.png`],
     },
   };
 }
