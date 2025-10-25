@@ -37,10 +37,10 @@ export const metadata: Metadata = {
     description: "Build and manage AI agent workflows",
     images: [
       {
-        url: "/logo.png",
+        url: "/images/Four-bots.png",
         width: 1200,
         height: 630,
-        alt: "AffinityBots",
+        alt: "AffinityBots - Four AI Agents",
       },
     ],
   },
@@ -48,7 +48,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "AffinityBots",
     description: "Build and manage AI agent workflows",
-    images: ["/logo.png"],
+    images: ["/images/Four-bots.png"],
   },
   robots: process.env.NODE_ENV === 'production'
     ? { index: true, follow: true }
@@ -82,7 +82,7 @@ export default function RootLayout({
           <OrganizationJsonLd
             name="AffinityBots"
             url={siteUrl}
-            logoUrl={`${siteUrl}/logo.png`}
+            logoUrl={`${siteUrl}/images/Four-bots.png`}
           />
           {children}
           <CookieBanner />

@@ -66,7 +66,7 @@ export async function generateMetadata({ params }: BlogPostPageProps) {
         },
       ] : [
         {
-          url: `${siteUrl}/logo.png`,
+          url: `${siteUrl}/images/Four-bots.png`,
           width: 1200,
           height: 630,
           alt: post.title,
@@ -79,7 +79,7 @@ export async function generateMetadata({ params }: BlogPostPageProps) {
       description: post.excerpt,
       images: post.coverImage ? [
         post.coverImage.startsWith('http') ? post.coverImage : `${siteUrl}${post.coverImage}`
-      ] : [`${siteUrl}/logo.png`],
+      ] : [`${siteUrl}/images/Four-bots.png`],
     },
   };
 }
