@@ -6,7 +6,7 @@ import { TooltipIconButton } from "./TooltipIconButton";
 import { Welcome } from "./Welcome";
 import { UserMessage, AssistantMessage } from "./Message";
 import { Composer } from "./Composer";
-import type { Message } from "@/hooks/useLangGraphChat";
+import type { ChatMessage as Message } from "@/components/chat/types";
 
 interface ThreadProps {
   messages: Message[];

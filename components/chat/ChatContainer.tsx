@@ -6,9 +6,8 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { TooltipProvider } from "@radix-ui/react-tooltip";
 import { Assistant } from "@/types/assistant";
-import { useLangGraphChat } from "@/hooks/useLangGraphChat";
+import { Chat } from "@/components/chat/Chat";
 import ThreadSidebar, { ThreadSidebarRef } from "@/components/chat/ThreadSidebar";
-import { Thread } from "./Thread";
 
 interface ChatContainerProps {
   assistant: Assistant;
@@ -17,34 +16,15 @@ interface ChatContainerProps {
 export default function ChatContainer({ assistant }: ChatContainerProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const sidebarRef = useRef<ThreadSidebarRef>(null);
-  
-  const {
-    threadId,
-    messages,
-    isRunning,
-    error,
-    sendMessage,
-    cancel,
-    switchToNewThread,
-    switchToThread,
-  } = useLangGraphChat({
-    assistantId: assistant.assistant_id,
-    onThreadCreated: (newThreadId) => {
-      console.log("Thread created:", newThreadId);
-      // Force refresh the sidebar when a new thread is created
-      setTimeout(() => {
-        sidebarRef.current?.refreshThreads();
-      }, 200);
-    },
-  });
+  const [threadId, setThreadId] = useState<string | null>(null);
 
   const handleThreadSelect = (selectedThreadId: string) => {
-    switchToThread(selectedThreadId);
+    setThreadId(selectedThreadId);
     setIsSidebarOpen(false); // Close sidebar on mobile after selection
   };
 
   const handleNewThread = () => {
-    switchToNewThread();
+    setThreadId(null);
     setIsSidebarOpen(false); // Close sidebar on mobile after creating new thread
   };
 
@@ -81,21 +61,11 @@ export default function ChatContainer({ assistant }: ChatContainerProps) {
             >
               {isSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </Button>
-            {error && (
-              <div className="text-sm text-destructive">
-                Error: {error}
-              </div>
-            )}
           </div>
 
-          {/* Thread Chat */}
+          {/* Thread Chat (migrated to useStream) */}
           <div className="flex-1 overflow-hidden">
-            <Thread
-              messages={messages}
-              isRunning={isRunning}
-              onSendMessage={sendMessage}
-              onCancel={cancel}
-            />
+            <Chat assistantId={assistant.assistant_id} threadId={threadId} onThreadId={setThreadId} />
           </div>
         </div>
 

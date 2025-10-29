@@ -3,8 +3,7 @@
 import { useStream } from "@langchain/langgraph-sdk/react";
 import { Thread } from "@/components/chat/Thread";
 import type { ChatMessage } from "@/components/chat/types";
-import { Message } from "@langchain/langgraph-sdk";
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 
 export function Chat({ assistantId, threadId, onThreadId }: { assistantId: string, threadId?: string | null, onThreadId?: (id: string) => void }) {
   // Resolve relative base to absolute URL to avoid URL constructor errors in SDK
@@ -14,10 +13,64 @@ export function Chat({ assistantId, threadId, onThreadId }: { assistantId: strin
       ? `${window.location.origin}${base}`
       : base;
 
-  // Refs used to ensure we title ONLY the newly created thread
-  const firstUserTextRef = useRef<string | null>(null);
-  const createdThreadIdRef = useRef<string | null>(threadId || null);
-  const didAutonameRef = useRef<boolean>(false);
+  const hasTitledRef = useRef<Set<string>>(new Set());
+  const renameRequestedRef = useRef<boolean>(false);
+  const renameTextRef = useRef<string | null>(null);
+  const lastThreadIdRef = useRef<string | null>(null);
+  const pendingFirstMessageRef = useRef<string | null>(null);
+
+  // Auto-generate title for new threads after first user message
+  const generateTitleForThread = async (threadId: string, userMessage: string) => {
+    if (!threadId || hasTitledRef.current.has(threadId)) {
+      console.log("Skipping title generation:", { threadId, hasThreadId: !!threadId, alreadyTitled: hasTitledRef.current.has(threadId) });
+      return;
+    }
+
+    try {
+      hasTitledRef.current.add(threadId);
+      console.log("Generating title for thread:", { threadId, assistantId, userMessage: userMessage.substring(0, 50) });
+
+      const url = `/api/agents/${assistantId}/threads/${threadId}/rename`;
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          conversation: userMessage,
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log("Successfully generated title for thread:", { threadId, title: result.title });
+        // Dispatch event to refresh sidebar
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("threads:refresh"));
+        }
+      } else {
+        const errorText = await response.text();
+        console.error("Failed to generate title for thread:", { threadId, status: response.status, error: errorText });
+        // Remove from titled set so we can retry
+        hasTitledRef.current.delete(threadId);
+      }
+    } catch (error) {
+      console.error("Error generating title:", { threadId, error: error instanceof Error ? error.message : String(error) });
+      hasTitledRef.current.delete(threadId);
+    }
+  };
+
+  // Track thread changes to reset titling state
+  useEffect(() => {
+    if (threadId && threadId !== lastThreadIdRef.current) {
+      lastThreadIdRef.current = threadId;
+      // Don't clear pendingFirstMessageRef here for new threads - we need it for title generation
+      // Only clear if we're switching to an existing thread
+      if (hasTitledRef.current.has(threadId)) {
+        pendingFirstMessageRef.current = null;
+      }
+    }
+  }, [threadId]);
 
   const thread = useStream<{ messages: any[] }>({
     apiUrl: resolvedApiUrl,
@@ -26,38 +79,18 @@ export function Chat({ assistantId, threadId, onThreadId }: { assistantId: strin
     reconnectOnMount: true,
     threadId: threadId ?? undefined,
     onThreadId: (newThreadId) => {
-      createdThreadIdRef.current = newThreadId;
       onThreadId?.(newThreadId);
-      // Trigger sidebar refresh when a new thread is created
-      if (typeof window !== "undefined") {
+      
+      // Generate title immediately when a new thread is created and we have a pending message
+      if (newThreadId && pendingFirstMessageRef.current && !hasTitledRef.current.has(newThreadId)) {
+        console.log("New thread created, generating title:", newThreadId, pendingFirstMessageRef.current);
+        // Small delay to ensure thread is fully created before updating metadata
         setTimeout(() => {
-          window.dispatchEvent(new CustomEvent("threads:refresh"));
-        }, 500);
-      }
-    },
-    onFinish: async () => {
-      const text = firstUserTextRef.current?.trim();
-      const newId = createdThreadIdRef.current;
-      if (!didAutonameRef.current && !threadId && text && newId) {
-        try {
-          didAutonameRef.current = true;
-          const res = await fetch(`/api/threads/${newId}/autoname`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ conversation: text.slice(0, 160) }),
-          });
-          if (!res.ok) {
-            console.warn("autoname failed", res.status);
-          } else if (typeof window !== "undefined") {
-            setTimeout(() => {
-              window.dispatchEvent(new CustomEvent("threads:refresh"));
-            }, 300);
+          if (pendingFirstMessageRef.current) {
+            generateTitleForThread(newThreadId, pendingFirstMessageRef.current);
+            pendingFirstMessageRef.current = null;
           }
-        } catch (e) {
-          console.error("autoname error", e);
-        } finally {
-          firstUserTextRef.current = null;
-        }
+        }, 1000);
       }
     },
   });
@@ -72,19 +105,16 @@ export function Chat({ assistantId, threadId, onThreadId }: { assistantId: strin
       createdAt: new Date(),
     }));
 
+  
   const handleSend = (text: string) => {
     const newMessage = { type: "human" as const, content: text };
+    const isFirstMessage = uiMessages.length === 0;
 
-    // Capture first user text for brand-new threads so we can autoname on finish
-    const isFirstInView = (thread.messages as any[]).length === 0;
-    if (!threadId && isFirstInView) {
-      firstUserTextRef.current = text;
-      didAutonameRef.current = false;
-    }
     thread.submit(
       { messages: [newMessage] },
       {
         streamResumable: true,
+        // Do not pass a synthetic threadId; allow server to assign to prevent 409
         ...(threadId ? { threadId } : {}),
         // Add metadata for thread creation
         metadata: {
@@ -97,6 +127,11 @@ export function Chat({ assistantId, threadId, onThreadId }: { assistantId: strin
         },
       }
     );
+
+    // Store the first message for potential title generation
+    if (isFirstMessage) {
+      pendingFirstMessageRef.current = text;
+    }
   };
   
 
@@ -110,9 +145,6 @@ export function Chat({ assistantId, threadId, onThreadId }: { assistantId: strin
           onCancel={() => thread.stop()}
         />
       </div>
-      {/* Composer is rendered inside Thread; keep here if needed */}
     </div>
   );
 }
-
-

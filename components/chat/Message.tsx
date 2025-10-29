@@ -5,7 +5,7 @@ import { useState, type FC } from "react";
 import { CopyIcon, CheckIcon } from "lucide-react";
 import { TooltipIconButton } from "./TooltipIconButton";
 import { AttachmentUI } from "./attachments/AttachmentUI";
-import type { Message as MessageType } from "@/hooks/useLangGraphChat";
+import type { ChatMessage as MessageType } from "@/components/chat/types";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
