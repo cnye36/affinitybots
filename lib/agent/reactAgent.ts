@@ -484,7 +484,7 @@ async function callModel(
     // Build params conditionally: GPT-5 rejects temperature and expects reasoningEffort
     const universalParams: Record<string, any> = {
       modelProvider: modelProvider as any,
-      streaming: true, // Enable token-by-token streaming
+      streaming: true, 
     };
     if (isGpt5) {
       universalParams.reasoningEffort = configurable.reasoningEffort ?? "medium";
@@ -616,8 +616,7 @@ function shouldContinue({ messages }: typeof MessagesAnnotation.State) {
   console.log(`Checking if should continue. Last message type: ${lastMessage.constructor.name}`);
   console.log(`Tool calls found: ${lastMessage.tool_calls?.length || 0}`);
   
-  // If the LLM makes a tool call, then we route to the "tools" node
-  // The interruptBefore: ["tools"] will automatically pause before tool execution
+  
   if (lastMessage.tool_calls?.length) {
     console.log(`Routing to tools node. Tool calls:`, lastMessage.tool_calls.map(tc => tc.name));
     return "tools";

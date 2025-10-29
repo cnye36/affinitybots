@@ -8,7 +8,7 @@ type StoreRow = {
   updated_at: string | null;
 };
 
-export async function GET(request: NextRequest, props: { params: Promise<{ assistantId: string }> }) {
+export async function GET(request: NextRequest, props: { params: Promise<{ agentId: string }> }) {
   const params = await props.params;
   try {
     // Create a Supabase client
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ assis
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const assistantId = params.assistantId;
+    const assistantId = params.agentId;
 
     // Verify user has access to this assistant
     const { data: userAssistant, error: accessError } = await supabase

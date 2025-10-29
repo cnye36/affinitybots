@@ -142,7 +142,7 @@ export function Header() {
                   <Link href="/early-access">Request Early Access</Link>
                 </AlertDialogCancel>
                 <AlertDialogAction asChild>
-                  <Link href="/signin">I have an invite — Sign In</Link>
+                  <Link href="/auth/signin">I have an invite — Sign In</Link>
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

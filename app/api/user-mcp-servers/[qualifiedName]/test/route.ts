@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { findOfficialServer } from "@/lib/mcp/officialMcpServers";
 import { createClient } from "@supabase/supabase-js";
+import { createGoogleDriveClient } from "@/lib/mcp/googleDriveMcpClient";
 
 export async function POST(
   request: NextRequest,
@@ -49,6 +50,16 @@ export async function POST(
     }
 
     console.log('Testing MCP server:', deploymentUrl);
+
+    // Check if this is a Google Drive MCP server (custom protocol)
+    const isGoogleDriveServer = qualifiedName.toLowerCase().includes('google') || 
+                                qualifiedName.toLowerCase().includes('drive') ||
+                                deploymentUrl.includes('localhost:3002') ||
+                                deploymentUrl.includes('google-drive');
+
+    if (isGoogleDriveServer) {
+      return await testGoogleDriveConnection(qualifiedName, deploymentUrl);
+    }
 
     // Test the connection using a simple HTTP request to the MCP server
     try {
@@ -208,5 +219,112 @@ export async function POST(
       success: false,
       error: 'Internal server error during connection test'
     }, { status: 500 });
+  }
+}
+
+/**
+ * Test Google Drive MCP server connection with OAuth validation
+ */
+async function testGoogleDriveConnection(qualifiedName: string, serverUrl: string): Promise<NextResponse> {
+  try {
+    console.log(`Testing Google Drive MCP server: ${serverUrl}`);
+
+    // Step 1: Test basic connectivity with health check
+    console.log('Testing Google Drive MCP server health...');
+    try {
+      const healthResponse = await fetch(`${serverUrl}/health`, {
+        method: 'GET',
+        signal: AbortSignal.timeout(5000) // 5 second timeout
+      });
+
+      if (!healthResponse.ok) {
+        return NextResponse.json({
+          success: false,
+          error: `Google Drive MCP server health check failed (${healthResponse.status})`,
+          details: {
+            server: qualifiedName,
+            url: serverUrl,
+            status: healthResponse.status,
+            statusText: healthResponse.statusText
+          }
+        });
+      }
+
+      console.log('Google Drive MCP server health check passed');
+    } catch (healthError: any) {
+      console.log('Google Drive MCP server health check failed:', healthError.message);
+      return NextResponse.json({
+        success: false,
+        error: `Cannot connect to Google Drive MCP server: ${healthError.message}`,
+        details: {
+          server: qualifiedName,
+          url: serverUrl,
+          error: healthError.toString()
+        }
+      });
+    }
+
+    // Step 2: Test tools endpoint (doesn't require OAuth)
+    console.log('Testing Google Drive MCP server tools endpoint...');
+    try {
+      const toolsResponse = await fetch(`${serverUrl}/mcp/tools`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        signal: AbortSignal.timeout(5000)
+      });
+
+      if (!toolsResponse.ok) {
+        return NextResponse.json({
+          success: false,
+          error: `Google Drive MCP server tools endpoint failed (${toolsResponse.status})`,
+          details: {
+            server: qualifiedName,
+            url: serverUrl,
+            status: toolsResponse.status,
+            statusText: toolsResponse.statusText
+          }
+        });
+      }
+
+      const toolsData = await toolsResponse.json();
+      console.log(`Google Drive MCP server has ${toolsData.tools?.length || 0} available tools`);
+
+      return NextResponse.json({
+        success: true,
+        message: 'Google Drive MCP server connection successful',
+        details: {
+          server: qualifiedName,
+          url: serverUrl,
+          availableTools: toolsData.tools?.length || 0,
+          tools: toolsData.tools || []
+        }
+      });
+
+    } catch (toolsError: any) {
+      console.log('Google Drive MCP server tools endpoint failed:', toolsError.message);
+      return NextResponse.json({
+        success: false,
+        error: `Google Drive MCP server tools endpoint error: ${toolsError.message}`,
+        details: {
+          server: qualifiedName,
+          url: serverUrl,
+          error: toolsError.toString()
+        }
+      });
+    }
+
+  } catch (error: any) {
+    console.error('Error testing Google Drive MCP server:', error);
+    return NextResponse.json({
+      success: false,
+      error: `Google Drive MCP server test failed: ${error.message}`,
+      details: {
+        server: qualifiedName,
+        url: serverUrl,
+        error: error.toString()
+      }
+    });
   }
 } 

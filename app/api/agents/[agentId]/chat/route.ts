@@ -6,7 +6,7 @@ import { rateLimiter } from "@/lib/rateLimiting";
 export const runtime = "nodejs";
 
 /**
- * Handle resume commands for tool approval interrupts
+ * Handle resume commands for tool approval
  */
 async function handleResumeCommand(
   assistantId: string,
@@ -36,7 +36,7 @@ async function handleResumeCommand(
           thread_id: threadId,
         },
       },
-      interruptBefore: ["tools"],
+      
       streamMode: ["messages"],
     }
   );
@@ -201,7 +201,7 @@ export async function POST(
         config: {
           configurable: fullConfig,
         },
-        interruptBefore: ["tools"],
+        
         streamMode: ["messages-tuple"],
       }
     );

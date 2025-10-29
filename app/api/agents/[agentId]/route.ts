@@ -2,6 +2,36 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
 import { Client } from "@langchain/langgraph-sdk";
 import { Assistant } from "@/types/assistant";
+import { SupabaseClient } from "@supabase/supabase-js";
+
+// Helper function to clean up all memories for an assistant
+async function cleanupAssistantMemories(supabase: SupabaseClient, assistantId: string) {
+  try {
+    // Delete all memories for this assistant from the store table
+    // Memories can be stored with different prefix formats
+    const prefixDot = `user_profile.${assistantId}`;
+    const prefixJson = JSON.stringify(["user_profile", assistantId]);
+    
+    // Use separate delete operations to avoid PostgREST parsing issues with JSON arrays
+    const { error: deleteError1 } = await supabase
+      .from("store")
+      .delete()
+      .eq("prefix", prefixDot);
+    
+    const { error: deleteError2 } = await supabase
+      .from("store")
+      .delete()
+      .eq("prefix", prefixJson);
+    
+    if (deleteError1 || deleteError2) {
+      console.error("Error cleaning up assistant memories:", deleteError1 || deleteError2);
+    } else {
+      console.log(`Cleaned up memories for assistant ${assistantId}`);
+    }
+  } catch (error) {
+    console.error("Error in cleanupAssistantMemories:", error);
+  }
+}
 
 // Helper function to merge configurations safely
 function mergeConfigurations(
@@ -203,12 +233,18 @@ export async function DELETE(
     try {
       await langgraphClient.assistants.delete(assistantId);
       
+      // Clean up all memories for this assistant
+      await cleanupAssistantMemories(supabase, assistantId);
+      
       return NextResponse.json({
         success: true,
         message: "Assistant deleted successfully",
       });
     } catch (langgraphError) {
       console.error("LangGraph deletion failed, trying direct database deletion:", langgraphError);
+      
+      // Clean up all memories for this assistant before deleting the assistant
+      await cleanupAssistantMemories(supabase, assistantId);
       
       // Fallback: direct database deletion
       const { error: deleteError } = await supabase

@@ -15,7 +15,7 @@ services:
     langgraph-api:
         image: "affinitybots:latest"
         ports:
-            - "8123:8000"
+            - "8123:8000"  # Map host port 8123 to container port 8000
         depends_on:
             langgraph-redis:
                 condition: service_healthy
@@ -33,6 +33,14 @@ services:
             LANGSMITH_TRACING: ${LANGSMITH_TRACING}
         extra_hosts:
             - "host.docker.internal:host-gateway"
+
+    google-drive-mcp:
+        image: "gdrive-mcp-server-gdrive-mcp"
+        ports:
+            - "3002:3002"
+        environment:
+            - .env
+            
     
     # Schedule worker - only needed if self-hosting (not needed for Vercel deployments)
     # For local dev, run separately with: pnpm run schedule:worker:dev

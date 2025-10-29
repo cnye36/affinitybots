@@ -42,7 +42,7 @@ export class GoogleDriveMCPClient {
    */
   private async getValidTokens(): Promise<GoogleOAuthTokens> {
     if (!this.tokens) {
-      throw new Error("No tokens configured for Google Drive MCP client")
+      throw new Error("No tokens configured for Google Drive MCP client. Please reconnect your Google account.")
     }
 
     try {
@@ -56,6 +56,7 @@ export class GoogleDriveMCPClient {
       // Update cached tokens if they were refreshed
       if (validTokens.access_token !== this.tokens.access_token) {
         this.tokens = validTokens
+        console.log("Google Drive tokens refreshed successfully")
       }
 
       return validTokens
@@ -69,6 +70,8 @@ export class GoogleDriveMCPClient {
    * Execute a tool on the Google Drive MCP server
    */
   async executeTool(toolName: string, toolArgs?: Record<string, any>): Promise<any> {
+    console.log(`GoogleDriveMCPClient: Executing tool ${toolName} on ${this.serverUrl}`)
+    
     const tokens = await this.getValidTokens()
 
     const requestBody: GoogleDriveMCPExecuteRequest = {
@@ -82,25 +85,34 @@ export class GoogleDriveMCPClient {
     }
 
     try {
+      console.log(`GoogleDriveMCPClient: Making request to ${this.serverUrl}/mcp/execute`)
       const response = await fetch(`${this.serverUrl}/mcp/execute`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          // New header-based auth for servers expecting Bearer tokens
+          Authorization: `Bearer ${tokens.access_token}`,
         },
         body: JSON.stringify(requestBody),
+        signal: AbortSignal.timeout(30000) // 30 second timeout
       })
+
+      console.log(`GoogleDriveMCPClient: Response status ${response.status}`)
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
+        console.error(`GoogleDriveMCPClient: Server error ${response.status}:`, errorData)
         throw new Error(errorData.error || `MCP server error (${response.status})`)
       }
 
       const result: GoogleDriveMCPExecuteResponse = await response.json()
 
       if (!result.success) {
+        console.error(`GoogleDriveMCPClient: Tool execution failed:`, result.error)
         throw new Error(result.error || "Tool execution failed")
       }
 
+      console.log(`GoogleDriveMCPClient: Tool ${toolName} executed successfully`)
       return result.result
     } catch (error) {
       console.error(`Error executing Google Drive tool ${toolName}:`, error)
@@ -114,10 +126,13 @@ export class GoogleDriveMCPClient {
    */
   async listTools(): Promise<Array<{ name: string; description?: string; inputSchema?: any }>> {
     try {
+      // Include Authorization header if tokens are available
+      const tokens = this.tokens ? await this.getValidTokens() : null
       const response = await fetch(`${this.serverUrl}/mcp/tools`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
+          ...(tokens ? { Authorization: `Bearer ${tokens.access_token}` } : {}),
         },
       })
 
@@ -139,10 +154,20 @@ export class GoogleDriveMCPClient {
    */
   async healthCheck(): Promise<boolean> {
     try {
+      console.log(`GoogleDriveMCPClient: Health check for ${this.serverUrl}`)
+      // Some deployments may require auth for health; include if available
+      const tokens = this.tokens ? await this.getValidTokens() : null
       const response = await fetch(`${this.serverUrl}/health`, {
         method: "GET",
+        headers: {
+          ...(tokens ? { Authorization: `Bearer ${tokens.access_token}` } : {}),
+        },
+        signal: AbortSignal.timeout(5000) // 5 second timeout
       })
-      return response.ok
+      
+      const isHealthy = response.ok
+      console.log(`GoogleDriveMCPClient: Health check ${isHealthy ? 'passed' : 'failed'} (${response.status})`)
+      return isHealthy
     } catch (error) {
       console.error("Google Drive MCP server health check failed:", error)
       return false
