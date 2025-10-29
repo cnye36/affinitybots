@@ -1,6 +1,6 @@
 ---
-title: "Building Your First AI Agent: A Step-by-Step Guide"
-excerpt: "Learn how to create your first AI agent using AffinityBots in under 10 minutes. We'll walk you through the entire process from setup to deployment."
+title: "Build an AffinityBots Agent in 10 Minutes"
+excerpt: "Walk through the AffinityBots agent builder and launch a working AI teammate without touching a line of code."
 author: "Curtis Nye"
 date: "2025-08-05"
 readTime: "6 min read"
@@ -21,269 +21,171 @@ coverImage: "/blog-images/Build-your-first-ai-agent.png"
   priority
 />
 
-Creating your first AI agent might seem daunting, but with the right tools and approach, you can have a fully functional agent up and running in just a few minutes. This comprehensive guide will walk you through the entire process using AffinityBots.
+Creating your first AI agent might seem daunting, but with the right tools and approach, you can have a fully functional agent up and running in just a few minutes. This comprehensive guide will walk you through the entire process using AffinityBots. If you want a preview of what mature automation looks like, skim [AI-First Workflows](/blog/ai-first-workflows-how-to-build-smarter-faster-more-scalable-operations) for the end-to-end blueprint we’re steering toward.
 
-## Prerequisites
+> **Goal:** By the time you reach the bottom of this post you’ll have launched a working agent, uploaded supporting knowledge, added tools, and shared it with your team.
+## What You’ll Need
 
-Before we begin, make sure you have:
+- An AffinityBots account (a free workspace works perfectly)
+- Clarity on the “job to be done” for your first agent—support triage, demo requests, lead capture, anything repeatable
+- A couple of reference docs (pricing, FAQs, or onboarding checklists) to use as optional knowledge
 
-- A computer with internet access
-- Basic understanding of business processes
-- Clear goals for what you want your AI agent to accomplish
+## Step 1 · Open the Agent Builder
 
-<Callout type="info" title="No Coding Required">
-You don't need any programming experience to follow this guide. AffinityBots provides a visual, no-code interface for building AI agents.
+From the AffinityBots dashboard click **Create Agent**. You’ll land on the dedicated builder screen where every control lives in one scrollable panel.
+
+<Image
+ src="/blog-images/Create-first-agent-2.png"
+ alt="Create new agent button in AffinityBots"
+ width={1200}
+ height={720}
+ className="w-full h-auto rounded-lg mb-8"
+ sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 70vw"
+/>
+
+
+## Step 2 · Give Your Agent a Name (Optional but Fun)
+
+Right at the top you’ll see the **Name (Optional)** card. Drop in something memorable like “LaunchPad Liaison” or leave it blank and AffinityBots will generate a creative label for you.
+
+<Image
+  src="/docs-images/Name-your-agent.png"
+  alt="Name your agent"
+  width={1200}
+  height={720}
+  className="w-full h-auto rounded-lg mb-8"
+  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 70vw"
+/>
+
+<Callout type="info" title="Why the name matters">
+Names show up in the agent list, chat headers, and team notifications. Pick something that signals the agent’s job so teammates know what to expect.
 </Callout>
 
-## Step 1: Define Your Agent's Purpose
+## Step 3 · Explain what you need your agent to do:
 
-The first step in creating an effective AI agent is clearly defining its purpose. Ask yourself:
+The heart of the builder is the **Describe Your AI Agent** textarea. Think of it as a conversation with a teammate: set the mission, rules, and desired outputs. The UI includes a built-in **Enhance** button that tightens your instructions if you want a quick upgrade.
 
-### What problem are you trying to solve?
+**Example brief**
 
-- **Customer Support**: Handle common inquiries and provide instant responses
-- **Lead Qualification**: Assess and score potential customers
-- **Sales Assistance**: Guide prospects through your sales process
-- **Data Collection**: Gather information from customers or prospects
+```
+I need an agent that can be the first responder for inbound product demos.
+- Greet leads by name when available.
+- Capture company, role, and current tooling.
+- Answer pricing questions using the attached FAQ.
+- Escalate enterprise leads to the human sales team.
+```
 
-### What specific tasks should your agent handle?
-
-Be as specific as possible. For example:
-- "Answer questions about product pricing and features"
-- "Collect contact information from website visitors"
-- "Schedule appointments with qualified leads"
-
-<Alert type="warning">
-Avoid trying to make your first agent do everything. Start with a single, well-defined purpose and expand from there.
-</Alert>
-
-## Step 2: Set Up Your AffinityBots Account
-
-1. **Visit the AffinityBots website** and click "Get Started"
-2. **Create your account** using your business email
-3. **Choose your plan** (we recommend starting with the free tier)
-4. **Complete the onboarding process**
-
-### Account Setup Checklist
-
-- [ ] Email verified
-- [ ] Business information added
-- [ ] Payment method configured (if using paid plan)
-- [ ] Team members invited (if applicable)
-
-## Step 3: Create Your First Agent
-
-Now it's time to build your agent:
-
-### 3.1 Choose Your Agent Type
-
-AffinityBots offers several pre-built agent templates:
-
-- **Customer Support Agent**: Handles common customer inquiries
-- **Sales Assistant**: Qualifies leads and provides product information
-- **Appointment Scheduler**: Manages calendar bookings
-- **Data Collector**: Gathers information from users
-
-<Callout type="tip" title="Template Selection">
-Choose the template that most closely matches your agent's purpose. You can always customize it later.
+<Callout type="tip" title="Use the Enhance button">
+Enter your draft, click **Enhance**, and AffinityBots will polish the instructions while keeping your intent intact. It's a great way to get professional-quality prompts without being a prompt expert.
 </Callout>
 
-### 3.2 Configure Basic Settings
+## Step 4 · Jump-Start with a Template
 
-Give your agent a name and description:
+Directly below the description box, you'll see a list of templates. Click any template to prefill the description box with a curated system prompt. You can treat it as a starting point or use it verbatim.
 
-```
-Agent Name: "Customer Support Bot"
-Description: "Handles common customer inquiries about products and services"
-```
+<Image
+ src="/docs-images/Template-selection.png"
+ alt="Agent templates displayed as pills"
+ width={1200}
+ height={540}
+ className="w-full h-auto rounded-lg mb-8"
+ sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 70vw"
+/>
 
-### 3.3 Define Your Agent's Personality
+Templates are especially handy when you’re onboarding go-to-market or support teammates—one click, tweak a sentence, ship it.
 
-This is where you make your agent unique:
+## Step 5 · Wire Up the Right Tools
 
-- **Tone**: Professional, friendly, casual, or technical
-- **Communication Style**: Direct, conversational, or detailed
-- **Expertise Level**: Beginner-friendly or advanced
+Next up is the **Add Tools** accordion. Use the dropdown to toggle any integrations you need—Gmail, Notion, Supabase, HubSpot, whatever is enabled in your workspace.
 
-<Alert type="info">
-Your agent's personality should match your brand voice and target audience.
-</Alert>
+<image
+  src="/docs-images/Tools-selection.png"
+  alt="Add tools"
+  width={1200}
+  height={540}
+  className="w-full h-auto rounded-lg mb-8"
+  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 70vw"
+/>
 
-## Step 4: Train Your Agent
+Tips:
 
-Training is the most important step in creating an effective AI agent.
+- Grant tools on a need-to-use basis so each agent stays focused.
+- You can add or remove tools later without recreating the agent.
+- All selections show up as a badge count on the accordion header so you never lose track.
 
-### 4.1 Add Knowledge Base Content
+If you’re not sure which tools to start with, skim [Harnessing Agentic AI for Business](/blog/harnessing-agentic-ai-for-business-multi-agent-systems-and-workflow-automation) for role-based recommendations.
 
-Upload or create content that your agent can reference:
+## Step 6 · Load Supporting Knowledge
 
-- **FAQ documents**: Common questions and answers
-- **Product information**: Features, pricing, specifications
-- **Company policies**: Return policies, shipping information
-- **Process documentation**: How to use your products or services
+Click **Add Knowledge** to open the drag-and-drop zone. AffinityBots queues your docs locally and uploads them after the agent is created, updating the progress in real time.
 
-### 4.2 Create Conversation Flows
+<Image
+ src="/docs-images/Knowledge-selection.png"
+ alt="Add knowledge"
+ width={1200}
+ height={540}
+ className="w-full h-auto rounded-lg mb-8"
+ sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 70vw"
+/>
 
-Design how your agent should handle different scenarios:
+- Drag files straight onto the dropzone or click to browse
+- Supported types include PDF, DOCX, CSV, XLSX, Markdown, HTML, and more
+- After creation the builder automatically writes successful uploads to the agent’s knowledge base
 
-#### Example: Customer Support Flow
-
-```
-1. Greeting: "Hello! How can I help you today?"
-2. Identify the issue type
-3. Provide relevant information
-4. Offer additional assistance
-5. Closing: "Is there anything else I can help you with?"
-```
-
-### 4.3 Set Up Integrations
-
-Connect your agent to your existing tools:
-
-- **CRM Systems**: Salesforce, HubSpot, Pipedrive
-- **Email Platforms**: Gmail, Outlook, Mailchimp
-- **Calendar Systems**: Google Calendar, Outlook Calendar
-- **Communication Tools**: Slack, Microsoft Teams
-
-<Callout type="success" title="Integration Benefits">
-Integrations allow your agent to access real-time data and perform actions like creating tickets or scheduling meetings.
+<Callout type="success" title="Short on docs?">
+Start with a single FAQ or pricing sheet. You can always drop in more files later from the agent settings page.
 </Callout>
 
-## Step 5: Test Your Agent
+## Step 7 · Launch the Agent
 
-Before deploying your agent, thorough testing is essential.
+With description, tools, and knowledge squared away, hit **Create Agent**. The system will:
 
-### 5.1 Internal Testing
+1. Process your agent configuration and create the new agent
+2. Upload any knowledge files you selected and show progress badges (queued → uploading → success/error)
+3. Connect your knowledge files to the agent's memory
+4. Take you to your new agent's workspace
 
-Test your agent with various scenarios:
+<Image
+ src="/docs-images/Creating-agent-dialog.png"
+ alt="Agent creation dialog showing progress"
+ width={600}
+ height={320}
+ className="w-96 h-auto rounded-lg mb-8 mx-auto"
+ sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 70vw"
+/>
 
-- **Happy path**: Normal, expected interactions
-- **Edge cases**: Unusual or complex requests
-- **Error handling**: What happens when something goes wrong
+If anything fails mid-upload you’ll see an inline error badge with retry guidance—no guessing which file stalled.
 
-### 5.2 Beta Testing
+## Step 8 · Share It with Your Team
 
-Invite a small group of users to test your agent:
+Once created, the agent shows up in your workspace list. From there you can:
 
-- **Internal team members**: Get feedback from your staff
-- **Trusted customers**: Real-world usage scenarios
-- **Focus groups**: Targeted feedback from your audience
+- Send the share link to teammates so they can start chatting immediately
+- Duplicate the agent when you want a variant for another segment
+- Open the edit drawer to add more tools, adjust instructions, or re-order knowledge
 
-### 5.3 Performance Metrics
+Remember: agents are iterative. Early feedback helps you tighten prompts, add missing FAQs, or relax escalation rules.
 
-Monitor key performance indicators:
+## Frequently Asked Questions
 
-- **Response accuracy**: How often does the agent provide correct information?
-- **User satisfaction**: Do users find the agent helpful?
-- **Resolution rate**: How often does the agent solve the user's problem?
+**Do I need to build everything from scratch?**
 
-<Alert type="warning">
-Don't skip the testing phase. It's better to find and fix issues before your agent goes live.
-</Alert>
+No. Templates give you a tuned starting point, and the Enhance button polishes whatever you type.
 
-## Step 6: Deploy Your Agent
+**Can I upload knowledge later?**
 
-Once testing is complete, it's time to deploy your agent.
+Yep. Head back to the agent detail page, drop in more files, and the system will index them in the background.
 
-### 6.1 Choose Your Deployment Method
+**What if I want humans in the loop?**
 
-AffinityBots offers multiple deployment options:
+Add clear escalation instructions in your description (“If revenue > $10K, summarize the conversation and route to Sales Ops”). AffinityBots will follow them to the letter.
 
-- **Website Widget**: Embed directly on your website
-- **Chat Integration**: Connect to existing chat platforms
-- **API Integration**: Build custom integrations
-- **Mobile App**: Deploy as a mobile application
+## Keep Building
 
-### 6.2 Configure Deployment Settings
-
-- **Availability**: When should your agent be active?
-- **Escalation**: When should conversations be transferred to humans?
-- **Analytics**: What data should be tracked?
-
-### 6.3 Launch and Monitor
-
-- **Soft launch**: Start with limited availability
-- **Monitor performance**: Watch key metrics closely
-- **Gather feedback**: Collect user input
-- **Iterate and improve**: Make adjustments based on data
-
-## Step 7: Optimize and Scale
-
-Your agent's journey doesn't end at deployment.
-
-### 7.1 Continuous Improvement
-
-Regularly review and update your agent:
-
-- **Analyze conversation logs**: Identify common issues
-- **Update knowledge base**: Add new information as needed
-- **Refine responses**: Improve clarity and accuracy
-- **Add new capabilities**: Expand functionality over time
-
-### 7.2 Scaling Your Success
-
-Once your first agent is successful:
-
-- **Create additional agents**: For different use cases
-- **Integrate across channels**: Deploy on multiple platforms
-- **Advanced features**: Add more sophisticated capabilities
-- **Team training**: Educate your team on agent management
-
-## Common Pitfalls to Avoid
-
-### 1. Overcomplicating Your First Agent
-
-<Callout type="warning" title="Keep It Simple">
-Start with a single, well-defined purpose. You can always add complexity later.
-</Callout>
-
-### 2. Insufficient Training Data
-
-Your agent is only as good as the information you provide. Invest time in creating comprehensive training content.
-
-### 3. Ignoring User Feedback
-
-User feedback is invaluable for improving your agent. Make it easy for users to provide input and act on their suggestions.
-
-### 4. Setting Unrealistic Expectations
-
-AI agents are powerful tools, but they're not magic. Set realistic expectations for what your agent can accomplish.
-
-## Best Practices for Success
-
-### 1. Start Small and Scale
-
-Begin with a simple use case and gradually expand your agent's capabilities.
-
-### 2. Focus on User Experience
-
-Prioritize making interactions with your agent smooth and helpful.
-
-### 3. Monitor and Iterate
-
-Continuously monitor performance and make improvements based on data and feedback.
-
-### 4. Integrate with Your Workflow
-
-Ensure your agent works seamlessly with your existing business processes.
-
-## Conclusion
-
-Building your first AI agent is an exciting journey that can transform how you interact with customers and manage business processes. By following this step-by-step guide, you'll have a functional AI agent that can handle real-world scenarios and provide value to your business.
+You just launched your first agent without leaving the browser. Next, try chaining a few together using the multi-agent workflow patterns in [AI-First Workflows](/blog/ai-first-workflows-how-to-build-smarter-faster-more-scalable-operations) or give your new teammate superpowers with the retrieval strategies in [Combining RAG and Reasoning](/blog/combining-rag-with-reasoning-in-ai).
 
 <Alert type="success">
-Remember: The best AI agents are those that solve real problems for real people. Focus on creating value, and success will follow.
+AffinityBots agents take minutes to configure and can run for you 24/7. Try one, collect a week of wins, then clone the pattern for every repeatable task on your roadmap.
 </Alert>
 
-### Next Steps
-
-Now that you've built your first agent:
-
-1. **Monitor its performance** for the first few weeks
-2. **Gather user feedback** and make improvements
-3. **Plan your next agent** based on what you've learned
-4. **Share your success** with your team and stakeholders
-
----
-
-*Ready to build your first AI agent? [Get started with AffinityBots today](/signup) and join thousands of businesses already using AI to transform their operations.*
+Ready to experience it yourself? [Start a free AffinityBots workspace](/signup), open the agent builder, and see how fast a digital teammate can join your crew.

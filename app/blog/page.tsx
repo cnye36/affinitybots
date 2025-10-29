@@ -29,7 +29,13 @@ interface BlogPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
+const POSTS_PER_PAGE = 10;
+
 export default async function BlogPage({ searchParams }: BlogPageProps) {
+  // Parse search params
+  const params = await searchParams;
+  const currentPage = parseInt((params.page as string) || '1', 10);
+  
   // Fetch blog posts from MDX files
   const allPosts = await getAllBlogPosts();
   const categories = getAllCategories();
@@ -37,6 +43,12 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
 
   // Sort all posts by date (latest first)
   const sortedPosts = allPosts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  
+  // Paginate posts
+  const totalPages = Math.ceil(sortedPosts.length / POSTS_PER_PAGE);
+  const startIndex = (currentPage - 1) * POSTS_PER_PAGE;
+  const endIndex = startIndex + POSTS_PER_PAGE;
+  const paginatedPosts = sortedPosts.slice(startIndex, endIndex);
 
   // Get category counts
   const categoryCounts = categories.map(category => ({
@@ -197,7 +209,7 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
               </div>
               
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {sortedPosts.map((post, index) => (
+                {paginatedPosts.map((post, index) => (
               <Link key={index} href={`/blog/${post.slug}`} className="group">
                 <Card className="bg-white dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-all duration-300 hover:shadow-xl group-hover:shadow-2xl h-full">
                   <div className="relative aspect-[3/2] overflow-hidden bg-gray-100 dark:bg-gray-800">
@@ -245,11 +257,76 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
             ))}
               </div>
               
-              {/* Load More */}
-              <div className="text-center mt-12">
-                <Button variant="outline" className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
-                  Load More Articles
-                </Button>
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex justify-center items-center gap-2 mt-12">
+                  {/* Previous Button */}
+                  <Link href={currentPage > 1 ? `/blog?page=${currentPage - 1}` : `/blog?page=1`}>
+                    <Button 
+                      variant="outline" 
+                      disabled={currentPage === 1}
+                      className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Previous
+                    </Button>
+                  </Link>
+                  
+                  {/* Page Numbers */}
+                  <div className="flex gap-1">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                      // Show first page, last page, current page, and pages around current
+                      const showPage = 
+                        page === 1 || 
+                        page === totalPages || 
+                        (page >= currentPage - 1 && page <= currentPage + 1);
+                      
+                      // Show ellipsis
+                      const showEllipsisBefore = page === currentPage - 2 && currentPage > 3;
+                      const showEllipsisAfter = page === currentPage + 2 && currentPage < totalPages - 2;
+                      
+                      return (
+                        <div key={page} className="flex items-center gap-1">
+                          {showEllipsisBefore && (
+                            <span className="text-gray-500 dark:text-gray-400 px-2">...</span>
+                          )}
+                          {showPage && (
+                            <Link href={`/blog?page=${page}`}>
+                              <Button
+                                variant={page === currentPage ? "default" : "outline"}
+                                className={`${
+                                  page === currentPage
+                                    ? "bg-blue-600 hover:bg-blue-700 text-white"
+                                    : "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                } min-w-[40px]`}
+                              >
+                                {page}
+                              </Button>
+                            </Link>
+                          )}
+                          {showEllipsisAfter && (
+                            <span className="text-gray-500 dark:text-gray-400 px-2">...</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  
+                  {/* Next Button */}
+                  <Link href={currentPage < totalPages ? `/blog?page=${currentPage + 1}` : `/blog?page=${totalPages}`}>
+                    <Button 
+                      variant="outline" 
+                      disabled={currentPage === totalPages}
+                      className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Next
+                    </Button>
+                  </Link>
+                </div>
+              )}
+              
+              {/* Page Info */}
+              <div className="text-center mt-4 text-sm text-gray-600 dark:text-gray-400">
+                Showing {startIndex + 1} to {Math.min(endIndex, sortedPosts.length)} of {sortedPosts.length} articles
               </div>
             </div>
           </div>

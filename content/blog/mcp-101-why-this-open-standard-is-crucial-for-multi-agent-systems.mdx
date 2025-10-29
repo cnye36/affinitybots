@@ -21,15 +21,15 @@ coverImage: "/blog-images/mcp-101.png"
   priority
 />
 
-Multi-agent systems are having a moment. Teams of specialized AI agents can now divide and conquer research, analysis, outreach, and operations—handing off tasks like a well-rehearsed relay team. Yet as the number of agents and tools grows, so does the integration tax: brittle adapters, duplicated effort, and security sprawl. This is where MCP—the Model Context Protocol—steps in. MCP is an open standard that defines how AI agents discover tools, exchange context, and execute actions reliably across different environments. In short, MCP gives multi-agent systems a common language.
+Multi-agent systems are having a moment. Teams of specialized AI agents can now divide and conquer research, analysis, outreach, and operations—handing off tasks like a well-rehearsed relay team. Yet as the number of agents and tools grows, so does the integration tax: brittle adapters, duplicated effort, and security sprawl. This is where MCP—the Model Context Protocol—steps in. MCP is an open standard that defines how AI agents discover tools, exchange context, and execute actions reliably across different environments. In short, MCP gives multi-agent systems a common language. If you need a refresher on why orchestration matters, revisit [From Chatbots to Agents](/blog/from-chatbots-to-agents) for the big-picture shift happening across 2025.
 
 ## What Is MCP, in Plain English?
 
-Think of MCP as the “USB for AI tools.” Instead of every agent learning a different plug for Gmail, Notion, databases, or custom APIs, MCP provides a predictable interface for capability discovery and invocation. An MCP-compatible agent can enumerate available tools, request permissions, pass structured inputs, receive structured outputs, and share context without bespoke glue code each time. By standardizing these core primitives, MCP dramatically reduces integration friction and improves portability.
+Think of MCP as the “USB for AI tools.” Instead of every agent learning a different plug for Gmail, Notion, databases, or custom APIs, MCP provides a predictable interface for capability discovery and invocation. An MCP-compatible agent can enumerate available tools, request permissions, pass structured inputs, receive structured outputs, and share context without bespoke glue code each time. By standardizing these core primitives, MCP dramatically reduces integration friction and improves portability. You can read the protocol details in the [official specification](https://modelcontextprotocol.io/) or browse the [open-source repo](https://github.com/modelcontextprotocol/specification) for implementation examples.
 
 ## Why Multi-Agent Systems Need an Open Standard
 
-**1) Interoperability without lock-in.** Multi-agent setups quickly touch dozens of services. An open standard ensures agents and tools from different vendors can cooperate. You’re free to replace a CRM, analytics stack, or vector store without rewriting every agent.
+**1) Interoperability without lock-in.** Multi-agent setups quickly touch dozens of services. An open standard ensures agents and tools from different vendors can cooperate. You’re free to replace a CRM, analytics stack, or vector store without rewriting every agent, exactly the kind of resilience we advocate in [Harnessing Agentic AI for Business](/blog/harnessing-agentic-ai-for-business-multi-agent-systems-and-workflow-automation).
 
 **2) Consistent context sharing.** Agents do their best work when they see the same picture. MCP allows standardized resource access (documents, databases, memory) so agents can pass information without losing structure or meaning.
 
@@ -62,8 +62,8 @@ On the server side, providers expose actions (e.g., “send email,” “query t
 ## Real-World Use Cases
 
 * **Lead orchestration:** One agent enriches leads from a database, another drafts outreach, a third updates the CRM—all via MCP tools so the workflow remains portable and inspectable.
-* **Customer support triage:** An intake agent pulls context from a knowledge base, a resolver agent queries ticket history, and an escalation agent coordinates with human on-call. Standardized tool use means faster iteration and safer guardrails.
-* **Content pipelines:** Research, draft, fact-check, and publish across docs, CMS, and analytics—all exposed as MCP servers so the agents work like a coordinated editorial team.
+* **Customer support triage:** An intake agent pulls context from a knowledge base, a resolver agent queries ticket history, and an escalation agent coordinates with human on-call. Standardized tool use means faster iteration and safer guardrails—see [5 Ways AI Agents Transform Customer Support](/blog/5-ways-ai-agents-transform-customer-support) for end-user outcomes.
+* **Content pipelines:** Research, draft, fact-check, and publish across docs, CMS, and analytics—all exposed as MCP servers so the agents work like a coordinated editorial team. We document this workflow in [Automating Content Creation with AI Agents](/blog/automating-content-creation-with-ai-agents).
 
 ## Where AffinityBots Fits
 
@@ -79,7 +79,7 @@ For teams that want to move beyond single-task chatbots, AffinityBots provides a
 4. **Design for handoffs.** Define the artifact formats agents pass along: JSON payloads, document references, or dataset pointers. Consistency is oxygen for multi-agent reliability.
 5. **Keep humans in the loop.** Use MCP-exposed review steps—approval gates, retry queues, and escalation actions—for critical operations.
 
-With AffinityBots, many of these practices are built into the experience. You’ll get workflow tracing, tool toggles per agent, and collaborative spaces where multiple agents—and people—share context.
+With AffinityBots, many of these practices are built into the experience. You’ll get workflow tracing, tool toggles per agent, and collaborative spaces where multiple agents—and people—share context. If you need design inspiration, compare the orchestration patterns in [AI-First Workflows](/blog/ai-first-workflows-how-to-build-smarter-faster-more-scalable-operations) to decide how MCP-backed agents should hand off work.
 
 ## Common Pitfalls to Avoid
 

@@ -23,7 +23,7 @@ coverImage: "/blog-images/creating-richer-experiences.png"
 
 Users don’t think in single channels. They speak, type, point at screenshots, forward PDFs, and paste URLs. To meet them where they are, AI must interpret all those signals together and take meaningful action. That’s the promise of multimodal agents—systems that see, hear, read, plan, and execute across text, images, audio, video, and tools. Done well, they feel closer to human-like understanding and deliver outcomes, not just answers.
 
-This guide explains what multimodal agents are, how they create richer user experiences, and how to ship them in production. Crucially, we’ll show how platforms like AffinityBots—which natively support multimodal modalities and operations—make these capabilities practical with built-in perception, orchestration, and observability.
+This guide explains what multimodal agents are, how they create richer user experiences, and how to ship them in production. Crucially, we’ll show how platforms like AffinityBots—which natively support multimodal modalities and operations—make these capabilities practical with built-in perception, orchestration, and observability. If you’re still grounding your automation strategy, start with [Harnessing Agentic AI for Business](/blog/harnessing-agentic-ai-for-business-multi-agent-systems-and-workflow-automation) and [Combining RAG and Reasoning](/blog/combining-rag-with-reasoning-in-ai) for foundational patterns we extend here.
 
 ## What Makes an Agent “Multimodal”?
 A multimodal agent combines four capabilities:
@@ -31,7 +31,7 @@ A multimodal agent combines four capabilities:
 - **Perception**: Ingests and interprets text, images, audio, video, and structured data.
 - **Grounding**: Links raw inputs to real-world entities, dates, SKUs, and user context.
 - **Reasoning**: Plans steps, reflects on progress, and decides when to use tools.
-- **Action**: Calls APIs, updates records, drafts content, and triggers workflows.
+- **Action**: Calls APIs, updates records, drafts content, and triggers workflows. Keep this layer interoperable by borrowing the standards from [MCP 101](/blog/mcp-101-why-this-open-standard-is-crucial-for-multi-agent-systems).
 
 The key difference from a chat-only bot is signal fusion. A user can drop a screenshot of an error, a short voice note, and a link to a log. The agent jointly analyzes them, then proposes a fix and opens a ticket. That cross-signal fluency is the path to human-like understanding.
 
@@ -95,7 +95,7 @@ Log tools used, evidence cited, and confidence signals. AffinityBots includes ru
 Perceive: Analyze a user’s error screenshot and associated log snippet.
 Ground: Match error codes to known incidents; pull device metadata from CRM.
 Act: Suggest fixes; if needed, open a ticket with all artifacts attached and an auto-generated timeline.
-With AffinityBots, the same workflow can route across Vision (screenshot analysis), Research (KB retrieval), and Operator (ticket creation) agents as one multimodal operation.
+With AffinityBots, the same workflow can route across Vision (screenshot analysis), Research (KB retrieval), and Operator (ticket creation) agents as one multimodal operation. For channel-specific playbooks, layer these capabilities onto the tactics in [5 Ways AI Agents Transform Customer Support](/blog/5-ways-ai-agents-transform-customer-support).
 
 ### 2. Sales & RevOps With Evidence-Backed Outreach
 Perceive: Parse a prospect’s PDF deck and a short product demo recording.
@@ -139,7 +139,7 @@ Store artifacts and their cited spans or timestamps. This makes reviews fast and
 Arithmetic validation for invoices, policy checks for outbound content, and confidence thresholds to trigger human review.
 
 ### Scale Into Multi-Agent Orchestration
-Split distinct concerns—vision, research, writing, operations—into cooperating agents. AffinityBots provides templates, shared memory, and native multimodal operations so you can scale without duct-taped integrations.
+Split distinct concerns—vision, research, writing, operations—into cooperating agents. AffinityBots provides templates, shared memory, and native multimodal operations so you can scale without duct-taped integrations. For inspiration on how those roles collaborate day-to-day, revisit [Unlocking Productivity](/blog/unlocking-productivity).
 
 ## Common Pitfalls (and Easy Escapes)
 Monolithic “Do-Everything” Agents: They become slow and inconsistent. Specialize agents and define clear contracts.

@@ -21,9 +21,9 @@ coverImage: "/blog-images/combining-rag-with-reasoning.png"
   priority
 />
 
-If you want AI agents that are actually useful—agents that answer with confidence **and** evidence—stop treating “retrieval” and “reasoning” as separate superpowers. The real magic happens when **Retrieval-Augmented Generation (RAG)** and **structured reasoning** lock arms. RAG keeps your model grounded in facts; reasoning turns those facts into decisions, plans, and explanations. Put together, they become a reliability engine for everything from customer support to research to operations.
+If you want AI agents that are actually useful—agents that answer with confidence **and** evidence—stop treating “retrieval” and “reasoning” as separate superpowers. The real magic happens when **Retrieval-Augmented Generation (RAG)** and **structured reasoning** lock arms. RAG keeps your model grounded in facts; reasoning turns those facts into decisions, plans, and explanations. Put together, they become a reliability engine for everything from customer support to research to operations. The original [RAG paper](https://arxiv.org/abs/2005.11401) and follow-up work on [chain-of-thought prompting](https://arxiv.org/abs/2201.11903) are useful primers if you want to peek under the hood before diving into implementation.
 
-This post breaks down the why, the how, and the practical blueprint for combining RAG and reasoning. It’s written for builders shipping production systems, not just running demos.
+This post breaks down the why, the how, and the practical blueprint for combining RAG and reasoning. It’s written for builders shipping production systems, not just running demos. For a broader automation strategy, compare these tactics with the multi-agent patterns in [Harnessing Agentic AI for Business](/blog/harnessing-agentic-ai-for-business-multi-agent-systems-and-workflow-automation).
 
 ## Why RAG Alone Isn’t Enough (and Reasoning Alone Isn’t Safe)
 
@@ -61,7 +61,7 @@ Outcome: fewer hallucinations, clearer explanations, and decisions that survive 
 
 ## A Practical Architecture You Can Ship
 
-Here’s a clean, production-ready blueprint. Keep the pieces modular so you can upgrade each without breaking the others.
+Here’s a clean, production-ready blueprint. Keep the pieces modular so you can upgrade each without breaking the others, and line it up with the orchestration checkpoints we describe in [Unlocking Productivity](/blog/unlocking-productivity).
 
 ### 1) Query Understanding Layer
 
@@ -154,7 +154,7 @@ Imagine a support agent that must answer eligibility questions for discounts:
 5. **Verify:** Check that the conclusion follows from the cited lines; if ambiguity remains, present a safe fallback (e.g., “requires manual review”).
 6. **Deliver:** A clear answer with short, in-line citations and the exact clause IDs.
 
-In pilots like this, teams typically see fewer escalations, faster time-to-resolution, and fewer “policy misreads.” The trick isn’t fancier prompts. It’s the **discipline of steps** backed by good retrieval hygiene.
+In pilots like this, teams typically see fewer escalations, faster time-to-resolution, and fewer “policy misreads.” The trick isn’t fancier prompts. It’s the **discipline of steps** backed by good retrieval hygiene. Couple this with the multimodal guardrails from [Creating Richer Experiences](/blog/creating-richer-experiences-multimodal-agents-and-human-like-understanding) when screenshots, PDFs, or audio clips enter the workflow.
 
 AffinityBots is well-suited here: configure a retrieval agent with your policy index, a reasoning agent trained on support templates, and a verifier agent that flags ungrounded claims. Add observability to trace decisions and you’ve got an auditable, durable support flow.
 

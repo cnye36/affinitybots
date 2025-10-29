@@ -1,0 +1,4 @@
+---
+The app uses a Langgraph platform and server for the backend. Always try to use the Langgraph SDK to interact with the backend first before connecting directly to the database.
+alwaysApply: true
+---
