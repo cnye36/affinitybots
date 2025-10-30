@@ -107,7 +107,7 @@ export function AgentPageHeader({ assistant }: AgentPageHeaderProps) {
       <div className="container flex h-20 items-center">
         <Button
           variant="ghost"
-          onClick={() => router.back()}
+          onClick={() => router.push('/agents')}
           className="gap-2 -ml-4"
         >
           <ArrowLeftIcon className="h-4 w-4" />

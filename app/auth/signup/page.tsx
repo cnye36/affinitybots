@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { signUp, signUpWithGoogle, signUpWithGitHub } from "../../(auth)/actions";
+import { signUp, signUpWithGoogle, signUpWithGitHub } from "@/app/auth/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
