@@ -30,7 +30,7 @@ export default async function AgentPage(props: AgentPageProps) {
         } = await supabase.auth.getUser();
 
         if (userError || !user) {
-          redirect("/signin");
+          redirect("/auth/signin");
         }
 
         // Check if user has access to this assistant

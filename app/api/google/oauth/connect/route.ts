@@ -1,10 +1,27 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getGoogleAuthorizationUrl } from "@/lib/oauth/googleOAuthClient"
+import { getGoogleAuthorizationUrl, GOOGLE_SERVICE_SCOPES } from "@/lib/oauth/googleOAuthClient"
 import { createClient } from "@/supabase/server"
 
 /**
- * Initiates Google OAuth flow for Drive access
- * This redirects the user to Google's consent screen
+ * Service-specific configuration for Google OAuth
+ */
+/**
+ * Default URLs use Docker service names for container-to-container communication
+ * These work from inside the LangGraph container
+ */
+const GOOGLE_SERVICE_CONFIG: Record<string, { qualifiedName: string; urlEnvVar: string; defaultUrl: string; port: number }> = {
+  drive: { qualifiedName: "google-drive", urlEnvVar: "GOOGLE_DRIVE_MCP_URL", defaultUrl: "http://google-drive-mcp:3002", port: 3002 },
+  gmail: { qualifiedName: "gmail", urlEnvVar: "GMAIL_MCP_URL", defaultUrl: "http://gmail-mcp-server:3003", port: 3003 },
+  calendar: { qualifiedName: "google-calendar", urlEnvVar: "GOOGLE_CALENDAR_MCP_URL", defaultUrl: "http://google-calendar-mcp:3004", port: 3004 },
+  docs: { qualifiedName: "google-docs", urlEnvVar: "GOOGLE_DOCS_MCP_URL", defaultUrl: "http://google-docs-mcp:3005", port: 3005 },
+  sheets: { qualifiedName: "google-sheets", urlEnvVar: "GOOGLE_SHEETS_MCP_URL", defaultUrl: "http://google-sheets-mcp:3006", port: 3006 },
+}
+
+/**
+ * Initiates Google OAuth flow for any Google service
+ * This redirects the user to Google's consent screen with service-specific scopes
+ * 
+ * Query parameter: service=drive|gmail|calendar|docs|sheets (REQUIRED)
  */
 export async function GET(request: NextRequest) {
   try {
@@ -15,17 +32,30 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    // Get the service from query parameter
+    const url = new URL(request.url)
+    const service = url.searchParams.get("service") as keyof typeof GOOGLE_SERVICE_SCOPES
+    
+    // Validate service parameter - REQUIRED to prevent scope confusion
+    if (!service || !GOOGLE_SERVICE_CONFIG[service]) {
+      const validServices = Object.keys(GOOGLE_SERVICE_CONFIG).join(", ")
+      return NextResponse.json({ 
+        error: `Service parameter is required. Must be one of: ${validServices}` 
+      }, { status: 400 })
+    }
+
+    const config = GOOGLE_SERVICE_CONFIG[service]
+    const qualifiedName = config.qualifiedName
+    const serverUrl = process.env[config.urlEnvVar] || config.defaultUrl
+
     // Generate a session ID to track this OAuth flow
     const sessionId = Math.random().toString(36).substring(2) + Date.now().toString(36)
     
-    console.log(`🔍 Google OAuth Connect - Starting OAuth flow for user ${user.id} with session ${sessionId}`);
+    console.log(`🔍 Google OAuth Connect - Starting ${service} OAuth flow for user ${user.id} with session ${sessionId}`);
     
-    // Get the authorization URL with state parameter
-    const authUrl = getGoogleAuthorizationUrl(sessionId)
+    // Get the authorization URL with state parameter and appropriate scopes
+    const authUrl = getGoogleAuthorizationUrl(service, sessionId)
 
-    // Store the session ID temporarily so we can verify it in the callback
-    // In a production app, you might want to store this in Redis with expiration
-    const url = new URL(request.url)
     const callbackUrl = `${url.origin}/api/google/oauth/callback`
     
     // Create a placeholder entry in user_mcp_servers to track this OAuth attempt
@@ -33,12 +63,12 @@ export async function GET(request: NextRequest) {
       .from("user_mcp_servers")
       .upsert({
         user_id: user.id,
-        qualified_name: "google-drive",
-        url: process.env.GOOGLE_DRIVE_MCP_URL || "http://localhost:3002",
+        qualified_name: qualifiedName,
+        url: serverUrl,
         session_id: sessionId,
         config: {
           callbackUrl,
-          provider: "google-drive",
+          provider: service, // Store the actual service type for validation
         },
         is_enabled: false, // Will be enabled after successful OAuth
         created_at: new Date().toISOString(),
@@ -48,18 +78,19 @@ export async function GET(request: NextRequest) {
       })
 
     if (insertError) {
-      console.error("Failed to create OAuth session record:", insertError)
+      console.error("Failed to store OAuth attempt:", insertError)
       return NextResponse.json({ error: "Failed to initiate OAuth" }, { status: 500 })
     }
 
-    // Redirect to Google's authorization page
+    console.log(`🔍 Google OAuth Connect - Redirecting to: ${authUrl}`);
+
+    // Redirect to Google OAuth consent screen
     return NextResponse.redirect(authUrl)
   } catch (error: unknown) {
     console.error("Error initiating Google OAuth:", error)
-    if (error instanceof Error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
-    return NextResponse.json({ error: String(error) }, { status: 500 })
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : String(error) },
+      { status: 500 }
+    )
   }
 }
-

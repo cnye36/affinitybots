@@ -143,7 +143,12 @@ export default function ServerDetailPage() {
       }
       if (server.qualifiedName === 'google-drive') {
         // Use our Google Drive OAuth connect route
-        window.location.href = '/api/google/oauth/connect';
+        window.location.href = '/api/google/oauth/connect?service=drive';
+        return;
+      }
+      if (server.qualifiedName === 'gmail') {
+        // Use our Gmail OAuth connect route (same endpoint, different service)
+        window.location.href = '/api/google/oauth/connect?service=gmail';
         return;
       }
       // Default behavior for other official servers

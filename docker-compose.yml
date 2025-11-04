@@ -38,8 +38,26 @@ services:
         image: "gdrive-mcp-server-gdrive-mcp"
         ports:
             - "3002:3002"
-        environment:
+        env_file:
             - .env
+        healthcheck:
+            test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+            interval: 10s
+            timeout: 5s
+            retries: 3
+    
+    gmail-mcp-server:
+        image: "gmail-mcp-server-2-gmail-mcp-server"
+        ports:
+            - "3003:3003"
+        env_file:
+            - .env
+        healthcheck:
+            test: ["CMD", "curl", "-f", "http://localhost:3003/health"]
+            interval: 10s
+            timeout: 5s
+            retries: 3
+    
             
     
     # Schedule worker - only needed if self-hosting (not needed for Vercel deployments)

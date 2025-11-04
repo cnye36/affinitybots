@@ -32,6 +32,10 @@
   ],
   "exclude": [
     "node_modules",
-    "mcp/**"
+    "mcp/**",
+    ".turbo",
+    ".vercel",
   ]
 }
+
+
