@@ -183,18 +183,32 @@ export class GitHubOAuthClient {
 
   async finishAuth(authCode: string): Promise<void> {
     if (!this.client || !this.oauthProvider) {
-      throw new Error("Client not initialized");
+      throw new Error("Client not initialized. Call connect() first.");
     }
+
+    console.log("GitHubOAuthClient: Finishing OAuth with auth code");
 
     const baseUrl = new URL(this.serverUrl);
     const transport = new StreamableHTTPClientTransport(baseUrl, {
       authProvider: this.oauthProvider,
     });
 
-    await transport.finishAuth(authCode);
-    await this.client.connect(transport);
-    this.connected = true;
-    this.cacheTokensFromProvider();
+    try {
+      console.log("GitHubOAuthClient: Exchanging auth code for tokens");
+      await transport.finishAuth(authCode);
+
+      console.log("GitHubOAuthClient: Connecting to MCP server");
+      await this.client.connect(transport);
+
+      this.connected = true;
+      this.cacheTokensFromProvider();
+
+      console.log("GitHubOAuthClient: Successfully completed OAuth flow");
+    } catch (error) {
+      console.error("GitHubOAuthClient: Error finishing OAuth:", error);
+      this.connected = false;
+      throw error;
+    }
   }
 
   async listTools(): Promise<ListToolsResult> {

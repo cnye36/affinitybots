@@ -155,6 +155,7 @@ export class MCPWebInterface {
 
       // Rehydrate OAuth client if serverless/dev hot-reload dropped in-memory session
       if (!sessionStore.getClient(sessionId)) {
+        console.log(`Session ${sessionId} not found in memory, attempting to rehydrate from database`);
         try {
           if (serverRow?.url) {
             const callbackUrl =
@@ -164,24 +165,58 @@ export class MCPWebInterface {
               serverRow.url.includes('githubcopilot.com') || serverRow.url.includes('github.com');
             let client: GitHubOAuthClient | MCPOAuthClient;
             if (isGitHub) {
+              console.log(`Rehydrating GitHub OAuth client for session ${sessionId}`);
               client = new GitHubOAuthClient(serverRow.url, callbackUrl, () => {});
+              // Set the session ID in the GitHub client
+              if ('setSessionId' in client && typeof client.setSessionId === 'function') {
+                client.setSessionId(sessionId);
+              }
+              // Initialize the client without attempting connection
+              // This sets up the internal client and oauthProvider needed for finishAuth
+              try {
+                await client.connect();
+              } catch (err: any) {
+                // Expected to throw "OAuth authorization required" - that's fine, we just need the client initialized
+                if (err?.message !== "OAuth authorization required") {
+                  console.warn(`Unexpected error during client initialization: ${err?.message}`);
+                }
+              }
             } else {
+              console.log(`Rehydrating MCP OAuth client for session ${sessionId}`);
               const mcpClient = new MCPOAuthClient(serverRow.url, callbackUrl, () => {});
               const state = serverRow.config?.providerState;
               if (state) {
-                try { mcpClient.prepareWithState(state); } catch {}
+                try {
+                  mcpClient.prepareWithState(state);
+                  console.log(`Restored provider state for session ${sessionId}`);
+                } catch (e) {
+                  console.warn(`Failed to restore provider state for session ${sessionId}:`, e);
+                }
+              }
+              // Initialize the MCP client as well
+              try {
+                await mcpClient.connect();
+              } catch (err: any) {
+                // Expected to throw "OAuth authorization required" - that's fine
+                if (err?.message !== "OAuth authorization required") {
+                  console.warn(`Unexpected error during MCP client initialization: ${err?.message}`);
+                }
               }
               client = mcpClient;
             }
             // Store reconstructed client so finishOAuth can succeed
             sessionStore.setClient(sessionId, client as any);
-            // Avoid calling connect() here to prevent new client_id registration. We'll finishAuth directly.
+            console.log(`Successfully rehydrated and initialized OAuth client for session ${sessionId}`);
           } else {
-            console.warn('No DB record found to rehydrate OAuth client for session', sessionId);
+            console.warn(`No DB record found to rehydrate OAuth client for session ${sessionId}`);
+            throw new Error("Server configuration not found in database");
           }
         } catch (rehydrateError) {
-          console.warn('Failed to rehydrate OAuth client from DB', rehydrateError);
+          console.error(`Failed to rehydrate OAuth client from DB for session ${sessionId}:`, rehydrateError);
+          throw new Error(`Failed to restore OAuth session: ${rehydrateError instanceof Error ? rehydrateError.message : String(rehydrateError)}`);
         }
+      } else {
+        console.log(`Found existing OAuth client in memory for session ${sessionId}`);
       }
 
       await mcpClientFactory.completeOAuth(sessionId, authCode);
@@ -230,11 +265,16 @@ export class MCPWebInterface {
     try {
       console.log(`MCPWebInterface: Disconnecting session ${sessionId} for user ${userId}`);
 
+      // Clear OAuth session from memory
       await mcpClientFactory.disconnectOAuth(sessionId);
-      
-      // Remove from database
+
+      // Clear MCP client cache to force refresh on next connection
+      mcpClientFactory.clearCache();
+
+      // Remove from database (clears tokens, session_id, etc.)
       await this.removeServerConnection(sessionId, userId);
 
+      console.log(`MCPWebInterface: Successfully disconnected session ${sessionId}`);
       return { success: true };
     } catch (error) {
       console.error('MCPWebInterface: Disconnect error:', error);
@@ -523,6 +563,8 @@ export class MCPWebInterface {
    */
   async disconnectServerByName(serverName: string, userId: string): Promise<{ success: boolean; error?: string }> {
     try {
+      console.log(`MCPWebInterface: Disconnecting server ${serverName} for user ${userId}`);
+
       // Look up the server row to find any active session_id
       const { data: row, error: fetchError } = await this.getSupabase()
         .from('user_mcp_servers')
@@ -533,6 +575,7 @@ export class MCPWebInterface {
 
       if (fetchError) {
         if ((fetchError as any).code === 'PGRST116') {
+          console.log(`No server found for ${serverName}, nothing to disconnect`);
           return { success: true }; // Nothing to do
         }
         throw new Error(fetchError.message);
@@ -548,6 +591,9 @@ export class MCPWebInterface {
         }
       }
 
+      // Clear MCP client cache to force refresh
+      mcpClientFactory.clearCache();
+
       // Delete the server row
       const { error: deleteError } = await this.getSupabase()
         .from('user_mcp_servers')
@@ -559,8 +605,10 @@ export class MCPWebInterface {
         throw new Error(deleteError.message);
       }
 
+      console.log(`MCPWebInterface: Successfully disconnected server ${serverName}`);
       return { success: true };
     } catch (error) {
+      console.error(`MCPWebInterface: Error disconnecting server ${serverName}:`, error);
       return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   }
