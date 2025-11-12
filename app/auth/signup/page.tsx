@@ -143,7 +143,7 @@ function SignUpForm() {
         </form>
         <p className="mt-4 text-center">
           Already have an account?{" "}
-          <Link href="/signin" className="text-primary hover:underline">
+          <Link href="/auth/signin" className="text-primary hover:underline">
             Sign In
           </Link>
         </p>

@@ -114,7 +114,7 @@ export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();
   revalidatePath("/", "layout");
-  redirect("/signin");
+  redirect("/auth/signin");
 }
 
 async function getSiteUrl() {
@@ -137,7 +137,7 @@ export async function signInWithGoogle() {
     options: { redirectTo },
   });
   if (error) {
-    redirect(`/signin?error=${encodeURIComponent(error.message)}`);
+    redirect(`/auth/signin?error=${encodeURIComponent(error.message)}`);
   }
   if (data?.url) {
     redirect(data.url);
@@ -154,7 +154,7 @@ export async function signInWithGitHub() {
     options: { redirectTo },
   });
   if (error) {
-    redirect(`/signin?error=${encodeURIComponent(error.message)}`);
+    redirect(`/auth/signin?error=${encodeURIComponent(error.message)}`);
   }
   if (data?.url) {
     redirect(data.url);
@@ -166,7 +166,7 @@ export async function signUpWithGoogle(formData: FormData) {
   const inviteCode = (formData.get("inviteCode") as string) || "";
   
   if (!inviteCode) {
-    redirect(`/signup?error=${encodeURIComponent("Invite code is required.")}`);
+    redirect(`/auth/signup?error=${encodeURIComponent("Invite code is required.")}`);
   }
   
   // Store invite code in session storage for validation after OAuth
@@ -177,7 +177,7 @@ export async function signUpWithGoogle(formData: FormData) {
     options: { redirectTo },
   });
   if (error) {
-    redirect(`/signup?error=${encodeURIComponent(error.message)}`);
+    redirect(`/auth/signup?error=${encodeURIComponent(error.message)}`);
   }
   if (data?.url) {
     redirect(data.url);
@@ -189,7 +189,7 @@ export async function signUpWithGitHub(formData: FormData) {
   const inviteCode = (formData.get("inviteCode") as string) || "";
   
   if (!inviteCode) {
-    redirect(`/signup?error=${encodeURIComponent("Invite code is required.")}`);
+    redirect(`/auth/signup?error=${encodeURIComponent("Invite code is required.")}`);
   }
   
   // Store invite code in session storage for validation after OAuth
@@ -200,7 +200,7 @@ export async function signUpWithGitHub(formData: FormData) {
     options: { redirectTo },
   });
   if (error) {
-    redirect(`/signup?error=${encodeURIComponent(error.message)}`);
+    redirect(`/auth/signup?error=${encodeURIComponent(error.message)}`);
   }
   if (data?.url) {
     redirect(data.url);

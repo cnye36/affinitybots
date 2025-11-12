@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     const redirectResponse = NextResponse.redirect(new URL(next, origin));
 
     if (!code) {
-      return NextResponse.redirect(new URL("/signin", origin));
+      return NextResponse.redirect(new URL("/auth/signin", origin));
     }
 
     // Create a Supabase server client that writes cookies to our redirect response
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
       console.error("Error exchanging code for session:", error);
       return NextResponse.redirect(
         new URL(
-          `/signin?error=${encodeURIComponent("Authentication failed. Please try again.")}`,
+          `/auth/signin?error=${encodeURIComponent("Authentication failed. Please try again.")}`,
           origin
         )
       );
@@ -46,6 +46,6 @@ export async function GET(request: NextRequest) {
     return redirectResponse;
   } catch (error) {
     console.error("Error in auth callback:", error);
-    return NextResponse.redirect(new URL("/signin?error=Verification failed", request.url));
+    return NextResponse.redirect(new URL("/auth/signin?error=Verification failed", request.url));
   }
 }

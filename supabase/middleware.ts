@@ -50,8 +50,8 @@ export async function updateSession(request: NextRequest) {
     // App domain requires authentication for most routes
     if (
       !user &&
-      !request.nextUrl.pathname.startsWith("/signin") &&
-      !request.nextUrl.pathname.startsWith("/signup") &&
+      !request.nextUrl.pathname.startsWith("/auth/signin") &&
+      !request.nextUrl.pathname.startsWith("/auth/signup") &&
       // Allow OAuth callback to run unauthenticated so it can set the session
       !request.nextUrl.pathname.startsWith("/auth/callback") &&
       request.nextUrl.pathname !== "/"
@@ -59,7 +59,7 @@ export async function updateSession(request: NextRequest) {
       // no user, redirect to signin
       const url = request.nextUrl.clone();
       console.log("Redirecting to signin");
-      url.pathname = "/signin";
+      url.pathname = "/auth/signin";
       return NextResponse.redirect(url);
     }
   } else if (isMarketingDomain) {
@@ -67,7 +67,7 @@ export async function updateSession(request: NextRequest) {
     if (!user && request.nextUrl.pathname.startsWith("/admin")) {
       // Admin pages require authentication
       const url = request.nextUrl.clone();
-      url.pathname = "/signin";
+      url.pathname = "/auth/signin";
       return NextResponse.redirect(url);
     }
   }

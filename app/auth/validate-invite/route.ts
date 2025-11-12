@@ -17,7 +17,7 @@ export async function GET(req: Request) {
   if (!user || !user.email) {
     return NextResponse.redirect(
       new URL(
-        `/signup?error=${encodeURIComponent(
+        `/auth/signup?error=${encodeURIComponent(
           "Authentication failed. Please try again."
         )}`,
         requestUrl.origin
@@ -29,7 +29,7 @@ export async function GET(req: Request) {
     await supabase.auth.signOut();
     return NextResponse.redirect(
       new URL(
-        `/signup?error=${encodeURIComponent("Invite code is required.")}`,
+        `/auth/signup?error=${encodeURIComponent("Invite code is required.")}`,
         requestUrl.origin
       )
     );
@@ -46,7 +46,7 @@ export async function GET(req: Request) {
     await supabase.auth.signOut();
     return NextResponse.redirect(
       new URL(
-        `/signup?error=${encodeURIComponent("Invalid invite code.")}`,
+        `/auth/signup?error=${encodeURIComponent("Invalid invite code.")}`,
         requestUrl.origin
       )
     );
@@ -56,7 +56,7 @@ export async function GET(req: Request) {
     await supabase.auth.signOut();
     return NextResponse.redirect(
       new URL(
-        `/signup?error=${encodeURIComponent(
+        `/auth/signup?error=${encodeURIComponent(
           "Invite code is not valid for this email address."
         )}`,
         requestUrl.origin
