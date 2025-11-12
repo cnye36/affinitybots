@@ -71,8 +71,8 @@ export default function SettingsPage() {
               authMetadata.picture ||
               null,
             provider,
-            updated_at: profile?.updated_at,
-            preferences: profile?.preferences,
+            updated_at: profile?.updated_at ?? undefined,
+            preferences: profile?.preferences ?? undefined,
           };
 
           setUserData(mergedData);
@@ -82,7 +82,12 @@ export default function SettingsPage() {
             const { error: syncError } = await supabase
               .from("profiles")
               .upsert({
-                ...mergedData,
+                id: mergedData.id,
+                email: mergedData.email,
+                username: mergedData.username,
+                name: mergedData.name,
+                avatar_url: mergedData.avatar_url,
+                preferences: mergedData.preferences ?? null,
                 updated_at: new Date().toISOString(),
               });
 

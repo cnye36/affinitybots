@@ -228,7 +228,7 @@ export class MultimodalFileProcessor {
   private async extractTextWithLangChain(fileMetadata: FileMetadata, fileBuffer: Buffer): Promise<string> {
     try {
       // Create a temporary File object for LangChain loaders
-      const file = new File([fileBuffer], fileMetadata.originalFilename, {
+      const file = new File([new Uint8Array(fileBuffer)], fileMetadata.originalFilename, {
         type: fileMetadata.mimeType
       });
 

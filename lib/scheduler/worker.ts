@@ -58,7 +58,7 @@ async function executeScheduledWorkflow(job: Job<ScheduleJob>): Promise<void> {
       return;
     }
 
-    if (!trigger.is_active || !trigger.schedule_enabled) {
+    if (!(trigger as any).is_active || !(trigger as any).schedule_enabled) {
       console.warn(`⚠️ Trigger ${triggerId} is disabled, skipping execution`);
       await logExecution({
         triggerId,
@@ -160,8 +160,8 @@ async function executeScheduledWorkflow(job: Job<ScheduleJob>): Promise<void> {
     }
 
     // Update trigger's last_fired_at (BullMQ manages next_run_at automatically)
-    await supabase
-      .from('workflow_triggers')
+    await (supabase
+      .from('workflow_triggers') as any)
       .update({
         last_fired_at: new Date().toISOString(),
       })
@@ -235,7 +235,7 @@ async function logExecution(data: {
 }): Promise<void> {
   try {
     const supabase = getSupabaseAdmin();
-    await supabase.from('workflow_schedule_executions').insert({
+    await (supabase.from('workflow_schedule_executions') as any).insert({
       trigger_id: data.triggerId,
       workflow_id: data.workflowId,
       scheduled_at: data.scheduledAt.toISOString(),

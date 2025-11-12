@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/supabase/types';
 
 /**
  * Server-side Supabase client for background jobs and workers
@@ -10,7 +11,7 @@ import { createClient } from '@supabase/supabase-js';
  * Use @/supabase/server instead for route handlers.
  */
 
-let supabaseAdmin: ReturnType<typeof createClient> | null = null;
+let supabaseAdmin: ReturnType<typeof createClient<Database>> | null = null;
 
 export function getSupabaseAdmin() {
   if (supabaseAdmin) {
@@ -27,7 +28,7 @@ export function getSupabaseAdmin() {
     );
   }
 
-  supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+  supabaseAdmin = createClient<Database>(supabaseUrl, supabaseServiceKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,

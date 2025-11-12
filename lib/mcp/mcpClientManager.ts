@@ -2,9 +2,11 @@ import { MultiServerMCPClient } from "@langchain/mcp-adapters";
 import { MCPOAuthClient } from "@/lib/oauth/oauthClient";
 import { GitHubOAuthClient } from "@/lib/oauth/githubOauthClient";
 import { GoogleDriveMCPClient, createGoogleDriveClient } from "./googleDriveMcpClient";
+import { GmailMCPClient, createGmailClient } from "./gmailMcpClient";
 import { sessionStore } from "@/lib/oauth/sessionStore";
 import { getAvailableMcpServers } from "../agent/getAvailableMcpServers";
 import { OAuthTokens } from "@modelcontextprotocol/sdk/shared/auth.js";
+import { DynamicStructuredTool } from "@langchain/core/tools";
 
 export interface MCPServerInfo {
   qualified_name: string;
@@ -25,7 +27,7 @@ export interface MCPClientConfig {
 export interface MCPClientResult {
   client: MultiServerMCPClient | null;
   tools: any[];
-  oauthClients: Map<string, MCPOAuthClient | GitHubOAuthClient | GoogleDriveMCPClient>;
+  oauthClients: Map<string, MCPOAuthClient | GitHubOAuthClient | GoogleDriveMCPClient | GmailMCPClient>;
   sessions: Map<string, string>; // serverName -> sessionId
 }
 
@@ -33,6 +35,160 @@ export interface MCPClientResult {
 const mcpClientCache = new Map<string, { result: MCPClientResult; timestamp: number }>();
 const oauthClientCache = new Map<string, MCPOAuthClient | GitHubOAuthClient | GoogleDriveMCPClient>();
 const CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes for HTTP sessions
+
+const FALLBACK_TOOL_SCHEMA: Readonly<Record<string, unknown>> = Object.freeze({
+	type: "object",
+	properties: {},
+	additionalProperties: true,
+});
+
+interface NormalizedTool {
+	displayName: string;
+	remoteName: string;
+	description: string;
+	schema: Record<string, unknown>;
+}
+
+function pickFirstString(...values: unknown[]): string | undefined {
+	for (const value of values) {
+		if (typeof value === "string") {
+			const trimmed = value.trim();
+			if (trimmed.length > 0) {
+				return trimmed;
+			}
+		}
+	}
+	return undefined;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function normalizeToolSchema(candidate: unknown): Record<string, unknown> {
+	if (isPlainObject(candidate)) {
+		return candidate as Record<string, unknown>;
+	}
+	return { ...FALLBACK_TOOL_SCHEMA };
+}
+
+function normalizeToolMetadata(rawTool: unknown, serverName: string): NormalizedTool | null {
+	if (!isPlainObject(rawTool)) {
+		console.warn(`Skipping tool from ${serverName}: tool definition is not an object`, rawTool);
+		return null;
+	}
+
+	const toolRecord = rawTool as Record<string, unknown>;
+	const metadata = isPlainObject(toolRecord.metadata) ? (toolRecord.metadata as Record<string, unknown>) : undefined;
+
+	const remoteName = pickFirstString(
+		toolRecord.name,
+		toolRecord.tool,
+		toolRecord.id,
+		toolRecord.command,
+		toolRecord.identifier,
+		toolRecord.key,
+		toolRecord.action,
+		toolRecord.slug,
+		metadata?.name,
+		metadata?.id
+	);
+
+	if (!remoteName) {
+		console.warn(`Skipping tool from ${serverName}: missing identifier`, rawTool);
+		return null;
+	}
+
+	const displayName =
+		pickFirstString(
+			toolRecord.displayName,
+			toolRecord.title,
+			toolRecord.label,
+			metadata?.displayName,
+			metadata?.title,
+			toolRecord.name,
+			toolRecord.tool,
+			toolRecord.id
+		) || remoteName;
+
+	const description =
+		pickFirstString(
+			toolRecord.description,
+			toolRecord.summary,
+			toolRecord.details,
+			toolRecord.help,
+			metadata?.description
+		) || "";
+
+	const schemaCandidate =
+		metadata?.parameters ??
+		toolRecord.parameters ??
+		toolRecord.inputSchema ??
+		toolRecord.schema ??
+		toolRecord.arguments ??
+		metadata?.schema;
+
+	return {
+		displayName,
+		remoteName,
+		description,
+		schema: normalizeToolSchema(schemaCandidate),
+	};
+}
+
+function unwrapToolCallResult(result: unknown): unknown {
+	if (!result || typeof result !== "object") {
+		return result;
+	}
+
+	const withContent = result as { content?: unknown };
+	const content = withContent.content;
+	if (typeof content === "string") {
+		return content;
+	}
+
+	if (Array.isArray(content)) {
+		const textEntry = content.find((entry) => typeof entry?.text === "string");
+		if (textEntry && typeof textEntry.text === "string") {
+			return textEntry.text;
+		}
+		return content;
+	}
+
+	return content ?? result;
+}
+
+function createDynamicToolInstance(
+	normalized: NormalizedTool,
+	executor: (args: Record<string, unknown>) => Promise<unknown>
+): DynamicStructuredTool<any, any, any, string> {
+	const schema = normalizeToolSchema(normalized.schema);
+	const tool = new DynamicStructuredTool<any, any, any, string>({
+		name: normalized.displayName,
+		description: normalized.description || normalized.displayName,
+		schema: schema as any,
+		func: async (input: Record<string, unknown>) => {
+			const args = isPlainObject(input)
+				? (input as Record<string, unknown>)
+				: input == null
+					? {}
+					: { value: input };
+			const result = await executor(args);
+			if (typeof result === "string") {
+				return result;
+			}
+			try {
+				return JSON.stringify(result);
+			} catch (error) {
+				console.warn(`Failed to stringify tool result for ${normalized.displayName}`, error);
+				return String(result);
+			}
+		},
+	});
+
+	(tool as any).__remoteName = normalized.remoteName;
+	return tool;
+}
 
 // Clear cache function for debugging
 export function clearMcpCache() {
@@ -133,7 +289,7 @@ export class MCPClientManager {
       }
       
       const mcpServers: Record<string, any> = {};
-      const oauthClients = new Map<string, MCPOAuthClient | GitHubOAuthClient | GoogleDriveMCPClient>();
+      const oauthClients = new Map<string, MCPOAuthClient | GitHubOAuthClient | GoogleDriveMCPClient | GmailMCPClient>();
       const sessions = new Map<string, string>();
       let allTools: any[] = [];
 
@@ -285,16 +441,23 @@ export class MCPClientManager {
    */
   private async handleOAuthServer(qualifiedName: string, serverConfig: any, userId: string): Promise<{
     url: string;
-    client?: MCPOAuthClient | GitHubOAuthClient | GoogleDriveMCPClient;
+    client?: MCPOAuthClient | GitHubOAuthClient | GoogleDriveMCPClient | GmailMCPClient;
     sessionId?: string;
   } | null> {
     try {
-      // Check if we have an existing OAuth session (but skip for Google Drive - use custom client)
+      // Check if this is a Google service that needs custom client handling
       const isGoogleDriveServer =
         qualifiedName === 'google-drive' ||
         serverConfig.config?.provider === 'google-drive';
+      
+      const isGmailServer =
+        qualifiedName === 'gmail' ||
+        serverConfig.config?.provider === 'gmail';
+      
+      // Skip sessionStore lookup for Google services - they use custom clients
+      const isGoogleService = isGoogleDriveServer || isGmailServer;
 
-      if (serverConfig.session_id && !isGoogleDriveServer) {
+      if (serverConfig.session_id && !isGoogleService) {
         const existingClient = sessionStore.getClient(serverConfig.session_id);
         if (existingClient) {
           console.log(`Using existing OAuth session for ${qualifiedName}`);
@@ -352,6 +515,32 @@ export class MCPClientManager {
           };
         } catch (error) {
           console.error(`Failed to create Google Drive client:`, error);
+          return null;
+        }
+      }
+
+      // Handle Gmail servers with custom client (same pattern as Drive)
+      
+      if (isGmailServer) {
+        console.log(`🔍 Gmail Debug - qualifiedName: ${qualifiedName}, hasStoredToken: ${hasStoredToken}`);
+        console.log(`🔍 Gmail Debug - serverConfig.oauth_token: ${serverConfig.oauth_token ? 'PRESENT' : 'MISSING'}`);
+        console.log(`Creating Gmail MCP client for ${qualifiedName}`);
+        try {
+          const gmailClient = await createGmailClient(userId, serverConfig);
+          
+          // Test health check
+          const isHealthy = await gmailClient.healthCheck();
+          if (!isHealthy) {
+            console.warn(`Gmail MCP server health check failed at ${serverConfig.url}`);
+          }
+          
+          return {
+            url: serverConfig.url,
+            client: gmailClient as any,
+            sessionId: serverConfig.session_id,
+          };
+        } catch (error) {
+          console.error(`Failed to create Gmail client:`, error);
           return null;
         }
       }
@@ -452,7 +641,7 @@ export class MCPClientManager {
   /**
    * Validates that OAuth sessions are still active
    */
-  private async validateOAuthSessions(oauthClients: Map<string, MCPOAuthClient | GitHubOAuthClient | GoogleDriveMCPClient>): Promise<boolean> {
+  private async validateOAuthSessions(oauthClients: Map<string, MCPOAuthClient | GitHubOAuthClient | GoogleDriveMCPClient | GmailMCPClient>): Promise<boolean> {
     try {
       // For each OAuth client, try to list tools to verify it's still active
       for (const [serverName, client] of oauthClients) {
@@ -611,8 +800,8 @@ export class MCPClientManager {
   /**
    * Gets cached OAuth clients for debugging
    */
-  getCachedOAuthClients(): Map<string, MCPOAuthClient | GitHubOAuthClient | GoogleDriveMCPClient> {
-    const allClients = new Map<string, MCPOAuthClient | GitHubOAuthClient | GoogleDriveMCPClient>();
+  getCachedOAuthClients(): Map<string, MCPOAuthClient | GitHubOAuthClient | GoogleDriveMCPClient | GmailMCPClient> {
+    const allClients = new Map<string, MCPOAuthClient | GitHubOAuthClient | GoogleDriveMCPClient | GmailMCPClient>();
     for (const cachedEntry of mcpClientCache.values()) {
       for (const [name, client] of cachedEntry.result.oauthClients) {
         allClients.set(name, client);
@@ -624,7 +813,7 @@ export class MCPClientManager {
   /**
    * Gets tools from an OAuth client
    */
-  private async getToolsFromOAuthClient(oauthClient: MCPOAuthClient | GitHubOAuthClient | GoogleDriveMCPClient, serverName: string): Promise<any[]> {
+  private async getToolsFromOAuthClient(oauthClient: MCPOAuthClient | GitHubOAuthClient | GoogleDriveMCPClient | GmailMCPClient, serverName: string): Promise<any[]> {
     try {
       // Ensure the OAuth client is connected
       if (!oauthClient) {
@@ -632,44 +821,59 @@ export class MCPClientManager {
         return [];
       }
 
-      // Handle Google Drive MCP client separately
-      if (oauthClient instanceof GoogleDriveMCPClient) {
-        console.log(`Getting tools from Google Drive MCP client for ${serverName}`);
-        const googleTools = await oauthClient.listTools();
-        
-        return googleTools.map((tool: any) => ({
-          name: tool.name,
-          description: tool.description,
-          schema: tool.inputSchema,
-          invoke: async (args: any) => {
-            const result = await oauthClient.executeTool(tool.name, args);
-            return result;
-          }
-        }));
-      }
+		const buildLangChainTools = (
+			rawTools: unknown[],
+			executorFactory: (meta: NormalizedTool) => (args: Record<string, unknown>) => Promise<unknown>
+		): DynamicStructuredTool<any, any, any, string>[] => {
+			const structuredTools: DynamicStructuredTool<any, any, any, string>[] = [];
+			rawTools.forEach((rawTool, index) => {
+				const normalized = normalizeToolMetadata(rawTool, serverName);
+				if (!normalized) {
+					console.warn(`Skipping tool ${index + 1} from ${serverName} due to incomplete metadata.`);
+					return;
+				}
+				const executor = executorFactory(normalized);
+				structuredTools.push(createDynamicToolInstance(normalized, executor));
+			});
+			return structuredTools;
+		};
 
-      if ("isConnected" in oauthClient && typeof (oauthClient as any).isConnected === "function") {
-        if (!(oauthClient as any).isConnected()) {
-          console.warn(`OAuth client for ${serverName} is not connected; skipping tool discovery.`);
-          return [];
-        }
-      }
+		if (oauthClient instanceof GoogleDriveMCPClient) {
+			console.log(`Getting tools from Google Drive MCP client for ${serverName}`);
+			const googleTools = await oauthClient.listTools();
+			return buildLangChainTools(googleTools, (meta) => async (args) => {
+				const result = await oauthClient.executeTool(meta.remoteName, args);
+				return unwrapToolCallResult(result);
+			});
+		}
 
-      // Try to list tools from the OAuth client
-      const toolsResult = await oauthClient.listTools();
-      
-      // Convert the tools to the format expected by LangChain
-      const tools = toolsResult.tools.map((tool: any) => ({
-        name: tool.name,
-        description: tool.description,
-        schema: tool.inputSchema,
-        invoke: async (args: any) => {
-          const result = await oauthClient.callTool(tool.name, args);
-          return result.content;
-        }
-      }));
-      
-      return tools;
+		if (oauthClient instanceof GmailMCPClient) {
+			console.log(`Getting tools from Gmail MCP client for ${serverName}`);
+			const gmailTools = await oauthClient.listTools();
+			return buildLangChainTools(gmailTools, (meta) => async (args) => {
+				const result = await oauthClient.executeTool(meta.remoteName, args);
+				return unwrapToolCallResult(result);
+			});
+		}
+
+		if ("isConnected" in oauthClient && typeof (oauthClient as any).isConnected === "function") {
+			if (!(oauthClient as any).isConnected()) {
+				console.warn(`OAuth client for ${serverName} is not connected; skipping tool discovery.`);
+				return [];
+			}
+		}
+
+		const toolsResult = await oauthClient.listTools();
+		const rawTools = Array.isArray((toolsResult as any)?.tools)
+			? (toolsResult as any).tools
+			: Array.isArray(toolsResult)
+				? (toolsResult as unknown[])
+				: [];
+
+		return buildLangChainTools(rawTools, (meta) => async (args) => {
+			const result = await oauthClient.callTool(meta.remoteName, args);
+			return unwrapToolCallResult(result);
+		});
     } catch (error) {
       console.error(`Error getting tools from OAuth client for ${serverName}:`, error);
       return [];

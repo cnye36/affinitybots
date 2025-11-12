@@ -18,6 +18,55 @@ export const GOOGLE_DRIVE_SCOPES = [
 ]
 
 /**
+ * Google OAuth scopes for Gmail access
+ */
+export const GOOGLE_GMAIL_SCOPES = [
+  "https://www.googleapis.com/auth/gmail.readonly",
+  "https://www.googleapis.com/auth/gmail.compose",
+  "https://www.googleapis.com/auth/gmail.modify",
+  "https://www.googleapis.com/auth/userinfo.email",
+]
+
+/**
+ * Google OAuth scopes for Calendar access
+ */
+export const GOOGLE_CALENDAR_SCOPES = [
+  "https://www.googleapis.com/auth/calendar",
+  "https://www.googleapis.com/auth/calendar.events",
+  "https://www.googleapis.com/auth/userinfo.email",
+]
+
+/**
+ * Google OAuth scopes for Docs access
+ */
+export const GOOGLE_DOCS_SCOPES = [
+  "https://www.googleapis.com/auth/documents",
+  "https://www.googleapis.com/auth/drive.file",
+  "https://www.googleapis.com/auth/userinfo.email",
+]
+
+/**
+ * Google OAuth scopes for Sheets access
+ */
+export const GOOGLE_SHEETS_SCOPES = [
+  "https://www.googleapis.com/auth/spreadsheets",
+  "https://www.googleapis.com/auth/drive.file",
+  "https://www.googleapis.com/auth/userinfo.email",
+]
+
+/**
+ * Map of Google services to their required scopes
+ * Add new services here when you add more Google integrations
+ */
+export const GOOGLE_SERVICE_SCOPES: Record<string, string[]> = {
+  drive: GOOGLE_DRIVE_SCOPES,
+  gmail: GOOGLE_GMAIL_SCOPES,
+  calendar: GOOGLE_CALENDAR_SCOPES,
+  docs: GOOGLE_DOCS_SCOPES,
+  sheets: GOOGLE_SHEETS_SCOPES,
+}
+
+/**
  * Get Google MCP OAuth credentials from environment
  * These are separate from user authentication credentials
  */
@@ -42,15 +91,28 @@ export function createGoogleMcpOAuthClient() {
 }
 
 /**
- * Generate Google OAuth authorization URL for MCP Drive integration
+ * Generate Google OAuth authorization URL for any Google service
+ * @param service - Which Google service to request scopes for
+ * @param state - State parameter to track the OAuth flow
+ * @throws Error if service is not supported
  */
-export function getGoogleAuthorizationUrl(state?: string): string {
+export function getGoogleAuthorizationUrl(
+  service: keyof typeof GOOGLE_SERVICE_SCOPES,
+  state?: string
+): string {
   const oauth2Client = createGoogleMcpOAuthClient()
+  const scopes = GOOGLE_SERVICE_SCOPES[service]
+  
+  if (!scopes) {
+    throw new Error(
+      `Unknown Google service: ${service}. Valid services: ${Object.keys(GOOGLE_SERVICE_SCOPES).join(", ")}`
+    )
+  }
   
   return oauth2Client.generateAuthUrl({
     access_type: "offline",
-    scope: GOOGLE_DRIVE_SCOPES,
-    prompt: "consent",
+    scope: scopes,
+    prompt: "consent", // Always show consent screen to ensure proper scopes
     state,
   })
 }
@@ -131,4 +193,3 @@ export async function getValidGoogleTokens(
 
   return await refreshAccessToken(refreshToken)
 }
-

@@ -752,10 +752,6 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
           throw new Error("User not authenticated");
         }
 
-        interface UserAgent {
-          assistant: Assistant;
-        }
-
         const { data: agentsData, error } = await supabase
           .from("user_assistants")
           .select(
@@ -768,7 +764,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
         if (error) throw error;
 
         // Extract just the agent data from the joined results
-        setAssistants(agentsData?.map((ua: UserAgent) => ua.assistant) || []);
+        setAssistants(agentsData?.map((ua: any) => ua.assistant) || []);
       } catch (err) {
         console.error("Error loading agents:", err);
         toast({
@@ -1128,7 +1124,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
               .eq("workflow_task_id", selectedTaskForAgent)
               .single()
               .then(
-                (result: { data: { config: Record<string, unknown> } }) =>
+                (result) =>
                   result.data?.config || {}
               )),
             assigned_assistant: {
