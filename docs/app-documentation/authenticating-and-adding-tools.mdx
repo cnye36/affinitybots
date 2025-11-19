@@ -1,0 +1,61 @@
+---
+title: "Authenticating and Adding Tools"
+excerpt: "Empower your agents by connecting them to external MCP servers and services via OAuth."
+date: "2024-03-19"
+readTime: "7 min read"
+category: "Configuration"
+---
+
+# Authenticating and Adding Tools
+
+Tools in our platform are built on the **Model Context Protocol (MCP)**. MCP is an open standard that enables AI models to securely interact with local and remote resources. Think of it as a universal language that allows your agents to "talk" to your files, databases, and external services.
+
+For a deeper dive into MCP, you can check out:
+- The official [Model Context Protocol website](https://modelcontextprotocol.io)
+- Our blog post: [MCP 101: Why This Open Standard is Crucial](/blog/mcp-101-why-this-open-standard-is-crucial-for-multi-agent-systems)
+
+## 1. Connecting Tools (Global Configuration)
+
+Before any agent can use a tool, you must first connect and authenticate it at the platform level. This is done in the **Tools** or **Integrations** section of the app.
+
+### Authentication via OAuth
+
+For services like Google Drive, you'll need to authorize the application to access your data.
+
+1.  Navigate to the **Tools** page.
+2.  Find the MCP server you want to connect (e.g., "Google Drive MCP").
+3.  Click **"Connect"**.
+4.  Follow the OAuth flow to log in and grant permissions.
+
+![Connect Google Drive](/docs-images/connect-gdrive.png)
+
+### Viewing Tool Capabilities
+
+Once an MCP server is connected, you will be able to see exactly what it provides:
+- **Tools**: Functions the agent can execute (e.g., `list_files`, `send_email`).
+- **Resources**: Data sources the agent can read.
+- **Prompts**: Pre-defined templates for using the tool.
+
+![Connected Tool Details](/docs-images/authentication-2.png)
+
+## 2. Assigning Tools to an Agent
+
+**Important:** Connecting a tool globally does **not** automatically give every agent access to it. You must explicitly assign tools to specific agents. This allows you to create specialized agents with distinct capabilities (e.g., one agent for file management, another for coding).
+
+To assign a tool:
+
+1.  Go to the **Agents** page and open the **Agent Configuration** modal (either when creating a new agent or editing an existing one).
+2.  Expand the **"Add Tools"** section.
+3.  Select the specific tools you want this agent to have access to.
+
+![Agent Tool Selection](/docs-images/Tools-selection.png)
+
+> [!NOTE]
+> **Why is this separate?**
+> By decoupling global connection from agent assignment, you maintain security and control. You might have 10 different tools connected to your account, but you only want your "Writer Agent" to have access to Google Docs, not your GitHub repository.
+
+## 3. Using Tools in Chat
+
+Once assigned, the agent is aware of its tools. When you ask a question that requires external action, the agent will intelligently decide to call the appropriate tool.
+
+For example, if you've assigned the Google Drive tool and ask, *"Find the marketing report in my Drive,"* the agent will execute the `search_files` tool provided by the Google Drive MCP server.
