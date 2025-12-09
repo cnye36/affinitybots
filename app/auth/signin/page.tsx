@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { signIn, signInWithGoogle, signInWithGitHub } from "../actions";
+import { signIn, signInWithGoogle } from "../actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -51,9 +51,9 @@ function SignInForm() {
             <Button variant="outline" formAction={signInWithGoogle} className="w-full">
               Sign in with Google
             </Button>
-            <Button variant="outline" formAction={signInWithGitHub} className="w-full">
+            {/* <Button variant="outline" formAction={signInWithGitHub} className="w-full">
               Sign in with GitHub
-            </Button>
+            </Button> */}
            
           </div>
         </form>

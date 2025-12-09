@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { signUp, signUpWithGoogle, signUpWithGitHub } from "@/app/auth/actions";
+import { signUp, signUpWithGoogle } from "@/app/auth/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -88,13 +88,13 @@ function SignUpForm() {
           >
             Sign up with Google
           </Button>
-          <Button
+          {/* <Button
             variant="outline"
             formAction={signUpWithGitHub}
             className="w-full"
           >
             Sign up with GitHub
-          </Button>
+          </Button> */}
          
         </form>
         <p className="mt-4 text-center">

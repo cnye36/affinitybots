@@ -134,29 +134,29 @@ export async function signInWithGoogle() {
   }
 }
 
-export async function signInWithGitHub() {
-  const supabase = await createClient();
-  // Route through our auth callback so we can exchange the code for a session
-  const next = encodeURIComponent(`/dashboard`);
-  const redirectTo = `${await getSiteUrl()}/auth/callback?next=${next}`;
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: "github",
-    options: { redirectTo },
-  });
-  if (error) {
-    redirect(`/auth/signin?error=${encodeURIComponent(error.message)}`);
-  }
-  if (data?.url) {
-    redirect(data.url);
-  }
-}
+// export async function signInWithGitHub() {
+//   const supabase = await createClient();
+//   // Route through our auth callback so we can exchange the code for a session
+//   const next = encodeURIComponent(`/dashboard`);
+//   const redirectTo = `${await getSiteUrl()}/auth/callback?next=${next}`;
+//   const { data, error } = await supabase.auth.signInWithOAuth({
+//     provider: "github",
+//     options: { redirectTo },
+//   });
+//   if (error) {
+//     redirect(`/auth/signin?error=${encodeURIComponent(error.message)}`);
+//   }
+//   if (data?.url) {
+//     redirect(data.url);
+//   }
+// }
 
 export async function signUpWithGoogle(formData: FormData) {
   // Alias to standard sign in, whitelist check happens in callback
   return signInWithGoogle();
 }
 
-export async function signUpWithGitHub(formData: FormData) {
-  // Alias to standard sign in, whitelist check happens in callback
-  return signInWithGitHub();
-}
+// export async function signUpWithGitHub(formData: FormData) {
+//   // Alias to standard sign in, whitelist check happens in callback
+//   return signInWithGitHub();
+// }
