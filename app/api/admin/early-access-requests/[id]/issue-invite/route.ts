@@ -54,9 +54,8 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
       );
     }
 
-    // 2. Generate a unique invite code
-    const inviteCode = crypto.randomBytes(8).toString("hex"); // 16-character hex string
-
+    // 2. No invite code generation needed for whitelist
+    
     // 3. Set invited timestamp; no expiration
     const invitedAt = new Date();
 
@@ -64,19 +63,18 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     const { data: updatedRecord, error: updateError } = await supabase
       .from("early_access_invites")
       .update({
-        status: "invited",
-        invite_code: inviteCode,
+        status: "approved", // Changed from 'invited' to 'approved'
         invited_at: invitedAt.toISOString(),
         expires_at: null,
       })
       .eq("id", id)
-      .select("id, email, name, invite_code, status, expires_at") // Add name for email
+      .select("id, email, name, status") 
       .single();
 
     if (updateError) {
       console.error("Error updating early access request:", updateError);
       return NextResponse.json(
-        { error: "Failed to issue invite code" },
+        { error: "Failed to approve request" },
         { status: 500 }
       );
     }
@@ -86,15 +84,14 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
       await sendInviteEmail({
         to: updatedRecord.email,
         name: updatedRecord.name,
-        inviteCode: updatedRecord.invite_code,
       });
     } catch (emailError) {
-      console.error("Failed to send invite email:", emailError);
+      console.error("Failed to send approval email:", emailError);
       // Do not block the response if email fails
     }
 
     return NextResponse.json({
-      message: "Invite code issued successfully.",
+      message: "Access approved successfully.",
       data: updatedRecord,
     });
   } catch (error) {

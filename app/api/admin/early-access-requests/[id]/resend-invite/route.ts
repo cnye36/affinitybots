@@ -25,25 +25,27 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     return NextResponse.json({ error: "Invite not found" }, { status: 404 });
   }
 
-  if (invite.status !== "invited") {
+  if (invite.status !== "invited" && invite.status !== "approved") {
     return NextResponse.json(
-      { error: `Cannot resend invite. Current status: ${invite.status}` },
+      { error: `Cannot resend allow access email. Current status: ${invite.status}` },
       { status: 400 }
     );
   }
 
-  // Reuse existing invite code; only refresh invited_at and ensure no expiry
+  // Refresh invited_at
   const invitedAt = new Date().toISOString();
 
   const { data: updated, error: updateError } = await supabase
     .from("early_access_invites")
     .update({
       invited_at: invitedAt,
-      expires_at: null,
-      status: "invited",
+      expires_at: null, // ensure no expiry
+      // Keep existing status (invited or approved) or normalize to approved?
+      // Let's normalize to approved if we are resending
+      status: "approved",
     })
     .eq("id", id)
-    .select("email, name, invite_code")
+    .select("email, name")
     .single();
 
   if (updateError) {
@@ -58,9 +60,8 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     await sendInviteEmail({
       to: updated.email,
       name: updated.name,
-      inviteCode: updated.invite_code,
     });
-    return NextResponse.json({ message: "Invite email resent." });
+    return NextResponse.json({ message: "Approval email resent." });
   } catch (error) {
     console.error("Failed to resend invite email:", error);
     return NextResponse.json(

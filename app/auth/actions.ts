@@ -28,40 +28,36 @@ export async function signUp(formData: FormData) {
 
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
-  // Sanitize invite code server-side: alphanumeric only
-  const inviteCodeRaw = formData.get("inviteCode") as string;
-  const inviteCode = (inviteCodeRaw || "").replace(/[^a-zA-Z0-9]/g, "");
 
-  if (!email || !password || !inviteCode) {
-    return { error: "Email, password, and invite code are required." };
+  if (!email || !password) {
+    return { error: "Email and password are required." };
   }
 
-  // 1. Validate Invite Code
+  // 1. Validate Email Approval
   const { data: invite, error: inviteError } = await supabase
     .from("early_access_invites")
     .select("id, email, status")
-    .eq("invite_code", inviteCode)
-    .single(); // Expecting a single, unique invite code
+    .eq("email", email)
+    .single();
 
   if (inviteError || !invite) {
-    console.error("Invite code validation error:", inviteError);
+    // Treat "not found" as "not approved" to avoid leaking email existence if desired,
+    // or be explicit. For early access, explicit is usually fine.
     return {
-      error:
-        "Invalid invite code. Please check your code and try again.",
+      error: "This email address is not on the approved list. Please request early access.",
     };
   }
 
-  if (invite.email !== email) {
-    return { error: "Invite code is not valid for this email address." };
+  // Allow 'invited' (legacy) or 'approved'
+  if (invite.status !== "invited" && invite.status !== "approved") {
+     if (invite.status === "requested") {
+        return { error: "Your access request is still pending approval." };
+     }
+     if (invite.status === "accepted") {
+        return { error: "This email has already been registered." };
+     }
+     return { error: "Access denied." };
   }
-
-  if (invite.status !== "invited") {
-    return {
-      error: "This invite code has already been used or is not active.",
-    };
-  }
-
-  // No expiration enforcement
 
   // 2. Sign up the user with Supabase Auth
   const { data: signUpData, error: signUpAuthError } =
@@ -70,9 +66,7 @@ export async function signUp(formData: FormData) {
       password,
       options: {
         emailRedirectTo: `${await getSiteUrl()}/auth/callback`,
-        data: {
-          invite_code: inviteCode,
-        }
+        // No invite code metadata needed anymore
       }
     });
 
@@ -90,23 +84,17 @@ export async function signUp(formData: FormData) {
     .update({
       status: "accepted",
       accepted_by_user_id: signUpData.user.id,
-      invite_code: null, // Clear the invite code as it's been used
-      expires_at: null, // Clear expiry
     })
     .eq("id", invite.id);
 
   if (updateInviteError) {
-    // This is not ideal, as the user is created but the invite status isn't updated.
-    // Log this for admin attention. Potentially attempt a rollback or flag for manual review.
     console.error(
-      `Failed to update invite status for user ${signUpData.user.id} (invite ID: ${invite.id}):`,
+      `Failed to update invite status for user ${signUpData.user.id}:`,
       updateInviteError
     );
-    // Don't block user login for this, but it needs to be addressed.
   }
 
   revalidatePath("/", "layout");
-  // Redirect to verification page since email confirmation is required
   redirect(`/auth/verify-email?email=${encodeURIComponent(email)}`);
 }
 
@@ -122,8 +110,6 @@ async function getSiteUrl() {
   const forwardedProto = hdrs.get("x-forwarded-proto");
   const host = hdrs.get("host");
   const computedOrigin = forwardedProto && host ? `${forwardedProto}://${host}` : hdrs.get("origin");
-  // Prefer the current request origin (works for localhost and multi-domain)
-  // Fallback to env var if origin is not available
   return computedOrigin ?? process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 }
 
@@ -162,47 +148,11 @@ export async function signInWithGitHub() {
 }
 
 export async function signUpWithGoogle(formData: FormData) {
-  const supabase = await createClient();
-  const inviteCode = (formData.get("inviteCode") as string) || "";
-  
-  if (!inviteCode) {
-    redirect(`/auth/signup?error=${encodeURIComponent("Invite code is required.")}`);
-  }
-  
-  // Store invite code in session storage for validation after OAuth
-  const nextPath = `/auth/validate-invite?inviteCode=${encodeURIComponent(inviteCode)}`;
-  const redirectTo = `${await getSiteUrl()}/auth/callback?next=${encodeURIComponent(nextPath)}`;
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: "google",
-    options: { redirectTo },
-  });
-  if (error) {
-    redirect(`/auth/signup?error=${encodeURIComponent(error.message)}`);
-  }
-  if (data?.url) {
-    redirect(data.url);
-  }
+  // Alias to standard sign in, whitelist check happens in callback
+  return signInWithGoogle();
 }
 
 export async function signUpWithGitHub(formData: FormData) {
-  const supabase = await createClient();
-  const inviteCode = (formData.get("inviteCode") as string) || "";
-  
-  if (!inviteCode) {
-    redirect(`/auth/signup?error=${encodeURIComponent("Invite code is required.")}`);
-  }
-  
-  // Store invite code in session storage for validation after OAuth
-  const nextPath = `/auth/validate-invite?inviteCode=${encodeURIComponent(inviteCode)}`;
-  const redirectTo = `${await getSiteUrl()}/auth/callback?next=${encodeURIComponent(nextPath)}`;
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: "github",
-    options: { redirectTo },
-  });
-  if (error) {
-    redirect(`/auth/signup?error=${encodeURIComponent(error.message)}`);
-  }
-  if (data?.url) {
-    redirect(data.url);
-  }
+  // Alias to standard sign in, whitelist check happens in callback
+  return signInWithGitHub();
 }

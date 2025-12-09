@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useRef, useState, useEffect, Suspense } from "react";
+import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 function SignUpForm() {
@@ -14,39 +14,12 @@ function SignUpForm() {
   const [error, setError] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const queryError = searchParams.get("error");
-  const inviteRef = useRef<HTMLInputElement | null>(null);
-
-  // Auto-fill invite code from URL and optionally copy to clipboard
-  useEffect(() => {
-    const raw = searchParams.get("inviteCode");
-    // Support both 'copy' and 'autocopy' flags
-    const shouldCopy = searchParams.get("copy") ?? searchParams.get("autocopy");
-    if (raw && inviteRef.current) {
-      // Sanitize: remove any trailing query fragments mistakenly appended to the code (e.g., "=1")
-      const code = raw.replace(/[^a-zA-Z0-9]/g, "");
-      inviteRef.current.value = code;
-      // Optionally copy to clipboard if requested via query param
-      if (shouldCopy === "1" && typeof navigator !== "undefined" && navigator.clipboard) {
-        navigator.clipboard.writeText(code).catch(() => {
-          // best-effort; ignore clipboard errors
-        });
-      }
-    }
-  }, [searchParams]);
-
   async function handleSignUp(formData: FormData) {
     const password = formData.get("password") as string;
     const confirmPassword = formData.get("confirmPassword") as string;
-    // Sanitize invite code on submit as well
-    const inviteCode = (formData.get("inviteCode") as string)?.replace(/[^a-zA-Z0-9]/g, "");
 
     if (password !== confirmPassword) {
       setError("Passwords do not match");
-      return;
-    }
-
-    if (!inviteCode) {
-      setError("Invite code is required.");
       return;
     }
 
@@ -99,10 +72,7 @@ function SignUpForm() {
               type="password"
             />
           </div>
-          <div>
-            <Label htmlFor="inviteCode">Invite Code</Label>
-            <Input id="inviteCode" name="inviteCode" type="text" ref={inviteRef} />
-          </div>
+
           <Button formAction={handleSignUp} className="w-full">
             Sign Up
           </Button>
@@ -115,13 +85,6 @@ function SignUpForm() {
             variant="outline"
             formAction={signUpWithGoogle}
             className="w-full"
-            onClick={(e) => {
-              const value = inviteRef.current?.value?.trim();
-              if (!value) {
-                e.preventDefault();
-                setError("Invite code is required.");
-              }
-            }}
           >
             Sign up with Google
           </Button>
@@ -129,13 +92,6 @@ function SignUpForm() {
             variant="outline"
             formAction={signUpWithGitHub}
             className="w-full"
-            onClick={(e) => {
-              const value = inviteRef.current?.value?.trim();
-              if (!value) {
-                e.preventDefault();
-                setError("Invite code is required.");
-              }
-            }}
           >
             Sign up with GitHub
           </Button>

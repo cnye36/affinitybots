@@ -44,6 +44,42 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // --- whitelist check start ---
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user?.email) {
+      const { data: invite } = await supabase
+        .from("early_access_invites")
+        .select("status")
+        .eq("email", user.email)
+        .single();
+      
+      // Allow 'invited' (legacy) or 'approved'
+      // Also allow 'accepted' if they are just logging in again
+      const isApproved = invite && (
+        invite.status === 'invited' || 
+        invite.status === 'approved' || 
+        invite.status === 'accepted'
+      );
+
+      if (!isApproved) {
+        await supabase.auth.signOut();
+        return NextResponse.redirect(
+          new URL(
+            `/auth/signin?error=${encodeURIComponent("Your email is not approved for early access.")}`,
+            origin
+          )
+        );
+      }
+
+      // Optionally mark as accepted if this is their first login
+      if (invite && invite.status !== 'accepted') {
+          await supabase.from("early_access_invites")
+            .update({ status: 'accepted', accepted_by_user_id: user.id })
+            .eq("email", user.email);
+      }
+    }
+    // --- whitelist check end ---
+
     return redirectResponse;
   } catch (error) {
     console.error("Error in auth callback:", error);
