@@ -85,6 +85,23 @@ export async function GET(request: NextRequest) {
       }
     } else {
         console.log("Auth Callback: No user session found after exchange.");
+        return NextResponse.redirect(
+          new URL(
+            `/auth/signin?error=${encodeURIComponent("Login failed: Could not retrieve user session.")}`,
+            origin
+          )
+        );
+    }
+    
+    if (!user.email) {
+       console.log("Auth Callback: User has no email.");
+       await supabase.auth.signOut();
+       return NextResponse.redirect(
+          new URL(
+            `/auth/signin?error=${encodeURIComponent("Login failed: GitHub did not provide an email address.")}`,
+            origin
+          )
+        );
     }
     // --- whitelist check end ---
 

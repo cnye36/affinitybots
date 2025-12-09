@@ -6,17 +6,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { Menu, X } from "lucide-react";
-import {
-  AlertDialog,
-  AlertDialogTrigger,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogCancel,
-  AlertDialogAction,
-} from "@/components/ui/alert-dialog";
+
 
 export function Header() {
   const [scrolled, setScrolled] = useState(false);
@@ -116,37 +106,19 @@ export function Header() {
           </Link>
 
           {/* Sign In with invite confirmation (desktop) */}
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <div className="relative p-0.5 rounded-md bg-gradient-to-r from-blue-500 to-purple-600">
-                <Button
-                  variant="ghost"
-                  className={`hidden md:inline-flex transition-all duration-200 bg-background hover:bg-background/80 ${
-                    scrolled ? "text-sm py-1" : ""
-                  }`}
-                >
-                  Sign In
-                </Button>
-              </div>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Do you have an invite?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  AffinityBots is currently in closed beta. If you haven&apos;t
-                  been invited yet, request early access to join the waitlist.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel asChild>
-                  <Link href="/early-access">Request Early Access</Link>
-                </AlertDialogCancel>
-                <AlertDialogAction asChild>
-                  <Link href="/auth/signin">I have an invite — Sign In</Link>
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          {/* Sign In Button (desktop) */}
+          <Link href="/auth/signin" className="hidden md:block">
+            <div className="relative p-0.5 rounded-md bg-gradient-to-r from-blue-500 to-purple-600">
+              <Button
+                variant="ghost"
+                className={`transition-all duration-200 bg-background hover:bg-background/80 ${
+                  scrolled ? "text-sm py-1" : ""
+                }`}
+              >
+                Sign In
+              </Button>
+            </div>
+          </Link>
 
           <ThemeToggle />
 
@@ -208,32 +180,14 @@ export function Header() {
               </Link>
 
               {/* Sign In with invite confirmation (mobile) */}
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <div className="relative p-0.5 rounded-md bg-gradient-to-r from-blue-500 to-purple-600 w-full">
-                    <Button variant="ghost" className="w-full bg-background hover:bg-background/80">
-                      Sign In
-                    </Button>
-                  </div>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Do you have an invite?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      AffinityBots is currently in closed beta. If you haven&apos;t
-                      been invited yet, request early access to join the waitlist.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel asChild>
-                      <Link href="/early-access">Request Early Access</Link>
-                    </AlertDialogCancel>
-                    <AlertDialogAction asChild>
-                      <Link href="/auth/signin">I have an invite — Sign In</Link>
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+              {/* Sign In Button (mobile) */}
+              <Link href="/auth/signin" onClick={handleNavClick}>
+                <div className="relative p-0.5 rounded-md bg-gradient-to-r from-blue-500 to-purple-600 w-full">
+                  <Button variant="ghost" className="w-full bg-background hover:bg-background/80">
+                    Sign In
+                  </Button>
+                </div>
+              </Link>
             </nav>
           </div>
         )}
