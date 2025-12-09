@@ -68,7 +68,7 @@ export async function GET(req: Request) {
     await supabase.auth.signOut();
     return NextResponse.redirect(
       new URL(
-        `/signup?error=${encodeURIComponent(
+        `/auth/signup?error=${encodeURIComponent(
           "This invite code has already been used or is not active."
         )}`,
         requestUrl.origin

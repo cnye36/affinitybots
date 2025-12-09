@@ -198,7 +198,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
               Ready to build with multi‑agent workflows?
             </p>
             <div className="flex items-center gap-2">
-              <Link href="/signup">
+              <Link href="/auth/signup">
                 <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
                   Try AffinityBots Now
                 </Button>

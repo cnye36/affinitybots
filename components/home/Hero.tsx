@@ -54,32 +54,32 @@ export function Hero() {
                 </Button>
               </Link>
             </div>
-            <div className="mt-8 md:mt-12 grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-6">
-              <div className="flex flex-col md:flex-row md:items-center">
-                <div className="text-3xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600">
+            <div className="mt-8 md:mt-12 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-6 md:gap-8">
+              <div className="flex flex-col items-center text-center">
+                <div className="text-3xl sm:text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600 mb-2">
                   1min
                 </div>
-                <div className="mt-1 md:mt-0 md:ml-2 text-xs md:text-sm text-muted-foreground">
+                <div className="text-sm sm:text-base md:text-sm text-muted-foreground">
                   To Create
                   <br />
                   an Agent
                 </div>
               </div>
-              <div className="flex flex-col md:flex-row md:items-center">
-                <div className="text-3xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600">
+              <div className="flex flex-col items-center text-center">
+                <div className="text-3xl sm:text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600 mb-2">
                   24/7
                 </div>
-                <div className="mt-1 md:mt-0 md:ml-2 text-xs md:text-sm text-muted-foreground">
+                <div className="text-sm sm:text-base md:text-sm text-muted-foreground">
                   Availability
                   <br />
                   Always On
                 </div>
               </div>
-              <div className="flex flex-col md:flex-row md:items-center">
-                <div className="text-3xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600">
+              <div className="flex flex-col items-center text-center">
+                <div className="text-3xl sm:text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600 mb-2">
                   100%
                 </div>
-                <div className="mt-1 md:mt-0 md:ml-2 text-xs md:text-sm text-muted-foreground">
+                <div className="text-sm sm:text-base md:text-sm text-muted-foreground">
                   Customizable
                   <br />
                   Agents

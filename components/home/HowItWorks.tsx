@@ -55,16 +55,16 @@ export function HowItWorks() {
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
               viewport={{ once: true }}
-              className="relative"
+              className="relative flex"
             >
-              <div className="relative p-0.5 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 hover:from-purple-600 hover:to-blue-500 transition-all duration-300">
-                <div className="bg-card rounded-lg p-6 h-full">
+              <div className="relative p-0.5 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 hover:from-purple-600 hover:to-blue-500 transition-all duration-300 flex-1 flex flex-col">
+                <div className="bg-card rounded-lg p-6 flex-1 flex flex-col">
                   <div className="text-4xl mb-4">{step.icon}</div>
                   <div className="text-sm text-muted-foreground mb-2">
                     {step.number}
                   </div>
                   <h3 className="text-xl font-semibold mb-3">{step.title}</h3>
-                  <p className="text-muted-foreground">{step.description}</p>
+                  <p className="text-muted-foreground flex-1">{step.description}</p>
                 </div>
               </div>
               {index < steps.length - 1 && (

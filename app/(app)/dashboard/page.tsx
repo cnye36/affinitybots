@@ -93,7 +93,7 @@ export default async function Dashboard() {
           console.error("Error fetching user:", userError);
         }
         if (!user) {
-          redirect("/api/auth/signin");
+          redirect("/auth/signin");
         }
 
         // --------------------------------------------------------------------
