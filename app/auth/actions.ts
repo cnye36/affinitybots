@@ -106,6 +106,10 @@ export async function signOut() {
 }
 
 async function getSiteUrl() {
+  if (process.env.NEXT_PUBLIC_BASE_URL) {
+    return process.env.NEXT_PUBLIC_BASE_URL.replace(/\/$/, "");
+  }
+  
   const hdrs = await headers();
   const forwardedProto = hdrs.get("x-forwarded-proto");
   const host = hdrs.get("host");

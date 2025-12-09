@@ -46,13 +46,18 @@ export async function GET(request: NextRequest) {
 
     // --- whitelist check start ---
     const { data: { user } } = await supabase.auth.getUser();
+    
+    console.log("Auth Callback: User found:", user?.email);
+
     if (user?.email) {
-      const { data: invite } = await supabase
+      const { data: invite, error: inviteError } = await supabase
         .from("early_access_invites")
-        .select("status")
-        .eq("email", user.email)
+        .select("status, id")
+        .ilike("email", user.email) // Case insensitive check
         .single();
       
+      console.log("Auth Callback: Invite status:", invite?.status, "Error:", inviteError);
+
       // Allow 'invited' (legacy) or 'approved'
       // Also allow 'accepted' if they are just logging in again
       const isApproved = invite && (
@@ -62,6 +67,7 @@ export async function GET(request: NextRequest) {
       );
 
       if (!isApproved) {
+        console.log("Auth Callback: Access Denied. Redirecting to error.");
         await supabase.auth.signOut();
         return NextResponse.redirect(
           new URL(
@@ -75,8 +81,10 @@ export async function GET(request: NextRequest) {
       if (invite && invite.status !== 'accepted') {
           await supabase.from("early_access_invites")
             .update({ status: 'accepted', accepted_by_user_id: user.id })
-            .eq("email", user.email);
+            .eq("id", invite.id); // Use ID to be safe
       }
+    } else {
+        console.log("Auth Callback: No user session found after exchange.");
     }
     // --- whitelist check end ---
 
