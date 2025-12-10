@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,9 +16,11 @@ import {
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/useToast";
 import axios from "axios";
+import { useSearchParams } from "next/navigation";
 
 export function EarlyAccessForm() {
   const { toast } = useToast();
+  const searchParams = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
@@ -27,6 +29,15 @@ export function EarlyAccessForm() {
     expectations: "",
     newsletter: false,
   });
+
+  useEffect(() => {
+    const emailFromQuery = searchParams.get("email");
+    if (emailFromQuery) {
+      setFormData((prev) =>
+        prev.email ? prev : { ...prev, email: emailFromQuery }
+      );
+    }
+  }, [searchParams]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>

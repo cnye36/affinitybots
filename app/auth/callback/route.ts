@@ -68,11 +68,12 @@ export async function GET(request: NextRequest) {
     if (!isApproved) {
       console.log("Auth Callback: Access Denied. Redirecting to error.");
       await supabase.auth.signOut();
+      const params = new URLSearchParams({
+        error: "Your email is not approved for early access.",
+        email: user.email,
+      });
       return NextResponse.redirect(
-        new URL(
-          `/auth/signin?error=${encodeURIComponent("Your email is not approved for early access.")}`,
-          origin
-        )
+        new URL(`/auth/signin?${params.toString()}`, origin)
       );
     }
 
