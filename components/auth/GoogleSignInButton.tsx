@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/supabase/client"
+import { SiGoogle } from "react-icons/si"
 
 export function GoogleSignInButton() {
 	const [isLoading, setIsLoading] = useState(false)
@@ -50,10 +51,11 @@ export function GoogleSignInButton() {
 		<Button
 			type="button"
 			variant="outline"
-			className="w-full"
+			className="w-full gap-2"
 			onClick={handleGoogleSignIn}
 			disabled={isLoading}
 		>
+			<SiGoogle className="h-5 w-5" />
 			{isLoading ? "Redirecting..." : "Continue with Google"}
 		</Button>
 	)
