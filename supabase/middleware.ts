@@ -39,16 +39,16 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Check if this is an OAuth callback that Supabase redirected to root path
-  // When Site URL is set to the base URL, Supabase may redirect to /?code=... instead of /auth/callback?code=...
+  // Check if this is an OAuth callback that Supabase redirected to the wrong path
+  // Depending on Site URL, Supabase may redirect to /, /dashboard, etc. with ?code=...
+  // We normalize all of these to /auth/callback so the dedicated handler can
+  // exchange the code for a session and set cookies correctly.
   const code = request.nextUrl.searchParams.get("code");
-  if (code && request.nextUrl.pathname === "/") {
-    console.log("🔍 Middleware: Detected OAuth code on root path, redirecting to /auth/callback");
-    const redirectUrl = new URL("/auth/callback", request.nextUrl.origin);
-    // Preserve all query parameters (code, next, etc.)
-    request.nextUrl.searchParams.forEach((value, key) => {
-      redirectUrl.searchParams.set(key, value);
-    });
+  if (code && !request.nextUrl.pathname.startsWith("/auth/callback")) {
+    console.log("🔍 Middleware: Detected OAuth code on non-callback path, redirecting to /auth/callback");
+    const redirectUrl = request.nextUrl.clone();
+    redirectUrl.pathname = "/auth/callback";
+    // Query params (including code, next, etc.) are already on nextUrl and will be preserved
     return NextResponse.redirect(redirectUrl);
   }
 
