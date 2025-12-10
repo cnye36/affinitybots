@@ -6,8 +6,16 @@ import type { Database } from "@/supabase/types";
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
+  // Get next from query params (passed through Supabase's queryParams option)
+  // OR from the URL if Supabase adds it, OR default to dashboard
   const next = requestUrl.searchParams.get("next") || "/dashboard";
   const origin = requestUrl.origin;
+  
+  // Log if we're on the wrong origin (this helps debug Supabase redirect issues)
+  if (origin.includes("affinitybots.com") && process.env.NODE_ENV === "development") {
+    console.warn("⚠️ Auth Callback: Received callback on production domain in development mode!");
+    console.warn("⚠️ This suggests Supabase Site URL is set to production. Check Supabase dashboard.");
+  }
 
   console.log("🔍 Auth Callback: Starting callback handler");
   console.log("🔍 Auth Callback: Request URL:", requestUrl.toString());

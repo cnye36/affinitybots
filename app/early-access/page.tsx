@@ -19,7 +19,7 @@ export default function EarlyAccessPage() {
             </p>
           </div>
           <Suspense fallback={<div className="text-center">Loading form...</div>}>
-            <EarlyAccessForm />
+          <EarlyAccessForm />
           </Suspense>
         </div>
       </main>
