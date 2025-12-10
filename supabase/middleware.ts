@@ -39,6 +39,19 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Check if this is an OAuth callback that Supabase redirected to root path
+  // When Site URL is set to the base URL, Supabase may redirect to /?code=... instead of /auth/callback?code=...
+  const code = request.nextUrl.searchParams.get("code");
+  if (code && request.nextUrl.pathname === "/") {
+    console.log("🔍 Middleware: Detected OAuth code on root path, redirecting to /auth/callback");
+    const redirectUrl = new URL("/auth/callback", request.nextUrl.origin);
+    // Preserve all query parameters (code, next, etc.)
+    request.nextUrl.searchParams.forEach((value, key) => {
+      redirectUrl.searchParams.set(key, value);
+    });
+    return NextResponse.redirect(redirectUrl);
+  }
+
   // Get the hostname from the request
   const hostname = request.headers.get("host") || "";
 
