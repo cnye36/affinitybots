@@ -69,6 +69,7 @@ function SignUpForm() {
 							type="email"
 							value={email}
 							onChange={(e) => setEmail(e.target.value)}
+							autoComplete="email"
 						/>
 					</div>
 					<div>
@@ -80,6 +81,7 @@ function SignUpForm() {
 								type={showPassword ? "text" : "password"}
 								className="pr-10"
 								minLength={6}
+								autoComplete="new-password"
 							/>
 							<button
 								type="button"
@@ -96,6 +98,7 @@ function SignUpForm() {
 							id="confirmPassword"
 							name="confirmPassword"
 							type="password"
+							autoComplete="new-password"
 						/>
 					</div>
 

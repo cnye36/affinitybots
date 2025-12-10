@@ -11,16 +11,29 @@ export function GoogleSignInButton() {
 		try {
 			setIsLoading(true)
 			const supabase = createClient()
+			const redirectUrl = `${window.location.origin}/auth/callback?next=/dashboard`
+			
+			console.log("🔍 Google Sign-In: Initiating OAuth flow")
+			console.log("🔍 Google Sign-In: Current origin:", window.location.origin)
+			console.log("🔍 Google Sign-In: Redirect URL:", redirectUrl)
 
-			await supabase.auth.signInWithOAuth({
+			const { data, error } = await supabase.auth.signInWithOAuth({
 				provider: "google",
 				options: {
-					redirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
+					redirectTo: redirectUrl,
 				},
 			})
+
+			if (error) {
+				console.error("❌ Google Sign-In: OAuth error:", error)
+				setIsLoading(false)
+				return
+			}
+
+			console.log("✅ Google Sign-In: OAuth flow initiated, redirecting to:", data?.url)
 			// Redirect is handled by Supabase, no further action needed here
 		} catch (error) {
-			console.error("Error during Google sign-in:", error)
+			console.error("❌ Google Sign-In: Unexpected error:", error)
 			setIsLoading(false)
 		}
 	}

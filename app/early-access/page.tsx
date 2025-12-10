@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Suspense } from "react";
 import { EarlyAccessForm } from "@/components/emails/EarlyAccessForm";
 import { Header } from "@/components/home/Header";
 import { Footer } from "@/components/home/Footer";
@@ -18,7 +18,9 @@ export default function EarlyAccessPage() {
               early access and we&apos;ll get back to you soon.
             </p>
           </div>
-          <EarlyAccessForm />
+          <Suspense fallback={<div className="text-center">Loading form...</div>}>
+            <EarlyAccessForm />
+          </Suspense>
         </div>
       </main>
       <Footer />
