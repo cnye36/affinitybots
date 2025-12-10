@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { signUp, signUpWithGoogle } from "@/app/auth/actions";
+import { signUp } from "@/app/auth/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -76,25 +76,6 @@ function SignUpForm() {
           <Button formAction={handleSignUp} className="w-full">
             Sign Up
           </Button>
-         
-          <div className="relative my-2 text-center text-sm text-muted-foreground">
-            <span className="px-2 bg-background relative z-10">or</span>
-            <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-px bg-border" />
-          </div>
-          <Button
-            variant="outline"
-            formAction={signUpWithGoogle}
-            className="w-full"
-          >
-            Sign up with Google
-          </Button>
-          {/* <Button
-            variant="outline"
-            formAction={signUpWithGitHub}
-            className="w-full"
-          >
-            Sign up with GitHub
-          </Button> */}
          
         </form>
         <p className="mt-4 text-center">
