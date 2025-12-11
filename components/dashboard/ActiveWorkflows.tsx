@@ -23,7 +23,7 @@ interface LatestWorkflowsProps {
 
 export function LatestWorkflows({ workflows }: LatestWorkflowsProps) {
   return (
-    <Card>
+    <Card data-tutorial="workflows-section">
       <CardHeader>
         <CardTitle>Latest Workflows</CardTitle>
         <CardDescription>

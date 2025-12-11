@@ -42,7 +42,7 @@ export function RecentActivity({ activities }: RecentActivityProps) {
   };
 
   return (
-    <Card>
+    <Card data-tutorial="activity-section">
       <CardHeader className="pb-4">
         <CardTitle className="text-lg">Recent Activity</CardTitle>
         <CardDescription>Latest updates from your workspace</CardDescription>

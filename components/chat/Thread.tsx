@@ -77,7 +77,7 @@ export const Thread: FC<ThreadProps> = ({
       <div
         ref={viewportRef}
         className="flex min-w-0 flex-1 flex-col gap-6 overflow-y-scroll"
-        data-tutorial="agent-chat-viewport"
+        data-tutorial="chat-messages"
       >
         {messages.length === 0 ? (
           <Welcome />
@@ -126,11 +126,13 @@ export const Thread: FC<ThreadProps> = ({
         </TooltipIconButton>
       )}
 
-      <Composer
-        onSend={onSendMessage}
-        onCancel={onCancel}
-        isRunning={isRunning}
-      />
+      <div data-tutorial="chat-composer">
+        <Composer
+          onSend={onSendMessage}
+          onCancel={onCancel}
+          isRunning={isRunning}
+        />
+      </div>
     </div>
   );
 };

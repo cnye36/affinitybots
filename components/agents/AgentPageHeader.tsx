@@ -1,8 +1,7 @@
 "use client";
 
-import { AgentConfigButton } from "@/components/configuration/AgentConfigButton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeftIcon, Database, Brain, Wrench, Cpu } from "lucide-react";
+import { ArrowLeftIcon, Database, Brain, Wrench, Cpu, Settings2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "../ui/button";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +14,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Assistant } from "@/types/assistant";
+import { useAgentConfigPanel } from "@/contexts/AgentConfigPanelContext";
 
 interface AgentPageHeaderProps {
   assistant: Assistant;
@@ -22,6 +22,19 @@ interface AgentPageHeaderProps {
 
 export function AgentPageHeader({ assistant }: AgentPageHeaderProps) {
   const router = useRouter();
+  const { isOpen, togglePanel } = useAgentConfigPanel();
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile viewport
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
   // Get first letter of agent name for avatar fallback
   const avatarFallback = assistant.name.charAt(0).toUpperCase();
 
@@ -103,7 +116,7 @@ export function AgentPageHeader({ assistant }: AgentPageHeaderProps) {
   };
 
   return (
-    <div className="flex-none border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <div className="flex-none border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60" data-tutorial="agent-header">
       <div className="container flex h-20 items-center">
         <Button
           variant="ghost"
@@ -203,8 +216,24 @@ export function AgentPageHeader({ assistant }: AgentPageHeaderProps) {
             </div>
           )}
 
-          <div>
-            <AgentConfigButton assistant={assistant} />
+          <div data-tutorial="configure-agent">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={togglePanel}
+                  className="gap-2"
+                >
+                  <Settings2 className="h-4 w-4" />
+                  {isMobile ? "" : isOpen ? "Hide Config" : "Show Config"}
+                  {!isMobile && (isOpen ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />)}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {isOpen ? "Hide configuration panel" : "Show configuration panel"}
+              </TooltipContent>
+            </Tooltip>
           </div>
         </div>
       </div>

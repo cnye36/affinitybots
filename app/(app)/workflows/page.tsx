@@ -19,6 +19,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { WorkflowCard } from "@/components/workflows/WorkflowCard";
+import { TutorialLayout } from "@/components/tutorial/TutorialLayout";
+import { workflowsTutorial } from "@/lib/tutorials";
 
 export default function WorkflowsPage() {
   const router = useRouter();
@@ -135,20 +137,26 @@ export default function WorkflowsPage() {
   };
 
   if (isLoading) {
-    return <div className="container mx-auto py-6">Loading...</div>;
+    return (
+      <TutorialLayout tutorials={[workflowsTutorial]}>
+        <div className="container mx-auto py-6">Loading...</div>
+      </TutorialLayout>
+    );
   }
 
   if (error) {
     return (
-      <div className="container mx-auto py-6">
-        <h1 className="text-2xl font-bold mb-4">My Workflows</h1>
-        <div className="text-red-500">Error: {error}</div>
-      </div>
+      <TutorialLayout tutorials={[workflowsTutorial]}>
+        <div className="container mx-auto py-6">
+          <h1 className="text-2xl font-bold mb-4">My Workflows</h1>
+          <div className="text-red-500">Error: {error}</div>
+        </div>
+      </TutorialLayout>
     );
   }
 
   return (
-    <>
+    <TutorialLayout tutorials={[workflowsTutorial]}>
       <AlertDialog
         open={!!workflowToDelete}
         onOpenChange={() => setWorkflowToDelete(null)}
@@ -178,12 +186,12 @@ export default function WorkflowsPage() {
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">My Workflows</h1>
           <Link href="/workflows/new">
-            <Button>Create New Workflow</Button>
+            <Button data-tutorial="create-workflow-button">Create New Workflow</Button>
           </Link>
         </div>
 
         {workflows.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" data-tutorial="workflows-grid">
             {workflows.map((workflow) => (
               <div
                 key={workflow.workflow_id}
@@ -236,6 +244,6 @@ export default function WorkflowsPage() {
           </div>
         )}
       </div>
-    </>
+    </TutorialLayout>
   );
 }

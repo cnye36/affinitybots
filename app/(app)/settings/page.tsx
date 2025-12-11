@@ -3,11 +3,12 @@
 import { useState, useEffect } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CreditCard, Settings2, User } from "lucide-react";
+import { CreditCard, Settings2, User, GraduationCap } from "lucide-react";
 import { createClient } from "@/supabase/client";
 import { ProfileSettings } from "@/components/settings/ProfileSettings";
 import { BillingSettings } from "@/components/settings/BillingSettings";
 import { PreferencesSettings } from "@/components/settings/PreferencesSettings";
+import { TutorialSettings } from "@/components/settings/TutorialSettings";
 
 interface UserProfile {
   id: string;
@@ -157,6 +158,10 @@ export default function SettingsPage() {
             <Settings2 className="h-4 w-4" />
             Preferences
           </TabsTrigger>
+          <TabsTrigger value="tutorials" className="flex items-center gap-2">
+            <GraduationCap className="h-4 w-4" />
+            Tutorials
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="profile">
@@ -176,6 +181,10 @@ export default function SettingsPage() {
             preferences={userData?.preferences}
             onUpdate={handleUpdate}
           />
+        </TabsContent>
+
+        <TabsContent value="tutorials">
+          <TutorialSettings />
         </TabsContent>
       </Tabs>
     </div>

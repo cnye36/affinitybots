@@ -1,34 +1,21 @@
 "use client";
 
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { AgentConfigModal } from "./AgentConfigModal";
 import { Settings } from "lucide-react";
-import { Assistant } from "@/types/assistant";
+import { useAgentConfigSidebar } from "@/contexts/AgentConfigSidebarContext";
 
-interface AgentConfigButtonProps {
-  assistant: Assistant;
-}
-
-export function AgentConfigButton({ assistant }: AgentConfigButtonProps) {
-  const [open, setOpen] = useState(false);
+export function AgentConfigButton() {
+  const { openSidebar } = useAgentConfigSidebar();
 
   return (
-    <>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => setOpen(true)}
-        className="gap-2"
-      >
-        <Settings className="h-4 w-4" />
-        Configure
-      </Button>
-      <AgentConfigModal 
-        open={open} 
-        onOpenChange={setOpen} 
-        assistant={assistant} 
-      />
-    </>
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={openSidebar}
+      className="gap-2"
+    >
+      <Settings className="h-4 w-4" />
+      Configure
+    </Button>
   );
 }

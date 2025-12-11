@@ -43,7 +43,7 @@ const statCards = [
 
 export function StatsOverview({ stats }: StatsOverviewProps) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8" data-tutorial="stats-overview">
       {statCards.map((card, index) => {
         const IconComponent = card.icon;
         const colorClasses = {

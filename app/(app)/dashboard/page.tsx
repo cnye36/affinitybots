@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/supabase/server";
 import { Clock, Bot, Play } from "lucide-react";
 import Image from "next/image";
-import { headers } from "next/headers";
 import { OFFICIAL_MCP_SERVERS } from "@/lib/mcp/officialMcpServers";
 import { StatsOverview } from "@/components/dashboard/StatsOverview";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
@@ -18,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { formatRelativeTime } from "@/lib/utils";
+import { DashboardWithTutorial } from "@/components/dashboard/DashboardWithTutorial";
 
 // Helper to impose a maximum time for the entire server function.
 function createTimeoutPromise(timeoutMs: number): Promise<never> {
@@ -278,18 +278,19 @@ export default async function Dashboard() {
         // Render the dashboard UI
         // --------------------------------------------------------------------
         return (
-          <div className="min-h-screen bg-background">
-            <div className="container mx-auto px-4 py-8">
-              {/* Enhanced Header */}
-              <div className="mb-8">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
-                  <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-                    <p className="text-muted-foreground mt-1">
-                      Monitor your agents, workflows, and system performance
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3">
+          <DashboardWithTutorial>
+            <div className="min-h-screen bg-background">
+              <div className="container mx-auto px-4 py-8">
+                {/* Enhanced Header */}
+                <div className="mb-8">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
+                    <div>
+                      <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+                      <p className="text-muted-foreground mt-1">
+                        Monitor your agents, workflows, and system performance
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3" data-tutorial="quick-actions">
                     <Button variant="outline" size="sm" asChild>
                       <Link href="/agents/new">
                         <Bot className="h-4 w-4 mr-2" />
@@ -315,7 +316,7 @@ export default async function Dashboard() {
 
               {/* Tools and Agents summary grid */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">{/* Agents section */}
-                <Card>
+                <Card data-tutorial="agents-section">
                   <CardHeader>
                     <CardTitle>Agents</CardTitle>
                     <CardDescription>
@@ -392,7 +393,7 @@ export default async function Dashboard() {
                   </CardContent>
                 </Card>
                 {/* Tools section */}
-                <Card>
+                <Card data-tutorial="tools-section">
                   <CardHeader>
                     <CardTitle>Tools</CardTitle>
                     <CardDescription>
@@ -470,6 +471,7 @@ export default async function Dashboard() {
               </div>
             </div>
           </div>
+          </DashboardWithTutorial>
         );
       })(),
       createTimeoutPromise(30000),

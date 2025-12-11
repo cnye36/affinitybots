@@ -67,6 +67,7 @@ export const AttachmentComposer: FC<AttachmentComposerProps> = ({
         tooltip="Add Attachment"
         variant="ghost"
         onClick={() => fileInputRef.current?.click()}
+        data-tutorial="attachment-button"
       >
         <PaperclipIcon />
       </TooltipIconButton>
