@@ -270,7 +270,7 @@ export function AgentConfigPanel({ assistant }: AgentConfigPanelProps) {
 								<AccordionTrigger className="hover:no-underline py-3">
 									<div className="flex items-center gap-2">
 										<Cpu className="h-4 w-4" />
-										<span className="font-medium">Models</span>
+										<span className="font-medium">Model</span>
 									</div>
 								</AccordionTrigger>
 								<AccordionContent>
