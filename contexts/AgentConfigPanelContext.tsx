@@ -31,14 +31,20 @@ export function AgentConfigPanelProvider({ children }: { children: React.ReactNo
 	const [isOpen, setIsOpen] = useState(() => {
 		if (typeof window === "undefined") return true
 
-		// Try to restore from localStorage
-		const stored = localStorage.getItem(STORAGE_KEY)
-		if (stored !== null) {
-			return stored === "true"
+		const isMobile = window.innerWidth < 1024 // lg breakpoint
+
+		// On mobile/tablet, respect the last stored preference so users can keep it closed
+		if (isMobile) {
+			const stored = localStorage.getItem(STORAGE_KEY)
+			if (stored !== null) {
+				return stored === "true"
+			}
+			// Mobile default: closed unless explicitly opened
+			return false
 		}
 
-		// No stored preference, use viewport default
-		return getDefaultPanelState()
+		// On desktop, always default to open so the config panel is visible by default
+		return true
 	})
 
 	// Persist to localStorage when state changes

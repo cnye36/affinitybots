@@ -34,6 +34,7 @@ import {
 	AlertCircle,
 } from "lucide-react"
 import { GeneralConfig } from "@/components/configuration/GeneralConfig"
+import { ModelConfig } from "@/components/configuration/ModelConfig"
 import { PromptsConfig } from "@/components/configuration/PromptsConfig"
 import { ToolSelector } from "@/components/configuration/ToolSelector"
 import { KnowledgeConfig } from "@/components/configuration/KnowledgeConfig"
@@ -43,6 +44,13 @@ import { useRouter } from "next/navigation"
 import { mutate } from "swr"
 import { useAgentConfigPanel } from "@/contexts/AgentConfigPanelContext"
 import { cn } from "@/lib/utils"
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog"
 
 interface AgentConfigPanelProps {
 	assistant: Assistant
@@ -73,6 +81,7 @@ export function AgentConfigPanel({ assistant }: AgentConfigPanelProps) {
 	const [saveSuccess, setSaveSuccess] = useState<boolean>(false)
 	const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false)
 	const [isMobile, setIsMobile] = useState(false)
+	const [isSettingsOpen, setIsSettingsOpen] = useState(false)
 	const router = useRouter()
 
 	// Detect mobile viewport
@@ -198,8 +207,8 @@ export function AgentConfigPanel({ assistant }: AgentConfigPanelProps) {
 	const DesktopPanel = () => (
 		<div
 			className={cn(
-				"hidden lg:flex flex-col border-l bg-background transition-all duration-300 ease-in-out",
-				isOpen ? "fixed right-0 top-0 w-[420px] h-screen z-30" : "w-0"
+				"hidden lg:flex h-full flex-col border-l bg-background transition-all duration-300 ease-in-out relative",
+				isOpen ? "w-[380px]" : "w-0"
 			)}
 			style={{
 				minWidth: isOpen ? "420px" : "0px",
@@ -209,8 +218,8 @@ export function AgentConfigPanel({ assistant }: AgentConfigPanelProps) {
 			<button
 				onClick={togglePanel}
 				className={cn(
-					"absolute left-0 top-20 -translate-x-1/2 z-50",
-					"h-10 w-6 rounded-l-lg border border-r-0",
+					"absolute -left-8 top-20 z-50",
+					"h-10 w-8 rounded-l-lg border border-r-0",
 					"bg-background hover:bg-accent",
 					"flex items-center justify-center",
 					"transition-colors duration-200",
@@ -229,54 +238,19 @@ export function AgentConfigPanel({ assistant }: AgentConfigPanelProps) {
 			<div className={cn("flex flex-col h-full overflow-hidden", !isOpen && "opacity-0")}>
 				{/* Header Section */}
 				<div className="flex-none px-6 pt-6 pb-4 border-b space-y-4">
-					<div className="flex items-center gap-3">
-						<Avatar className="h-12 w-12">
-							{config.agent_avatar ? (
-								<AvatarImage src={config.agent_avatar} alt={config.name} />
-							) : (
-								<AvatarFallback
-									className="bg-primary/10"
-									style={{
-										backgroundColor: `hsl(${(config.name.length * 30) % 360}, 70%, 50%)`,
-									}}
-								>
-									{avatarFallback}
-								</AvatarFallback>
-							)}
-						</Avatar>
-						<div className="flex-1 min-w-0">
-							<h2 className="text-lg font-semibold truncate">{config.name}</h2>
-							<p className="text-sm text-muted-foreground">Configuration</p>
-						</div>
+					<div className="flex items-center justify-between">
+						<h2 className="text-sm font-medium text-muted-foreground">Configuration</h2>
+						<Button
+							variant="ghost"
+							size="icon"
+							onClick={() => setIsSettingsOpen(true)}
+							aria-label="Open agent settings"
+						>
+							<Settings2 className="h-4 w-4" />
+						</Button>
 					</div>
 
-					{/* Quick Stats */}
-					<div className="flex flex-wrap gap-2">
-						<Badge variant="outline" className="gap-1.5">
-							<Cpu className="h-3.5 w-3.5" />
-							<span className="text-xs">{config.config.model || "No model"}</span>
-						</Badge>
-						{hasMemory && (
-							<Badge variant="secondary" className="gap-1.5">
-								<Brain className="h-3.5 w-3.5" />
-								<span className="text-xs">Memory</span>
-							</Badge>
-						)}
-						{hasKnowledge && (
-							<Badge variant="secondary" className="gap-1.5">
-								<Database className="h-3.5 w-3.5" />
-								<span className="text-xs">Knowledge</span>
-							</Badge>
-						)}
-						{enabledTools > 0 && (
-							<Badge variant="secondary" className="gap-1.5">
-								<Wrench className="h-3.5 w-3.5" />
-								<span className="text-xs">
-									{enabledTools} {enabledTools === 1 ? "Tool" : "Tools"}
-								</span>
-							</Badge>
-						)}
-					</div>
+					
 
 					{/* Unsaved changes indicator */}
 					{hasUnsavedChanges && (
@@ -290,27 +264,19 @@ export function AgentConfigPanel({ assistant }: AgentConfigPanelProps) {
 				{/* Scrollable Configuration Sections */}
 				<ScrollArea className="flex-1">
 					<div className="px-6 py-4">
-						<Accordion type="multiple" defaultValue={["general", "prompt"]} className="space-y-3">
-							{/* General Section */}
-							<AccordionItem value="general" className="border rounded-lg px-4">
+						<Accordion type="multiple" defaultValue={["models", "prompt"]} className="space-y-3">
+							{/* Models Section */}
+							<AccordionItem value="models" className="border rounded-lg px-4">
 								<AccordionTrigger className="hover:no-underline py-3">
 									<div className="flex items-center gap-2">
-										<Settings2 className="h-4 w-4" />
-										<span className="font-medium">General Settings</span>
+										<Cpu className="h-4 w-4" />
+										<span className="font-medium">Models</span>
 									</div>
 								</AccordionTrigger>
 								<AccordionContent>
 									<div className="pt-2 pb-1">
-										<GeneralConfig
-											config={{
-												id: config.agent_id,
-												name: config.name,
-												description: config.description || "",
-												metadata: config.metadata,
-												config: config.config as AssistantConfiguration,
-												agent_avatar: config.agent_avatar,
-											}}
-											onChange={handleChange}
+										<ModelConfig
+											config={config.config as AssistantConfiguration}
 											onConfigurableChange={handleConfigurableChange}
 										/>
 									</div>
@@ -522,29 +488,21 @@ export function AgentConfigPanel({ assistant }: AgentConfigPanelProps) {
 					<div className="py-6">
 						<Accordion
 							type="multiple"
-							defaultValue={["general", "prompt"]}
+							defaultValue={["models", "prompt"]}
 							className="w-full space-y-2"
 						>
-							{/* Same accordion structure as desktop */}
-							<AccordionItem value="general" className="border rounded-lg px-4">
+							{/* Models Section */}
+							<AccordionItem value="models" className="border rounded-lg px-4">
 								<AccordionTrigger className="hover:no-underline">
 									<div className="flex items-center gap-2">
-										<Settings2 className="h-4 w-4" />
-										<span className="font-semibold">General Settings</span>
+										<Cpu className="h-4 w-4" />
+										<span className="font-semibold">Models</span>
 									</div>
 								</AccordionTrigger>
 								<AccordionContent>
 									<div className="pt-2">
-										<GeneralConfig
-											config={{
-												id: config.agent_id,
-												name: config.name,
-												description: config.description || "",
-												metadata: config.metadata,
-												config: config.config as AssistantConfiguration,
-												agent_avatar: config.agent_avatar,
-											}}
-											onChange={handleChange}
+										<ModelConfig
+											config={config.config as AssistantConfiguration}
 											onConfigurableChange={handleConfigurableChange}
 										/>
 									</div>
@@ -682,6 +640,36 @@ export function AgentConfigPanel({ assistant }: AgentConfigPanelProps) {
 		<>
 			<DesktopPanel />
 			<MobileSheet />
+
+			{/* Settings modal for avatar, description & destructive actions */}
+			<Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+				<DialogContent className="max-w-xl">
+					<DialogHeader>
+						<DialogTitle>Agent settings</DialogTitle>
+						<DialogDescription>
+							Update the agent&apos;s identity and manage advanced actions.
+						</DialogDescription>
+					</DialogHeader>
+
+					<div className="mt-4">
+						<GeneralConfig
+							config={{
+								id: config.agent_id,
+								name: config.name,
+								description: config.description || "",
+								metadata: config.metadata,
+								config: config.config as AssistantConfiguration,
+								agent_avatar: config.agent_avatar,
+							}}
+							onChange={handleChange}
+							onConfigurableChange={handleConfigurableChange}
+							showProfileSection
+							showModelSection={false}
+							showDangerZone
+						/>
+					</div>
+				</DialogContent>
+			</Dialog>
 		</>
 	)
 }

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation"
 import { AgentDetailWithTutorial } from "@/components/agents/AgentDetailWithTutorial"
 import { AgentConfigPanelProvider } from "@/contexts/AgentConfigPanelContext"
 import { AgentConfigPanel } from "@/components/agents/AgentConfigPanel"
+import { AgentPageHeader } from "@/components/agents/AgentPageHeader"
 
 // Helper function to create a timeout promise
 function createTimeoutPromise(timeoutMs: number): Promise<never> {
@@ -88,9 +89,12 @@ export default async function AgentPage(props: AgentPageProps) {
 				return (
 					<AgentDetailWithTutorial>
 						<AgentConfigPanelProvider>
-							<div className="flex flex-1 min-h-0 bg-background">
-								<ChatContainer assistant={typedAssistant} />
-								<AgentConfigPanel assistant={typedAssistant} />
+							<div className="flex flex-col h-screen bg-background overflow-hidden">
+								<AgentPageHeader assistant={typedAssistant} />
+								<main className="flex-1 flex overflow-hidden">
+									<ChatContainer assistant={typedAssistant} />
+									<AgentConfigPanel assistant={typedAssistant} />
+								</main>
 							</div>
 						</AgentConfigPanelProvider>
 					</AgentDetailWithTutorial>

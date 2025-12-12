@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useRef } from "react"
-import { ArrowLeftIcon, Menu, X } from "lucide-react"
+import { useRef, useState } from "react"
+import { ArrowLeftIcon, Menu, Settings2, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { TooltipProvider } from "@radix-ui/react-tooltip"
@@ -19,7 +19,7 @@ export default function ChatContainer({ assistant }: ChatContainerProps) {
 	const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 	const sidebarRef = useRef<ThreadSidebarRef>(null)
 	const [threadId, setThreadId] = useState<string | null>(null)
-	const { isOpen: isConfigPanelOpen } = useAgentConfigPanel()
+	const { isOpen: isConfigPanelOpen, togglePanel } = useAgentConfigPanel()
 	const router = useRouter()
 
 	const handleThreadSelect = (selectedThreadId: string) => {
@@ -38,7 +38,7 @@ export default function ChatContainer({ assistant }: ChatContainerProps) {
 				{/* Thread list sidebar */}
 				<div
 					className={cn(
-						"border-r transition-all duration-300 flex-shrink-0 overflow-hidden",
+						"border-r transition-all duration-300 flex-shrink-0 overflow-hidden relative z-40",
 						isSidebarOpen ? "w-64 sm:w-80" : "w-0 lg:w-64"
 					)}
 				>
@@ -56,39 +56,33 @@ export default function ChatContainer({ assistant }: ChatContainerProps) {
 				{/* Main Chat Area */}
 				<div
 					className={cn(
-						"flex-1 flex flex-col min-w-0 transition-all duration-300",
-						isConfigPanelOpen && "lg:mr-[420px]"
+						"flex-1 flex flex-col min-w-0 transition-all duration-300"
 					)}
 				>
-					{/* Playground header */}
-					<div className="border-b px-4 py-3 flex items-center gap-3">
-						<Button
-							variant="ghost"
-							size="sm"
-							className="gap-2"
-							onClick={() => router.push("/agents")}
-						>
-							<ArrowLeftIcon className="h-4 w-4" />
-							<span className="hidden sm:inline">Back to Agents</span>
-						</Button>
-
+					{/* Local chat header (mobile only: thread toggle + config) */}
+					<div className="border-b px-4 py-3 flex items-center gap-3 lg:hidden">
+						{/* Thread sidebar toggle (mobile) */}
 						<Button
 							variant="ghost"
 							size="icon"
-							className="lg:hidden ml-1"
+							className="ml-1"
 							onClick={() => setIsSidebarOpen(!isSidebarOpen)}
 							aria-label={isSidebarOpen ? "Close thread list" : "Open thread list"}
 						>
 							{isSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
 						</Button>
 
-						<div className="ml-2 truncate">
-							<p className="text-sm font-medium truncate">{assistant.name}</p>
-							{assistant.config?.configurable?.model && (
-								<p className="text-xs text-muted-foreground truncate">
-									{assistant.config.configurable.model}
-								</p>
-							)}
+						<div className="ml-auto flex items-center gap-2">
+							{/* Mobile / tablet: icon-only config button opens sheet/modal */}
+							<Button
+								variant="ghost"
+								size="icon"
+								className=""
+								onClick={togglePanel}
+								aria-label={isConfigPanelOpen ? "Hide configuration" : "Show configuration"}
+							>
+								<Settings2 className="h-5 w-5" />
+							</Button>
 						</div>
 					</div>
 
@@ -105,7 +99,7 @@ export default function ChatContainer({ assistant }: ChatContainerProps) {
 				{/* Mobile Overlay */}
 				{isSidebarOpen && (
 					<div
-						className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+						className="fixed inset-0 bg-black/50 z-30 lg:hidden"
 						onClick={() => setIsSidebarOpen(false)}
 					/>
 				)}

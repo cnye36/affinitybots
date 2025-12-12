@@ -1,7 +1,7 @@
 "use client";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeftIcon, Database, Brain, Wrench, Cpu, Settings2, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeftIcon, Database, Brain, Wrench, Cpu } from "lucide-react";
 import { Button } from "../ui/button";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
@@ -216,25 +216,7 @@ export function AgentPageHeader({ assistant }: AgentPageHeaderProps) {
             </div>
           )}
 
-          <div data-tutorial="configure-agent">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={togglePanel}
-                  className="gap-2"
-                >
-                  <Settings2 className="h-4 w-4" />
-                  {isMobile ? "" : isOpen ? "Hide Config" : "Show Config"}
-                  {!isMobile && (isOpen ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />)}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                {isOpen ? "Hide configuration panel" : "Show configuration panel"}
-              </TooltipContent>
-            </Tooltip>
-          </div>
+          {/* Config toggle now lives in the chat header/sidebar, so we keep this area clean */}
         </div>
       </div>
     </div>
