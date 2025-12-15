@@ -53,9 +53,18 @@ export default function ToolsPage() {
     setSearchTerm(value);
   }, []);
   
-  // Helper to check if a server is configured
-  const isConfigured = (qualifiedName: string) =>
-    userServers.some((s: any) => s.qualified_name === qualifiedName);
+  // Helper to check if a server is configured (enabled + has tokens for OAuth)
+  const isConfigured = (qualifiedName: string) => {
+    const server = OFFICIAL_MCP_SERVERS.find((s) => s.qualifiedName === qualifiedName);
+    const serverEntry = userServers.find((s: any) => s.qualified_name === qualifiedName);
+    if (!serverEntry) return false;
+    // For OAuth servers, must be enabled AND have tokens
+    if (server?.authType === 'oauth') {
+      return serverEntry.is_enabled && serverEntry.has_oauth_token;
+    }
+    // For non-OAuth servers, just check if enabled
+    return serverEntry.is_enabled;
+  };
   
   return (
     <div className="max-w-5xl mx-auto py-10 px-4">

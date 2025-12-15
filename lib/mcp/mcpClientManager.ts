@@ -458,7 +458,7 @@ export class MCPClientManager {
       const isGoogleService = isGoogleDriveServer || isGmailServer;
 
       if (serverConfig.session_id && !isGoogleService) {
-        const existingClient = sessionStore.getClient(serverConfig.session_id);
+        const existingClient = await sessionStore.getClient(serverConfig.session_id);
         if (existingClient) {
           console.log(`Using existing OAuth session for ${qualifiedName}`);
           return {
@@ -481,7 +481,22 @@ export class MCPClientManager {
         serverConfig.oauth_token !== '' &&
         serverConfig.oauth_token !== 'present';
 
-      const tokens: OAuthTokens | null = hasStoredToken
+      const expiresAt: string | undefined = serverConfig.expires_at || serverConfig.config?.tokenMetadata?.expires_at;
+
+      // Check if token is expired
+      let isTokenExpired = false;
+      if (expiresAt) {
+        const expiryDate = new Date(expiresAt);
+        const bufferMs = 5 * 60 * 1000; // 5 minute buffer
+        isTokenExpired = expiryDate.getTime() - bufferMs <= Date.now();
+
+        if (isTokenExpired) {
+          console.log(`OAuth token for ${qualifiedName} is expired (expired at ${expiresAt})`);
+        }
+      }
+
+      // Only use token if it's not expired OR if we have a refresh token to get new one
+      const tokens: OAuthTokens | null = hasStoredToken && !isTokenExpired
         ? {
             access_token: serverConfig.oauth_token,
             token_type: storedTokenType,
@@ -489,8 +504,6 @@ export class MCPClientManager {
             refresh_token: serverConfig.refresh_token || undefined,
           }
         : null;
-
-      const expiresAt: string | undefined = serverConfig.expires_at || serverConfig.config?.tokenMetadata?.expires_at;
 
       console.log(`🔍 Google Drive Debug - qualifiedName: ${qualifiedName}, isGoogleDriveServer: ${isGoogleDriveServer}, hasStoredToken: ${hasStoredToken}`);
       console.log(`🔍 Google Drive Debug - serverConfig.oauth_token: ${serverConfig.oauth_token ? 'PRESENT' : 'MISSING'}`);
@@ -696,15 +709,17 @@ export class MCPClientManager {
   /**
    * Creates an OAuth client for a specific server
    */
-  async createOAuthClient(serverUrl: string, callbackUrl: string): Promise<{
+  async createOAuthClient(serverUrl: string, callbackUrl: string, userId?: string, serverName?: string): Promise<{
     client: MCPOAuthClient | GitHubOAuthClient;
     sessionId: string;
     requiresAuth?: boolean;
     authUrl?: string;
     providerState?: any;
+    state?: string;
   }> {
     const sessionId = sessionStore.generateSessionId();
     let authUrl: string | null = null;
+    let stateParam: string | undefined;
 
     // Use GitHub-specific OAuth client for GitHub MCP server
     const isGitHubServer = serverUrl.includes('githubcopilot.com') || serverUrl.includes('github.com');
@@ -730,14 +745,7 @@ export class MCPClientManager {
         serverUrl,
         callbackUrl,
         (redirectUrl: string) => {
-          // Ensure our sessionId is propagated via the OAuth state param
-          try {
-            const url = new URL(redirectUrl);
-            url.searchParams.set('state', sessionId);
-            authUrl = url.toString();
-          } catch {
-            authUrl = redirectUrl;
-          }
+          authUrl = redirectUrl;
         }
       );
     }
@@ -745,24 +753,61 @@ export class MCPClientManager {
     try {
       await client.connect();
       // If we get here, connection succeeded without OAuth
-      sessionStore.setClient(sessionId, client);
+      await sessionStore.setClient(sessionId, client);
       return { client, sessionId };
     } catch (error: any) {
       if (error.message === "OAuth authorization required" && authUrl) {
+        // Generate cryptographically secure state parameter for CSRF protection
+        const crypto = await import('crypto');
+        stateParam = crypto.randomBytes(32).toString('hex');
+
+        // Store state mapping for validation on callback
+        if (userId && serverName) {
+          await sessionStore.setOAuthState(stateParam, {
+            sessionId,
+            userId,
+            serverName,
+            serverUrl,
+            expiresAt: Date.now() + 5 * 60 * 1000, // 5 minute expiration
+          });
+
+          // Append state parameter to auth URL
+          try {
+            const url = new URL(authUrl);
+            url.searchParams.set('state', stateParam);
+            authUrl = url.toString();
+          } catch (urlError) {
+            console.error('Failed to append state parameter to OAuth URL:', urlError);
+          }
+        } else {
+          console.warn('⚠️  OAuth state parameter not stored - userId or serverName missing (CSRF protection disabled)');
+          // Fallback to using sessionId as state (less secure but maintains compatibility)
+          try {
+            const url = new URL(authUrl);
+            url.searchParams.set('state', sessionId);
+            authUrl = url.toString();
+          } catch {
+            // Keep original authUrl
+          }
+        }
+
         // Store client for later use
         console.log(`Storing OAuth client in session store for sessionId: ${sessionId}`);
-        sessionStore.setClient(sessionId, client);
+        await sessionStore.setClient(sessionId, client);
+
         // Capture provider state for rehydration on callback
         let providerState: any = undefined;
         if (client instanceof MCPOAuthClient) {
           providerState = client.getProviderState();
         }
+
         return {
           client,
           sessionId,
           requiresAuth: true,
           authUrl,
-          providerState
+          providerState,
+          state: stateParam
         };
       } else {
         throw error;
@@ -774,7 +819,7 @@ export class MCPClientManager {
    * Finishes OAuth authentication for a client
    */
   async finishOAuth(sessionId: string, authCode: string): Promise<void> {
-    const client = sessionStore.getClient(sessionId);
+    const client = await sessionStore.getClient(sessionId);
     if (!client) {
       throw new Error("No active OAuth session found");
     }
@@ -786,7 +831,7 @@ export class MCPClientManager {
    * Disconnects a specific OAuth session
    */
   async disconnectOAuth(sessionId: string): Promise<void> {
-    sessionStore.removeClient(sessionId);
+    await sessionStore.removeClient(sessionId);
   }
 
   /**

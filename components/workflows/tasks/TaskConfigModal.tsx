@@ -245,7 +245,7 @@ export function TaskConfigModal({
         <DialogContent className="max-w-7xl">
           <TaskModalHeader
             task={currentTask}
-            assistant={assistant}
+            assistant={assistant ?? null}
             isLoading={isLoading || loadingAssistants}
             onTest={handleTest}
             onSave={() => saveTask(currentTask)}

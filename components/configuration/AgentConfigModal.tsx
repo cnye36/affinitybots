@@ -1,15 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GeneralConfig } from "./GeneralConfig";
@@ -17,10 +15,10 @@ import { PromptsConfig } from "./PromptsConfig";
 import { ToolSelector } from "@/components/configuration/ToolSelector";
 import { MemoryConfig } from "./MemoryConfig";
 import { KnowledgeConfig } from "./KnowledgeConfig";
-import { AssistantConfiguration, AssistantMetadata, ModelType } from "@/types/assistant";
-import { useRouter } from "next/navigation";
+import { AssistantConfiguration, AssistantMetadata } from "@/types/assistant";
 import { mutate } from "swr";
 import { Assistant } from "@/types/assistant";
+import { useAgent } from "@/hooks/useAgent";
  
 
 interface AgentConfigModalProps {
@@ -34,52 +32,79 @@ export function AgentConfigModal({
   onOpenChange,
   assistant,
 }: AgentConfigModalProps) {
-  const [config, setConfig] = useState({
-    agent_id: assistant.assistant_id,
-    description: assistant.metadata.description,
-    agent_avatar: assistant.metadata.agent_avatar,
-    graph_id: assistant.graph_id,
-    created_at: assistant.created_at,
-    updated_at: assistant.updated_at,
-    name: assistant.name,
+  const { assistant: liveAssistant } = useAgent(assistant.assistant_id, {
+    fallbackData: assistant,
+  });
+  const currentAssistant = liveAssistant || assistant;
+
+  const assistantToDraft = (a: Assistant) => ({
+    agent_id: a.assistant_id,
+    description: a.metadata.description,
+    agent_avatar: a.metadata.agent_avatar,
+    graph_id: a.graph_id,
+    created_at: a.created_at,
+    updated_at: a.updated_at,
+    name: a.name,
     metadata: {
-      owner_id: String(assistant.metadata.owner_id),
+      owner_id: String(a.metadata.owner_id),
     } as AssistantMetadata,
-    config: (assistant.config.configurable as AssistantConfiguration),
+    config: a.config.configurable as AssistantConfiguration,
   });
 
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
+  const [config, setConfig] = useState(() => assistantToDraft(currentAssistant));
+
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "error">("idle");
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSavedSnapshotRef = useRef<string>("");
+  const isInitialSnapshotRef = useRef(true);
+  const lastEditKindRef = useRef<"text" | "other">("other");
   
-  // Reset config state when modal opens to ensure we always start with fresh data from the assistant prop
-  React.useEffect(() => {
-    if (open) {
-      setConfig({
-        agent_id: assistant.assistant_id,
-        description: assistant.metadata.description,
-        agent_avatar: assistant.metadata.agent_avatar,
-        graph_id: assistant.graph_id,
-        created_at: assistant.created_at,
-        updated_at: assistant.updated_at,
-        name: assistant.name,
-        metadata: {
-          owner_id: String(assistant.metadata.owner_id),
-        } as AssistantMetadata,
-        config: (assistant.config.configurable as AssistantConfiguration),
-      });
-    }
-  }, [open, assistant]);
+  // Reset draft when opening, but do not require explicit saving (autosave handles persistence).
+  useEffect(() => {
+    if (!open) return;
+    const next = assistantToDraft(currentAssistant);
+    setConfig(next);
+    const payload = {
+      name: next.name,
+      metadata: {
+        ...next.metadata,
+        description: next.description || "",
+        agent_avatar: next.agent_avatar || null,
+      },
+      config: { configurable: next.config },
+    };
+    lastSavedSnapshotRef.current = JSON.stringify(payload);
+    isInitialSnapshotRef.current = true;
+    setSaveStatus("idle");
+    setSaveError(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, currentAssistant.assistant_id]);
 
   const handleChange = (field: string, value: unknown) => {
+    lastEditKindRef.current = field === "name" || field === "description" ? "text" : "other";
     setConfig((prev) => ({
       ...prev,
       [field]: value,
     }));
+
+    // Optimistically update SWR cache for instant UI consistency.
+    const optimistic = {
+      ...currentAssistant,
+      name: field === "name" ? String(value) : currentAssistant.name,
+      metadata: {
+        ...currentAssistant.metadata,
+        description:
+          field === "description" ? String(value) : (currentAssistant.metadata.description || ""),
+        agent_avatar:
+          field === "agent_avatar" ? (value === null ? undefined : String(value)) : currentAssistant.metadata.agent_avatar,
+      },
+    } satisfies Assistant;
+    void mutate(`/api/agents/${currentAssistant.assistant_id}`, optimistic, false);
   };
 
   const handleConfigurableChange = (field: string, value: unknown) => {
-    
+    lastEditKindRef.current = field === "prompt_template" ? "text" : "other";
     setConfig((prev) => {
       const newConfig = {
         ...prev,
@@ -91,10 +116,25 @@ export function AgentConfigModal({
       
       return newConfig;
     });
+
+    if (field === "prompt_template") return;
+
+    const optimistic = {
+      ...currentAssistant,
+      config: {
+        ...currentAssistant.config,
+        configurable: {
+          ...currentAssistant.config.configurable,
+          [field]: value as any,
+        },
+      },
+    } satisfies Assistant;
+    void mutate(`/api/agents/${currentAssistant.assistant_id}`, optimistic, false);
   };
 
   const handleMCPServersChange = (servers: string[]) => {
     console.log("🔧 MCP Servers changed:", servers);
+    lastEditKindRef.current = "other";
     setConfig((prev) => ({
       ...prev,
       config: {
@@ -102,51 +142,97 @@ export function AgentConfigModal({
         enabled_mcp_servers: servers,
       },
     }));
-  };
 
-  const handleSubmit = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      console.log("💾 Saving agent configuration:", {
-        name: config.name,
-        enabled_mcp_servers: config.config.enabled_mcp_servers,
-        configurable: config.config,
-      });
-
-      const response = await fetch(`/api/agents/${assistant.assistant_id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
+    const optimistic = {
+      ...currentAssistant,
+      config: {
+        ...currentAssistant.config,
+        configurable: {
+          ...currentAssistant.config.configurable,
+          enabled_mcp_servers: servers,
         },
-        body: JSON.stringify({
-          name: config.name,
-          description: config.description,
-          metadata: config.metadata,
-          config: { configurable: config.config },
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("❌ Save failed:", response.status, errorText);
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const updatedAgent = await response.json();
-      console.log("✅ Agent updated successfully:", updatedAgent);
-      
-      await mutate(`/api/agents/${assistant.assistant_id}`, updatedAgent, false);
-      await mutate("/api/agents");
-      onOpenChange(false);
-      router.refresh();
-    } catch (err) {
-      console.error("Error updating agent:", err);
-      setError("Failed to update agent configuration.");
-    } finally {
-      setLoading(false);
-    }
+      },
+    } satisfies Assistant;
+    void mutate(`/api/agents/${currentAssistant.assistant_id}`, optimistic, false);
   };
+
+  const updatePayload = useMemo(() => {
+    return {
+      name: config.name,
+      metadata: {
+        ...config.metadata,
+        description: config.description || "",
+        agent_avatar: config.agent_avatar || null,
+      },
+      config: { configurable: config.config },
+    };
+  }, [config.agent_avatar, config.config, config.description, config.metadata, config.name]);
+
+  const updateSnapshot = useMemo(() => JSON.stringify(updatePayload), [updatePayload]);
+
+  // Autosave only while modal is open.
+  useEffect(() => {
+    if (!open) return;
+    if (!currentAssistant.assistant_id) return;
+
+    if (isInitialSnapshotRef.current) {
+      lastSavedSnapshotRef.current = updateSnapshot;
+      isInitialSnapshotRef.current = false;
+      return;
+    }
+
+    if (updateSnapshot === lastSavedSnapshotRef.current) return;
+
+    const delayMs = lastEditKindRef.current === "text" ? 800 : 250;
+    if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+
+    autosaveTimerRef.current = setTimeout(async () => {
+      setSaveStatus("saving");
+      setSaveError(null);
+      try {
+        const response = await fetch(`/api/agents/${currentAssistant.assistant_id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: updateSnapshot,
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text().catch(() => "");
+          throw new Error(errorText || `Failed to save: ${response.status}`);
+        }
+
+        const updatedAgent = (await response.json()) as Assistant;
+        const nextDraft = assistantToDraft(updatedAgent);
+        const nextPayload = {
+          name: nextDraft.name,
+          metadata: {
+            ...nextDraft.metadata,
+            description: nextDraft.description || "",
+            agent_avatar: nextDraft.agent_avatar || null,
+          },
+          config: { configurable: nextDraft.config },
+        };
+
+        // Update snapshot from server response to avoid resaving due to normalization,
+        // but DO NOT overwrite the local draft state (prevents cursor loss mid-edit).
+        lastSavedSnapshotRef.current = JSON.stringify(nextPayload);
+
+        await mutate(`/api/agents/${currentAssistant.assistant_id}`, updatedAgent, false);
+        await mutate("/api/agents");
+
+        setSaveStatus("idle");
+      } catch (err) {
+        console.error("Autosave failed:", err);
+        setSaveStatus("error");
+        setSaveError("Failed to save changes. Check your connection and try again.");
+      }
+    }, delayMs);
+
+    return () => {
+      if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, updateSnapshot, currentAssistant.assistant_id]);
 
   
 
@@ -160,6 +246,14 @@ export function AgentConfigModal({
           <DialogDescription>
             Modify the settings for your agent.
           </DialogDescription>
+          <div className="pt-2">
+            {saveStatus === "saving" && (
+              <p className="text-xs text-muted-foreground">Saving…</p>
+            )}
+            {saveStatus === "error" && saveError && (
+              <p className="text-xs text-destructive">{saveError}</p>
+            )}
+          </div>
         </DialogHeader>
 
         <Tabs defaultValue="general" className="flex-1 flex flex-col min-h-0">
@@ -219,24 +313,11 @@ export function AgentConfigModal({
           </TabsContent>
         </Tabs>
 
-        {error && (
+        {saveError && (
           <Alert variant="destructive" className="flex-shrink-0">
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription>{saveError}</AlertDescription>
           </Alert>
         )}
-
-        <DialogFooter className="flex justify-end space-x-2 flex-shrink-0">
-          <Button
-            variant="ghost"
-            onClick={() => onOpenChange(false)}
-            disabled={loading}
-          >
-            Cancel
-          </Button>
-          <Button onClick={handleSubmit} disabled={loading}>
-            {loading ? "Saving..." : "Save Changes"}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

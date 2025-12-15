@@ -44,16 +44,21 @@ export async function GET(req: NextRequest) {
       user_id: user.id,
       qualified_name: "hubspot",
       url: hubspotMcpUrl,
-      // Store bearer token in config so our MCP client passes it as Authorization header
+      // Store access token in oauth_token field (expected by mcpClientManager)
+      oauth_token: tokens.access_token,
+      refresh_token: tokens.refresh_token || null,
+      expires_at: expiresAt,
+      is_enabled: true,
       config: {
-        bearer_token: tokens.access_token,
         scope: tokens.scope,
         provider: "hubspot",
+        auth_type: "bearer", // Mark as bearer token auth
+        tokenMetadata: {
+          token_type: "Bearer",
+          scope: tokens.scope,
+          expires_at: expiresAt,
+        },
       },
-      is_enabled: true,
-      // Track expiry so we can refresh later if needed
-      expires_at: expiresAt,
-      refresh_token: tokens.refresh_token || null,
       updated_at: new Date().toISOString(),
       created_at: new Date().toISOString(),
     } as any;

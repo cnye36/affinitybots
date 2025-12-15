@@ -97,7 +97,7 @@ export function Chat({ assistantId, threadId, onThreadId }: { assistantId: strin
 
   // Map SDK messages to our UI message type
   const uiMessages: ChatMessage[] = (thread.messages as any[])
-    .filter((m) => m.type === "human" || m.type === "ai")
+    .filter((m) => m.type === "human" || m.type === "ai" || m.type === "tool")
     .map((m, idx) => ({
       id: m.id || `m-${idx}`,
       role: m.type === "human" ? "user" : "assistant",

@@ -87,7 +87,7 @@ export class MCPWebInterface {
       console.log(`MCPWebInterface: Connecting to ${serverUrl} for user ${userId}`);
 
       // Try to connect using the OAuth client
-      const result = await mcpClientFactory.initiateOAuth(serverUrl, callbackUrl);
+      const result = await mcpClientFactory.initiateOAuth(serverUrl, callbackUrl, userId, serverName);
 
       if (result.requiresAuth && result.authUrl) {
         // OAuth flow required
@@ -154,9 +154,11 @@ export class MCPWebInterface {
       }
 
       // Rehydrate OAuth client if serverless/dev hot-reload dropped in-memory session
-      if (!sessionStore.getClient(sessionId)) {
+      const existingClient = await sessionStore.getClient(sessionId);
+      if (!existingClient) {
         try {
           if (serverRow?.url) {
+            console.log(`Rehydrating OAuth client for session ${sessionId} from database`);
             const callbackUrl =
               serverRow.config?.callbackUrl ||
               `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/mcp/auth/callback`;
@@ -169,18 +171,26 @@ export class MCPWebInterface {
               const mcpClient = new MCPOAuthClient(serverRow.url, callbackUrl, () => {});
               const state = serverRow.config?.providerState;
               if (state) {
-                try { mcpClient.prepareWithState(state); } catch {}
+                try {
+                  mcpClient.prepareWithState(state);
+                  console.log(`Restored provider state for MCP OAuth client`);
+                } catch (prepareError) {
+                  console.error(`Failed to prepare MCP client with state:`, prepareError);
+                }
               }
               client = mcpClient;
             }
             // Store reconstructed client so finishOAuth can succeed
-            sessionStore.setClient(sessionId, client as any);
+            await sessionStore.setClient(sessionId, client as any);
+            console.log(`Rehydrated OAuth client stored in session store`);
             // Avoid calling connect() here to prevent new client_id registration. We'll finishAuth directly.
           } else {
-            console.warn('No DB record found to rehydrate OAuth client for session', sessionId);
+            console.error('No DB record found to rehydrate OAuth client for session', sessionId);
+            throw new Error('OAuth session expired or invalid - please restart OAuth flow');
           }
         } catch (rehydrateError) {
-          console.warn('Failed to rehydrate OAuth client from DB', rehydrateError);
+          console.error('Failed to rehydrate OAuth client from DB', rehydrateError);
+          throw new Error('Failed to restore OAuth session - please restart OAuth flow');
         }
       }
 

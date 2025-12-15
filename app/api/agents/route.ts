@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
 import { generateAgentConfiguration } from "@/lib/agent/agentGeneration";
 import { Client } from "@langchain/langgraph-sdk";
+import { legacyModelToLlmId } from "@/lib/llm/catalog";
 
 // Helper function to create a timeout promise
 function createTimeoutPromise(timeoutMs: number): Promise<never> {
@@ -53,6 +54,7 @@ export async function POST(request: Request) {
             configurable: {
               user_id: user.id,
               model: generatedConfig.model,
+              llm: legacyModelToLlmId(generatedConfig.model) || `openai:${generatedConfig.model}`,
               tools: generatedConfig.tools,
               memory: generatedConfig.memory,
               prompt_template: generatedConfig.instructions,

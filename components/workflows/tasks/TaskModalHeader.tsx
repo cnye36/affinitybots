@@ -17,6 +17,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Assistant } from "@/types/assistant";
+import { getLlmLabel } from "@/lib/llm/catalog";
 
 interface TaskModalHeaderProps {
   task: Task;
@@ -152,11 +153,14 @@ export function TaskModalHeader({
           {/* Agent Capabilities */}
           {assistant && (
             <div className="flex flex-wrap items-center gap-3 rounded-md border bg-muted/50 p-2">
-              {assistant?.config?.configurable?.model && (
+              {(assistant?.config?.configurable?.llm || assistant?.config?.configurable?.model) && (
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-medium text-muted-foreground">Model:</span>
                   <Badge variant="secondary" className="text-xs">
-                    {assistant.config.configurable.model}
+                    {getLlmLabel(
+                      assistant.config.configurable.llm,
+                      assistant.config.configurable.model
+                    )}
                   </Badge>
                 </div>
               )}

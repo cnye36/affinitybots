@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { AssistantConfiguration, ModelType, AssistantMetadata } from "@/types/assistant";
+import { AssistantConfiguration, AssistantMetadata } from "@/types/assistant";
 import { createClient } from "@/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Upload, Loader2 } from "lucide-react";
@@ -28,6 +28,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "@/hooks/useToast";
+import { LLM_OPTIONS, legacyModelToLlmId } from "@/lib/llm/catalog";
 
 interface GeneralConfigProps {
   config: {
@@ -113,7 +114,7 @@ export function GeneralConfig({
         } = supabase.storage.from("agent-avatars").getPublicUrl(filePath);
 
         // Update the avatar in the parent component
-        onChange("avatar", publicUrl);
+        onChange("agent_avatar", publicUrl);
 
         // Save the changes immediately to persist the avatar
         const response = await fetch(`/api/agents/${config.id}`, {
@@ -272,47 +273,20 @@ export function GeneralConfig({
           <div className="space-y-2">
             <Label htmlFor="model">Model</Label>
             <Select
-              value={config.config.model}
-              onValueChange={(value: ModelType) => {
-                onConfigurableChange("model", value);
-                // Map curated model to universal llm id
-                const map: Record<string, string> = {
-                  "gpt-5": "openai:gpt-5",
-                  "gpt-5-mini": "openai:gpt-5-mini",
-                  "gpt-5-nano": "openai:gpt-5-nano",
-                  "gpt-4.1": "openai:gpt-4.1",
-                  "gpt-4.1-mini": "openai:gpt-4.1-mini",
-                  "gpt-4.1-nano": "openai:gpt-4.1-nano",
-                  "gpt-4o": "openai:gpt-4o",
-                  "claude-sonnet-4-20250514": "anthropic:claude-sonnet-4-20250514",
-                  "claude-opus-4-20250514": "anthropic:claude-opus-4-20250514",
-                  "claude-3-7-sonnet-20250219": "anthropic:claude-3-7-sonnet-20250219",
-                  "claude-3-5-haiku-20241022": "anthropic:claude-3-5-haiku-20241022",
-                  "gemini-2.5-pro": "google-genai:gemini-2.5-pro",
-                  "gemini-2.5-flash": "google-genai:gemini-2.5-flash",
-                  "gemini-2.5-flash-lite": "google-genai:gemini-2.5-flash-lite",
-                };
-                onConfigurableChange("llm", map[value]);
+              value={config.config.llm || legacyModelToLlmId(config.config.model) || ""}
+              onValueChange={(value: string) => {
+                onConfigurableChange("llm", value);
               }}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select a model" />
               </SelectTrigger>
               <SelectContent position="popper" className="z-[1000]">
-                <SelectItem value="gpt-5">GPT-5</SelectItem>
-                <SelectItem value="gpt-5-mini">GPT-5 Mini</SelectItem>
-                <SelectItem value="gpt-5-nano">GPT-5 Nano</SelectItem>
-                <SelectItem value="gpt-4.1">GPT-4.1</SelectItem>
-                <SelectItem value="gpt-4.1-mini">GPT-4.1 Mini</SelectItem>
-                <SelectItem value="gpt-4.1-nano">GPT-4.1 Nano</SelectItem>
-                <SelectItem value="gpt-4o">GPT-4o</SelectItem>
-                <SelectItem value="claude-sonnet-4-20250514">Claude Sonnet 4 (20250514)</SelectItem>
-                <SelectItem value="claude-opus-4-20250514">Claude Opus 4 (20250514)</SelectItem>
-                <SelectItem value="claude-3-7-sonnet-20250219">Claude 3.7 Sonnet (20250219)</SelectItem>
-                <SelectItem value="claude-3-5-haiku-20241022">Claude 3.5 Haiku (20241022)</SelectItem>
-                <SelectItem value="gemini-2.5-pro">Gemini 2.5 Pro</SelectItem>
-                <SelectItem value="gemini-2.5-flash">Gemini 2.5 Flash</SelectItem>
-                <SelectItem value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</SelectItem>
+                {LLM_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.id} value={opt.id}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

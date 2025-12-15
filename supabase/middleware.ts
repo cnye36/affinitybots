@@ -39,12 +39,53 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  function withSessionCookies(response: NextResponse) {
+    supabaseResponse.cookies.getAll().forEach(({ name, value, ...options }) => {
+      response.cookies.set(name, value, options)
+    })
+    return response
+  }
+
+  const adminEmail = (process.env.ADMIN_EMAIL ?? "cnye@affinitybots.com").toLowerCase()
+  const isAdmin = (user?.email ?? "").toLowerCase() === adminEmail
+
+  // Always protect admin routes regardless of domain/hostname checks below.
+  if (request.nextUrl.pathname.startsWith("/api/admin")) {
+    if (!user) {
+      return withSessionCookies(
+        NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      )
+    }
+    if (!isAdmin) {
+      return withSessionCookies(
+        NextResponse.json({ error: "Forbidden" }, { status: 403 })
+      )
+    }
+  }
+
+  if (request.nextUrl.pathname.startsWith("/admin")) {
+    if (!user) {
+      const url = request.nextUrl.clone()
+      url.pathname = "/auth/signin"
+      url.searchParams.set("next", request.nextUrl.pathname)
+      return withSessionCookies(NextResponse.redirect(url))
+    }
+    if (!isAdmin) {
+      const url = request.nextUrl.clone()
+      url.pathname = "/"
+      return withSessionCookies(NextResponse.redirect(url))
+    }
+  }
+
   // Check if this is an OAuth callback that Supabase redirected to the wrong path
   // Depending on Site URL, Supabase may redirect to /, /dashboard, etc. with ?code=...
   // We normalize all of these to /auth/callback so the dedicated handler can
   // exchange the code for a session and set cookies correctly.
+  // IMPORTANT: Exclude /api/* routes as they have their own OAuth handlers (Google, HubSpot, MCP, etc.)
   const code = request.nextUrl.searchParams.get("code");
-  if (code && !request.nextUrl.pathname.startsWith("/auth/callback")) {
+  if (code &&
+      !request.nextUrl.pathname.startsWith("/auth/callback") &&
+      !request.nextUrl.pathname.startsWith("/api/")) {
     console.log("🔍 Middleware: Detected OAuth code on non-callback path, redirecting to /auth/callback");
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/auth/callback";

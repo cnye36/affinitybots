@@ -236,7 +236,7 @@ export class MCPSessionManager {
     for (const session of oauthSessions) {
       try {
         if (session.session_id) {
-          const client = sessionStore.getClient(session.session_id);
+          const client = await sessionStore.getClient(session.session_id);
           if (client) {
             // Try a simple operation to validate the session
             await client.listTools();
@@ -306,7 +306,7 @@ export class MCPSessionManager {
         }
 
         // Check if session is in memory
-        if (session.session_id && sessionStore.getClient(session.session_id)) {
+        if (session.session_id && await sessionStore.getClient(session.session_id)) {
           sessionsInMemory++;
         }
       }
@@ -352,7 +352,7 @@ export class MCPSessionManager {
       for (const session of userSessions || []) {
         try {
           if (session.session_id) {
-            sessionStore.removeClient(session.session_id);
+            await sessionStore.removeClient(session.session_id);
           }
           
           await this.markSessionAsExpired(userId, session.qualified_name);

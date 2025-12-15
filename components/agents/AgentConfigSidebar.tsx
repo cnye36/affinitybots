@@ -30,6 +30,7 @@ import { useRouter } from "next/navigation"
 import { mutate } from "swr"
 import { useAgentConfigSidebar } from "@/contexts/AgentConfigSidebarContext"
 import { cn } from "@/lib/utils"
+import { getLlmLabel } from "@/lib/llm/catalog"
 
 interface AgentConfigSidebarProps {
 	assistant: Assistant
@@ -174,7 +175,7 @@ export function AgentConfigSidebar({ assistant }: AgentConfigSidebarProps) {
 					<div className="flex flex-wrap gap-2">
 						<Badge variant="outline" className="gap-1">
 							<FileText className="h-3 w-3" />
-							Model: {config.config.model || "Not set"}
+							Model: {getLlmLabel(config.config.llm, config.config.model)}
 						</Badge>
 						{hasMemory && (
 							<Badge variant="secondary" className="gap-1">

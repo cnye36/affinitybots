@@ -13,6 +13,12 @@ function getCorsHeaders() {
 
 async function handleRequest(req: NextRequest, method: string) {
   try {
+    const requestId =
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+      (globalThis.crypto && "randomUUID" in globalThis.crypto)
+        ? (globalThis.crypto as Crypto).randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
     // Require an authenticated user
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -33,6 +39,7 @@ async function handleRequest(req: NextRequest, method: string) {
     const options: RequestInit = {
       method,
       headers: {
+        "x-request-id": requestId,
         "x-api-key": process.env["LANGSMITH_API_KEY"] || "",
         // Preserve content-type for JSON bodies when present
         ...(req.headers.get("content-type")
@@ -82,7 +89,7 @@ async function handleRequest(req: NextRequest, method: string) {
     const started = Date.now();
     const res = await fetch(target, options);
     const elapsed = Date.now() - started;
-    console.log("[Proxy]", method, target, res.status, `${elapsed}ms`);
+    console.log("[Proxy]", requestId, method, target, res.status, `${elapsed}ms`);
 
     // Copy through selected upstream headers for streaming correctness
     const upstreamContentType = res.headers.get("content-type") || "application/x-ndjson; charset=utf-8";
@@ -95,6 +102,7 @@ async function handleRequest(req: NextRequest, method: string) {
         "content-type": upstreamContentType,
         "cache-control": upstreamCacheControl,
         "x-accel-buffering": "no",
+        "x-request-id": requestId,
         ...getCorsHeaders(),
       },
     });

@@ -2,14 +2,14 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
 import crypto from "crypto";
 import { sendInviteEmail } from "@/lib/sendInviteEmail";
+import { requireAdmin } from "@/lib/admin/requireAdmin";
 
 export async function POST(request: Request, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
-  // TODO: Implement robust admin authentication/authorization here
-  // const { user } = await validateUser(request); // Hypothetical auth function
-  // if (!user || user.role !== 'admin') {
-  //   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  // }
+  const admin = await requireAdmin();
+  if (!admin.ok) {
+    return NextResponse.json({ error: admin.error }, { status: admin.status });
+  }
 
   const { id } = params; // This is the ID of the early_access_invites record
 

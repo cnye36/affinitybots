@@ -104,16 +104,27 @@ export default function ServerDetailPage() {
         const res = await fetch('/api/user-mcp-servers');
         const data = await res.json();
         const list = data.servers || [];
-        const exists = list.some((s: any) => s.qualified_name === decodeURIComponent(qualifiedName));
-        setIsConnected(exists);
+        // Check if server is actually connected (enabled + has tokens for OAuth)
+        const serverEntry = list.find((s: any) => s.qualified_name === decodeURIComponent(qualifiedName));
+        if (!serverEntry) {
+          setIsConnected(false);
+          return;
+        }
+        // For OAuth servers, must be enabled AND have tokens
+        if (server?.authType === 'oauth') {
+          setIsConnected(serverEntry.is_enabled && serverEntry.has_oauth_token);
+        } else {
+          // For non-OAuth servers, just check if enabled
+          setIsConnected(serverEntry.is_enabled);
+        }
       } catch {
         setIsConnected(false);
       }
     }
-    if (qualifiedName) {
+    if (qualifiedName && server) {
       loadConnectionState();
     }
-  }, [qualifiedName]);
+  }, [qualifiedName, server]);
 
   // Back to top scroll listener
   useEffect(() => {
@@ -141,14 +152,18 @@ export default function ServerDetailPage() {
         window.location.href = startUrl;
         return;
       }
-      if (server.qualifiedName === 'google-drive') {
-        // Use our Google Drive OAuth connect route
-        window.location.href = '/api/google/oauth/connect?service=drive';
-        return;
-      }
-      if (server.qualifiedName === 'gmail') {
-        // Use our Gmail OAuth connect route (same endpoint, different service)
-        window.location.href = '/api/google/oauth/connect?service=gmail';
+      // Google Services - use our custom Google OAuth routes
+      const googleServices = ['google-drive', 'gmail', 'google-calendar', 'google-docs', 'google-sheets'];
+      if (googleServices.includes(server.qualifiedName)) {
+        const serviceMap: Record<string, string> = {
+          'google-drive': 'drive',
+          'gmail': 'gmail',
+          'google-calendar': 'calendar',
+          'google-docs': 'docs',
+          'google-sheets': 'sheets',
+        };
+        const service = serviceMap[server.qualifiedName];
+        window.location.href = `/api/google/oauth/connect?service=${service}`;
         return;
       }
       // Default behavior for other official servers

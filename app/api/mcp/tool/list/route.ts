@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const client = sessionStore.getClient(sessionId);
+    const client = await sessionStore.getClient(sessionId);
 
     if (!client) {
       return NextResponse.json(

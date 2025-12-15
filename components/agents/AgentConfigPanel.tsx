@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 import {
 	Sheet,
 	SheetContent,
@@ -17,12 +17,9 @@ import {
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
 	CheckCircle,
-	Loader2,
 	Settings2,
 	FileText,
 	Wrench,
@@ -31,7 +28,6 @@ import {
 	ChevronLeft,
 	ChevronRight,
 	Cpu,
-	AlertCircle,
 } from "lucide-react"
 import { GeneralConfig } from "@/components/configuration/GeneralConfig"
 import { ModelConfig } from "@/components/configuration/ModelConfig"
@@ -40,10 +36,11 @@ import { ToolSelector } from "@/components/configuration/ToolSelector"
 import { KnowledgeConfig } from "@/components/configuration/KnowledgeConfig"
 import { MemoryConfig } from "@/components/configuration/MemoryConfig"
 import { AssistantConfiguration, AssistantMetadata, Assistant } from "@/types/assistant"
-import { useRouter } from "next/navigation"
 import { mutate } from "swr"
 import { useAgentConfigPanel } from "@/contexts/AgentConfigPanelContext"
 import { cn } from "@/lib/utils"
+import { useAgent } from "@/hooks/useAgent"
+import { getLlmLabel } from "@/lib/llm/catalog"
 import {
 	Dialog,
 	DialogContent,
@@ -62,27 +59,43 @@ interface AgentConfigPanelProps {
  */
 export function AgentConfigPanel({ assistant }: AgentConfigPanelProps) {
 	const { isOpen, togglePanel } = useAgentConfigPanel()
-	const [config, setConfig] = useState({
-		agent_id: assistant.assistant_id,
-		description: assistant.metadata.description,
-		agent_avatar: assistant.metadata.agent_avatar,
-		graph_id: assistant.graph_id,
-		created_at: assistant.created_at,
-		updated_at: assistant.updated_at,
-		name: assistant.name,
+
+	const { assistant: liveAssistant } = useAgent(assistant.assistant_id, {
+		fallbackData: assistant,
+	})
+	const currentAssistant = liveAssistant || assistant
+
+	const assistantToDraft = (a: Assistant) => ({
+		agent_id: a.assistant_id,
+		description: a.metadata.description,
+		agent_avatar: a.metadata.agent_avatar,
+		graph_id: a.graph_id,
+		created_at: a.created_at,
+		updated_at: a.updated_at,
+		name: a.name,
 		metadata: {
-			owner_id: String(assistant.metadata.owner_id),
+			owner_id: String(a.metadata.owner_id),
 		} as AssistantMetadata,
-		config: assistant.config.configurable as AssistantConfiguration,
+		config: a.config.configurable as AssistantConfiguration,
 	})
 
-	const [loading, setLoading] = useState<boolean>(false)
-	const [error, setError] = useState<string | null>(null)
-	const [saveSuccess, setSaveSuccess] = useState<boolean>(false)
-	const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false)
+	const [config, setConfig] = useState(() => assistantToDraft(currentAssistant))
+
+	// Ensure draft updates when switching between agents (navigation)
+	useEffect(() => {
+		setConfig(assistantToDraft(currentAssistant))
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [currentAssistant.assistant_id])
+
+	const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "error">("idle")
+	const [saveError, setSaveError] = useState<string | null>(null)
+
+	const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+	const lastSavedSnapshotRef = useRef<string>("")
+	const isInitialSnapshotRef = useRef(true)
+	const lastEditKindRef = useRef<"text" | "other">("other")
 	const [isMobile, setIsMobile] = useState(false)
 	const [isSettingsOpen, setIsSettingsOpen] = useState(false)
-	const router = useRouter()
 
 	// Detect mobile viewport
 	useEffect(() => {
@@ -94,45 +107,112 @@ export function AgentConfigPanel({ assistant }: AgentConfigPanelProps) {
 		return () => window.removeEventListener("resize", checkMobile)
 	}, [])
 
-	// Reset config state when panel opens to ensure we always start with fresh data
-	useEffect(() => {
-		if (isOpen) {
-			setConfig({
-				agent_id: assistant.assistant_id,
-				description: assistant.metadata.description,
-				agent_avatar: assistant.metadata.agent_avatar,
-				graph_id: assistant.graph_id,
-				created_at: assistant.created_at,
-				updated_at: assistant.updated_at,
-				name: assistant.name,
-				metadata: {
-					owner_id: String(assistant.metadata.owner_id),
-				} as AssistantMetadata,
-				config: assistant.config.configurable as AssistantConfiguration,
-			})
-			setError(null)
-			setSaveSuccess(false)
-			setHasUnsavedChanges(false)
+	const updatePayload = useMemo(() => {
+		return {
+			name: config.name,
+			metadata: {
+				...config.metadata,
+				description: config.description || "",
+				agent_avatar: config.agent_avatar || null,
+			},
+			config: {
+				configurable: config.config,
+			},
 		}
-	}, [isOpen, assistant])
+	}, [config.agent_avatar, config.config, config.description, config.metadata, config.name])
 
-	// Track unsaved changes
+	const updateSnapshot = useMemo(() => JSON.stringify(updatePayload), [updatePayload])
+
+	// Autosave agent changes (debounced + snapshot guarded to prevent "save loops")
 	useEffect(() => {
-		const hasChanges =
-			config.name !== assistant.name ||
-			config.description !== assistant.metadata.description ||
-			JSON.stringify(config.config) !== JSON.stringify(assistant.config.configurable)
-		setHasUnsavedChanges(hasChanges)
-	}, [config, assistant])
+		if (!currentAssistant.assistant_id) return
+
+		if (isInitialSnapshotRef.current) {
+			lastSavedSnapshotRef.current = updateSnapshot
+			isInitialSnapshotRef.current = false
+			return
+		}
+
+		if (updateSnapshot === lastSavedSnapshotRef.current) return
+
+		const delayMs = lastEditKindRef.current === "text" ? 800 : 250
+		if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current)
+
+		autosaveTimerRef.current = setTimeout(async () => {
+			setSaveStatus("saving")
+			setSaveError(null)
+			try {
+				const response = await fetch(`/api/agents/${currentAssistant.assistant_id}`, {
+					method: "PUT",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					body: updateSnapshot,
+				})
+
+				if (!response.ok) {
+					const errorText = await response.text().catch(() => "")
+					throw new Error(errorText || `Failed to save: ${response.status}`)
+				}
+
+				const updatedAgent = (await response.json()) as Assistant
+
+				// Update snapshot from server response to avoid resaving due to server normalization,
+				// but DO NOT overwrite the local draft state (prevents cursor loss mid-edit).
+				const nextDraft = assistantToDraft(updatedAgent)
+				const nextPayload = {
+					name: nextDraft.name,
+					metadata: {
+						...nextDraft.metadata,
+						description: nextDraft.description || "",
+						agent_avatar: nextDraft.agent_avatar || null,
+					},
+					config: { configurable: nextDraft.config },
+				}
+				lastSavedSnapshotRef.current = JSON.stringify(nextPayload)
+
+				// Update caches so header + lists update immediately.
+				await mutate(`/api/agents/${currentAssistant.assistant_id}`, updatedAgent, false)
+				await mutate("/api/agents")
+
+				setSaveStatus("idle")
+			} catch (err) {
+				console.error("Autosave failed:", err)
+				setSaveStatus("error")
+				setSaveError("Failed to save changes. Check your connection and try again.")
+			}
+		}, delayMs)
+
+		return () => {
+			if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current)
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [updateSnapshot, currentAssistant.assistant_id])
 
 	const handleChange = (field: string, value: unknown) => {
+		lastEditKindRef.current = field === "name" || field === "description" ? "text" : "other"
 		setConfig((prev) => ({
 			...prev,
 			[field]: value,
 		}))
+
+		// Optimistically update the SWR cache so the header reflects changes instantly.
+		const optimistic = {
+			...currentAssistant,
+			name: field === "name" ? String(value) : currentAssistant.name,
+			metadata: {
+				...currentAssistant.metadata,
+				description: field === "description" ? String(value) : (currentAssistant.metadata.description || ""),
+				agent_avatar:
+					field === "agent_avatar" ? (value === null ? undefined : String(value)) : currentAssistant.metadata.agent_avatar,
+			},
+		} satisfies Assistant
+
+		void mutate(`/api/agents/${currentAssistant.assistant_id}`, optimistic, false)
 	}
 
 	const handleConfigurableChange = (field: string, value: unknown) => {
+		lastEditKindRef.current = field === "prompt_template" ? "text" : "other"
 		setConfig((prev) => ({
 			...prev,
 			config: {
@@ -140,9 +220,26 @@ export function AgentConfigPanel({ assistant }: AgentConfigPanelProps) {
 				[field]: value,
 			},
 		}))
+
+		// Avoid blasting the SWR cache on every keystroke for large text fields.
+		if (field === "prompt_template") return
+
+		const optimistic = {
+			...currentAssistant,
+			config: {
+				...currentAssistant.config,
+				configurable: {
+					...currentAssistant.config.configurable,
+					[field]: value as any,
+				},
+			},
+		} satisfies Assistant
+
+		void mutate(`/api/agents/${currentAssistant.assistant_id}`, optimistic, false)
 	}
 
 	const handleMCPServersChange = (servers: string[]) => {
+		lastEditKindRef.current = "other"
 		setConfig((prev) => ({
 			...prev,
 			config: {
@@ -150,49 +247,19 @@ export function AgentConfigPanel({ assistant }: AgentConfigPanelProps) {
 				enabled_mcp_servers: servers,
 			},
 		}))
-	}
 
-	const handleSubmit = async () => {
-		setLoading(true)
-		setError(null)
-		setSaveSuccess(false)
-
-		try {
-			const response = await fetch(`/api/agents/${assistant.assistant_id}`, {
-				method: "PUT",
-				headers: {
-					"Content-Type": "application/json",
+		const optimistic = {
+			...currentAssistant,
+			config: {
+				...currentAssistant.config,
+				configurable: {
+					...currentAssistant.config.configurable,
+					enabled_mcp_servers: servers,
 				},
-				body: JSON.stringify({
-					name: config.name,
-					description: config.description,
-					metadata: config.metadata,
-					config: { configurable: config.config },
-				}),
-			})
+			},
+		} satisfies Assistant
 
-			if (!response.ok) {
-				const errorText = await response.text()
-				throw new Error(`Failed to save: ${response.status}`)
-			}
-
-			const updatedAgent = await response.json()
-
-			await mutate(`/api/agents/${assistant.assistant_id}`, updatedAgent, false)
-			await mutate("/api/agents")
-
-			setSaveSuccess(true)
-			setHasUnsavedChanges(false)
-			router.refresh()
-
-			// Auto-hide success message after 3 seconds
-			setTimeout(() => setSaveSuccess(false), 3000)
-		} catch (err) {
-			console.error("Error updating agent:", err)
-			setError("Failed to update agent configuration. Please try again.")
-		} finally {
-			setLoading(false)
-		}
+		void mutate(`/api/agents/${currentAssistant.assistant_id}`, optimistic, false)
 	}
 
 	// Get configuration status indicators
@@ -201,7 +268,8 @@ export function AgentConfigPanel({ assistant }: AgentConfigPanelProps) {
 	const enabledTools = Array.isArray(config.config.enabled_mcp_servers)
 		? config.config.enabled_mcp_servers.length
 		: 0
-	const avatarFallback = assistant.name.charAt(0).toUpperCase()
+
+	const modelLabel = getLlmLabel(config.config.llm, config.config.model)
 
 	// Desktop panel (collapsible side panel)
 	const DesktopPanel = () => (
@@ -240,23 +308,29 @@ export function AgentConfigPanel({ assistant }: AgentConfigPanelProps) {
 				<div className="flex-none px-6 pt-6 pb-4 border-b space-y-4">
 					<div className="flex items-center justify-between">
 						<h2 className="text-sm font-medium text-muted-foreground">Configuration</h2>
-						<Button
-							variant="ghost"
-							size="icon"
-							onClick={() => setIsSettingsOpen(true)}
-							aria-label="Open agent settings"
-						>
-							<Settings2 className="h-4 w-4" />
-						</Button>
+						<div className="flex items-center gap-2">
+							{saveStatus === "saving" && (
+								<span className="text-xs text-muted-foreground">Saving…</span>
+							)}
+							{saveStatus === "error" && (
+								<span className="text-xs text-destructive">Save failed</span>
+							)}
+							<Button
+								variant="ghost"
+								size="icon"
+								onClick={() => setIsSettingsOpen(true)}
+								aria-label="Open agent settings"
+							>
+								<Settings2 className="h-4 w-4" />
+							</Button>
+						</div>
 					</div>
 
 					
 
-					{/* Unsaved changes indicator */}
-					{hasUnsavedChanges && (
-						<Alert variant="default" className="py-2">
-							<AlertCircle className="h-4 w-4" />
-							<AlertDescription className="text-xs">You have unsaved changes</AlertDescription>
+					{saveError && (
+						<Alert variant="destructive" className="py-2">
+							<AlertDescription className="text-xs">{saveError}</AlertDescription>
 						</Alert>
 					)}
 				</div>
@@ -377,63 +451,7 @@ export function AgentConfigPanel({ assistant }: AgentConfigPanelProps) {
 					</div>
 				</ScrollArea>
 
-				{/* Footer with Save/Cancel */}
-				<div className="flex-none border-t px-6 py-4 bg-background/95 backdrop-blur space-y-3">
-					{error && (
-						<Alert variant="destructive" className="py-2">
-							<AlertDescription className="text-sm">{error}</AlertDescription>
-						</Alert>
-					)}
-
-					{saveSuccess && (
-						<Alert className="py-2 border-green-500 bg-green-50 dark:bg-green-950/30">
-							<CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
-							<AlertDescription className="text-sm text-green-600 dark:text-green-400">
-								Configuration saved successfully!
-							</AlertDescription>
-						</Alert>
-					)}
-
-					<div className="flex gap-2">
-						<Button
-							variant="outline"
-							onClick={() => {
-								setConfig({
-									agent_id: assistant.assistant_id,
-									description: assistant.metadata.description,
-									agent_avatar: assistant.metadata.agent_avatar,
-									graph_id: assistant.graph_id,
-									created_at: assistant.created_at,
-									updated_at: assistant.updated_at,
-									name: assistant.name,
-									metadata: {
-										owner_id: String(assistant.metadata.owner_id),
-									} as AssistantMetadata,
-									config: assistant.config.configurable as AssistantConfiguration,
-								})
-								setHasUnsavedChanges(false)
-							}}
-							disabled={loading || !hasUnsavedChanges}
-							className="flex-1"
-						>
-							Reset
-						</Button>
-						<Button
-							onClick={handleSubmit}
-							disabled={loading || !hasUnsavedChanges}
-							className="flex-1"
-						>
-							{loading ? (
-								<>
-									<Loader2 className="h-4 w-4 mr-2 animate-spin" />
-									Saving...
-								</>
-							) : (
-								"Save Changes"
-							)}
-						</Button>
-					</div>
-				</div>
+				{/* No footer: this panel is fully persistent/autosaving */}
 			</div>
 		</div>
 	)
@@ -453,6 +471,14 @@ export function AgentConfigPanel({ assistant }: AgentConfigPanelProps) {
 					<SheetDescription>
 						Customize your agent&apos;s behavior, capabilities, and knowledge
 					</SheetDescription>
+					<div className="pt-2">
+						{saveStatus === "saving" && (
+							<p className="text-xs text-muted-foreground">Saving…</p>
+						)}
+						{saveStatus === "error" && saveError && (
+							<p className="text-xs text-destructive">{saveError}</p>
+						)}
+					</div>
 				</SheetHeader>
 
 				{/* Configuration Status Bar */}
@@ -460,7 +486,7 @@ export function AgentConfigPanel({ assistant }: AgentConfigPanelProps) {
 					<div className="flex flex-wrap gap-2">
 						<Badge variant="outline" className="gap-1">
 							<FileText className="h-3 w-3" />
-							Model: {config.config.model || "Not set"}
+							Model: {modelLabel}
 						</Badge>
 						{hasMemory && (
 							<Badge variant="secondary" className="gap-1">
@@ -599,39 +625,7 @@ export function AgentConfigPanel({ assistant }: AgentConfigPanelProps) {
 					</div>
 				</ScrollArea>
 
-				{/* Footer with Save/Cancel */}
-				<div className="border-t px-6 py-4 bg-background">
-					{error && (
-						<Alert variant="destructive" className="mb-4">
-							<AlertDescription>{error}</AlertDescription>
-						</Alert>
-					)}
-
-					{saveSuccess && (
-						<Alert className="mb-4 border-green-500 bg-green-50 dark:bg-green-950">
-							<CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
-							<AlertDescription className="text-green-600 dark:text-green-400">
-								Configuration saved successfully!
-							</AlertDescription>
-						</Alert>
-					)}
-
-					<div className="flex justify-end gap-3">
-						<Button variant="outline" onClick={togglePanel} disabled={loading}>
-							Cancel
-						</Button>
-						<Button onClick={handleSubmit} disabled={loading} className="min-w-[120px]">
-							{loading ? (
-								<>
-									<Loader2 className="h-4 w-4 mr-2 animate-spin" />
-									Saving...
-								</>
-							) : (
-								"Save Changes"
-							)}
-						</Button>
-					</div>
-				</div>
+				{/* No footer: this sheet is fully persistent/autosaving */}
 			</SheetContent>
 		</Sheet>
 	)

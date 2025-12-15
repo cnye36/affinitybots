@@ -1,14 +1,12 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server"; // Assuming same Supabase client setup
+import { requireAdmin } from "@/lib/admin/requireAdmin";
 
 export async function GET(request: Request) {
-  // TODO: Implement robust admin authentication/authorization here
-  // For example, check if the user has an 'admin' role or specific permissions.
-  // If not authorized, return a 401 or 403 error.
-  // const { user } = await validateUser(request); // Hypothetical auth function
-  // if (!user || user.role !== 'admin') {
-  //   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  // }
+  const admin = await requireAdmin();
+  if (!admin.ok) {
+    return NextResponse.json({ error: admin.error }, { status: admin.status });
+  }
 
   const supabase = await createClient();
 

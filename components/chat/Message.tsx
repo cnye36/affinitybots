@@ -15,21 +15,6 @@ interface MessageProps {
   isThinking?: boolean;
 }
 
-const StarIcon = ({ size = 14 }: { size?: number }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 16 16"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-  >
-    <path
-      d="M8 0L9.79611 6.20389L16 8L9.79611 9.79611L8 16L6.20389 9.79611L0 8L6.20389 6.20389L8 0Z"
-      fill="currentColor"
-    />
-  </svg>
-);
-
 const CopyButton: FC<{ text: string }> = ({ text }) => {
   const [copied, setCopied] = useState(false);
 
@@ -47,6 +32,79 @@ const CopyButton: FC<{ text: string }> = ({ text }) => {
     <TooltipIconButton tooltip="Copy" onClick={handleCopy}>
       {copied ? <CheckIcon /> : <CopyIcon />}
     </TooltipIconButton>
+  );
+};
+
+async function downloadUrl(url: string) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Download failed: ${res.status}`);
+  const blob = await res.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  const fileName = (() => {
+    try {
+      const u = new URL(url);
+      const last = u.pathname.split("/").filter(Boolean).pop();
+      return last ? last.split("?")[0] : "image.png";
+    } catch {
+      return "image.png";
+    }
+  })();
+
+  const a = document.createElement("a");
+  a.href = objectUrl;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(objectUrl);
+}
+
+const MarkdownImage: FC<{ src?: string; alt?: string }> = ({ src, alt }) => {
+  const [downloading, setDownloading] = useState(false);
+
+  if (!src) return null;
+
+  return (
+    <div className="my-4">
+      <div className="flex justify-center">
+        <div className="overflow-hidden rounded-xl border bg-muted/20 w-full max-w-[520px]">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={src}
+          alt={alt || "Generated image"}
+          className="w-full h-auto block"
+          style={{ maxHeight: 520, objectFit: "contain" }}
+        />
+        </div>
+      </div>
+      <div className="mt-2 flex items-center gap-2">
+        <button
+          type="button"
+          className="text-xs rounded-md border px-2 py-1 hover:bg-accent disabled:opacity-50"
+          disabled={downloading}
+          onClick={async () => {
+            try {
+              setDownloading(true);
+              await downloadUrl(src);
+            } catch (e) {
+              console.error("Download failed:", e);
+            } finally {
+              setDownloading(false);
+            }
+          }}
+        >
+          {downloading ? "Downloading…" : "Download"}
+        </button>
+        <a
+          className="text-xs text-muted-foreground underline underline-offset-4"
+          href={src}
+          target="_blank"
+          rel="noreferrer"
+        >
+          Open in new tab
+        </a>
+      </div>
+    </div>
   );
 };
 
@@ -134,23 +192,14 @@ export const AssistantMessage: FC<MessageProps> = ({ message, isThinking = false
 
   return (
     <motion.div
-      className="relative mx-auto grid w-full max-w-[var(--thread-max-width)] grid-cols-[auto_auto_1fr] grid-rows-[auto_1fr] px-[var(--thread-padding-x)] py-4"
+      className="relative mx-auto w-full max-w-[var(--thread-max-width)] px-[var(--thread-padding-x)] py-4"
       initial={{ y: 5, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       data-role="assistant"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className={cn(
-        "bg-background col-start-1 row-start-1 flex size-8 shrink-0 items-center justify-center rounded-full ring-1",
-        isThinking 
-          ? "ring-blue-500 bg-blue-50 dark:bg-blue-950" 
-          : "ring-border"
-      )}>
-        <StarIcon size={14} />
-      </div>
-
-      <div className="text-foreground col-span-2 col-start-2 row-start-1 ml-4 leading-7 break-words">
+      <div className="text-foreground leading-7 break-words">
         {isThinking && !hasContent ? (
           <ThinkingDots />
         ) : hasContent ? (
@@ -172,6 +221,9 @@ export const AssistantMessage: FC<MessageProps> = ({ message, isThinking = false
               ),
               a: ({ className, ...props }) => (
                 <a className={cn("text-primary font-medium underline underline-offset-4", className)} {...props} />
+              ),
+              img: ({ ...props }) => (
+                <MarkdownImage src={(props as any).src} alt={(props as any).alt} />
               ),
               ul: ({ className, ...props }) => (
                 <ul className={cn("my-5 ml-6 list-disc [&>li]:mt-2", className)} {...props} />
@@ -200,7 +252,7 @@ export const AssistantMessage: FC<MessageProps> = ({ message, isThinking = false
 
       {isHovered && hasContent && (
         <div
-          className="text-muted-foreground col-start-3 row-start-2 mt-3 ml-3 flex gap-1"
+          className="text-muted-foreground absolute right-2 top-2 flex gap-1"
         >
           <CopyButton text={message.content} />
         </div>

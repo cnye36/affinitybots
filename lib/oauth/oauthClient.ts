@@ -7,6 +7,9 @@ import {
   OAuthClientMetadata,
   OAuthTokens,
 } from "@modelcontextprotocol/sdk/shared/auth.js";
+
+// Re-export OAuthTokens for use in other modules
+export type { OAuthTokens };
 import {
   CallToolRequest,
   ListToolsRequest,
@@ -225,10 +228,60 @@ export class MCPOAuthClient {
     this.cacheTokensFromProvider();
   }
 
+  /**
+   * Check if tokens need refresh and refresh if necessary
+   */
+  async refreshTokensIfNeeded(): Promise<void> {
+    if (!this.cachedTokens || !this.cachedTokenExpiresAt) {
+      return; // No tokens to refresh
+    }
+
+    const expiryDate = new Date(this.cachedTokenExpiresAt);
+    const now = new Date();
+    const bufferMs = 5 * 60 * 1000; // Refresh 5 minutes before expiry
+
+    if (expiryDate.getTime() - bufferMs > now.getTime()) {
+      return; // Token still valid
+    }
+
+    if (!this.cachedTokens.refresh_token) {
+      throw new Error("Token expired and no refresh token available");
+    }
+
+    console.log("MCP OAuth tokens expired or expiring soon, refreshing...");
+
+    // The MCP SDK's StreamableHTTPClientTransport should handle token refresh
+    // We need to reconnect to trigger the refresh
+    if (!this.client || !this.oauthProvider) {
+      throw new Error("Client not initialized");
+    }
+
+    try {
+      const baseUrl = new URL(this.serverUrl);
+      const transport = new StreamableHTTPClientTransport(baseUrl, {
+        authProvider: this.oauthProvider,
+      });
+
+      // Disconnect and reconnect to trigger token refresh
+      this.client.close();
+      await this.client.connect(transport);
+      this.connected = true;
+      this.cacheTokensFromProvider();
+
+      console.log("MCP OAuth tokens refreshed successfully");
+    } catch (error) {
+      console.error("Token refresh failed:", error);
+      throw new Error("Failed to refresh OAuth token");
+    }
+  }
+
   async listTools(): Promise<ListToolsResult> {
     if (!this.client) {
       throw new Error("Not connected to server");
     }
+
+    // Refresh tokens if needed before making request
+    await this.refreshTokensIfNeeded();
 
     const request: ListToolsRequest = {
       method: "tools/list",
@@ -245,6 +298,9 @@ export class MCPOAuthClient {
     if (!this.client) {
       throw new Error("Not connected to server");
     }
+
+    // Refresh tokens if needed before making request
+    await this.refreshTokensIfNeeded();
 
     const request: CallToolRequest = {
       method: "tools/call",

@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/tooltip";
 import { Assistant } from "@/types/assistant";
 import { useAgentConfigPanel } from "@/contexts/AgentConfigPanelContext";
+import { useAgent } from "@/hooks/useAgent";
+import { getLlmLabel } from "@/lib/llm/catalog";
 
 interface AgentPageHeaderProps {
   assistant: Assistant;
@@ -24,6 +26,12 @@ export function AgentPageHeader({ assistant }: AgentPageHeaderProps) {
   const router = useRouter();
   const { isOpen, togglePanel } = useAgentConfigPanel();
   const [isMobile, setIsMobile] = useState(false);
+
+  const { assistant: liveAssistant } = useAgent(assistant.assistant_id, {
+    fallbackData: assistant,
+  });
+
+  const currentAssistant = liveAssistant || assistant;
 
   // Detect mobile viewport
   useEffect(() => {
@@ -36,58 +44,29 @@ export function AgentPageHeader({ assistant }: AgentPageHeaderProps) {
   }, []);
 
   // Get first letter of agent name for avatar fallback
-  const avatarFallback = assistant.name.charAt(0).toUpperCase();
+  const avatarFallback = currentAssistant.name.charAt(0).toUpperCase();
 
-  const avatarUrl = assistant.metadata.agent_avatar;
+  const avatarUrl = currentAssistant.metadata.agent_avatar;
 
   // Get configuration states
-  const hasMemory = assistant.config.configurable.memory?.enabled;
-  const hasKnowledge = assistant.config.configurable.knowledge_base?.isEnabled;
+  const hasMemory = currentAssistant.config.configurable.memory?.enabled;
+  const hasKnowledge = currentAssistant.config.configurable.knowledge_base?.isEnabled;
 
   // Compute enabled MCP servers and display their names as pills
-  const enabledQualifiedNames: string[] = Array.isArray(assistant.config.configurable.enabled_mcp_servers)
-    ? assistant.config.configurable.enabled_mcp_servers
-    : assistant.config.configurable.enabled_mcp_servers && typeof assistant.config.configurable.enabled_mcp_servers === "object"
-    ? Object.entries(assistant.config.configurable.enabled_mcp_servers)
+  const enabledQualifiedNames: string[] = Array.isArray(currentAssistant.config.configurable.enabled_mcp_servers)
+    ? currentAssistant.config.configurable.enabled_mcp_servers
+    : currentAssistant.config.configurable.enabled_mcp_servers && typeof currentAssistant.config.configurable.enabled_mcp_servers === "object"
+    ? Object.entries(currentAssistant.config.configurable.enabled_mcp_servers)
         .filter(([, v]) => (v as { isEnabled?: boolean })?.isEnabled)
         .map(([k]) => k)
     : [];
 
   const [toolLogos, setToolLogos] = useState<Record<string, string>>({});
 
-  const formatModelName = (modelId?: string): string => {
-    if (!modelId) return "Not specified";
-    let cleaned = modelId.trim();
-    cleaned = cleaned.replace(/-\d{4}-\d{2}-\d{2}$/i, "");
-    cleaned = cleaned.replace(/-\d{8}$/i, "");
-
-    if (/^gpt-5/i.test(cleaned)) return "GPT 5";
-    if (/^gpt-4o/i.test(cleaned)) return "GPT 4o";
-    if (/^o3-mini/i.test(cleaned)) return "O3 Mini";
-    if (/^gemini-2\.5-pro/i.test(cleaned)) return "Gemini 2.5 Pro";
-    if (/^gemini-1\.5-pro/i.test(cleaned)) return "Gemini 1.5 Pro";
-    if (/^claude-3-7-sonnet/i.test(cleaned)) return "Claude 3.7 Sonnet";
-    if (/^claude-3-5-sonnet/i.test(cleaned)) return "Claude 3.5 Sonnet";
-
-    const tokenMap: Record<string, string> = {
-      gpt: "GPT",
-      gemini: "Gemini",
-      claude: "Claude",
-      sonnet: "Sonnet",
-      opus: "Opus",
-      haiku: "Haiku",
-      pro: "Pro",
-      mini: "Mini",
-      flash: "Flash",
-      turbo: "Turbo",
-    };
-    const tokens = cleaned.split("-");
-    const pretty = tokens
-      .filter(Boolean)
-      .map((t) => tokenMap[t.toLowerCase()] || (t.match(/^[a-z]/) ? t[0].toUpperCase() + t.slice(1) : t))
-      .join(" ");
-    return pretty;
-  };
+  const modelLabel = getLlmLabel(
+    currentAssistant.config?.configurable?.llm,
+    currentAssistant.config?.configurable?.model
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -107,7 +86,7 @@ export function AgentPageHeader({ assistant }: AgentPageHeaderProps) {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [assistant.assistant_id]);
+  }, [currentAssistant.assistant_id]);
 
   const formatToolLabel = (qualified: string) => {
     // e.g. "@exa/exa" -> "Exa"; "@supabase-community/supabase-mcp" -> "Supabase-mcp"
@@ -155,7 +134,7 @@ export function AgentPageHeader({ assistant }: AgentPageHeaderProps) {
               <TooltipTrigger>
                 <Badge variant="secondary" className="gap-1">
                   <Cpu className="h-3 w-3" />
-                  {formatModelName(assistant.config?.configurable?.model)}
+                  {modelLabel}
                 </Badge>
               </TooltipTrigger>
               <TooltipContent>

@@ -1,10 +1,16 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
 import { sendInviteEmail } from "@/lib/sendInviteEmail";
+import { requireAdmin } from "@/lib/admin/requireAdmin";
 
 export async function POST(request: Request, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   const { id } = params;
+  const admin = await requireAdmin();
+  if (!admin.ok) {
+    return NextResponse.json({ error: admin.error }, { status: admin.status });
+  }
+
   if (!id) {
     return NextResponse.json(
       { error: "Request ID is required" },

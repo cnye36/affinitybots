@@ -1,27 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { rateLimiter } from "@/lib/rateLimiting";
+import { requireAdmin } from "@/lib/admin/requireAdmin";
 
 export const runtime = "nodejs";
 
-// Simple admin authentication (you should implement proper admin auth)
-function isAdmin(req: NextRequest): boolean {
-  const authHeader = req.headers.get('authorization');
-  const adminToken = process.env.ADMIN_API_TOKEN;
-  
-  if (!adminToken) {
-    console.warn('ADMIN_API_TOKEN not set, allowing all admin requests');
-    return true;
-  }
-  
-  return authHeader === `Bearer ${adminToken}`;
-}
-
 export async function GET(req: NextRequest) {
   try {
-    if (!isAdmin(req)) {
+    const admin = await requireAdmin();
+    if (!admin.ok) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
+        { error: admin.error },
+        { status: admin.status }
       );
     }
 
@@ -61,10 +50,11 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    if (!isAdmin(req)) {
+    const admin = await requireAdmin();
+    if (!admin.ok) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
+        { error: admin.error },
+        { status: admin.status }
       );
     }
 

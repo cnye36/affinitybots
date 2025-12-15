@@ -24,7 +24,7 @@ export const Welcome: FC = () => {
             transition={{ delay: 0.6 }}
             className="text-muted-foreground/65 text-2xl"
           >
-            How can I help you today?
+            Ready to get to work?
           </motion.div>
         </div>
       </div>

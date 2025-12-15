@@ -70,8 +70,8 @@ export class MCPClientFactory {
   /**
    * Initiates OAuth flow for a server
    */
-  async initiateOAuth(serverUrl: string, callbackUrl: string) {
-    return await mcpClientManager.createOAuthClient(serverUrl, callbackUrl);
+  async initiateOAuth(serverUrl: string, callbackUrl: string, userId?: string, serverName?: string) {
+    return await mcpClientManager.createOAuthClient(serverUrl, callbackUrl, userId, serverName);
   }
 
   /**

@@ -74,7 +74,51 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     authType: "oauth",
     requiresSetup: true,
   },
-  
+  {
+    qualifiedName: "google-calendar",
+    displayName: "Google Calendar",
+    description:
+      "Access and manage your Google Calendar events, schedules, and permissions. Create events, check availability, update meetings, and organize your calendar using your Google account via OAuth.",
+    logoUrl: "https://ssl.gstatic.com/calendar/images/dynamiclogo_2020q4/calendar_31_2x.png",
+    url: process.env.GOOGLE_CALENDAR_MCP_URL || "http://google-calendar-mcp:3004",
+    docsUrl: "https://developers.google.com/calendar",
+    authType: "oauth",
+    requiresSetup: true,
+  },
+  {
+    qualifiedName: "google-docs",
+    displayName: "Google Docs",
+    description:
+      "Access and manage your Google Docs documents. Create, read, edit documents, and organize your Docs using your Google account via OAuth.",
+    logoUrl: "https://ssl.gstatic.com/docs/documents/images/kix-favicon7.ico",
+    url: process.env.GOOGLE_DOCS_MCP_URL || "http://google-docs-mcp:3005",
+    docsUrl: "https://developers.google.com/docs",
+    authType: "oauth",
+    requiresSetup: true,
+  },
+  {
+    qualifiedName: "google-sheets",
+    displayName: "Google Sheets",
+    description:
+      "Access and manage your Google Sheets spreadsheets. Create, read, edit spreadsheets, manipulate data, and organize your Sheets using your Google account via OAuth.",
+    logoUrl: "https://ssl.gstatic.com/docs/spreadsheets/favicon3.ico",
+    url: process.env.GOOGLE_SHEETS_MCP_URL || "http://google-sheets-mcp:3006",
+    docsUrl: "https://developers.google.com/sheets",
+    authType: "oauth",
+    requiresSetup: true,
+  },
+  {
+    qualifiedName: "supabase",
+    displayName: "Supabase",
+    description:
+      "Official Supabase MCP server. Connect to your Supabase projects to manage databases, tables, migrations, and configurations. Design schemas, query data, and debug - all through natural language commands via OAuth.",
+    logoUrl: "https://supabase.com/dashboard/_next/image?url=%2Fdashboard%2Fimg%2Fsupabase-logo.svg&w=64&q=75",
+    url: "https://mcp.supabase.com/mcp",
+    docsUrl: "https://supabase.com/docs/guides/getting-started/mcp",
+    authType: "oauth",
+    requiresSetup: true,
+  },
+
 ];
 
 export function findOfficialServer(qualifiedName: string): OfficialMcpServerMeta | undefined {

@@ -21,6 +21,7 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from "uuid";
 import { mcpClientFactory, MCPFactoryResult } from "../mcp/mcpClientFactory";
 import { rateLimiter, RateLimitError, TokenUsage } from "../rateLimiting";
+import { createImageGenerationTool } from "../tools/imageGeneration";
 
 // Local fallback store for development. On LangGraph Platform, a persistent
 // store is injected into config.store; we only use this if none is provided.
@@ -345,6 +346,9 @@ MULTIMODAL CAPABILITIES:
 - **Images**: Metadata and basic analysis is provided - ask users to describe visual content for deeper analysis
 - **Files**: All uploaded content is processed and made available in your context
 
+IMAGE GENERATION:
+- If the user asks you to create/generate an image, call the available image generation tool (for example: \`generate_image\`) and return the resulting URL.
+
 When analyzing uploaded documents, images, or files, their content will be directly provided to you in the context - there is no need to search for or fetch these files using tools.`;
 
 // --- MAIN ENTRY POINT ---
@@ -463,6 +467,24 @@ async function callModel(
     } as any);
     tools = refreshed.tools;
   }
+  
+  // Add built-in image generation tool to all agents
+  // This enables agents to generate images using DALL-E 3
+  try {
+    const imageTool = createImageGenerationTool({ ownerId: userId || assistantId || "unknown" });
+    if (!tools.some((t) => t?.name === "generate_image")) {
+      tools.push(imageTool);
+    }
+    console.log("Added built-in image generation tool", {
+      hasOpenAIKey: !!process.env.OPENAI_API_KEY,
+      hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+      hasSupabaseServiceRoleKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+    });
+  } catch (error) {
+    console.error("Failed to add image generation tool:", error);
+    // Continue without image generation if there's an error
+  }
+  
   console.log(`Assistant ${userId || assistantId}: Binding ${tools.length} tools to model`);
   console.log(`Enabled servers: ${enabledServersForRun.join(", ") || "none"}`);
   
@@ -550,6 +572,16 @@ async function callModel(
     })));
   }
   console.log(`Response content preview: ${typeof response.content === 'string' ? response.content.substring(0, 200) : JSON.stringify(response.content).substring(0, 200)}...`);
+
+  // If the model is about to call tools, suppress any "pre-tool" natural language.
+  // We want the tool result (e.g., inline generated image) to appear directly under the user's message.
+  if (response.tool_calls?.length) {
+    try {
+      (response as any).content = "";
+    } catch {
+      // best-effort
+    }
+  }
   
   // Record usage after successful model invocation
   if (userId && !response.additional_kwargs?.rate_limit_exceeded) {
@@ -625,6 +657,21 @@ function shouldContinue({ messages }: typeof MessagesAnnotation.State) {
   return "__end__";
 }
 
+function shouldContinueAfterTools({ messages }: typeof MessagesAnnotation.State) {
+  // If the last tool call was `generate_image`, end immediately so the UI shows
+  // the tool result directly under the user message (no extra assistant chatter).
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const msg: any = messages[i];
+    const toolCalls = msg?.tool_calls;
+    if (Array.isArray(toolCalls) && toolCalls.length > 0) {
+      const names = toolCalls.map((tc: any) => tc?.name).filter(Boolean);
+      if (names.includes("generate_image")) return "__end__";
+      return "agent";
+    }
+  }
+  return "agent";
+}
+
 // Create a dynamic tool node that loads tools at runtime
 async function createToolNode(state: any, config: any): Promise<any> {
   const configurable = config.configurable as AssistantConfiguration & {
@@ -652,6 +699,17 @@ async function createToolNode(state: any, config: any): Promise<any> {
       force_mcp_refresh: true,
     } as any);
     tools = refreshed.tools;
+  }
+  
+  // Add built-in image generation tool (same as in callModel)
+  try {
+    const imageTool = createImageGenerationTool({ ownerId: userId || assistantId || "unknown" });
+    // Check if tool already exists to avoid duplicates
+    if (!tools.some(t => t.name === "generate_image")) {
+      tools.push(imageTool);
+    }
+  } catch (error) {
+    console.error("Failed to add image generation tool in tool node:", error);
   }
   
   console.log(`Tool node for assistant ${userId || assistantId}: Executing with ${tools.length} available tools`);
@@ -734,8 +792,8 @@ const workflow = new StateGraph(MessagesAnnotation)
   // Both memory paths eventually reach agent
   .addEdge("skipMemory", "agent")
 
-  // Tool usage cycles back to agent
-  .addEdge("tools", "agent")
+  // Tools normally cycle back to agent, but end immediately after image generation
+  .addConditionalEdges("tools", shouldContinueAfterTools)
 
   // Conditional path from agent based on whether additional tools are needed
   .addConditionalEdges("agent", shouldContinue);

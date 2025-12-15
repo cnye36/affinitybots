@@ -1,6 +1,6 @@
 "use client"
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react"
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { Tutorial, TutorialStep, TutorialContextValue, TutorialState } from "@/types/tutorial"
 
 const TUTORIAL_STORAGE_KEY = "agenthub-tutorials"
@@ -70,6 +70,7 @@ export function TutorialProvider({ children, tutorials = [] }: TutorialProviderP
 	const [tutorialState, setTutorialState] = useState<TutorialState>(loadTutorialState)
 	const [activeTutorialId, setActiveTutorialId] = useState<string | null>(null)
 	const [currentStepIndex, setCurrentStepIndex] = useState(0)
+	const hasAutoStartedRef = useRef(false)
 
 	// Get the current active tutorial
 	const currentTutorial = useMemo(() => {
@@ -86,6 +87,7 @@ export function TutorialProvider({ children, tutorials = [] }: TutorialProviderP
 	// Auto-start tutorials on first visit
 	useEffect(() => {
 		if (tutorials.length === 0) return
+		if (hasAutoStartedRef.current) return // Prevent auto-starting multiple times in the same session
 
 		// Find the first tutorial that should auto-start and hasn't been completed
 		const autoStartTutorial = tutorials.find(
@@ -97,6 +99,7 @@ export function TutorialProvider({ children, tutorials = [] }: TutorialProviderP
 			const timer = setTimeout(() => {
 				setActiveTutorialId(autoStartTutorial.id)
 				setCurrentStepIndex(tutorialState.progress[autoStartTutorial.id] || 0)
+				hasAutoStartedRef.current = true // Mark that we've auto-started
 			}, 500)
 
 			return () => clearTimeout(timer)
@@ -190,9 +193,26 @@ export function TutorialProvider({ children, tutorials = [] }: TutorialProviderP
 	 * Skip/close the current tutorial
 	 */
 	const skipTutorial = useCallback(() => {
+		if (!activeTutorialId) return
+
+		// Mark tutorial as completed so it doesn't auto-start again
+		const newState = {
+			...tutorialState,
+			completed: {
+				...tutorialState.completed,
+				[activeTutorialId]: true,
+			},
+			progress: {
+				...tutorialState.progress,
+				[activeTutorialId]: 0,
+			},
+		}
+
+		setTutorialState(newState)
+		saveTutorialState(newState)
 		setActiveTutorialId(null)
 		setCurrentStepIndex(0)
-	}, [])
+	}, [activeTutorialId, tutorialState])
 
 	/**
 	 * Complete the current tutorial

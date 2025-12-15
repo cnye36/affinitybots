@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getGoogleAuthorizationUrl, GOOGLE_SERVICE_SCOPES } from "@/lib/oauth/googleOAuthClient"
 import { createClient } from "@/supabase/server"
+import { sessionStore } from "@/lib/oauth/sessionStore"
 
 /**
  * Service-specific configuration for Google OAuth
@@ -48,8 +49,8 @@ export async function GET(request: NextRequest) {
     const qualifiedName = config.qualifiedName
     const serverUrl = process.env[config.urlEnvVar] || config.defaultUrl
 
-    // Generate a session ID to track this OAuth flow
-    const sessionId = Math.random().toString(36).substring(2) + Date.now().toString(36)
+    // Generate a cryptographically secure session ID to track this OAuth flow
+    const sessionId = sessionStore.generateSessionId()
     
     console.log(`🔍 Google OAuth Connect - Starting ${service} OAuth flow for user ${user.id} with session ${sessionId}`);
     

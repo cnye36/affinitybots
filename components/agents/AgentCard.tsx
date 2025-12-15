@@ -19,6 +19,7 @@ import { mutate } from "swr";
 import { Assistant } from "@/types/assistant";
 import Image from "next/image";
 import { OFFICIAL_MCP_SERVERS } from "@/lib/mcp/officialMcpServers";
+import { getLlmLabel } from "@/lib/llm/catalog";
 
 interface AgentCardProps {
   assistant: Assistant;
@@ -94,42 +95,10 @@ export function AgentCard({ assistant, onDelete }: AgentCardProps) {
     return [];
   };
   
-  const formatModelName = (modelId?: string): string => {
-    if (!modelId) return "Not specified";
-    let cleaned = modelId.trim();
-    // Drop common date/version suffixes
-    cleaned = cleaned.replace(/-\d{4}-\d{2}-\d{2}$/i, ""); // -YYYY-MM-DD
-    cleaned = cleaned.replace(/-\d{8}$/i, ""); // -YYYYMMDD
-
-    // Explicit known mappings / prefixes
-    if (/^gpt-5/i.test(cleaned)) return "GPT 5";
-    if (/^gpt-4o/i.test(cleaned)) return "GPT 4o";
-    if (/^o3-mini/i.test(cleaned)) return "O3 Mini";
-    if (/^gemini-2\.5-pro/i.test(cleaned)) return "Gemini 2.5 Pro";
-    if (/^gemini-1\.5-pro/i.test(cleaned)) return "Gemini 1.5 Pro";
-    if (/^claude-3-7-sonnet/i.test(cleaned)) return "Claude 3.7 Sonnet";
-    if (/^claude-3-5-sonnet/i.test(cleaned)) return "Claude 3.5 Sonnet";
-
-    // Generic fallback: title-case tokens and known words
-    const tokenMap: Record<string, string> = {
-      gpt: "GPT",
-      gemini: "Gemini",
-      claude: "Claude",
-      sonnet: "Sonnet",
-      opus: "Opus",
-      haiku: "Haiku",
-      pro: "Pro",
-      mini: "Mini",
-      flash: "Flash",
-      turbo: "Turbo",
-    };
-    const tokens = cleaned.split("-");
-    const pretty = tokens
-      .filter(Boolean)
-      .map((t) => tokenMap[t.toLowerCase()] || (t.match(/^[a-z]/) ? t[0].toUpperCase() + t.slice(1) : t))
-      .join(" ");
-    return pretty;
-  };
+  const modelLabel = getLlmLabel(
+    assistant.config?.configurable?.llm,
+    assistant.config?.configurable?.model
+  );
   
   // Load logos for enabled tools from official servers
   const [toolLogos, setToolLogos] = useState<Record<string, string>>({});
@@ -196,7 +165,7 @@ export function AgentCard({ assistant, onDelete }: AgentCardProps) {
         </div>
         <div className="flex flex-wrap gap-2 items-center text-xs sm:text-sm text-muted-foreground mt-3 sm:mt-4">
           <span className="flex items-center">
-            Model: {formatModelName(assistant.config?.configurable?.model)}
+            Model: {modelLabel}
           </span>
           {enabledServers.length > 0 && (
             <>

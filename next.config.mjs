@@ -117,6 +117,12 @@ const nextConfig = {
         },
       {
         protocol: "https",
+        hostname: "supabase.com",
+        port: "",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
         hostname: "ssl.gstatic.com",
         port: "",
         pathname: "/**",
