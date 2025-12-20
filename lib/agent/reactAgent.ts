@@ -572,6 +572,19 @@ async function callModel(
     })));
   }
   console.log(`Response content preview: ${typeof response.content === 'string' ? response.content.substring(0, 200) : JSON.stringify(response.content).substring(0, 200)}...`);
+  
+  // Log full response structure to debug reasoning tokens
+  console.log(`[REACT AGENT] Full model response structure:`, {
+    responseType: response.constructor.name,
+    allKeys: Object.keys(response),
+    hasReasoningContent: !!(response as any).reasoning_content,
+    hasResponseMetadata: !!(response as any).response_metadata,
+    responseMetadataKeys: (response as any).response_metadata ? Object.keys((response as any).response_metadata) : [],
+    responseMetadata: (response as any).response_metadata ? JSON.stringify((response as any).response_metadata, null, 2) : null,
+    additionalKwargsKeys: (response as any).additional_kwargs ? Object.keys((response as any).additional_kwargs) : [],
+    additionalKwargs: (response as any).additional_kwargs ? JSON.stringify((response as any).additional_kwargs, null, 2) : null,
+    fullResponse: JSON.stringify(response, null, 2),
+  });
 
   // If the model is about to call tools, suppress any "pre-tool" natural language.
   // We want the tool result (e.g., inline generated image) to appear directly under the user's message.

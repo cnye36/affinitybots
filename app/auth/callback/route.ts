@@ -78,57 +78,8 @@ export async function GET(request: NextRequest) {
   
   console.log("✅ Auth Callback: User found:", user?.email);
 
-  if (user && user.email) {
-    const { data: invite, error: inviteError } = await supabase
-      .from("early_access_invites")
-      .select("status, id")
-      .ilike("email", user.email)
-      .maybeSingle();
-    
-    console.log("Auth Callback: User email:", user.email);
-    console.log("Auth Callback: Invite status:", invite?.status, "Error:", inviteError);
-
-    // Check if there was a real database error (not just "not found")
-    if (inviteError && inviteError.code !== "PGRST116") {
-      console.error("Auth Callback: Database error checking invite:", inviteError);
-      // For database errors, we'll still allow the user through but log it
-    }
-
-    const isApproved = invite && (
-      invite.status === 'invited' || 
-      invite.status === 'approved' || 
-      invite.status === 'accepted'
-    );
-
-    if (!isApproved) {
-      console.log("❌ Auth Callback: Access Denied. Email not approved. Redirecting to sign-in.");
-      await supabase.auth.signOut();
-      const params = new URLSearchParams({
-        error: "Your email is not approved for early access.",
-        email: user.email,
-      });
-      const redirectUrl = new URL(`/auth/signin?${params.toString()}`, origin);
-      console.log("🔍 Auth Callback: Redirecting to:", redirectUrl.toString());
-      return NextResponse.redirect(redirectUrl);
-    }
-
-    console.log("✅ Auth Callback: User is approved, proceeding...");
-
-    // Update invite status to accepted if it's not already
-    if (invite && invite.status !== 'accepted') {
-      console.log("🔍 Auth Callback: Updating invite status to accepted...");
-      const { error: updateError } = await supabase
-        .from("early_access_invites")
-        .update({ status: 'accepted', accepted_by_user_id: user.id })
-        .eq("id", invite.id);
-      
-      if (updateError) {
-        console.error("❌ Auth Callback: Error updating invite status:", updateError);
-      } else {
-        console.log("✅ Auth Callback: Invite status updated to accepted");
-      }
-    }
-  } else {
+  console.log("✅ Auth Callback: User authenticated, proceeding to dashboard");
+  if (!user?.email) {
       console.log("❌ Auth Callback: No user session found or no email.");
       return NextResponse.redirect(
         new URL(

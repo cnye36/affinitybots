@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useTutorial } from "@/contexts/TutorialContext"
 import { RefreshCw, CheckCircle2 } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { toast } from "@/hooks/useToast"
+import { createClient } from "@/supabase/client"
 
 const tutorialsList = [
 	{ id: "dashboard", name: "Dashboard Tour", description: "Overview of your dashboard features" },
@@ -17,15 +18,54 @@ const tutorialsList = [
 
 export function TutorialSettings() {
 	const [isResetting, setIsResetting] = useState(false)
+	const [completedTutorials, setCompletedTutorials] = useState<Record<string, boolean>>({})
+	const supabase = createClient()
+
+	// Load completed tutorials from database
+	useEffect(() => {
+		async function loadCompletedTutorials() {
+			try {
+				const { data: { user } } = await supabase.auth.getUser()
+				if (!user) return
+
+				const { data: completions } = await supabase
+					.from("user_tutorial_completion")
+					.select("tutorial_id")
+					.eq("user_id", user.id)
+
+				const completed: Record<string, boolean> = {}
+				completions?.forEach((c: any) => {
+					completed[c.tutorial_id] = true
+				})
+				setCompletedTutorials(completed)
+			} catch (error) {
+				console.error("Failed to load tutorial completions:", error)
+			}
+		}
+
+		loadCompletedTutorials()
+	}, [supabase])
 
 	/**
 	 * Reset all tutorials
 	 */
-	const handleResetAll = () => {
+	const handleResetAll = async () => {
 		try {
 			setIsResetting(true)
-			// Clear the tutorial state from localStorage
+
+			const { data: { user } } = await supabase.auth.getUser()
+			if (user) {
+				await supabase
+					.from("user_tutorial_completion")
+					.delete()
+					.eq("user_id", user.id)
+			}
+
+			// Also clear localStorage for backward compatibility
 			localStorage.removeItem("agenthub-tutorials")
+
+			// Clear local state
+			setCompletedTutorials({})
 
 			toast({
 				title: "Tutorials reset successfully",
@@ -46,8 +86,18 @@ export function TutorialSettings() {
 	/**
 	 * Reset a specific tutorial
 	 */
-	const handleResetTutorial = (tutorialId: string, tutorialName: string) => {
+	const handleResetTutorial = async (tutorialId: string, tutorialName: string) => {
 		try {
+			const { data: { user } } = await supabase.auth.getUser()
+			if (user) {
+				await supabase
+					.from("user_tutorial_completion")
+					.delete()
+					.eq("user_id", user.id)
+					.eq("tutorial_id", tutorialId)
+			}
+
+			// Also clear from localStorage for backward compatibility
 			const stored = localStorage.getItem("agenthub-tutorials")
 			if (stored) {
 				const state = JSON.parse(stored)
@@ -56,6 +106,12 @@ export function TutorialSettings() {
 				state.lastUpdated = new Date().toISOString()
 				localStorage.setItem("agenthub-tutorials", JSON.stringify(state))
 			}
+
+			// Update local state
+			setCompletedTutorials(prev => ({
+				...prev,
+				[tutorialId]: false,
+			}))
 
 			toast({
 				title: `${tutorialName} reset`,
@@ -75,14 +131,7 @@ export function TutorialSettings() {
 	 * Check if a tutorial has been completed
 	 */
 	const isTutorialCompleted = (tutorialId: string): boolean => {
-		try {
-			const stored = localStorage.getItem("agenthub-tutorials")
-			if (!stored) return false
-			const state = JSON.parse(stored)
-			return state.completed?.[tutorialId] || false
-		} catch {
-			return false
-		}
+		return completedTutorials[tutorialId] || false
 	}
 
 	return (

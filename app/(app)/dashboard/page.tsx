@@ -278,7 +278,7 @@ export default async function Dashboard() {
         // Render the dashboard UI
         // --------------------------------------------------------------------
         return (
-          <DashboardWithTutorial>
+          <DashboardWithTutorial userCreatedAt={user.created_at}>
             <div className="min-h-screen bg-background">
               <div className="container mx-auto px-4 py-8">
                 {/* Enhanced Header */}

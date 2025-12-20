@@ -31,6 +31,7 @@ export default function WorkflowsPage() {
     id: string;
     name: string;
   } | null>(null);
+  const [userCreatedAt, setUserCreatedAt] = useState<string | null>(null);
   const supabase = createClient();
 
   useEffect(() => {
@@ -43,6 +44,12 @@ export default function WorkflowsPage() {
       if (sessionError || !session) {
         router.push("/auth/login");
         return;
+      }
+
+      // Fetch user creation date for tutorial logic
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserCreatedAt(user.created_at);
       }
     };
 
@@ -138,7 +145,7 @@ export default function WorkflowsPage() {
 
   if (isLoading) {
     return (
-      <TutorialLayout tutorials={[workflowsTutorial]}>
+      <TutorialLayout tutorials={[workflowsTutorial]} userCreatedAt={userCreatedAt}>
         <div className="container mx-auto py-6">Loading...</div>
       </TutorialLayout>
     );
@@ -146,7 +153,7 @@ export default function WorkflowsPage() {
 
   if (error) {
     return (
-      <TutorialLayout tutorials={[workflowsTutorial]}>
+      <TutorialLayout tutorials={[workflowsTutorial]} userCreatedAt={userCreatedAt}>
         <div className="container mx-auto py-6">
           <h1 className="text-2xl font-bold mb-4">My Workflows</h1>
           <div className="text-red-500">Error: {error}</div>
@@ -156,7 +163,7 @@ export default function WorkflowsPage() {
   }
 
   return (
-    <TutorialLayout tutorials={[workflowsTutorial]}>
+    <TutorialLayout tutorials={[workflowsTutorial]} userCreatedAt={userCreatedAt}>
       <AlertDialog
         open={!!workflowToDelete}
         onOpenChange={() => setWorkflowToDelete(null)}

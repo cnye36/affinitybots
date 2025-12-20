@@ -6,15 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useEffect, useState, Suspense } from "react";
+import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 import { Header } from "@/components/home/Header";
 
@@ -23,15 +16,6 @@ function SignInForm() {
 	const searchParams = useSearchParams();
 	const queryError = searchParams.get("error");
 	const emailFromQuery = searchParams.get("email") || "";
-
-	const [earlyAccessDialogOpen, setEarlyAccessDialogOpen] = useState(false);
-
-	useEffect(() => {
-		const combinedError = error ?? queryError;
-		if (combinedError && combinedError.toLowerCase().includes("early access")) {
-			setEarlyAccessDialogOpen(true);
-		}
-	}, [error, queryError]);
 
 	async function handleSignIn(formData: FormData) {
 		const result = await signIn(formData);
@@ -109,38 +93,6 @@ function SignInForm() {
 						</Link>
 					</p>
 				</div>
-
-				<Dialog open={earlyAccessDialogOpen} onOpenChange={setEarlyAccessDialogOpen}>
-					<DialogContent>
-						<DialogHeader>
-							<DialogTitle>Email not approved for early access</DialogTitle>
-							<DialogDescription>
-								{effectiveError ??
-									"This email address is not currently approved to sign up. You can request early access for this email."}
-							</DialogDescription>
-						</DialogHeader>
-						<div className="mt-4 flex justify-end gap-2">
-							<Button
-								variant="outline"
-								type="button"
-								onClick={() => setEarlyAccessDialogOpen(false)}
-							>
-								Close
-							</Button>
-							<Link
-								href={
-									emailFromQuery
-										? `/early-access?email=${encodeURIComponent(emailFromQuery)}`
-										: "/early-access"
-								}
-							>
-								<Button type="button">
-									Request Early Access
-								</Button>
-							</Link>
-						</div>
-					</DialogContent>
-				</Dialog>
 				</div>
 			</div>
 		</div>

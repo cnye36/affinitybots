@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { AgentHeader } from "@/components/agents/AgentHeader";
 import { AgentCard } from "@/components/agents/AgentCard";
 import { EmptyAgents } from "@/components/agents/EmptyAgents";
@@ -8,9 +8,22 @@ import { Assistant } from "@/types/assistant";
 import { useAgents } from "@/hooks/useAgents";
 import { TutorialLayout } from "@/components/tutorial/TutorialLayout";
 import { agentsTutorial } from "@/lib/tutorials";
+import { createClient } from "@/supabase/client";
 
 export default function AgentsPage() {
   const { assistants, isLoading } = useAgents();
+  const [userCreatedAt, setUserCreatedAt] = useState<string | null>(null);
+  const supabase = createClient();
+
+  useEffect(() => {
+    async function fetchUser() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserCreatedAt(user.created_at);
+      }
+    }
+    fetchUser();
+  }, [supabase]);
 
   const agents: Assistant[] = useMemo(() => {
     if (!assistants) return [] as Assistant[];
@@ -23,7 +36,7 @@ export default function AgentsPage() {
 
   if (isLoading) {
     return (
-      <TutorialLayout tutorials={[agentsTutorial]}>
+      <TutorialLayout tutorials={[agentsTutorial]} userCreatedAt={userCreatedAt}>
         <div className="container mx-auto px-4 py-8">
           <AgentHeader />
           <div className="flex justify-center items-center h-64">
@@ -35,7 +48,7 @@ export default function AgentsPage() {
   }
 
   return (
-    <TutorialLayout tutorials={[agentsTutorial]}>
+    <TutorialLayout tutorials={[agentsTutorial]} userCreatedAt={userCreatedAt}>
       <div className="container mx-auto px-4 py-8">
         <AgentHeader />
 

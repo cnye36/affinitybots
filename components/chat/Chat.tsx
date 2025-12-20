@@ -98,12 +98,35 @@ export function Chat({ assistantId, threadId, onThreadId }: { assistantId: strin
   // Map SDK messages to our UI message type
   const uiMessages: ChatMessage[] = (thread.messages as any[])
     .filter((m) => m.type === "human" || m.type === "ai" || m.type === "tool")
-    .map((m, idx) => ({
-      id: m.id || `m-${idx}`,
-      role: m.type === "human" ? "user" : "assistant",
-      content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
-      createdAt: new Date(),
-    }));
+    .map((m, idx) => {
+      // Log full message structure for AI messages to debug reasoning tokens
+      if (m.type === "ai") {
+        console.log("[CHAT] AI Message Structure:", {
+          messageId: m.id || `m-${idx}`,
+          allKeys: Object.keys(m),
+          fullMessage: JSON.stringify(m, null, 2),
+          hasReasoningContent: !!m.reasoning_content,
+          hasResponseMetadata: !!m.response_metadata,
+          responseMetadataKeys: m.response_metadata ? Object.keys(m.response_metadata) : [],
+          responseMetadata: m.response_metadata ? JSON.stringify(m.response_metadata, null, 2) : null,
+        });
+      }
+
+      return {
+        id: m.id || `m-${idx}`,
+        role: m.type === "human" ? "user" : "assistant",
+        content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
+        createdAt: new Date(),
+        // Extract reasoning from response metadata (for models like o1/o3)
+        reasoning: m.type === "ai" ? (
+          m.reasoning_content ||
+          m.response_metadata?.reasoning_content ||
+          m.response_metadata?.reasoning ||
+          m.reasoning ||
+          undefined
+        ) : undefined,
+      };
+    });
 
   
   const handleSend = (text: string) => {

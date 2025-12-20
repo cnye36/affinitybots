@@ -87,7 +87,7 @@ export default async function AgentPage(props: AgentPageProps) {
 				}
 
 				return (
-					<AgentDetailWithTutorial>
+					<AgentDetailWithTutorial userCreatedAt={user.created_at}>
 						<AgentConfigPanelProvider>
 							<div className="flex flex-col h-screen bg-background overflow-hidden">
 								<AgentPageHeader assistant={typedAssistant} />

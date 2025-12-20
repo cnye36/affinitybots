@@ -94,14 +94,14 @@ export function Header() {
         </nav>
 
         <div className="flex items-center space-x-4">
-          <Link href="/early-access" className="hidden md:block">
+          <Link href="/pricing" className="hidden md:block">
             <Button
               variant="default"
               className={`transition-all duration-200 ${
                 scrolled ? "text-sm py-1" : ""
               }`}
             >
-              Request Access
+              Get Started
             </Button>
           </Link>
 
@@ -170,12 +170,12 @@ export function Header() {
                 Blog
               </Link>
               <Link
-                href="/early-access"
+                href="/pricing"
                 className="mt-2"
                 onClick={handleNavClick}
               >
                 <Button variant="default" className="w-full">
-                  Request Access
+                  Get Started
                 </Button>
               </Link>
 

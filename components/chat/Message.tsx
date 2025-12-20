@@ -9,6 +9,7 @@ import type { ChatMessage as MessageType } from "@/components/chat/types";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
+import { ReasoningDisplay } from "./ReasoningDisplay";
 
 interface MessageProps {
   message: MessageType;
@@ -203,50 +204,53 @@ export const AssistantMessage: FC<MessageProps> = ({ message, isThinking = false
         {isThinking && !hasContent ? (
           <ThinkingDots />
         ) : hasContent ? (
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            className="prose dark:prose-invert max-w-none"
-            components={{
-              h1: ({ className, ...props }) => (
-                <h1 className={cn("mb-8 scroll-m-20 text-4xl font-extrabold tracking-tight last:mb-0", className)} {...props} />
-              ),
-              h2: ({ className, ...props }) => (
-                <h2 className={cn("mb-4 mt-8 scroll-m-20 text-3xl font-semibold tracking-tight first:mt-0 last:mb-0", className)} {...props} />
-              ),
-              h3: ({ className, ...props }) => (
-                <h3 className={cn("mb-4 mt-6 scroll-m-20 text-2xl font-semibold tracking-tight first:mt-0 last:mb-0", className)} {...props} />
-              ),
-              p: ({ className, ...props }) => (
-                <p className={cn("mb-5 mt-5 leading-7 first:mt-0 last:mb-0", className)} {...props} />
-              ),
-              a: ({ className, ...props }) => (
-                <a className={cn("text-primary font-medium underline underline-offset-4", className)} {...props} />
-              ),
-              img: ({ ...props }) => (
-                <MarkdownImage src={(props as any).src} alt={(props as any).alt} />
-              ),
-              ul: ({ className, ...props }) => (
-                <ul className={cn("my-5 ml-6 list-disc [&>li]:mt-2", className)} {...props} />
-              ),
-              ol: ({ className, ...props }) => (
-                <ol className={cn("my-5 ml-6 list-decimal [&>li]:mt-2", className)} {...props} />
-              ),
-              code: ({ className, inline, ...props }: any) => (
-                <code
-                  className={cn(
-                    inline ? "bg-muted rounded border px-1 py-0.5 font-mono text-sm" : "block",
-                    className
-                  )}
-                  {...props}
-                />
-              ),
-              pre: ({ className, ...props }) => (
-                <pre className={cn("bg-muted rounded-lg p-4 overflow-x-auto my-4", className)} {...props} />
-              ),
-            }}
-          >
-            {message.content}
-          </ReactMarkdown>
+          <>
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              className="prose dark:prose-invert max-w-none"
+              components={{
+                h1: ({ className, ...props }) => (
+                  <h1 className={cn("mb-8 scroll-m-20 text-4xl font-extrabold tracking-tight last:mb-0", className)} {...props} />
+                ),
+                h2: ({ className, ...props }) => (
+                  <h2 className={cn("mb-4 mt-8 scroll-m-20 text-3xl font-semibold tracking-tight first:mt-0 last:mb-0", className)} {...props} />
+                ),
+                h3: ({ className, ...props }) => (
+                  <h3 className={cn("mb-4 mt-6 scroll-m-20 text-2xl font-semibold tracking-tight first:mt-0 last:mb-0", className)} {...props} />
+                ),
+                p: ({ className, ...props }) => (
+                  <p className={cn("mb-5 mt-5 leading-7 first:mt-0 last:mb-0", className)} {...props} />
+                ),
+                a: ({ className, ...props }) => (
+                  <a className={cn("text-primary font-medium underline underline-offset-4", className)} {...props} />
+                ),
+                img: ({ ...props }) => (
+                  <MarkdownImage src={(props as any).src} alt={(props as any).alt} />
+                ),
+                ul: ({ className, ...props }) => (
+                  <ul className={cn("my-5 ml-6 list-disc [&>li]:mt-2", className)} {...props} />
+                ),
+                ol: ({ className, ...props }) => (
+                  <ol className={cn("my-5 ml-6 list-decimal [&>li]:mt-2", className)} {...props} />
+                ),
+                code: ({ className, inline, ...props }: any) => (
+                  <code
+                    className={cn(
+                      inline ? "bg-muted rounded border px-1 py-0.5 font-mono text-sm" : "block",
+                      className
+                    )}
+                    {...props}
+                  />
+                ),
+                pre: ({ className, ...props }) => (
+                  <pre className={cn("bg-muted rounded-lg p-4 overflow-x-auto my-4", className)} {...props} />
+                ),
+              }}
+            >
+              {message.content}
+            </ReactMarkdown>
+            {message.reasoning && <ReasoningDisplay reasoning={message.reasoning} />}
+          </>
         ) : null}
       </div>
 

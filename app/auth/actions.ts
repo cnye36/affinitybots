@@ -33,33 +33,7 @@ export async function signUp(formData: FormData) {
     return { error: "Email and password are required." };
   }
 
-  // 1. Validate Email Approval
-  const { data: invite, error: inviteError } = await supabase
-    .from("early_access_invites")
-    .select("id, email, status")
-    .eq("email", email)
-    .single();
-
-  if (inviteError || !invite) {
-    // Treat "not found" as "not approved" to avoid leaking email existence if desired,
-    // or be explicit. For early access, explicit is usually fine.
-    return {
-      error: "This email address is not on the approved list. Please request early access.",
-    };
-  }
-
-  // Allow 'invited' (legacy) or 'approved'
-  if (invite.status !== "invited" && invite.status !== "approved") {
-     if (invite.status === "requested") {
-        return { error: "Your access request is still pending approval." };
-     }
-     if (invite.status === "accepted") {
-        return { error: "This email has already been registered." };
-     }
-     return { error: "Access denied." };
-  }
-
-  // 2. Sign up the user with Supabase Auth
+  // Sign up the user with Supabase Auth
   const { data: signUpData, error: signUpAuthError } =
     await supabase.auth.signUp({
       email,
@@ -76,22 +50,6 @@ export async function signUp(formData: FormData) {
 
   if (!signUpData.user) {
     return { error: "User registration failed. Please try again." };
-  }
-
-  // 3. Update the early_access_invites table
-  const { error: updateInviteError } = await supabase
-    .from("early_access_invites")
-    .update({
-      status: "accepted",
-      accepted_by_user_id: signUpData.user.id,
-    })
-    .eq("id", invite.id);
-
-  if (updateInviteError) {
-    console.error(
-      `Failed to update invite status for user ${signUpData.user.id}:`,
-      updateInviteError
-    );
   }
 
   revalidatePath("/", "layout");

@@ -2,8 +2,10 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { Tutorial, TutorialStep, TutorialContextValue, TutorialState } from "@/types/tutorial"
+import { createBrowserClient } from "@supabase/ssr"
 
 const TUTORIAL_STORAGE_KEY = "agenthub-tutorials"
+const DAYS_TO_CONSIDER_NEW_USER = 7
 
 /**
  * Tutorial context - provides tutorial state and actions throughout the app
@@ -16,6 +18,10 @@ interface TutorialProviderProps {
 	 * Tutorials available on the current page
 	 */
 	tutorials?: Tutorial[]
+	/**
+	 * User creation date - if provided, will determine if user is "new"
+	 */
+	userCreatedAt?: string | null
 }
 
 /**
@@ -66,11 +72,91 @@ function saveTutorialState(state: TutorialState): void {
  * Tutorial Provider Component
  * Manages tutorial state and provides tutorial controls
  */
-export function TutorialProvider({ children, tutorials = [] }: TutorialProviderProps) {
+export function TutorialProvider({ children, tutorials = [], userCreatedAt = null }: TutorialProviderProps) {
 	const [tutorialState, setTutorialState] = useState<TutorialState>(loadTutorialState)
 	const [activeTutorialId, setActiveTutorialId] = useState<string | null>(null)
 	const [currentStepIndex, setCurrentStepIndex] = useState(0)
 	const hasAutoStartedRef = useRef(false)
+	const [isLoadingFromDB, setIsLoadingFromDB] = useState(true)
+	const supabase = createBrowserClient(
+		process.env.NEXT_PUBLIC_SUPABASE_URL!,
+		process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+	)
+
+	/**
+	 * Check if user is considered "new" based on their account creation date
+	 */
+	const isNewUser = useMemo(() => {
+		if (!userCreatedAt) return false
+		const createdDate = new Date(userCreatedAt)
+		const daysSinceCreation = (Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24)
+		return daysSinceCreation <= DAYS_TO_CONSIDER_NEW_USER
+	}, [userCreatedAt])
+
+	/**
+	 * Load tutorial completion state from database
+	 */
+	useEffect(() => {
+		async function loadFromDatabase() {
+			try {
+				const { data: { user } } = await supabase.auth.getUser()
+				if (!user) {
+					setIsLoadingFromDB(false)
+					return
+				}
+
+				// Fetch completed tutorials from database
+				const { data: completions, error } = await supabase
+					.from("user_tutorial_completion")
+					.select("tutorial_id")
+					.eq("user_id", user.id)
+
+				if (error) {
+					console.error("Failed to load tutorial completions from database:", error)
+					setIsLoadingFromDB(false)
+					return
+				}
+
+				// Build completed state from database
+				const completedFromDB: Record<string, boolean> = {}
+				completions?.forEach((completion: any) => {
+					completedFromDB[completion.tutorial_id] = true
+				})
+
+				// Migrate localStorage data to database if needed
+				const localState = loadTutorialState()
+				const localCompletedTutorials = Object.entries(localState.completed || {})
+					.filter(([_, completed]) => completed)
+					.map(([tutorialId]) => tutorialId)
+
+				// Insert any completed tutorials from localStorage that aren't in the database
+				for (const tutorialId of localCompletedTutorials) {
+					if (!completedFromDB[tutorialId]) {
+						await supabase
+							.from("user_tutorial_completion")
+							.insert({
+								user_id: user.id,
+								tutorial_id: tutorialId,
+							})
+							.select()
+						completedFromDB[tutorialId] = true
+					}
+				}
+
+				// Update state with database data
+				setTutorialState(prev => ({
+					...prev,
+					completed: completedFromDB,
+				}))
+			} catch (error) {
+				console.error("Error loading tutorial state from database:", error)
+			} finally {
+				setIsLoadingFromDB(false)
+			}
+		}
+
+		loadFromDatabase()
+	}, [supabase])
 
 	// Get the current active tutorial
 	const currentTutorial = useMemo(() => {
@@ -84,10 +170,12 @@ export function TutorialProvider({ children, tutorials = [] }: TutorialProviderP
 		return currentTutorial.steps[currentStepIndex] || null
 	}, [currentTutorial, currentStepIndex])
 
-	// Auto-start tutorials on first visit
+	// Auto-start tutorials on first visit (only for new users)
 	useEffect(() => {
 		if (tutorials.length === 0) return
 		if (hasAutoStartedRef.current) return // Prevent auto-starting multiple times in the same session
+		if (isLoadingFromDB) return // Wait for database to load
+		if (!isNewUser) return // Only auto-start for new users
 
 		// Find the first tutorial that should auto-start and hasn't been completed
 		const autoStartTutorial = tutorials.find(
@@ -104,7 +192,7 @@ export function TutorialProvider({ children, tutorials = [] }: TutorialProviderP
 
 			return () => clearTimeout(timer)
 		}
-	}, [tutorials, tutorialState.completed, activeTutorialId, tutorialState.progress])
+	}, [tutorials, tutorialState.completed, activeTutorialId, tutorialState.progress, isLoadingFromDB, isNewUser])
 
 	// Execute beforeShow action when step changes
 	useEffect(() => {
@@ -192,8 +280,24 @@ export function TutorialProvider({ children, tutorials = [] }: TutorialProviderP
 	/**
 	 * Skip/close the current tutorial
 	 */
-	const skipTutorial = useCallback(() => {
+	const skipTutorial = useCallback(async () => {
 		if (!activeTutorialId) return
+
+		// Mark tutorial as completed in database
+		try {
+			const { data: { user } } = await supabase.auth.getUser()
+			if (user) {
+				await supabase
+					.from("user_tutorial_completion")
+					.insert({
+						user_id: user.id,
+						tutorial_id: activeTutorialId,
+					})
+					.select()
+			}
+		} catch (error) {
+			console.error("Failed to save tutorial completion to database:", error)
+		}
 
 		// Mark tutorial as completed so it doesn't auto-start again
 		const newState = {
@@ -212,13 +316,29 @@ export function TutorialProvider({ children, tutorials = [] }: TutorialProviderP
 		saveTutorialState(newState)
 		setActiveTutorialId(null)
 		setCurrentStepIndex(0)
-	}, [activeTutorialId, tutorialState])
+	}, [activeTutorialId, tutorialState, supabase])
 
 	/**
 	 * Complete the current tutorial
 	 */
-	const completeTutorial = useCallback(() => {
+	const completeTutorial = useCallback(async () => {
 		if (!activeTutorialId) return
+
+		// Mark tutorial as completed in database
+		try {
+			const { data: { user } } = await supabase.auth.getUser()
+			if (user) {
+				await supabase
+					.from("user_tutorial_completion")
+					.insert({
+						user_id: user.id,
+						tutorial_id: activeTutorialId,
+					})
+					.select()
+			}
+		} catch (error) {
+			console.error("Failed to save tutorial completion to database:", error)
+		}
 
 		const newState = {
 			...tutorialState,
@@ -236,7 +356,7 @@ export function TutorialProvider({ children, tutorials = [] }: TutorialProviderP
 		saveTutorialState(newState)
 		setActiveTutorialId(null)
 		setCurrentStepIndex(0)
-	}, [activeTutorialId, tutorialState])
+	}, [activeTutorialId, tutorialState, supabase])
 
 	/**
 	 * Check if a specific tutorial has been completed
@@ -248,7 +368,20 @@ export function TutorialProvider({ children, tutorials = [] }: TutorialProviderP
 	/**
 	 * Reset all tutorials
 	 */
-	const resetAllTutorials = useCallback(() => {
+	const resetAllTutorials = useCallback(async () => {
+		// Delete all tutorial completions from database
+		try {
+			const { data: { user } } = await supabase.auth.getUser()
+			if (user) {
+				await supabase
+					.from("user_tutorial_completion")
+					.delete()
+					.eq("user_id", user.id)
+			}
+		} catch (error) {
+			console.error("Failed to reset tutorials in database:", error)
+		}
+
 		const newState: TutorialState = {
 			completed: {},
 			progress: {},
@@ -258,12 +391,26 @@ export function TutorialProvider({ children, tutorials = [] }: TutorialProviderP
 		saveTutorialState(newState)
 		setActiveTutorialId(null)
 		setCurrentStepIndex(0)
-	}, [])
+	}, [supabase])
 
 	/**
 	 * Reset a specific tutorial
 	 */
-	const resetTutorial = useCallback((tutorialId: string) => {
+	const resetTutorial = useCallback(async (tutorialId: string) => {
+		// Delete specific tutorial completion from database
+		try {
+			const { data: { user } } = await supabase.auth.getUser()
+			if (user) {
+				await supabase
+					.from("user_tutorial_completion")
+					.delete()
+					.eq("user_id", user.id)
+					.eq("tutorial_id", tutorialId)
+			}
+		} catch (error) {
+			console.error("Failed to reset tutorial in database:", error)
+		}
+
 		const newState = {
 			...tutorialState,
 			completed: {
@@ -282,7 +429,7 @@ export function TutorialProvider({ children, tutorials = [] }: TutorialProviderP
 		if (activeTutorialId === tutorialId) {
 			setCurrentStepIndex(0)
 		}
-	}, [tutorialState, activeTutorialId])
+	}, [tutorialState, activeTutorialId, supabase])
 
 	/**
 	 * Get the current tutorial configuration

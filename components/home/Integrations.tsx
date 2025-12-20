@@ -1,5 +1,6 @@
 import React from "react";
 import { MotionDiv } from "@/components/motion/MotionDiv";
+import { AnimatedIntegrationDemo } from "@/components/home/AnimatedIntegrationDemo";
 import {
   SiGoogle,
   SiNotion,
@@ -49,85 +50,23 @@ export function Integrations() {
           <h2 className="text-2xl sm:text-3xl md:text-5xl font-bold mb-3 md:mb-4">
             Connect to Anything
           </h2>
-          <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
-            Instantly connect your agents to the world's most popular APIs and
-            tools. From <b>Google</b> to <b>Slack</b>, <b>Supabase</b>, <b>Redis</b>, and more,
-            AffinityBots (beta) lets you automate workflows with the platforms you
-            already use. Powered by <b>MCP servers</b> for limitless
-            extensibility and reliability.
+          <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-6">
+            AffinityBots is built for flexibility. Choose from leading AI models and switch anytime for optimal performance. 
+            Connect your agents to 70+ tools and services via <b>MCP servers</b>—from <b>Google</b> and <b>Slack</b> to <b>Supabase</b>, 
+            <b>Redis</b>, and more. Never get locked into one provider or platform.
           </p>
-          <div className="mt-6 flex flex-wrap justify-center gap-4 text-sm">
-            <div className="flex items-center gap-2 px-4 py-2 bg-background rounded-full border">
-              <img 
-                src="/integration-icons/OpenAI-dark.png" 
-                alt="OpenAI Logo"
-                className="w-4 h-4 dark:hidden"
-              />
-              <img 
-                src="/integration-icons/OpenAI-light.png" 
-                alt="OpenAI Logo"
-                className="w-4 h-4 hidden dark:block"
-              />
-              <span className="font-medium">OpenAI GPT-5</span>
-            </div>
-            <div className="flex items-center gap-2 px-4 py-2 bg-background rounded-full border">
-              <img 
-                src="/integration-icons/Anthropic-dark.png" 
-                alt="Anthropic Logo"
-                className="w-4 h-4 dark:hidden"
-              />
-              <img 
-                src="/integration-icons/Anthropic-light.png" 
-                alt="Anthropic Logo"
-                className="w-4 h-4 hidden dark:block"
-              />
-              <span className="font-medium">Claude 4.5 Sonnet</span>
-            </div>
-            <div className="flex items-center gap-2 px-4 py-2 bg-background rounded-full border">
-              <img 
-                src="/integration-icons/Google-logo.png" 
-                alt="Google Logo"
-                className="w-4 h-4"
-              />
-              <span className="font-medium">Gemini 2.5 Pro</span>
-            </div>
-            <div className="flex items-center gap-2 px-4 py-2 bg-background rounded-full border">
-              <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
-              <span className="font-medium">More Coming Soon</span>
-            </div>
-          </div>
+          
+          
+
+          {/* Tools Section Header */}
+          
         </div>
-        <MotionDiv
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7 }}
-          viewport={{ once: true }}
-        >
-          <div className="grid grid-cols-4 gap-6 md:gap-10 items-center justify-center">
-            {integrations.map((integration) => (
-              <div
-                key={integration.name}
-                className="flex flex-col items-center"
-              >
-                <div className="relative w-16 h-16 md:w-20 md:h-20 mb-2 flex items-center justify-center text-4xl md:text-5xl">
-                  {integration.logo}
-                </div>
-                <span className="text-sm md:text-base text-muted-foreground font-medium">
-                  {integration.name}
-                </span>
-              </div>
-            ))}
-          </div>
-        </MotionDiv>
+        <div className="mt-12">
+          <AnimatedIntegrationDemo />
+        </div>
+
         <div className="text-center mt-8 text-muted-foreground text-sm">
-          <span>
-            <b>Beta:</b> We're starting with the biggest names, but the
-            possibilities are nearly limitless. Want a specific integration?{" "}
-            <a href="/contact" className="underline hover:text-primary">
-              Let us know
-            </a>
-            !
-          </span>
+          
         </div>
       </div>
     </section>

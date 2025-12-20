@@ -1,5 +1,6 @@
 import { Header } from "@/components/home/Header";
 import { Hero } from "@/components/home/Hero";
+import { DemoVideo } from "@/components/home/DemoVideo";
 import { HowItWorks } from "@/components/home/HowItWorks";
 import { Benefits } from "@/components/home/Benefits";
 import { Features } from "@/components/home/Features";

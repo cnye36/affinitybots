@@ -38,8 +38,8 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
   
   // Fetch blog posts from MDX files
   const allPosts = await getAllBlogPosts();
-  const categories = getAllCategories();
-  const popularTags = getAllTags();
+  const allCategoriesList = await getAllCategories();
+  const popularTags = await getAllTags();
 
   // Sort all posts by date (latest first)
   const sortedPosts = allPosts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -50,12 +50,16 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
   const endIndex = startIndex + POSTS_PER_PAGE;
   const paginatedPosts = sortedPosts.slice(startIndex, endIndex);
 
-  // Get category counts
-  const categoryCounts = categories.map(category => ({
-    name: category,
-    count: allPosts.filter(post => post.category === category).length,
-    active: false
-  }));
+  // Get category counts - only include categories that have posts
+  const categoryCounts = allCategoriesList
+    .map(category => ({
+      name: category,
+      count: allPosts.filter(post => 
+        post.categories.some(cat => cat.toLowerCase() === category.toLowerCase())
+      ).length,
+      active: false
+    }))
+    .filter(cat => cat.count > 0); // Only show categories with posts
 
   // Add "All" category
   const allCategories = [
@@ -102,31 +106,7 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
 
           {/* Sort Filter */}
           <div className="max-w-6xl mx-auto">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-              {/* Mobile Categories */}
-              <div className="lg:hidden w-full">
-                <h3 className="text-lg font-semibold text-foreground mb-3">Categories</h3>
-                <div className="flex flex-wrap gap-2">
-                  {allCategories.map((category, index) => (
-                    <Button
-                      key={index}
-                      variant={category.active ? "default" : "outline"}
-                      size="sm"
-                      className={`${
-                        category.active 
-                          ? "bg-blue-600 hover:bg-blue-700 text-white" 
-                          : "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300"
-                      }`}
-                    >
-                      {category.name}
-                      <Badge variant="secondary" className="ml-2 text-xs">
-                        {category.count}
-                      </Badge>
-                    </Button>
-                  ))}
-                </div>
-              </div>
-              
+            <div className="flex justify-end items-center mb-6">
               <div className="flex items-center space-x-2">
                 <Filter className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                 <span className="text-sm text-gray-600 dark:text-gray-400">Sort by:</span>
@@ -143,118 +123,105 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
       {/* Blog Posts Grid */}
       <section className="py-16 px-4">
         <div className="container mx-auto">
-          <div className="flex gap-8">
-            {/* Sidebar */}
-            <div className="hidden lg:block w-64 flex-shrink-0">
-              {/* Categories */}
-              <div className="mb-8">
-                <h3 className="text-lg font-semibold text-foreground mb-4">Categories</h3>
-                <div className="space-y-2">
-                  {allCategories.map((category, index) => (
-                    <Button
-                      key={index}
-                      variant={category.active ? "default" : "ghost"}
-                      className={`w-full justify-start ${
-                        category.active 
-                          ? "bg-blue-600 hover:bg-blue-700 text-white" 
-                          : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-                      }`}
-                    >
-                      {category.name}
-                      <Badge variant="secondary" className="ml-auto text-xs">
-                        {category.count}
-                      </Badge>
-                    </Button>
-                  ))}
+          <div className="flex gap-4 md:gap-6 lg:gap-8">
+            {/* Sidebar - Always visible, narrower on small screens */}
+            <aside className="w-48 sm:w-56 md:w-64 flex-shrink-0 hidden sm:block">
+              <div className="sticky top-24 space-y-8 max-h-[calc(100vh-8rem)] overflow-y-auto">
+                {/* Categories */}
+                <div>
+                  <h3 className="text-base md:text-lg font-semibold text-foreground mb-3 md:mb-4">Categories</h3>
+                  <div className="space-y-1.5 md:space-y-2">
+                    {allCategories.map((category, index) => (
+                      <Button
+                        key={index}
+                        variant={category.active ? "default" : "ghost"}
+                        size="sm"
+                        className={`w-full justify-start text-xs md:text-sm ${
+                          category.active 
+                            ? "bg-blue-600 hover:bg-blue-700 text-white" 
+                            : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                        }`}
+                      >
+                        <span className="truncate">{category.name}</span>
+                        <Badge variant="secondary" className="ml-auto text-xs flex-shrink-0">
+                          {category.count}
+                        </Badge>
+                      </Button>
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              {/* Tags */}
-              <div>
-                <h3 className="text-lg font-semibold text-foreground mb-4">Tags</h3>
-                <div className="flex flex-wrap gap-2">
-                  {popularTags.map((tag, index) => (
-                    <Button
-                      key={index}
-                      variant="outline"
-                      size="sm"
-                      className="text-xs border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-                    >
-                      <Tag className="h-3 w-3 mr-1" />
-                      {tag}
-                    </Button>
-                  ))}
+                {/* Tags */}
+                <div>
+                  <h3 className="text-base md:text-lg font-semibold text-foreground mb-3 md:mb-4">Tags</h3>
+                  <div className="flex flex-wrap gap-1.5 md:gap-2">
+                    {popularTags.map((tag, index) => (
+                      <Button
+                        key={index}
+                        variant="outline"
+                        size="sm"
+                        className="text-xs border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                      >
+                        <Tag className="h-3 w-3 mr-1 flex-shrink-0" />
+                        <span className="truncate">{tag}</span>
+                      </Button>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
+            </aside>
 
             {/* Main Content */}
-            <div className="flex-1">
-              {/* Mobile Tags */}
-              <div className="lg:hidden mb-6">
-                <h3 className="text-lg font-semibold text-foreground mb-3">Tags</h3>
-                <div className="flex flex-wrap gap-2">
-                  {popularTags.map((tag, index) => (
-                    <Button
-                      key={index}
-                      variant="outline"
-                      size="sm"
-                      className="text-xs border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-                    >
-                      <Tag className="h-3 w-3 mr-1" />
-                      {tag}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-              
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="flex-1 min-w-0">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                 {paginatedPosts.map((post, index) => (
-              <Link key={index} href={`/blog/${post.slug}`} className="group">
-                <Card className="bg-white dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-all duration-300 hover:shadow-xl group-hover:shadow-2xl h-full">
-                  <div className="relative aspect-[3/2] overflow-hidden bg-gray-100 dark:bg-gray-800">
-                    {post.coverImage ? (
-                      <Image
-                        src={post.coverImage}
-                        alt={post.title}
-                        fill
-                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                        className="object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                    ) : (
-                      <div className="bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 h-full flex items-center justify-center">
-                        <BookOpen className="h-12 w-12 text-gray-600 dark:text-gray-400" />
+                  <Link key={index} href={`/blog/${post.slug}`} className="group">
+                    <Card className="bg-white dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-all duration-300 hover:shadow-lg h-full flex flex-col">
+                      <div className="relative aspect-[16/9] overflow-hidden bg-gray-100 dark:bg-gray-800">
+                        {post.coverImage ? (
+                          <Image
+                            src={post.coverImage}
+                            alt={post.title}
+                            fill
+                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                            className="object-cover group-hover:scale-105 transition-transform duration-300"
+                            quality={85}
+                            priority={index < 3}
+                          />
+                        ) : (
+                          <div className="bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 h-full flex items-center justify-center">
+                            <BookOpen className="h-8 w-8 sm:h-10 sm:w-10 text-gray-600 dark:text-gray-400" />
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                  <CardHeader>
-                    <div className="flex items-center space-x-2 mb-3">
-                      <Badge variant="outline" className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-xs">
-                        {post.category}
-                      </Badge>
-                    </div>
-                    <CardTitle className="text-gray-900 dark:text-white text-lg group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-200 line-clamp-2">
-                      {post.title}
-                    </CardTitle>
-                    <CardDescription className="text-gray-600 dark:text-gray-300 text-sm line-clamp-3">
-                      {post.excerpt}
-                    </CardDescription>
-                  </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
-                        <div className="flex items-center space-x-1">
-                          <Calendar className="h-3 w-3" />
-                          <span>{post.date}</span>
+                      <CardHeader className="p-3 sm:p-4 flex-1 flex flex-col">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <Badge variant="outline" className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-[10px] sm:text-xs px-1.5 py-0">
+                            {post.category}
+                          </Badge>
                         </div>
-                        <div className="flex items-center space-x-1">
-                          <Clock className="h-3 w-3" />
-                          <span>{post.readTime}</span>
+                        <CardTitle className="text-gray-900 dark:text-white text-sm sm:text-base font-semibold group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-200 line-clamp-2 mb-2">
+                          {post.title}
+                        </CardTitle>
+                        <CardDescription className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm line-clamp-2 flex-1">
+                          {post.excerpt}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="p-3 sm:p-4 pt-0">
+                        <div className="flex items-center justify-between text-[10px] sm:text-xs text-gray-600 dark:text-gray-400">
+                          <div className="flex items-center space-x-1">
+                            <Calendar className="h-3 w-3" />
+                            <span>{post.date}</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <Clock className="h-3 w-3" />
+                            <span>{post.readTime}</span>
+                          </div>
                         </div>
-                      </div>
-                    </CardContent>
-                </Card>
-              </Link>
-            ))}
+                      </CardContent>
+                    </Card>
+                  </Link>
+                ))}
               </div>
               
               {/* Pagination */}

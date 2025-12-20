@@ -94,10 +94,16 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
 
   const { post, mdxSource } = result;
 
-  // Get related posts (same category, excluding current post)
+  // Get related posts (share at least one category, excluding current post)
   const allPosts = await getAllBlogPosts();
   const relatedPosts = allPosts
-    .filter(p => p.category === post.category && p.slug !== post.slug)
+    .filter(p => {
+      if (p.slug === post.slug) return false;
+      // Check if posts share any category
+      return p.categories.some(cat => 
+        post.categories.some(postCat => postCat.toLowerCase() === cat.toLowerCase())
+      );
+    })
     .slice(0, 3);
 
   return (

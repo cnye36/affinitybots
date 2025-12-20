@@ -5,33 +5,52 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { CheckoutButton } from "@/components/pricing/CheckoutButton";
 import { 
   Check, 
-  X, 
   Star, 
   Zap, 
-  Shield, 
-  Users, 
   ArrowRight,
   Sparkles,
-  Crown,
-  Rocket
+  Crown
 } from "lucide-react";
 import Link from "next/link";
 
 export default function PricingPage() {
   const plans = [
     {
-      name: "Professional",
-      price: "$29.99",
+      name: "Starter",
+      price: "$19.99",
       period: "/month",
-      description: "Coming after beta - for growing businesses and teams",
-      icon: <Star className="h-8 w-8 text-purple-500" />,
+      description: "Perfect for individuals and small teams getting started",
+      icon: <Zap className="h-8 w-8 text-blue-500" />,
       popular: false,
       features: [
-        "Up to 25 AI agents",
+        "Up to 10 AI agents",
+        "5 active workflows*",
+        "5,000 AI credits per day",
+        "Basic templates",
+        "Email support",
+        "Standard integrations",
+        "Basic analytics",
+        "API access"
+      ],
+      limitations: [],
+      cta: "Start Free Trial",
+      ctaLink: "#",
+      planId: "starter"
+    },
+    {
+      name: "Pro",
+      price: "$39.99",
+      period: "/month",
+      description: "For growing businesses and power users",
+      icon: <Star className="h-8 w-8 text-purple-500" />,
+      popular: true,
+      features: [
+        "Up to 50 AI agents",
         "Unlimited active workflows",
-        "10,000 AI credits per day",
+        "25,000 AI credits per day",
         "Advanced templates",
         "Priority support",
         "All integrations",
@@ -40,38 +59,15 @@ export default function PricingPage() {
         "Custom branding",
         "Team collaboration"
       ],
-      limitations: ["Coming after beta"],
-      cta: "Get Notified",
-      ctaLink: "/early-access"
-    },
-    {
-      name: "Early Beta",
-      price: "Free",
-      description: "Limited access during our early beta phase",
-      icon: <Zap className="h-8 w-8 text-blue-500" />,
-      popular: true,
-      features: [
-        "Up to 5 AI agents",
-        "3 active workflows",
-        "100 AI credits per day",
-        "Basic templates",
-        "Email support",
-        "Standard integrations",
-        "Basic analytics",
-        "Community forum access"
-      ],
-      limitations: [
-        "Limited agent count",
-        "Workflow restrictions",
-        "Daily credit limits"
-      ],
-      cta: "Join Early Beta",
-      ctaLink: "/early-access"
+      limitations: [],
+      cta: "Start Free Trial",
+      ctaLink: "#",
+      planId: "pro"
     },
     {
       name: "Enterprise",
       price: "Custom",
-      description: "Coming after beta - for large organizations",
+      description: "For large organizations with custom needs",
       icon: <Crown className="h-8 w-8 text-yellow-500" />,
       popular: false,
       features: [
@@ -86,37 +82,42 @@ export default function PricingPage() {
         "SLA guarantee",
         "On-premise deployment"
       ],
-      limitations: ["Coming after beta"],
-      cta: "Get Notified",
-      ctaLink: "/early-access"
+      limitations: [],
+      cta: "Contact Sales",
+      ctaLink: "/contact",
+      planId: "enterprise"
     }
   ];
 
 
   const faqs = [
     {
+      question: "What is included in the free trial?",
+      answer: "During your 14-day free trial, you get full Pro-level access to all features regardless of which plan you choose. This includes up to 50 agents, unlimited workflows, and 25,000 AI credits per day. A payment method is required to start your trial, but you won't be charged until after the trial ends."
+    },
+    {
+      question: "What happens after my trial ends?",
+      answer: "After your 14-day trial ends, you'll automatically be charged for the plan you selected. If you chose Starter, you'll be charged $19.99/month and your limits will be set to Starter (10 agents, 5 workflows, 5,000 credits/day). If you chose Pro, you'll be charged $39.99/month and keep Pro limits. You can cancel anytime before the trial ends to avoid charges."
+    },
+    {
       question: "What are AI credits?",
-      answer: "AI credits are used for each interaction with your agents. Simple text responses use 1 credit, while complex tasks with multiple steps may use 2-5 credits. You get 100 credits per day in the beta."
+      answer: "AI credits are used for each interaction with your agents. Simple text responses use 1 credit, while complex tasks with multiple steps may use 2-5 credits. Credits reset daily at midnight UTC."
     },
     {
       question: "What happens when I reach my daily credit limit?",
-      answer: "Your agents will pause until the next day when your credits reset. You can monitor your usage in the dashboard and plan your agent interactions accordingly."
+      answer: "Your agents will pause until the next day when your credits reset. You can monitor your usage in the dashboard and plan your agent interactions accordingly. Pro plan users get priority processing."
     },
     {
-      question: "Can I create more than 5 agents in the beta?",
-      answer: "The beta is limited to 5 agents to help us manage server load and gather focused feedback. You can delete and recreate agents as needed to test different configurations."
+      question: "Can I upgrade or downgrade my plan?",
+      answer: "Yes! You can upgrade or downgrade your plan at any time from your account settings. Changes take effect immediately, and we'll prorate any charges or credits."
     },
     {
-      question: "What's the difference between active and inactive workflows?",
-      answer: "Active workflows are currently running and processing tasks. Inactive workflows are saved but not executing. You can switch between your 3 active workflows as needed."
+      question: "What payment methods do you accept?",
+      answer: "We accept all major credit cards through Stripe. All payments are secure and encrypted. We don't store your payment information on our servers."
     },
     {
-      question: "When will paid plans be available?",
-      answer: "We expect to launch paid plans in Q4 2025. Beta users will get early access and special pricing when we transition from beta to paid plans."
-    },
-    {
-      question: "How long will the beta last?",
-      answer: "We're planning a 3-6 month beta period to gather feedback and refine the platform. We'll give all beta users at least 30 days notice before transitioning to paid plans."
+      question: "Is there a refund policy?",
+      answer: "Yes, we offer a 30-day money-back guarantee. If you're not satisfied with your subscription, contact us within 30 days of your first payment for a full refund."
     }
   ];
 
@@ -127,18 +128,16 @@ export default function PricingPage() {
       {/* Hero Section */}
       <section className="pt-32 pb-16 px-4">
         <div className="container mx-auto text-center">
-          <Badge variant="secondary" className="mb-6 text-sm">
-            <Sparkles className="h-4 w-4 mr-2" />
-            Simple, Transparent Pricing
-          </Badge>
+          
           <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
-            Early Beta
+            Choose Your Plan
             <br />
-            <span className="text-foreground">Free for Everyone</span>
+            <span className="text-foreground">Start Your 14-Day Free Trial</span>
           </h1>
           <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto">
-            We're in early beta with limited free access! 
-            Get started with 5 agents, 3 workflows, and 100 AI credits per day to help shape the future of AI automation.
+            Try any plan free for 14 days with full Pro access. 
+            Payment method required - you'll be charged automatically after your trial ends.
+            Cancel anytime during your trial without being charged.
           </p>
         </div>
       </section>
@@ -150,9 +149,9 @@ export default function PricingPage() {
             {plans.map((plan, index) => (
               <Card 
                 key={index} 
-                className={`relative bg-card border-border hover:border-primary/20 transition-all duration-300 hover:shadow-xl ${
+                className={`relative bg-card border-border hover:border-primary/20 transition-all duration-300 hover:shadow-xl flex flex-col h-full ${
                   plan.popular ? 'ring-2 ring-primary lg:scale-105' : ''
-                } ${plan.name === "Professional" || plan.name === "Enterprise" ? 'opacity-75' : ''}`}
+                }`}
               >
                 {plan.popular && (
                   <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
@@ -169,31 +168,25 @@ export default function PricingPage() {
                   </div>
                   <CardTitle className="text-2xl text-card-foreground mb-2">{plan.name}</CardTitle>
                   <div className="mb-4">
-                    <span className={`text-4xl font-bold ${plan.name === "Professional" || plan.name === "Enterprise" ? "text-muted-foreground" : "text-card-foreground"}`}>
+                    <span className="text-4xl font-bold text-card-foreground">
                       {plan.price}
                     </span>
                     {plan.period && <span className="text-muted-foreground">{plan.period}</span>}
+                    {plan.planId !== "enterprise" && (
+                      <div className="mt-2">
+                        <Badge variant="outline" className="text-xs">
+                          14-day free trial
+                        </Badge>
+                      </div>
+                    )}
                   </div>
                   <CardDescription className="text-muted-foreground text-base">
                     {plan.description}
                   </CardDescription>
                 </CardHeader>
                 
-                <CardContent className="space-y-6">
-                  <Link href={plan.ctaLink} className="block">
-                    <Button 
-                      className={`w-full ${
-                        plan.popular 
-                          ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700' 
-                          : 'bg-blue-600 hover:bg-blue-700'
-                      }`}
-                    >
-                      {plan.cta}
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </Link>
-                  
-                  <div>
+                <CardContent className="flex flex-col flex-1 space-y-6">
+                  <div className="flex-1">
                     <h4 className="text-card-foreground font-semibold mb-3">What's included:</h4>
                     <ul className="space-y-2">
                       {plan.features.map((feature, featureIndex) => (
@@ -205,23 +198,31 @@ export default function PricingPage() {
                     </ul>
                   </div>
                   
-                  {plan.limitations.length > 0 && (
-                    <div>
-                      <h4 className="text-card-foreground font-semibold mb-3">Limitations:</h4>
-                      <ul className="space-y-2">
-                        {plan.limitations.map((limitation, limitationIndex) => (
-                          <li key={limitationIndex} className="flex items-center text-sm text-muted-foreground">
-                            <X className="h-4 w-4 text-red-500 mr-2 flex-shrink-0" />
-                            {limitation}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+                  <div className="mt-auto pt-4">
+                    {plan.planId === "enterprise" ? (
+                      <Link href={plan.ctaLink} className="block">
+                        <Button 
+                          className="w-full bg-blue-600 hover:bg-blue-700"
+                        >
+                          {plan.cta}
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                      </Link>
+                    ) : (
+                      <CheckoutButton 
+                        planId={plan.planId as "starter" | "pro"}
+                        cta={plan.cta}
+                        popular={plan.popular}
+                      />
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             ))}
           </div>
+          <p className="text-xs text-muted-foreground text-center mt-6 max-w-2xl mx-auto">
+            *Active workflows are running or deployed. Unlimited workflow drafts are allowed on all plans.
+          </p>
         </div>
       </section>
 

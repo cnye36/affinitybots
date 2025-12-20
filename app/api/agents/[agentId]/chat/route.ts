@@ -219,6 +219,20 @@ export async function POST(
             const eventName = typeof chunk?.event === "string" ? chunk.event : "";
             const data = chunk?.data ?? chunk;
 
+            // Log message events to debug reasoning token structure
+            if (eventName === "messages" || (data && (data.type === "ai" || data.type === "human"))) {
+              console.log("[CHAT API] Message event from LangGraph:", {
+                event: eventName,
+                messageType: data?.type,
+                messageKeys: data ? Object.keys(data) : [],
+                fullMessageData: JSON.stringify(data, null, 2),
+                hasReasoningContent: !!(data?.reasoning_content),
+                hasResponseMetadata: !!(data?.response_metadata),
+                responseMetadataKeys: data?.response_metadata ? Object.keys(data.response_metadata) : [],
+                responseMetadata: data?.response_metadata ? JSON.stringify(data.response_metadata, null, 2) : null,
+              });
+            }
+
             // Capture thread_id and run_id from metadata events
             if (eventName === "metadata" && data) {
               if (data.thread_id && !actualThreadId) {
@@ -252,6 +266,17 @@ export async function POST(
                   for (let i = messages.length - 1; i >= 0; i--) {
                     const message = messages[i];
                     if (message?.type === "ai" || message?.role === "assistant") {
+                      // Log full message structure from thread state to debug reasoning
+                      console.log("[CHAT API] AI Message from thread state:", {
+                        messageIndex: i,
+                        allKeys: Object.keys(message),
+                        fullMessage: JSON.stringify(message, null, 2),
+                        hasReasoningContent: !!message.reasoning_content,
+                        hasResponseMetadata: !!message.response_metadata,
+                        responseMetadataKeys: message.response_metadata ? Object.keys(message.response_metadata) : [],
+                        responseMetadata: message.response_metadata ? JSON.stringify(message.response_metadata, null, 2) : null,
+                      });
+
                       // Extract usage from response_metadata.usage (OpenAI format)
                       const usage = message?.response_metadata?.usage;
                       if (usage) {

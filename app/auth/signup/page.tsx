@@ -6,16 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useEffect, useState, Suspense } from "react";
+import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 import { Header } from "@/components/home/Header";
 
@@ -23,16 +16,8 @@ function SignUpForm() {
 	const [showPassword, setShowPassword] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [email, setEmail] = useState("");
-	const [earlyAccessDialogOpen, setEarlyAccessDialogOpen] = useState(false);
 	const searchParams = useSearchParams();
 	const queryError = searchParams.get("error");
-
-	useEffect(() => {
-		const combinedError = error ?? queryError;
-		if (combinedError && combinedError.toLowerCase().includes("early access")) {
-			setEarlyAccessDialogOpen(true);
-		}
-	}, [error, queryError]);
 
 	async function handleSignUp(formData: FormData) {
 		const password = formData.get("password") as string;
@@ -144,38 +129,6 @@ function SignUpForm() {
 						</Link>
 					</p>
 				</div>
-
-				<Dialog open={earlyAccessDialogOpen} onOpenChange={setEarlyAccessDialogOpen}>
-					<DialogContent>
-						<DialogHeader>
-							<DialogTitle>Email not approved for early access</DialogTitle>
-							<DialogDescription>
-								{effectiveError ??
-									"This email address is not currently approved to sign up. You can request early access for this email."}
-							</DialogDescription>
-						</DialogHeader>
-						<div className="mt-4 flex justify-end gap-2">
-							<Button
-								type="button"
-								variant="outline"
-								onClick={() => setEarlyAccessDialogOpen(false)}
-							>
-								Close
-							</Button>
-							<Link
-								href={
-									email
-										? `/early-access?email=${encodeURIComponent(email)}`
-										: "/early-access"
-								}
-							>
-								<Button type="button">
-									Request Early Access
-								</Button>
-							</Link>
-						</div>
-					</DialogContent>
-				</Dialog>
 				</div>
 			</div>
 		</div>

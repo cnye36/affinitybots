@@ -166,23 +166,20 @@ export default function FeaturesPage() {
               transition={{ duration: 0.8 }}
               className="text-center lg:text-left"
             >
-              <Badge variant="secondary" className="mb-6 text-sm">
-                <Sparkles className="h-4 w-4 mr-2" />
-                Powerful AI Features
-              </Badge>
+              
               <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
                 Everything You Need to Build
                 <br />
                 <span className="text-foreground">Intelligent Agents</span>
               </h1>
               <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto lg:mx-0">
-                From simple chatbots to complex workflow automation, AffinityBots provides all the tools 
+                From simple chatbots to complex workflow automation, AffinityBots provides all the tools
                 you need to create, deploy, and manage AI agents that actually work.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                <Link href="/early-access">
+                <Link href="/pricing">
                   <Button size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
-                    Start Building Free
+                    Get Started
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Button>
                 </Link>
@@ -194,20 +191,19 @@ export default function FeaturesPage() {
               </div>
             </MotionDiv>
 
-            {/* Image Section */}
+            {/* Screenshot Section */}
             <MotionDiv
               initial={{ opacity: 0, x: 50 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8, delay: 0.3 }}
               className="relative"
             >
-              <div className="relative h-[400px] md:h-[500px] lg:h-[600px] w-full">
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-600/10 rounded-2xl blur-3xl"></div>
+              <div className="relative w-full aspect-square">
                 <Image
-                  src="/images/Two-bots-2.png"
-                  alt="AI Bot Assistants"
+                  src="/images/Four-bots.png"
+                  alt="AI Agents - Multiple intelligent bots working together"
                   fill
-                  className="object-contain relative z-10"
+                  className="object-contain"
                   priority
                 />
               </div>
@@ -285,7 +281,7 @@ export default function FeaturesPage() {
                   />
                 </div>
                 <h3 className="text-xl font-bold text-card-foreground mb-2">OpenAI</h3>
-                <p className="text-muted-foreground mb-4">GPT-5, GPT-4.1, GPT-4o</p>
+                <p className="text-muted-foreground mb-4">GPT-5.2, GPT-4.1, GPT-4o</p>
                 <ul className="text-sm text-muted-foreground space-y-1">
                   <li>• Advanced reasoning capabilities</li>
                   <li>• Multimodal understanding</li>
@@ -309,7 +305,7 @@ export default function FeaturesPage() {
                   />
                 </div>
                 <h3 className="text-xl font-bold text-card-foreground mb-2">Anthropic</h3>
-                <p className="text-muted-foreground mb-4">Claude 4.5 Sonnet, Claude Opus, Claude 3.7 Sonnet</p>
+                <p className="text-muted-foreground mb-4">Claude 4.5 Sonnet, Claude Opus 4.5, Claude 3.7 Sonnet</p>
                 <ul className="text-sm text-muted-foreground space-y-1">
                   <li>• Exceptional safety and alignment</li>
                   <li>• Long context understanding</li>
@@ -328,7 +324,7 @@ export default function FeaturesPage() {
                   />
                 </div>
                 <h3 className="text-xl font-bold text-card-foreground mb-2">Google Gemini</h3>
-                <p className="text-muted-foreground mb-4">Gemini 2.5 Pro, Gemini 2.5 Flash, Gemini 2.5 Flash Lite</p>
+                <p className="text-muted-foreground mb-4">Gemini 3 Pro, Gemini 3 Flash, Gemini 3 Flash Lite</p>
                 <ul className="text-sm text-muted-foreground space-y-1">
                   <li>• Native multimodal understanding</li>
                   <li>• Fast inference speeds</li>

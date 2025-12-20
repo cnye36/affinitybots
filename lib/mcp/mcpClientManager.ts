@@ -248,10 +248,10 @@ export class MCPClientManager {
       console.log(`MCPClientManager: Creating client for userId=${userId}, enabledServers=${JSON.stringify(enabledServers)}`);
       console.log(`Available servers from database:`, Object.keys(allServers));
       
-      // If no servers are explicitly enabled, fall back to all available servers
-      let serversToLoad = enabledServers;
+      // Only load servers that are explicitly enabled - do NOT fall back to all available
+      let serversToLoad: string[] = [];
       // Normalize and resolve requested server names against available servers
-      if (serversToLoad.length > 0) {
+      if (enabledServers.length > 0) {
         const simplify = (name: string) => name.toLowerCase().replace(/^@/, "").replace(/[^a-z0-9]/g, "");
         const availableBySimple = new Map<string, string>();
         for (const key of Object.keys(allServers)) {
@@ -259,7 +259,7 @@ export class MCPClientManager {
         }
         const resolved: string[] = [];
         const missing: string[] = [];
-        for (const req of serversToLoad) {
+        for (const req of enabledServers) {
           if (allServers[req]) {
             resolved.push(req);
             continue;
@@ -276,16 +276,9 @@ export class MCPClientManager {
         if (missing.length > 0) {
           console.warn(`Requested servers not found: ${missing.join(", ")}. Available: ${Object.keys(allServers).join(", ")}`);
         }
-        if (resolved.length > 0) {
-          serversToLoad = resolved;
-        } else {
-          console.warn(`No enabled servers could be resolved; falling back to all available servers.`);
-          serversToLoad = Object.keys(allServers);
-        }
-      }
-      if (enabledServers.length === 0) {
-        serversToLoad = Object.keys(allServers);
-        console.log(`No servers explicitly enabled, falling back to all available: ${serversToLoad.join(", ")}`);
+        serversToLoad = resolved;
+      } else {
+        console.log(`No servers explicitly enabled, loading no MCP servers (empty list)`);
       }
       
       const mcpServers: Record<string, any> = {};

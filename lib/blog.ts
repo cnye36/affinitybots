@@ -12,7 +12,8 @@ export interface BlogPost {
   author: string;
   date: string;
   readTime: string;
-  category: string;
+  category: string; // For backward compatibility, uses first category
+  categories: string[]; // Array of categories from frontmatter
   featured?: boolean;
   tags: string[];
   coverImage?: string;
@@ -59,17 +60,53 @@ export async function getBlogPostBySlug(slug: string): Promise<BlogPost | null> 
     const fileContents = fs.readFileSync(fullPath, 'utf8');
     const { data, content } = matter(fileContents);
 
+    // Convert date to string if it's a Date object (gray-matter may parse dates automatically)
+    let dateString = '';
+    if (data.date) {
+      if (data.date instanceof Date) {
+        dateString = data.date.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+      } else {
+        dateString = String(data.date);
+      }
+    }
+
+    // Extract cover image from featuredImage.src or use coverImage directly
+    let coverImage = '';
+    if (data.coverImage) {
+      coverImage = data.coverImage;
+    } else if (data.featuredImage) {
+      // Handle both object format (featuredImage.src) and string format
+      if (typeof data.featuredImage === 'object' && data.featuredImage.src) {
+        coverImage = data.featuredImage.src;
+      } else if (typeof data.featuredImage === 'string') {
+        coverImage = data.featuredImage;
+      }
+    }
+
+    // Extract categories - handle both array and single category
+    let categories: string[] = [];
+    if (data.categories) {
+      if (Array.isArray(data.categories)) {
+        categories = data.categories.filter(cat => cat && typeof cat === 'string');
+      } else if (typeof data.categories === 'string') {
+        categories = [data.categories];
+      }
+    }
+    // For backward compatibility, use first category or fallback to data.category
+    const category = categories.length > 0 ? categories[0] : (data.category || '');
+
     return {
       slug,
       title: data.title || '',
-      excerpt: data.excerpt || '',
+      excerpt: data.excerpt || data.description || '',
       author: data.author || '',
-      date: data.date || '',
+      date: dateString,
       readTime: data.readTime || '',
-      category: data.category || '',
+      category: category,
+      categories: categories,
       featured: data.featured || false,
       tags: data.tags || [],
-      coverImage: data.coverImage || '',
+      coverImage: coverImage,
       content,
     };
   } catch (error) {
@@ -107,7 +144,7 @@ export async function getFeaturedBlogPosts(): Promise<BlogPost[]> {
 export async function getBlogPostsByCategory(category: string): Promise<BlogPost[]> {
   const allPosts = await getAllBlogPosts();
   return allPosts.filter(post => 
-    post.category.toLowerCase() === category.toLowerCase()
+    post.categories.some(cat => cat.toLowerCase() === category.toLowerCase())
   );
 }
 
@@ -118,34 +155,32 @@ export async function getBlogPostsByTag(tag: string): Promise<BlogPost[]> {
   );
 }
 
-export function getAllCategories(): string[] {
-  // This would typically be called after getAllBlogPosts
-  // For now, return a static list based on our sample posts
-  return [
-    'AI & Automation',
-    'AI Agents',
-    'Use Cases',
-    'Integration',
-    'Security',
-    'MCP',
-    'Chatbots',
-    'Multimodal Agents'
-  ];
+export async function getAllCategories(): Promise<string[]> {
+  const allPosts = await getAllBlogPosts();
+  const categorySet = new Set<string>();
+  
+  allPosts.forEach(post => {
+    post.categories.forEach(cat => {
+      if (cat && cat.trim()) {
+        categorySet.add(cat.trim());
+      }
+    });
+  });
+  
+  return Array.from(categorySet).sort();
 }
 
-export function getAllTags(): string[] {
-  // This would typically be called after getAllBlogPosts
-  // For now, return a static list based on our sample posts
-  return [
-    'AI Agents',
-    'Automation',
-    'Business',
-    'Future',
-    'Tutorial',
-    'Getting Started',
-    'Guide',
-    'Customer Support',
-    'Best Practices',
-    'Case Study'
-  ];
+export async function getAllTags(): Promise<string[]> {
+  const allPosts = await getAllBlogPosts();
+  const tagSet = new Set<string>();
+  
+  allPosts.forEach(post => {
+    post.tags.forEach(tag => {
+      if (tag && tag.trim()) {
+        tagSet.add(tag.trim());
+      }
+    });
+  });
+  
+  return Array.from(tagSet).sort();
 }
