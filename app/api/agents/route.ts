@@ -3,7 +3,7 @@ import { createClient } from "@/supabase/server";
 import { generateAgentConfiguration } from "@/lib/agent/agentGeneration";
 import { Client } from "@langchain/langgraph-sdk";
 import { legacyModelToLlmId } from "@/lib/llm/catalog";
-import { getEffectivePlan, canCreateAgent, getPlanLimits, type SubscriptionInfo } from "@/lib/subscription";
+import { canCreateAgent, incrementAgentCount } from "@/lib/subscription/usage";
 
 // Helper function to create a timeout promise
 function createTimeoutPromise(timeoutMs: number): Promise<never> {
@@ -26,41 +26,26 @@ export async function POST(request: Request) {
           return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        // Check subscription limits
-        const { data: subscription } = await supabase
-          .from("subscriptions")
-          .select("*")
-          .eq("user_id", user.id)
-          .single();
-
-        const subscriptionInfo: SubscriptionInfo | null = subscription || null;
-        const effectivePlan = getEffectivePlan(subscriptionInfo);
-        
-        // Get current agent count
-        const langgraphClient = new Client({
-          apiUrl: process.env.LANGGRAPH_API_URL!,
-          apiKey: process.env.LANGSMITH_API_KEY!,
-        });
-
-        const existingAssistants = await langgraphClient.assistants.search({
-          metadata: { owner_id: user.id },
-          limit: 1000,
-        });
-
-        const currentAgentCount = existingAssistants?.length || 0;
-
         // Check if user can create more agents
-        if (!canCreateAgent(subscriptionInfo, currentAgentCount)) {
-          const limits = getPlanLimits(subscriptionInfo);
+        const agentLimitCheck = await canCreateAgent(user.id);
+
+        if (!agentLimitCheck.allowed) {
           return NextResponse.json(
-            { 
-              error: `Agent limit reached. Your ${effectivePlan} plan allows up to ${limits.maxAgents} agents. Please upgrade your plan to create more agents.`,
-              limit: limits.maxAgents,
-              current: currentAgentCount,
+            {
+              error: agentLimitCheck.reason || "Agent limit reached",
+              limit: agentLimitCheck.limit,
+              current: agentLimitCheck.current,
+              planType: agentLimitCheck.planType,
             },
             { status: 403 }
           );
         }
+
+        // Initialize LangGraph client
+        const langgraphClient = new Client({
+          apiUrl: process.env.LANGGRAPH_API_URL!,
+          apiKey: process.env.LANGSMITH_API_KEY!,
+        });
 
         const { prompt, preferredName, enabledMCPServers } = await request.json();
 
@@ -131,6 +116,15 @@ export async function POST(request: Request) {
         if (mappingError) {
           console.error("Error creating user-assistant mapping:", mappingError);
           // Note: Assistant is already created in DB via LangGraph platform
+        }
+
+        // Increment agent count in usage tracking
+        try {
+          await incrementAgentCount(user.id);
+          console.log(`[AGENT CREATE] Incremented agent count for user ${user.id}`);
+        } catch (counterError) {
+          console.error("Error incrementing agent count:", counterError);
+          // Don't fail the request if counter increment fails
         }
 
         return NextResponse.json({

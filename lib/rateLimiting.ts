@@ -73,21 +73,16 @@ class RateLimiter {
   private connecting: Promise<void> | null = null;
 
   constructor() {
-    // Use dedicated Redis for rate limiting (separate from LangGraph)
-    // This allows rate limiting to use cloud Redis while LangGraph uses local Docker Redis
-    const rateLimitRedisUrl = process.env.RATE_LIMIT_REDIS_URL;
-    
-    if (!rateLimitRedisUrl) {
-      console.warn('⚠️ RATE_LIMIT_REDIS_URL not set. Rate limiting will be disabled.');
-    }
-    
-    const redisUrl = rateLimitRedisUrl || 
+    // Use local Docker Redis for rate limiting (same as LangGraph, but with namespace isolation)
+    // Rate limiting uses 'rate_limit:*' prefix to avoid conflicts
+    const redisUrl = process.env.REDIS_URL || process.env.REDIS_URI ||
                     (process.env.NODE_ENV === 'production' ? 'redis://langgraph-redis:6379' : 'redis://localhost:6379');
-    
+
     this.redis = new Redis(redisUrl, {
       maxRetriesPerRequest: 3,
       lazyConnect: true,
-      db: 0, // Upstash supports only DB 0; use 0 for compatibility
+      db: 0,
+      enableOfflineQueue: true,
     });
 
     this.redis.on('connect', () => {

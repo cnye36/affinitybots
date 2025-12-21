@@ -102,9 +102,9 @@ const FEATURES: Feature[] = [
 export function Features() {
 
   return (
-    <section id="features" className="py-20">
+    <section id="features" className="py-12 md:py-20">
       <div className="container mx-auto px-4">
-        <div className="text-center mb-12 md:mb-16">
+        <div className="text-center mb-8 md:mb-16">
           <h2 className="text-2xl sm:text-3xl md:text-5xl font-bold mb-4">Features</h2>
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto px-4">
             Everything you need to build and deploy AI agents that work for your business
@@ -121,7 +121,7 @@ export function Features() {
                   y: 0,
                 }}
                 transition={{ duration: 0.4, delay: index * 0.05 }}
-                className={`relative rounded-xl border-2 p-5 backdrop-blur-sm ${feature.bgColor} ${feature.borderColor} shadow-lg dark:shadow-xl shadow-black/5 dark:shadow-black/20 hover:shadow-xl dark:hover:shadow-2xl transition-shadow duration-300`}
+                className={`relative rounded-xl border-2 p-5 backdrop-blur-sm ${feature.bgColor} ${feature.borderColor} shadow-lg dark:shadow-xl shadow-black/5 dark:shadow-black/20 hover:shadow-xl dark:hover:shadow-2xl transition-shadow duration-300 ${index >= 4 ? 'hidden md:block' : ''}`}
               >
                 {/* Gradient overlay */}
                 <div className="absolute inset-0 rounded-xl opacity-10 dark:opacity-20 bg-gradient-to-br from-white dark:from-white/5 to-transparent" />

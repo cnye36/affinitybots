@@ -185,7 +185,7 @@ export function AnimatedIntegrationDemo() {
   }, []);
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
       {TOOLS.map((tool, index) => {
         const isActive = activeTools.has(tool.id);
         const isPulsing = pulseIndex !== null && pulseIndex === index && isActive;
@@ -199,7 +199,7 @@ export function AnimatedIntegrationDemo() {
               scale: isActive ? 1 : 0.95,
             }}
             transition={{ duration: 0.3 }}
-            className={`relative rounded-lg border-2 p-4 transition-all duration-300 ${
+            className={`relative rounded-lg border-2 p-4 transition-all duration-300 ${index >= 6 ? 'hidden md:block' : ''} ${
               isActive
                 ? `${tool.bgColor} border-opacity-60 dark:border-opacity-40 shadow-lg`
                 : "bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700/50"

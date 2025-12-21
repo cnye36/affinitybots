@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
 import { Client } from "@langchain/langgraph-sdk";
 import { rateLimiter } from "@/lib/rateLimiting";
+import { canMakeAIRequest, recordAIUsage } from "@/lib/subscription/usage";
+import { extractModelId } from "@/lib/llm/pricing";
 
 export const runtime = "nodejs";
 
@@ -186,6 +188,35 @@ export async function POST(
       enabled_mcp_servers: fullConfig.enabled_mcp_servers
     });
 
+    // Get the model being used for budget checking
+    const llmId = fullConfig.llm || "openai:gpt-5"; // Default to gpt-5 if not specified
+    const modelId = extractModelId(llmId);
+
+    // Check if user can afford this AI request (budget check)
+    console.log(`[CHAT API] Checking budget for user ${user.id} with model ${llmId}`);
+    const budgetCheck = await canMakeAIRequest(
+      user.id,
+      llmId,
+      1500, // Estimated input tokens (average chat message)
+      800   // Estimated output tokens (average response)
+    );
+
+    if (!budgetCheck.allowed) {
+      console.log(`[CHAT API] Budget exceeded for user ${user.id}:`, budgetCheck.reason);
+      return NextResponse.json(
+        {
+          error: "Budget Exceeded",
+          message: budgetCheck.reason,
+          current: budgetCheck.current,
+          limit: budgetCheck.limit,
+          planType: budgetCheck.planType,
+        },
+        { status: 429 } // Too Many Requests
+      );
+    }
+
+    console.log(`[CHAT API] Budget check passed. Remaining: $${(budgetCheck.limit as number - budgetCheck.current).toFixed(2)}`);
+
     // Stream the response with proper user context using SDK (yields {event, data})
     // Using streamMode: ["messages-tuple"] to get token-by-token streaming
     const runStream = await client.runs.stream(
@@ -295,14 +326,33 @@ export async function POST(
               console.warn(`[chat stream] Missing thread_id or run_id, cannot fetch accurate usage`);
             }
 
-            // Record the usage
+            // Record the usage in both systems
             if (user?.id && (inputTokens > 0 || outputTokens > 0)) {
+              // Record in new usage tracking system with accurate costs
+              try {
+                await recordAIUsage({
+                  userId: user.id,
+                  modelId,
+                  llmId,
+                  inputTokens,
+                  outputTokens,
+                  agentId: assistantId,
+                  sessionId: actualThreadId || threadId,
+                  requestType: "chat",
+                  success: true,
+                });
+                console.log(`[chat stream] Recorded usage: ${inputTokens} input, ${outputTokens} output tokens for model ${modelId}`);
+              } catch (recordError) {
+                console.error("[chat stream] Error recording AI usage:", recordError);
+              }
+
+              // Also record in legacy rate limiter for backwards compatibility
               await rateLimiter.recordUsage({
                 userId: user.id,
                 inputTokens,
                 outputTokens,
                 timestamp: Date.now(),
-                model: "gpt-5",
+                model: modelId,
                 sessionId: actualThreadId || threadId,
               });
             } else {

@@ -44,13 +44,13 @@ const integrations = [
 
 export function Integrations() {
   return (
-    <section id="integrations" className="py-16 bg-muted/50">
+    <section id="integrations" className="py-12 md:py-16 bg-muted/50">
       <div className="container mx-auto px-4">
-        <div className="text-center mb-10 md:mb-16">
+        <div className="text-center mb-8 md:mb-16">
           <h2 className="text-2xl sm:text-3xl md:text-5xl font-bold mb-3 md:mb-4">
             Connect to Anything
           </h2>
-          <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-6">
+          <p className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-6 px-2">
             AffinityBots is built for flexibility. Choose from leading AI models and switch anytime for optimal performance. 
             Connect your agents to 70+ tools and services via <b>MCP servers</b>—from <b>Google</b> and <b>Slack</b> to <b>Supabase</b>, 
             <b>Redis</b>, and more. Never get locked into one provider or platform.

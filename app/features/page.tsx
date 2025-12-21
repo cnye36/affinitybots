@@ -164,15 +164,15 @@ export default function FeaturesPage() {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8 }}
-              className="text-center lg:text-left"
+              className="text-center lg:text-left lg:col-span-1 mx-auto lg:mx-0 max-w-2xl lg:max-w-none"
             >
               
-              <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
+              <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
                 Everything You Need to Build
                 <br />
                 <span className="text-foreground">Intelligent Agents</span>
               </h1>
-              <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto lg:mx-0">
+              <p className="text-lg sm:text-xl text-muted-foreground mb-8 max-w-3xl mx-auto lg:mx-0">
                 From simple chatbots to complex workflow automation, AffinityBots provides all the tools
                 you need to create, deploy, and manage AI agents that actually work.
               </p>
@@ -196,7 +196,7 @@ export default function FeaturesPage() {
               initial={{ opacity: 0, x: 50 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8, delay: 0.3 }}
-              className="relative"
+              className="relative hidden lg:block"
             >
               <div className="relative w-full aspect-square">
                 <Image
@@ -213,7 +213,7 @@ export default function FeaturesPage() {
       </section>
 
       {/* Core Features */}
-      <section className="py-16 px-4">
+      <section className="py-12 md:py-16 px-4">
         <div className="container mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
@@ -253,7 +253,7 @@ export default function FeaturesPage() {
       </section>
 
       {/* AI Model Support */}
-      <section className="py-16 px-4 bg-muted/50">
+      <section className="py-12 md:py-16 px-4 bg-muted/50">
         <div className="container mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
@@ -361,7 +361,7 @@ export default function FeaturesPage() {
       </section>
 
       {/* Technical Features */}
-      <section className="py-16 px-4">
+      <section className="py-12 md:py-16 px-4">
         <div className="container mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
@@ -389,7 +389,7 @@ export default function FeaturesPage() {
       </section>
 
       {/* Use Cases */}
-      <section className="py-16 px-4">
+      <section className="py-12 md:py-16 px-4">
         <div className="container mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">

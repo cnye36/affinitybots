@@ -49,9 +49,9 @@ const steps = [
 
 export function HowItWorks() {
   return (
-    <section id="how-it-works" className="py-20">
+    <section id="how-it-works" className="py-12 md:py-20">
       <div className="container mx-auto px-4">
-        <div className="text-center mb-16 md:mb-20">
+        <div className="text-center mb-12 md:mb-20">
           <h2 className="text-2xl sm:text-3xl md:text-5xl font-bold mb-4">How It Works</h2>
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto px-4">
             Build your AI workforce in five simple steps. Create agents that
@@ -66,11 +66,11 @@ export function HowItWorks() {
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
           viewport={{ once: true }}
-          className="mb-20 md:mb-32"
+          className="mb-16 md:mb-32"
         >
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12 items-center">
             {/* Content Side - Left */}
-            <div className="order-2 lg:order-1">
+            <div className="order-1 lg:order-1">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-blue-500/20 to-purple-600/20 border border-blue-500/30 mb-6">
                 <span className="text-sm font-semibold text-blue-400">{steps[0].number}</span>
                 <span className="text-xs text-muted-foreground">Step 1</span>
@@ -84,10 +84,10 @@ export function HowItWorks() {
             </div>
 
             {/* Graphic Side - Right */}
-            <div className="order-1 lg:order-2 relative">
+            <div className="order-2 lg:order-2 relative">
               <div className="relative w-full max-w-lg mx-auto">
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-purple-600/20 rounded-2xl blur-2xl" />
-                <div className="relative rounded-2xl overflow-hidden border border-border bg-background/50 backdrop-blur-sm shadow-2xl h-[340px] sm:h-[360px] md:h-[400px]">
+                <div className="relative rounded-2xl overflow-hidden border border-border bg-background/50 backdrop-blur-sm shadow-2xl h-[280px] sm:h-[360px] md:h-[400px]">
                   <AnimatedAgentCreation />
                 </div>
               </div>
@@ -101,21 +101,21 @@ export function HowItWorks() {
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1 }}
           viewport={{ once: true }}
-          className="mb-20 md:mb-32"
+          className="mb-16 md:mb-32"
         >
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12 items-center">
             {/* Graphic Side - Left */}
-            <div className="order-1 relative">
+            <div className="order-2 lg:order-1 relative">
               <div className="relative w-full max-w-lg mx-auto">
                 <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 to-pink-600/20 rounded-2xl blur-2xl" />
-                <div className="relative rounded-2xl overflow-hidden border border-border bg-background/50 backdrop-blur-sm shadow-2xl h-[340px] sm:h-[360px] md:h-[400px]">
+                <div className="relative rounded-2xl overflow-hidden border border-border bg-background/50 backdrop-blur-sm shadow-2xl h-[280px] sm:h-[360px] md:h-[400px]">
                   <AnimatedToolsKnowledge />
                 </div>
               </div>
             </div>
 
             {/* Content Side - Right */}
-            <div className="order-2">
+            <div className="order-1 lg:order-2">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-purple-500/20 to-pink-600/20 border border-purple-500/30 mb-6">
                 <span className="text-sm font-semibold text-purple-400">{steps[1].number}</span>
                 <span className="text-xs text-muted-foreground">Step 2</span>
@@ -136,11 +136,11 @@ export function HowItWorks() {
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
           viewport={{ once: true }}
-          className="mb-20 md:mb-32"
+          className="mb-16 md:mb-32"
         >
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12 items-center">
             {/* Content Side - Left */}
-            <div className="order-2 lg:order-1">
+            <div className="order-1 lg:order-1">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-emerald-500/20 to-teal-600/20 border border-emerald-500/30 mb-6">
                 <span className="text-sm font-semibold text-emerald-400">{steps[2].number}</span>
                 <span className="text-xs text-muted-foreground">Step 3</span>
@@ -154,10 +154,10 @@ export function HowItWorks() {
             </div>
 
             {/* Graphic Side - Right */}
-            <div className="order-1 lg:order-2 relative">
+            <div className="order-2 lg:order-2 relative">
               <div className="relative w-full max-w-lg mx-auto">
                 <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/20 to-teal-600/20 rounded-2xl blur-2xl" />
-                <div className="relative rounded-2xl overflow-hidden border border-border bg-background/50 backdrop-blur-sm shadow-2xl h-[340px] sm:h-[360px] md:h-[400px]">
+                <div className="relative rounded-2xl overflow-hidden border border-border bg-background/50 backdrop-blur-sm shadow-2xl h-[280px] sm:h-[360px] md:h-[400px]">
                   <AnimatedTestImplement />
                 </div>
               </div>
@@ -171,21 +171,21 @@ export function HowItWorks() {
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.3 }}
           viewport={{ once: true }}
-          className="mb-20 md:mb-32"
+          className="mb-16 md:mb-32"
         >
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12 items-center">
             {/* Graphic Side - Left */}
-            <div className="order-1 relative">
+            <div className="order-2 lg:order-1 relative">
               <div className="relative w-full max-w-lg mx-auto">
                 <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-purple-600/20 rounded-2xl blur-2xl" />
-                <div className="relative rounded-2xl overflow-hidden border border-border bg-background/50 backdrop-blur-sm shadow-2xl h-[340px] sm:h-[360px] md:h-[400px]">
+                <div className="relative rounded-2xl overflow-hidden border border-border bg-background/50 backdrop-blur-sm shadow-2xl h-[280px] sm:h-[360px] md:h-[400px]">
                   <AnimatedWorkflow />
                 </div>
               </div>
             </div>
 
             {/* Content Side - Right */}
-            <div className="order-2">
+            <div className="order-1 lg:order-2">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-indigo-500/20 to-purple-600/20 border border-indigo-500/30 mb-6">
                 <span className="text-sm font-semibold text-indigo-400">{steps[3].number}</span>
                 <span className="text-xs text-muted-foreground">Step 4</span>
@@ -206,11 +206,11 @@ export function HowItWorks() {
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.4 }}
           viewport={{ once: true }}
-          className="mb-20 md:mb-32"
+          className="mb-16 md:mb-32"
         >
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12 items-center">
             {/* Content Side - Left */}
-            <div className="order-2 lg:order-1">
+            <div className="order-1 lg:order-1">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-orange-500/20 to-yellow-600/20 border border-orange-500/30 mb-6">
                 <span className="text-sm font-semibold text-orange-400">{steps[4].number}</span>
                 <span className="text-xs text-muted-foreground">Step 5</span>
@@ -224,10 +224,10 @@ export function HowItWorks() {
             </div>
 
             {/* Graphic Side - Right */}
-            <div className="order-1 lg:order-2 relative">
+            <div className="order-2 lg:order-2 relative">
               <div className="relative w-full max-w-lg mx-auto">
                 <div className="absolute inset-0 bg-gradient-to-br from-orange-500/20 to-yellow-600/20 rounded-2xl blur-2xl" />
-                <div className="relative rounded-2xl overflow-hidden border border-border bg-background/50 backdrop-blur-sm shadow-2xl h-[340px] sm:h-[360px] md:h-[400px]">
+                <div className="relative rounded-2xl overflow-hidden border border-border bg-background/50 backdrop-blur-sm shadow-2xl h-[280px] sm:h-[360px] md:h-[400px]">
                   <AnimatedMonitorImprove />
                 </div>
               </div>

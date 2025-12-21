@@ -125,6 +125,21 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
       {/* Article Header */}
       <section className="pb-8 px-4">
         <div className="container mx-auto max-w-4xl">
+          {/* Cover Image */}
+          {post.coverImage && (
+            <div className="relative w-full aspect-[16/9] mb-8 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+              <Image
+                src={post.coverImage}
+                alt={post.title}
+                fill
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 90vw, 896px"
+                className="object-cover"
+                priority
+                quality={90}
+              />
+            </div>
+          )}
+
           <div className="text-center mb-8">
             {/* Category Badge */}
             <Badge variant="outline" className="mb-4 border-gray-600 text-gray-300">
