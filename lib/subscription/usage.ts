@@ -31,6 +31,12 @@ export interface UsageCheckResult {
 	planType: PlanType
 }
 
+interface SubscriptionData {
+	plan_type: PlanType
+	status: "trialing" | "active" | "past_due" | "canceled" | "unpaid"
+	trial_end: string | null
+}
+
 /**
  * Get user's subscription plan type
  */
@@ -48,9 +54,11 @@ export async function getUserPlanType(userId: string): Promise<PlanType> {
 		return "free" // Default to free if error
 	}
 
+	const subscription = data as SubscriptionData
+
 	// Check if trial has ended for free users
-	if (data.plan_type === "free" && data.trial_end) {
-		const trialEnd = new Date(data.trial_end)
+	if (subscription.plan_type === "free" && subscription.trial_end) {
+		const trialEnd = new Date(subscription.trial_end)
 		if (trialEnd < new Date()) {
 			// Trial ended, but still on free plan - treat as expired trial
 			return "free"
@@ -58,11 +66,25 @@ export async function getUserPlanType(userId: string): Promise<PlanType> {
 	}
 
 	// Check subscription status
-	if (data.status === "canceled" || data.status === "past_due" || data.status === "unpaid") {
+	if (subscription.status === "canceled" || subscription.status === "past_due" || subscription.status === "unpaid") {
 		return "free" // Downgrade to free if subscription inactive
 	}
 
-	return data.plan_type as PlanType
+	return subscription.plan_type
+}
+
+interface UserUsageLimitsData {
+	user_id: string
+	agent_count: number
+	active_workflow_count: number
+	draft_workflow_count: number
+	integration_count: number
+	monthly_tokens_input: string | number
+	monthly_tokens_output: string | number
+	monthly_actual_cost_usd: string | number
+	monthly_charged_cost_usd: string | number
+	last_monthly_reset: string
+	current_month: string
 }
 
 /**
@@ -82,18 +104,20 @@ export async function getUserUsage(userId: string): Promise<UserUsage | null> {
 		return null
 	}
 
+	const usage = data as UserUsageLimitsData
+
 	return {
-		userId: data.user_id,
-		agentCount: data.agent_count,
-		activeWorkflowCount: data.active_workflow_count,
-		draftWorkflowCount: data.draft_workflow_count,
-		integrationCount: data.integration_count,
-		monthlyTokensInput: parseInt(data.monthly_tokens_input),
-		monthlyTokensOutput: parseInt(data.monthly_tokens_output),
-		monthlyActualCostUsd: parseFloat(data.monthly_actual_cost_usd),
-		monthlyChargedCostUsd: parseFloat(data.monthly_charged_cost_usd),
-		lastMonthlyReset: data.last_monthly_reset,
-		currentMonth: data.current_month,
+		userId: usage.user_id,
+		agentCount: usage.agent_count,
+		activeWorkflowCount: usage.active_workflow_count,
+		draftWorkflowCount: usage.draft_workflow_count,
+		integrationCount: usage.integration_count,
+		monthlyTokensInput: parseInt(String(usage.monthly_tokens_input)),
+		monthlyTokensOutput: parseInt(String(usage.monthly_tokens_output)),
+		monthlyActualCostUsd: parseFloat(String(usage.monthly_actual_cost_usd)),
+		monthlyChargedCostUsd: parseFloat(String(usage.monthly_charged_cost_usd)),
+		lastMonthlyReset: usage.last_monthly_reset,
+		currentMonth: usage.current_month,
 	}
 }
 
@@ -194,7 +218,7 @@ export async function canMakeAIRequest(
 export async function incrementAgentCount(userId: string): Promise<void> {
 	const supabase = await getSupabaseAdmin()
 
-	const { error } = await supabase.rpc("increment_agent_count", { p_user_id: userId })
+	const { error } = await (supabase.rpc as any)("increment_agent_count", { p_user_id: userId })
 
 	if (error) {
 		console.error("Error incrementing agent count:", error)
@@ -207,7 +231,7 @@ export async function incrementAgentCount(userId: string): Promise<void> {
 export async function decrementAgentCount(userId: string): Promise<void> {
 	const supabase = await getSupabaseAdmin()
 
-	const { error } = await supabase.rpc("decrement_agent_count", { p_user_id: userId })
+	const { error } = await (supabase.rpc as any)("decrement_agent_count", { p_user_id: userId })
 
 	if (error) {
 		console.error("Error decrementing agent count:", error)
@@ -220,7 +244,7 @@ export async function decrementAgentCount(userId: string): Promise<void> {
 export async function incrementActiveWorkflowCount(userId: string): Promise<void> {
 	const supabase = await getSupabaseAdmin()
 
-	const { error } = await supabase.rpc("increment_active_workflow_count", { p_user_id: userId })
+	const { error } = await (supabase.rpc as any)("increment_active_workflow_count", { p_user_id: userId })
 
 	if (error) {
 		console.error("Error incrementing workflow count:", error)
@@ -233,7 +257,7 @@ export async function incrementActiveWorkflowCount(userId: string): Promise<void
 export async function decrementActiveWorkflowCount(userId: string): Promise<void> {
 	const supabase = await getSupabaseAdmin()
 
-	const { error } = await supabase.rpc("decrement_active_workflow_count", { p_user_id: userId })
+	const { error } = await (supabase.rpc as any)("decrement_active_workflow_count", { p_user_id: userId })
 
 	if (error) {
 		console.error("Error decrementing workflow count:", error)
@@ -261,7 +285,7 @@ export async function recordAIUsage(params: {
 	const { actualCost, chargedCost } = calculateCostFromLlmId(params.llmId, params.inputTokens, params.outputTokens)
 
 	// Insert into ai_usage_logs
-	const { error: logError } = await supabase.from("ai_usage_logs").insert({
+	const { error: logError } = await ((supabase.from("ai_usage_logs") as any).insert({
 		user_id: params.userId,
 		model_id: params.modelId,
 		llm_id: params.llmId,
@@ -275,14 +299,14 @@ export async function recordAIUsage(params: {
 		request_type: params.requestType || "chat",
 		success: params.success !== false,
 		error_message: params.errorMessage,
-	})
+	}))
 
 	if (logError) {
 		console.error("Error logging AI usage:", logError)
 	}
 
 	// Update user_usage_limits
-	const { error: updateError } = await supabase.rpc("update_ai_usage", {
+	const { error: updateError } = await (supabase.rpc as any)("update_ai_usage", {
 		p_user_id: params.userId,
 		p_input_tokens: params.inputTokens,
 		p_output_tokens: params.outputTokens,
