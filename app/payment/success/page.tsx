@@ -1,3 +1,7 @@
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Header } from "@/components/home/Header";
 import { Footer } from "@/components/home/Footer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,6 +10,17 @@ import { CheckCircle } from "lucide-react";
 import Link from "next/link";
 
 export default function PaymentSuccessPage() {
+  const router = useRouter();
+
+  // Auto-redirect to dashboard after 3 seconds
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      router.push("/dashboard");
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [router]);
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Header />
@@ -42,6 +57,9 @@ export default function PaymentSuccessPage() {
                   </Button>
                 </Link>
               </div>
+              <p className="text-xs text-muted-foreground text-center">
+                Redirecting to dashboard in a few seconds...
+              </p>
             </CardContent>
           </Card>
         </div>

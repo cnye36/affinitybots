@@ -53,7 +53,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    // Determine base URL - prefer env var, fallback to request origin, then defaults
+    let baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL;
+    if (!baseUrl) {
+      // Try to get from request headers
+      const origin = request.headers.get('origin') || request.headers.get('referer');
+      if (origin) {
+        try {
+          const url = new URL(origin);
+          baseUrl = `${url.protocol}//${url.host}`;
+        } catch {
+          // Invalid URL, use default
+        }
+      }
+    }
+    // Final fallback
+    baseUrl = baseUrl || (process.env.NODE_ENV === 'production' ? 'https://affinitybots.com' : 'http://localhost:3000');
 
     // Create checkout session with 14-day trial
     const session = await createSubscriptionCheckoutSession({
