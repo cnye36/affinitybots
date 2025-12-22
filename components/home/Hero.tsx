@@ -9,13 +9,13 @@ import AnimationHero from "@/components/home/AnimatedHero";
 export function Hero() {
   return (
     <section className="relative py-12 md:py-8 md:pb-16 lg:py-12 lg:pb-20 md:min-h-[85vh] flex items-center overflow-hidden">
-      {/* Animated background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-purple-600/20 animate-gradient" />
+      {/* Improved background gradient - subtle and elegant */}
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-50/80 via-white to-purple-50/60 dark:from-blue-950/20 dark:via-gray-950 dark:to-purple-950/20" />
 
-      {/* Animated circles in background */}
+      {/* Animated circles in background - more subtle for light theme */}
       <div className="absolute inset-0">
-        <div className="absolute top-10 md:top-20 left-10 md:left-20 w-48 md:w-72 h-48 md:h-72 bg-blue-500/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-10 md:bottom-20 right-10 md:right-20 w-48 md:w-72 h-48 md:h-72 bg-purple-500/10 rounded-full blur-3xl animate-pulse delay-700" />
+        <div className="absolute top-10 md:top-20 left-10 md:left-20 w-48 md:w-72 h-48 md:h-72 bg-blue-400/20 dark:bg-blue-500/10 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-10 md:bottom-20 right-10 md:right-20 w-48 md:w-72 h-48 md:h-72 bg-purple-400/20 dark:bg-purple-500/10 rounded-full blur-3xl animate-pulse delay-700" />
       </div>
 
       <div className="container mx-auto px-4 pb-8 md:pb-12">

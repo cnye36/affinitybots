@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/table"
 import { EarlyAccessInvitesPanel } from "@/components/admin/EarlyAccessInvitesPanel"
 import { AdminRateLimitPanel } from "@/components/admin/AdminRateLimitPanel"
+import { BlogPostsList } from "@/components/admin/blog/BlogPostsList"
 
 type AdminMetrics = {
 	users: {
@@ -79,6 +80,7 @@ export function AdminDashboard() {
 			<Tabs defaultValue="overview">
 				<TabsList>
 					<TabsTrigger value="overview">Overview</TabsTrigger>
+					<TabsTrigger value="blog">Blog</TabsTrigger>
 					<TabsTrigger value="invites">Invites</TabsTrigger>
 					<TabsTrigger value="rate-limits">Rate Limits</TabsTrigger>
 				</TabsList>
@@ -187,6 +189,10 @@ export function AdminDashboard() {
 							</CardContent>
 						</Card>
 					</div>
+				</TabsContent>
+
+				<TabsContent value="blog">
+					<BlogPostsList />
 				</TabsContent>
 
 				<TabsContent value="invites">

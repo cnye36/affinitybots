@@ -57,17 +57,28 @@ const AnimatedWorkflowHero = () => {
             <stop offset="50%" stopColor="rgb(168, 85, 247)" stopOpacity="0.9" />
             <stop offset="100%" stopColor="rgb(236, 72, 153)" stopOpacity="0.9" />
           </linearGradient>
+          <style>{`
+            @media (prefers-color-scheme: dark) {
+              .orbit-ring { stroke: rgb(148, 163, 184) !important; }
+              .rotating-ring { stroke: rgb(56, 189, 248) !important; }
+              .connection-line { stroke: rgb(148, 163, 184) !important; }
+            }
+          `}</style>
         </defs>
 
-        {/* Animated orbit ring with pulsing effect */}
+        {/* Animated orbit ring with pulsing effect - darker for light theme */}
         <circle
           cx={ORCHESTRATOR.x}
           cy={ORCHESTRATOR.y}
           r={radius}
-          stroke="rgba(148,163,184,0.25)"
           strokeWidth="0.4"
           fill="none"
           strokeDasharray="2 2"
+          className="orbit-ring"
+          style={{ 
+            stroke: 'rgb(107, 114, 128)', // gray-500 for light theme (darker)
+            opacity: 0.5 
+          }}
         >
           <animate
             attributeName="r"
@@ -77,21 +88,25 @@ const AnimatedWorkflowHero = () => {
           />
           <animate
             attributeName="opacity"
-            values="0.25;0.4;0.25"
+            values="0.5;0.7;0.5"
             dur="4s"
             repeatCount="indefinite"
           />
         </circle>
-        {/* Rotating dashed ring for movement effect - slow clockwise rotation */}
+        {/* Rotating dashed ring for movement effect - slow clockwise rotation - darker for light theme */}
         <circle
           cx={ORCHESTRATOR.x}
           cy={ORCHESTRATOR.y}
           r={radius}
-          stroke="rgba(56,189,248,0.3)"
           strokeWidth="0.5"
           fill="none"
           strokeDasharray="3 6"
           strokeDashoffset="0"
+          className="rotating-ring"
+          style={{ 
+            stroke: 'rgb(37, 99, 235)', // blue-600 for light theme (darker)
+            opacity: 0.6 
+          }}
         >
           <animateTransform
             attributeName="transform"
@@ -102,7 +117,7 @@ const AnimatedWorkflowHero = () => {
           />
           <animate
             attributeName="opacity"
-            values="0.3;0.5;0.3"
+            values="0.6;0.8;0.6"
             dur="6s"
             repeatCount="indefinite"
           />
@@ -119,15 +134,18 @@ const AnimatedWorkflowHero = () => {
 
           return (
             <g key={agent.id}>
-              {/* Base line */}
+              {/* Base line - darker for light theme */}
               <line
                 x1={fromX}
                 y1={fromY}
                 x2={toX}
                 y2={toY}
-                stroke="rgba(148,163,184,0.4)"
                 strokeWidth={isActive ? 0.6 : 0.35}
-                className="transition-all duration-500"
+                className="connection-line"
+                style={{ 
+                  stroke: 'rgb(107, 114, 128)', // gray-500 for light theme (darker)
+                  opacity: isActive ? 0.6 : 0.4 
+                }}
               />
 
               {/* Highlighted gradient line for the active agent */}
@@ -212,18 +230,18 @@ const AnimatedWorkflowHero = () => {
         );
       })}
 
-      {/* Compact status pill (keep "Live • 6 agents • 6 links") */}
-      <div className="absolute top-4 right-4 hidden md:flex items-center gap-3 bg-slate-950/40 backdrop-blur-md rounded-xl px-3 py-2 border border-white/10 shadow-lg">
-        <span className="inline-flex items-center gap-2 text-xs text-slate-200">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.55)]" />
+      {/* Compact status pill (keep "Live • 6 agents • 6 links") - lighter background for light theme */}
+      <div className="absolute top-4 right-4 hidden md:flex items-center gap-3 bg-white/80 dark:bg-slate-950/40 backdrop-blur-md rounded-xl px-3 py-2 border border-gray-200 dark:border-white/10 shadow-lg">
+        <span className="inline-flex items-center gap-2 text-xs text-gray-700 dark:text-slate-200">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.55)]" />
           Live
         </span>
-        <span className="h-4 w-px bg-white/10" />
-        <span className="text-xs text-slate-300 tabular-nums">
-          <span className="font-semibold text-emerald-300">6</span> agents
+        <span className="h-4 w-px bg-gray-300 dark:bg-white/10" />
+        <span className="text-xs text-gray-600 dark:text-slate-300 tabular-nums">
+          <span className="font-semibold text-emerald-600 dark:text-emerald-300">6</span> agents
         </span>
-        <span className="text-xs text-slate-300 tabular-nums">
-          <span className="font-semibold text-sky-300">6</span> links
+        <span className="text-xs text-gray-600 dark:text-slate-300 tabular-nums">
+          <span className="font-semibold text-blue-600 dark:text-sky-300">6</span> links
         </span>
       </div>
 

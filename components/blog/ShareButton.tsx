@@ -31,7 +31,8 @@ export function ShareButton({ title, excerpt, url }: ShareButtonProps) {
   return (
     <Button 
       variant="outline" 
-      className="border-gray-600 text-gray-300 hover:bg-gray-700"
+      size="sm"
+      className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
       onClick={handleShare}
     >
       <Share2 className="h-4 w-4 mr-2" />

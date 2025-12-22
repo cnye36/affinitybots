@@ -125,7 +125,7 @@ The tool will create a high-quality image and return a public URL that can be sh
 			prompt: z.string().describe("A detailed description of the image to generate. Be specific about style, composition, colors, mood, and any important details."),
 			size: z.enum(["auto", "1024x1024", "1536x1024", "1024x1536", "1792x1024", "1024x1792"]).optional().describe("Image dimensions. Default is 1024x1024. Use 1536x1024 for landscape or 1024x1536 for portrait. If a provider doesn't support the requested size, it will be mapped to the closest supported size."),
 			provider: z.enum(["openai", "gemini"]).optional().describe("Optional: force the image provider. Defaults to IMAGE_PROVIDER env or best available."),
-			model: z.string().optional().describe("Optional: override the underlying image model name."),
+			model: z.string().optional().describe("Optional: override the underlying image model name. Default is gpt-image-1.5. Options: gpt-image-1.5, gpt-image-1-mini."),
 		}),
 		func: async ({ prompt, size = "1024x1024", provider, model }) => {
 			try {
@@ -182,7 +182,7 @@ The tool will create a high-quality image and return a public URL that can be sh
 						throw new Error("OPENAI_API_KEY is not configured. OpenAI image generation is not available.")
 					}
 
-					const openAiModel = model || process.env.OPENAI_IMAGE_MODEL || "gpt-image-1"
+					const openAiModel = model || process.env.OPENAI_IMAGE_MODEL || "gpt-image-1.5"
 					const openAiSize = normalizeSizeForOpenAI(size)
 					const started = Date.now()
 					const response = await fetchWithTimeout(

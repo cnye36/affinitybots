@@ -25,9 +25,10 @@ export function GoogleSignInButton() {
 				provider: "google",
 				options: {
 					redirectTo: redirectUrl,
-					// Pass next destination as a query param that Supabase will preserve
+					// Force Google to show account selection screen every time
 					queryParams: {
 						next: "/dashboard",
+						prompt: "select_account",
 					},
 				},
 			})

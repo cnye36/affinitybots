@@ -4,6 +4,7 @@ import matter from 'gray-matter';
 // RSC MDX flow: no serialize at build time
 import remarkGfm from 'remark-gfm';
 import remarkFrontmatter from 'remark-frontmatter';
+import { getSupabaseAdmin } from './supabase-admin';
 
 export interface BlogPost {
   slug: string;
@@ -23,36 +24,78 @@ export interface BlogPost {
 
 const contentDirectory = path.join(process.cwd(), 'content', 'blog');
 
+// Helper to convert database post to BlogPost format
+function dbPostToBlogPost(dbPost: any): BlogPost {
+  return {
+    slug: dbPost.slug,
+    title: dbPost.title,
+    excerpt: dbPost.excerpt || '',
+    author: dbPost.author,
+    date: dbPost.published_at ? new Date(dbPost.published_at).toISOString().split('T')[0] : new Date(dbPost.created_at).toISOString().split('T')[0],
+    readTime: dbPost.read_time || '5 min read',
+    category: dbPost.categories?.[0] || '',
+    categories: dbPost.categories || [],
+    featured: dbPost.featured || false,
+    tags: dbPost.tags || [],
+    coverImage: dbPost.cover_image,
+    content: dbPost.content,
+  };
+}
+
 export async function getAllBlogPosts(): Promise<BlogPost[]> {
   try {
-    if (!fs.existsSync(contentDirectory)) {
-      return [];
+    // Fetch posts from database (published only for public view)
+    const dbPosts: BlogPost[] = [];
+    try {
+      const supabase = getSupabaseAdmin();
+      const { data, error } = await supabase
+        .from('blog_posts')
+        .select('*')
+        .eq('status', 'published')
+        .order('published_at', { ascending: false });
+
+      if (!error && data) {
+        dbPosts.push(...data.map(dbPostToBlogPost));
+      }
+    } catch (dbError) {
+      console.error('Error fetching database posts:', dbError);
+      // Continue to MDX files even if database fails
     }
 
-    const fileNames = fs.readdirSync(contentDirectory);
-    const allPostsData = await Promise.all(
-      fileNames
-        .filter(name => name.endsWith('.mdx'))
-        .map(async (fileName) => {
-          const slug = fileName.replace(/\.mdx$/, '');
-          return await getBlogPostBySlug(slug);
-        })
-    );
+    // Fetch posts from MDX files
+    const mdxPosts: BlogPost[] = [];
+    if (fs.existsSync(contentDirectory)) {
+      const fileNames = fs.readdirSync(contentDirectory);
+      const allPostsData = await Promise.all(
+        fileNames
+          .filter(name => name.endsWith('.mdx'))
+          .map(async (fileName) => {
+            const slug = fileName.replace(/\.mdx$/, '');
+            return await getBlogPostFromMDX(slug);
+          })
+      );
+
+      mdxPosts.push(...allPostsData.filter(post => post !== null));
+    }
+
+    // Combine and deduplicate (database posts take precedence)
+    const dbSlugs = new Set(dbPosts.map(p => p.slug));
+    const uniqueMdxPosts = mdxPosts.filter(p => !dbSlugs.has(p.slug));
+    const allPosts = [...dbPosts, ...uniqueMdxPosts];
 
     // Sort posts by date (newest first)
-    return allPostsData
-      .filter(post => post !== null)
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return allPosts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   } catch (error) {
     console.error('Error reading blog posts:', error);
     return [];
   }
 }
 
-export async function getBlogPostBySlug(slug: string): Promise<BlogPost | null> {
+// Get post from MDX file
+async function getBlogPostFromMDX(slug: string): Promise<BlogPost | null> {
   try {
     const fullPath = path.join(contentDirectory, `${slug}.mdx`);
-    
+
     if (!fs.existsSync(fullPath)) {
       return null;
     }
@@ -109,6 +152,34 @@ export async function getBlogPostBySlug(slug: string): Promise<BlogPost | null> 
       coverImage: coverImage,
       content,
     };
+  } catch (error) {
+    console.error(`Error reading blog post ${slug}:`, error);
+    return null;
+  }
+}
+
+export async function getBlogPostBySlug(slug: string): Promise<BlogPost | null> {
+  try {
+    // Try database first
+    try {
+      const supabase = getSupabaseAdmin();
+      const { data, error } = await supabase
+        .from('blog_posts')
+        .select('*')
+        .eq('slug', slug)
+        .eq('status', 'published')
+        .single();
+
+      if (!error && data) {
+        return dbPostToBlogPost(data);
+      }
+    } catch (dbError) {
+      console.error('Error fetching from database:', dbError);
+      // Fall through to MDX
+    }
+
+    // Fall back to MDX file
+    return await getBlogPostFromMDX(slug);
   } catch (error) {
     console.error(`Error reading blog post ${slug}:`, error);
     return null;

@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { getBlogPostWithMDX, getAllBlogPosts } from "@/lib/blog";
+import { getBlogPostWithMDX, getAllBlogPosts, getAllTags } from "@/lib/blog";
 import { ShareButton } from '@/components/blog/ShareButton';
 import { MDXContent } from '@/components/blog/MDXContent';
 import { BlogPost } from '@/lib/blog';
@@ -106,6 +106,9 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
     })
     .slice(0, 3);
 
+  // Get all tags for the sidebar
+  const allTags = await getAllTags();
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Header />
@@ -114,7 +117,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
       <section className="pt-32 pb-8 px-4">
         <div className="container mx-auto">
           <Link href="/blog">
-            <Button variant="ghost" className="text-gray-400 hover:text-foreground">
+            <Button variant="ghost" className="text-muted-foreground hover:text-foreground">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Blog
             </Button>
@@ -127,13 +130,13 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
         <div className="container mx-auto max-w-4xl">
           {/* Cover Image */}
           {post.coverImage && (
-            <div className="relative w-full aspect-[16/9] mb-8 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+            <div className="relative w-full aspect-[3/2] mb-8 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
               <Image
                 src={post.coverImage}
                 alt={post.title}
                 fill
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 90vw, 896px"
-                className="object-cover"
+                className="object-cover object-top"
                 priority
                 quality={90}
               />
@@ -142,7 +145,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
 
           <div className="text-center mb-8">
             {/* Category Badge */}
-            <Badge variant="outline" className="mb-4 border-gray-600 text-gray-300">
+            <Badge variant="outline" className="mb-4 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">
               {post.category}
             </Badge>
 
@@ -157,7 +160,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
             </p>
 
             {/* Meta Information */}
-            <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-gray-400 mb-8">
+            <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground mb-8">
               <div className="flex items-center gap-2">
                 <User className="h-4 w-4" />
                 <span>{post.author}</span>
@@ -174,6 +177,13 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
                 <Clock className="h-4 w-4" />
                 <span>{post.readTime}</span>
               </div>
+              <div className="flex items-center">
+                <ShareButton 
+                  title={post.title}
+                  excerpt={post.excerpt}
+                  url={`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/blog/${post.slug}`}
+                />
+              </div>
             </div>
 
             {/* Tags */}
@@ -183,7 +193,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
                   <Badge 
                     key={index} 
                     variant="secondary" 
-                    className="text-xs bg-gray-800 text-gray-300 hover:bg-gray-700"
+                    className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700"
                   >
                     <Tag className="h-3 w-3 mr-1" />
                     {tag}
@@ -191,13 +201,6 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
                 ))}
               </div>
             )}
-
-            {/* Share Button */}
-            <ShareButton 
-              title={post.title}
-              excerpt={post.excerpt}
-              url={`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/blog/${post.slug}`}
-            />
           </div>
         </div>
       </section>
@@ -211,8 +214,39 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
         </div>
       </section>
 
+      {/* Explore Topics Section */}
+      <section className="py-12 px-4 bg-blue-50 dark:bg-gray-900/50">
+        <div className="container mx-auto max-w-4xl">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold text-foreground mb-2 flex items-center justify-center gap-2">
+              <Tag className="h-5 w-5" />
+              Explore More Topics
+            </h2>
+            <p className="text-muted-foreground">
+              Discover more articles about AI, automation, and workflows
+            </p>
+          </div>
+          <div className="flex flex-wrap justify-center gap-3">
+            {allTags.map((tag, index) => (
+              <Link key={index} href={`/blog?tag=${encodeURIComponent(tag)}`}>
+                <Badge 
+                  variant={post.tags.includes(tag) ? "default" : "outline"}
+                  className={`text-sm px-4 py-2 cursor-pointer transition-all duration-200 ${
+                    post.tags.includes(tag)
+                      ? "bg-blue-600 hover:bg-blue-700 text-white"
+                      : "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-400 dark:hover:border-blue-500 hover:scale-105"
+                  }`}
+                >
+                  {tag}
+                </Badge>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Inline CTA Banner */}
-      <section className="px-4">
+      <section className="px-4 py-12">
         <div className="container mx-auto max-w-6xl">
           <div className="rounded-md border border-gray-300 dark:border-gray-700 bg-gradient-to-r from-blue-600/10 to-purple-600/10 dark:from-blue-500/10 dark:to-purple-500/10 px-4 py-3 md:px-6 md:py-4 flex flex-col md:flex-row items-center justify-between gap-3">
             <p className="text-sm md:text-base text-foreground/90">
@@ -236,20 +270,20 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
 
       {/* Related Posts */}
       {relatedPosts.length > 0 && (
-        <section className="py-16 px-4 bg-gray-900/50">
+        <section className="py-16 px-4 bg-blue-50 dark:bg-gray-900/50">
           <div className="container mx-auto max-w-6xl">
             <div className="text-center mb-12">
               <h2 className="text-3xl font-bold text-foreground mb-4">
                 Related Articles
               </h2>
-              <p className="text-gray-300">
+              <p className="text-muted-foreground">
                 Continue exploring more insights on {post.category.toLowerCase()}
               </p>
             </div>
             
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
               {relatedPosts.map((relatedPost) => (
-                <Card key={relatedPost.slug} className="bg-gray-800/50 border-gray-700 hover:border-gray-600 transition-all duration-300 group">
+                <Card key={relatedPost.slug} className="bg-white dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-gray-600 transition-all duration-300 group shadow-sm hover:shadow-md">
                   <div className="relative aspect-[3/2] overflow-hidden bg-gray-100 dark:bg-gray-800">
                     {relatedPost.coverImage ? (
                       <Image
@@ -257,27 +291,27 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
                         alt={relatedPost.title}
                         fill
                         sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                        className="object-cover object-top group-hover:scale-105 transition-transform duration-300"
                       />
                     ) : (
-                      <div className="bg-gradient-to-br from-gray-700 to-gray-800 h-full flex items-center justify-center">
-                        <BookOpen className="h-12 w-12 text-gray-400" />
+                      <div className="bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 h-full flex items-center justify-center">
+                        <BookOpen className="h-12 w-12 text-gray-400 dark:text-gray-500" />
                       </div>
                     )}
                   </div>
                   <CardContent className="p-6">
                     <div className="flex items-center space-x-2 mb-3">
-                      <Badge variant="outline" className="border-gray-600 text-gray-300 text-xs">
+                      <Badge variant="outline" className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-xs">
                         {relatedPost.category}
                       </Badge>
                     </div>
-                    <h3 className="text-white text-lg font-semibold mb-3 group-hover:text-blue-400 transition-colors duration-200 line-clamp-2">
+                    <h3 className="text-foreground text-lg font-semibold mb-3 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-200 line-clamp-2">
                       {relatedPost.title}
                     </h3>
-                    <p className="text-gray-300 text-sm mb-4 line-clamp-3">
+                    <p className="text-muted-foreground text-sm mb-4 line-clamp-3">
                       {relatedPost.excerpt}
                     </p>
-                    <div className="flex items-center justify-between text-xs text-gray-400 mb-4">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground mb-4">
                       <div className="flex items-center space-x-1">
                         <User className="h-3 w-3" />
                         <span>{relatedPost.author}</span>
@@ -288,7 +322,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
                       </div>
                     </div>
                     <Link href={`/blog/${relatedPost.slug}`}>
-                      <Button variant="outline" className="w-full group-hover:border-primary group-hover:text-primary transition-all duration-200">
+                      <Button variant="outline" className="w-full border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 group-hover:border-blue-600 dark:group-hover:border-blue-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-all duration-200">
                         Read More
                         <ExternalLink className="ml-2 h-4 w-4" />
                       </Button>
@@ -305,7 +339,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
       <section className="py-16 px-4">
         <div className="container mx-auto text-center">
           <Link href="/blog">
-            <Button variant="outline" className="border-gray-600 text-gray-300 hover:bg-gray-700">
+            <Button variant="outline" className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to All Articles
             </Button>

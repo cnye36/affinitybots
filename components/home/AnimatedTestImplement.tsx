@@ -7,16 +7,16 @@ import { SiGoogledrive, SiNotion } from "react-icons/si";
 
 const conversationExamples = [
   {
-    userMessage: "What's the best content strategy for Q1?",
-    aiResponse: "For Q1, I recommend focusing on educational content that addresses your audience's goals. Based on your data, blog posts and video tutorials perform best during this period. I can create a detailed content calendar if you'd like.",
+    userMessage: "Create a content plan for next month and add it to Google Drive",
+    aiResponse: "I've created a comprehensive 30-day content plan with 12 posts across your channels. The plan includes 4 blog posts, 6 social media posts, and 2 email campaigns. I've saved it as 'Content_Plan_January_2026.docx' to your Google Drive in the 'Content Strategy' folder. Each piece is aligned with your KPIs and optimized for your target audience.",
   },
   {
-    userMessage: "Analyze our competitor's social media approach",
-    aiResponse: "I've analyzed your top 3 competitors. They're focusing heavily on video content (65% of posts) and posting 3x per week. Their engagement peaks on Tuesdays and Thursdays. I recommend increasing your video content to match their strategy.",
+    userMessage: "Analyze our competitor's social media approach and create 5 ways to improve our strategy, add it to our Notion Database",
+    aiResponse: "I've analyzed your top 3 competitors. They're focusing heavily on video content (65% of posts) and posting 3x per week. Their engagement peaks on Tuesdays and Thursdays. I've created a strategic improvement document with 5 actionable recommendations and added it to your 'Marketing Strategy' Notion database. The document includes benchmarks, specific action items, and timeline recommendations.",
   },
   {
-    userMessage: "Create a content plan for next month",
-    aiResponse: "I've created a 30-day content plan with 12 posts across your channels. The plan includes 4 blog posts, 6 social media posts, and 2 email campaigns. Each piece is aligned with your KPIs and optimized for your target audience.",
+    userMessage: "What's the best content strategy for Q1? Save the recommendations to Google Drive",
+    aiResponse: "For Q1, I recommend focusing on educational content that addresses your audience's goals. Based on your data, blog posts and video tutorials perform best during this period. I've created a detailed content strategy document with calendar templates, topic suggestions, and KPIs. The document has been saved to your Google Drive in the 'Q1_Planning' folder.",
   },
 ];
 
