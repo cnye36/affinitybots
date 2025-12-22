@@ -15,9 +15,10 @@ export default function Home() {
       <Header />
       <main className="pt-24">
         <Hero />
+        <HowItWorks />
         <Features />
         <Integrations />
-        <HowItWorks />
+        
         <Benefits />
         <FeaturedIn />
         <CTA />
