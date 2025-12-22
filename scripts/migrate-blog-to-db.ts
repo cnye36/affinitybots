@@ -112,7 +112,7 @@ async function migrateBlogPosts() {
       // Insert into database
       const { error } = await supabase
         .from('blog_posts')
-        .insert([postData])
+        .insert([postData] as any)
 
       if (error) {
         console.error(`  ❌ Error: ${error.message}\n`)

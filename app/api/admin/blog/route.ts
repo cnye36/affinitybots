@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
 
     // Calculate read time from content
     const { data: readTimeData } = await supabaseAdmin
-      .rpc("calculate_read_time", { content_text: content })
+      .rpc("calculate_read_time", { content_text: content } as any)
 
     const postData = {
       title,
@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
 
     const { data: post, error } = await supabaseAdmin
       .from("blog_posts")
-      .insert([postData])
+      .insert([postData] as any)
       .select()
       .single()
 

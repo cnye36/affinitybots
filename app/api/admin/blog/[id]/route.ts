@@ -76,7 +76,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     let readTime
     if (content) {
       const { data: readTimeData } = await supabaseAdmin
-        .rpc("calculate_read_time", { content_text: content })
+        .rpc("calculate_read_time", { content_text: content } as any)
       readTime = readTimeData || "1 min read"
     }
 
@@ -97,7 +97,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
           .from("blog_posts")
           .select("published_at")
           .eq("id", id)
-          .single()
+          .single() as { data: { published_at: string | null } | null }
 
         if (!currentPost?.published_at) {
           updateData.published_at = new Date().toISOString()
@@ -109,8 +109,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     if (meta_keywords !== undefined) updateData.meta_keywords = meta_keywords
     if (readTime) updateData.read_time = readTime
 
-    const { data: post, error } = await supabaseAdmin
-      .from("blog_posts")
+    const { data: post, error } = await (supabaseAdmin
+      .from("blog_posts") as any)
       .update(updateData)
       .eq("id", id)
       .select()
