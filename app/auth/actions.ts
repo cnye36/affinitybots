@@ -72,5 +72,5 @@ async function getSiteUrl() {
   const forwardedProto = hdrs.get("x-forwarded-proto");
   const host = hdrs.get("host");
   const computedOrigin = forwardedProto && host ? `${forwardedProto}://${host}` : hdrs.get("origin");
-  return computedOrigin ?? process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  return computedOrigin ?? process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
 }

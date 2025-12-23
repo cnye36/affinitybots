@@ -15,7 +15,7 @@ const publicRoutes = [
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const isProd = process.env.NODE_ENV === 'production'
-  const siteUrl = process.env.NEXT_PUBLIC_BASE_URL || (isProd ? 'https://affinitybots.com' : 'http://localhost:3000')
+  const siteUrl =  process.env.NEXT_PUBLIC_BASE_URL || (isProd ?'https://affinitybots.com' : 'http://localhost:3000')
   const now = new Date()
 
   // Get all blog posts

@@ -161,7 +161,7 @@ export class MCPWebInterface {
             console.log(`Rehydrating OAuth client for session ${sessionId} from database`);
             const callbackUrl =
               serverRow.config?.callbackUrl ||
-              `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/mcp/auth/callback`;
+              `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/mcp/auth/callback`;
             const isGitHub =
               serverRow.url.includes('githubcopilot.com') || serverRow.url.includes('github.com');
             let client: GitHubOAuthClient | MCPOAuthClient;

@@ -30,7 +30,7 @@ async function main() {
   console.log('Environment:');
   console.log(`  NODE_ENV: ${process.env.NODE_ENV || 'development'}`);
   console.log(`  Redis: ${process.env.REDIS_URL || process.env.REDIS_URI || 'default'}`);
-  console.log(`  App URL: ${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}`);
+  console.log(`  App URL: ${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}`);
   console.log('');
 
   try {

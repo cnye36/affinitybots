@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -210,6 +210,33 @@ export function BlogPostEditor({ mode, postId }: BlogPostEditorProps) {
     setTags(tags.filter(t => t !== tag))
   }
 
+  // Helper function to update article information fields from parsed frontmatter
+  const updateFieldsFromParsed = useCallback((parsed: any) => {
+    // Populate all fields from parsed frontmatter
+    if (parsed.title) setTitle(parsed.title)
+    if (parsed.slug) setSlug(parsed.slug)
+    if (parsed.excerpt) setExcerpt(parsed.excerpt)
+    if (parsed.author) setAuthor(parsed.author)
+    if (parsed.categories && parsed.categories.length > 0) {
+      setCategories(parsed.categories)
+    }
+    if (parsed.tags && parsed.tags.length > 0) {
+      setTags(parsed.tags)
+    }
+    if (parsed.featured !== undefined) setFeatured(parsed.featured)
+    if (parsed.status) setStatus(parsed.status as "draft" | "published" | "archived")
+
+    // Store featuredImage info for reference (user still needs to upload the actual image)
+    if (parsed.featuredImageInfo) {
+      setFeaturedImageInfo(parsed.featuredImageInfo)
+    } else if (parsed.coverImage) {
+      // If coverImage is a string, store it as reference info
+      setFeaturedImageInfo({ src: parsed.coverImage })
+    } else {
+      setFeaturedImageInfo(null)
+    }
+  }, [])
+
   const handleParseFrontmatter = async () => {
     if (!frontmatterText.trim()) {
       alert("Please paste frontmatter YAML content")
@@ -232,28 +259,8 @@ export function BlogPostEditor({ mode, postId }: BlogPostEditorProps) {
       const data = await response.json()
       const parsed = data.parsed
 
-      // Populate all fields from parsed frontmatter
-      if (parsed.title) setTitle(parsed.title)
-      if (parsed.slug) setSlug(parsed.slug)
-      if (parsed.excerpt) setExcerpt(parsed.excerpt)
-      if (parsed.author) setAuthor(parsed.author)
-      if (parsed.categories && parsed.categories.length > 0) {
-        setCategories(parsed.categories)
-      }
-      if (parsed.tags && parsed.tags.length > 0) {
-        setTags(parsed.tags)
-      }
-      if (parsed.featured !== undefined) setFeatured(parsed.featured)
-
-      // Store featuredImage info for reference (user still needs to upload the actual image)
-      if (parsed.featuredImageInfo) {
-        setFeaturedImageInfo(parsed.featuredImageInfo)
-      } else if (parsed.coverImage) {
-        // If coverImage is a string, store it as reference info
-        setFeaturedImageInfo({ src: parsed.coverImage })
-      } else {
-        setFeaturedImageInfo(null)
-      }
+      // Update article information fields from parsed frontmatter
+      updateFieldsFromParsed(parsed)
 
       // Switch back to fields tab to see populated values
       setDetailsTab("fields")
@@ -263,6 +270,63 @@ export function BlogPostEditor({ mode, postId }: BlogPostEditorProps) {
       alert("Failed to parse frontmatter. Please check the YAML syntax.")
     }
   }
+
+  // Auto-parse frontmatter when it's generated/updated (if it looks complete)
+  useEffect(() => {
+    const autoParseFrontmatter = async () => {
+      // Skip if frontmatter is empty
+      if (!frontmatterText.trim()) {
+        return
+      }
+
+      const trimmed = frontmatterText.trim()
+      
+      // Very lenient checks - if it looks like frontmatter YAML, try to parse it
+      // The API will handle adding delimiters if needed
+      const hasTitle = trimmed.includes("title:")
+      const hasYAMLStructure = trimmed.includes(":") && trimmed.length > 20
+      const hasDelimiters = trimmed.includes("---")
+      
+      // Try to parse if:
+      // 1. It has a title field (most common case)
+      // 2. OR it has YAML structure with delimiters (might be frontmatter without title yet)
+      // 3. OR it's substantial and has YAML-like structure
+      if ((hasTitle && hasYAMLStructure) || (hasDelimiters && hasYAMLStructure) || (hasTitle && trimmed.length > 30)) {
+        try {
+          const response = await fetch("/api/admin/blog/parse-frontmatter", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ frontmatterText }),
+          })
+
+          if (response.ok) {
+            const data = await response.json()
+            const parsed = data.parsed
+
+            // Only update if we have meaningful data (title is a good indicator)
+            if (parsed.title) {
+              console.log("Auto-parsing frontmatter and updating fields", parsed)
+              updateFieldsFromParsed(parsed)
+            }
+          } else {
+            const errorData = await response.json().catch(() => ({}))
+            console.debug("Auto-parse frontmatter failed:", errorData)
+          }
+        } catch (error) {
+          // Silently fail for auto-parse - user can manually parse if needed
+          console.debug("Auto-parse frontmatter error:", error)
+        }
+      }
+    }
+
+    // Debounce auto-parse to avoid too many requests while user is typing
+    // Reduced to 1 second for faster response when frontmatter is generated
+    const timeoutId = setTimeout(() => {
+      autoParseFrontmatter()
+    }, 1000)
+
+    return () => clearTimeout(timeoutId)
+  }, [frontmatterText, updateFieldsFromParsed])
 
   if (loading) {
     return (
@@ -388,7 +452,7 @@ export function BlogPostEditor({ mode, postId }: BlogPostEditorProps) {
                       className="font-mono text-sm"
                     />
                     <p className="text-xs text-muted-foreground mt-2">
-                      Paste your frontmatter YAML here. Click "Parse & Fill Fields" to automatically populate all fields.
+                      Paste your frontmatter YAML here. Fields will auto-update when frontmatter is detected, or click "Parse & Fill Fields" to manually parse.
                     </p>
                   </div>
                   <Button

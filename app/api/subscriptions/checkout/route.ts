@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Determine base URL - prefer env var, fallback to request origin, then defaults
-    let baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL;
+    let baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
     if (!baseUrl) {
       // Try to get from request headers
       const origin = request.headers.get('origin') || request.headers.get('referer');

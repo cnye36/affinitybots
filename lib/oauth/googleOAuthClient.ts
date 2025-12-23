@@ -73,7 +73,7 @@ export const GOOGLE_SERVICE_SCOPES: Record<string, string[]> = {
 export function getGoogleMcpCredentials() {
   const clientId = process.env.GOOGLE_MCP_CLIENT_ID
   const clientSecret = process.env.GOOGLE_MCP_CLIENT_SECRET
-  const redirectUri = process.env.GOOGLE_MCP_REDIRECT_URI || `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/google/oauth/callback`
+  const redirectUri = process.env.GOOGLE_MCP_REDIRECT_URI || `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/google/oauth/callback`
 
   if (!clientId || !clientSecret) {
     throw new Error("Google MCP OAuth credentials not configured. Please set GOOGLE_MCP_CLIENT_ID and GOOGLE_MCP_CLIENT_SECRET environment variables.")

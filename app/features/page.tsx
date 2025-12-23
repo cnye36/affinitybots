@@ -3,7 +3,6 @@ import { CTA } from "@/components/home/CTA";
 import { Footer } from "@/components/home/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { MotionDiv } from "@/components/motion/MotionDiv";
 import Image from "next/image";
 import { 
@@ -15,13 +14,9 @@ import {
   MessageSquare, 
   BarChart3, 
   Settings,
-  Clock,
-  Users,
   Database,
-  Lock,
   CheckCircle,
   ArrowRight,
-  Sparkles
 } from "lucide-react";
 import Link from "next/link";
 

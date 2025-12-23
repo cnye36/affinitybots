@@ -63,6 +63,7 @@ export async function POST(request: NextRequest) {
 			tags,
 			coverImage,
 			featured: data.featured || false,
+			status: data.status || "",
 			date: data.date ? (data.date instanceof Date ? data.date.toISOString().split("T")[0] : String(data.date)) : "",
 			featuredImageInfo: data.featuredImage && typeof data.featuredImage === "object" ? data.featuredImage : null,
 		}

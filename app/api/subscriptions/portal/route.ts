@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Create Stripe billing portal session
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
     const session = await stripe.billingPortal.sessions.create({
       customer: subscription.stripe_customer_id,
       return_url: `${baseUrl}/settings?tab=billing`,

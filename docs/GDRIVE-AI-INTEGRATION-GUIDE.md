@@ -93,7 +93,7 @@ GOOGLE_MCP_CLIENT_ID=your_mcp_client_id_here.apps.googleusercontent.com
 GOOGLE_MCP_CLIENT_SECRET=your_mcp_client_secret_here
 
 # Google MCP OAuth Redirect URI (should match what's configured in Google Cloud Console)
-# Optional - defaults to NEXT_PUBLIC_APP_URL + /api/google/oauth/callback
+# Optional - defaults to NEXT_PUBLIC_BASE_URL + /api/google/oauth/callback
 # For local development:
 GOOGLE_MCP_REDIRECT_URI=http://localhost:3000/api/google/oauth/callback
 # For production:
@@ -103,7 +103,7 @@ GOOGLE_MCP_REDIRECT_URI=http://localhost:3000/api/google/oauth/callback
 GOOGLE_DRIVE_MCP_URL=http://localhost:3002
 
 # Application URL (used for OAuth callbacks)
-NEXT_PUBLIC_APP_URL=http://localhost:3000
+NEXT_PUBLIC_BASE_URL=http://localhost:3000
 ```
 
 Database schema (example):

@@ -464,7 +464,7 @@ export class MCPClientManager {
 
       const callbackUrl =
         serverConfig.config?.callbackUrl ||
-        `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/mcp/auth/callback`;
+        `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/mcp/auth/callback`;
 
       const providerState = serverConfig.config?.providerState;
       const storedTokenType = serverConfig.config?.tokenMetadata?.token_type || 'Bearer';

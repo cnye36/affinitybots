@@ -181,7 +181,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
                 <ShareButton 
                   title={post.title}
                   excerpt={post.excerpt}
-                  url={`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/blog/${post.slug}`}
+                  url={`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/blog/${post.slug}`}
                 />
               </div>
             </div>
@@ -214,36 +214,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
         </div>
       </section>
 
-      {/* Explore Topics Section */}
-      <section className="py-12 px-4 bg-blue-50 dark:bg-gray-900/50">
-        <div className="container mx-auto max-w-4xl">
-          <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-foreground mb-2 flex items-center justify-center gap-2">
-              <Tag className="h-5 w-5" />
-              Explore More Topics
-            </h2>
-            <p className="text-muted-foreground">
-              Discover more articles about AI, automation, and workflows
-            </p>
-          </div>
-          <div className="flex flex-wrap justify-center gap-3">
-            {allTags.map((tag, index) => (
-              <Link key={index} href={`/blog?tag=${encodeURIComponent(tag)}`}>
-                <Badge 
-                  variant={post.tags.includes(tag) ? "default" : "outline"}
-                  className={`text-sm px-4 py-2 cursor-pointer transition-all duration-200 ${
-                    post.tags.includes(tag)
-                      ? "bg-blue-600 hover:bg-blue-700 text-white"
-                      : "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-400 dark:hover:border-blue-500 hover:scale-105"
-                  }`}
-                >
-                  {tag}
-                </Badge>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
+      
 
       {/* Inline CTA Banner */}
       <section className="px-4 py-12">

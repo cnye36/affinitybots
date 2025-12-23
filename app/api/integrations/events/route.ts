@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     });
 
     // Dispatch each workflow
-    const origin = typeof window !== "undefined" ? window.location.origin : process.env.NEXT_PUBLIC_APP_URL || "";
+    const origin = typeof window !== "undefined" ? window.location.origin : process.env.NEXT_PUBLIC_BASE_URL || "";
     await Promise.all(
       matching.map(async (t: any) => {
         try {
