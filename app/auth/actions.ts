@@ -12,6 +12,7 @@ export async function signIn(formData: FormData) {
     email: formData.get("email") as string,
     password: formData.get("password") as string,
   };
+  const plan = formData.get("plan") as string;
 
   const { error } = await supabase.auth.signInWithPassword(data);
 
@@ -20,7 +21,11 @@ export async function signIn(formData: FormData) {
   }
 
   revalidatePath("/", "layout");
-  redirect("/dashboard");
+  if (plan) {
+    redirect(`/pricing/checkout?plan=${plan}`);
+  } else {
+    redirect("/dashboard");
+  }
 }
 
 export async function signUp(formData: FormData) {
@@ -28,9 +33,16 @@ export async function signUp(formData: FormData) {
 
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
+  const plan = formData.get("plan") as string;
 
   if (!email || !password) {
     return { error: "Email and password are required." };
+  }
+
+  const siteUrl = await getSiteUrl();
+  let emailRedirectTo = `${siteUrl}/auth/callback`;
+  if (plan) {
+    emailRedirectTo += `?next=${encodeURIComponent(`/pricing/checkout?plan=${plan}`)}`;
   }
 
   // Sign up the user with Supabase Auth
@@ -39,7 +51,7 @@ export async function signUp(formData: FormData) {
       email,
       password,
       options: {
-        emailRedirectTo: `${await getSiteUrl()}/auth/callback`,
+        emailRedirectTo,
         // No invite code metadata needed anymore
       }
     });

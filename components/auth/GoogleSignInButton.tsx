@@ -5,8 +5,12 @@ import { Button } from "@/components/ui/button"
 import { createClient } from "@/supabase/client"
 import { SiGoogle } from "react-icons/si"
 
+import { useSearchParams } from "next/navigation"
+
 export function GoogleSignInButton() {
 	const [isLoading, setIsLoading] = useState(false)
+    const searchParams = useSearchParams()
+    const plan = searchParams.get("plan")
 
 	const handleGoogleSignIn = async () => {
 		try {
@@ -21,13 +25,15 @@ export function GoogleSignInButton() {
 			console.log("🔍 Google Sign-In: Current origin:", currentOrigin)
 			console.log("🔍 Google Sign-In: Redirect URL (must match Supabase config exactly):", redirectUrl)
 
+            const next = plan ? `/pricing/checkout?plan=${plan}` : "/dashboard"
+
 			const { data, error } = await supabase.auth.signInWithOAuth({
 				provider: "google",
 				options: {
 					redirectTo: redirectUrl,
 					// Force Google to show account selection screen every time
 					queryParams: {
-						next: "/dashboard",
+						next,
 						prompt: "select_account",
 					},
 				},

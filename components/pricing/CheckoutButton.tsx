@@ -26,6 +26,11 @@ export function CheckoutButton({ planId, cta, popular = false }: CheckoutButtonP
 
       const data = await response.json();
 
+      if (response.status === 401) {
+        window.location.href = `/auth/signup?plan=${planId}`;
+        return;
+      }
+
       if (!response.ok) {
         throw new Error(data.error || "Failed to create checkout session");
       }

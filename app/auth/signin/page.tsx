@@ -47,6 +47,7 @@ function SignInForm() {
 
 					<form className="space-y-4">
 						<div className="space-y-2">
+							<input type="hidden" name="plan" value={searchParams.get("plan") || ""} />
 							<Label htmlFor="email">Email</Label>
 							<Input 
 								id="email" 
@@ -88,7 +89,7 @@ function SignInForm() {
 
 					<p className="text-center text-sm text-muted-foreground">
 						Don&apos;t have an account?{" "}
-						<Link href="/auth/signup" className="text-primary hover:underline font-medium">
+						<Link href={searchParams.get("plan") ? `/auth/signup?plan=${searchParams.get("plan")}` : "/auth/signup"} className="text-primary hover:underline font-medium">
 							Sign Up
 						</Link>
 					</p>

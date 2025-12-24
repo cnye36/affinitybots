@@ -26,7 +26,7 @@ const AnimatedWorkflowHero = () => {
   const agentAngles = [
     -90,  // Researcher: top (12 o'clock)
     -30,  // Analyzer: top-right (1-2 o'clock)
-    45,   // Writer: right (2-3 o'clock)
+    50,   // Writer: right (2-3 o'clock)
     130,  // Reviewer: bottom-left (7-8 o'clock)
     210,  // Publisher: bottom (8 o'clock)
   ];
