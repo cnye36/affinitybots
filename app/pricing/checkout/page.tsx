@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
-export default function CheckoutPage() {
+function CheckoutContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const plan = searchParams.get("plan");
@@ -28,6 +28,12 @@ export default function CheckoutPage() {
 
         const data = await response.json();
 
+        if (response.status === 401) {
+             const currentParam = searchParams.toString();
+             router.push(`/auth/signup?${currentParam}`);
+             return; 
+        }
+
         if (!response.ok) {
           throw new Error(data.error || "Failed to create checkout session");
         }
@@ -44,7 +50,7 @@ export default function CheckoutPage() {
     };
 
     initiateCheckout();
-  }, [plan]);
+  }, [plan, router, searchParams]);
 
   if (error) {
     return (
@@ -65,5 +71,18 @@ export default function CheckoutPage() {
       <Loader2 className="h-8 w-8 animate-spin text-primary" />
       <p className="text-muted-foreground">Preparing your checkout...</p>
     </div>
+  );
+}
+
+export default function CheckoutPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col items-center justify-center min-h-screen bg-background space-y-4">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    }>
+      <CheckoutContent />
+    </Suspense>
   );
 }
