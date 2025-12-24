@@ -5,6 +5,202 @@ import { Task } from "@/types/workflow";
 import { Client } from "@langchain/langgraph-sdk";
 import { rateLimiter } from "@/lib/rateLimiting";
 
+/**
+ * Execute an orchestrator workflow where a manager agent coordinates sub-agents
+ */
+async function executeOrchestratorWorkflow(
+  workflow: any,
+  workflowId: string,
+  ownerId: string,
+  supabase: any,
+  request: Request
+) {
+  const encoder = new TextEncoder();
+
+  // Create workflow run record
+  const generatedWorkflowRunId = (globalThis as any).crypto?.randomUUID?.();
+  const { data: workflowRun, error: workflowRunError } = await supabase
+    .from("workflow_runs")
+    .insert({
+      ...(generatedWorkflowRunId ? { run_id: generatedWorkflowRunId } : {}),
+      workflow_id: workflowId,
+      status: "running",
+      started_at: new Date().toISOString(),
+      metadata: { execution_type: "orchestrator" },
+      workflow_snapshot: {
+        nodes: workflow.nodes || [],
+        edges: workflow.edges || [],
+        timestamp: new Date().toISOString(),
+      },
+      owner_id: ownerId,
+    })
+    .select("run_id")
+    .single();
+
+  if (workflowRunError || !workflowRun?.run_id) {
+    console.error("Failed to create workflow run:", workflowRunError);
+    return NextResponse.json(
+      { error: "Failed to create workflow run", details: workflowRunError?.message },
+      { status: 500 }
+    );
+  }
+
+  const workflowRunId = workflowRun.run_id;
+
+  // Update workflow status to running
+  await supabase
+    .from("workflows")
+    .update({
+      status: "running",
+      last_run_at: new Date().toISOString(),
+    })
+    .eq("workflow_id", workflowId);
+
+  // Build available agents from workflow_tasks
+  const allTasks = workflow.workflow_tasks || [];
+  const availableAgents: Record<string, any> = {};
+
+  for (const task of allTasks) {
+    const assistantId = task.assistant_id || task.config?.assigned_assistant?.id;
+    if (assistantId) {
+      availableAgents[task.name] = {
+        workflow_task_id: task.workflow_task_id,
+        name: task.name,
+        description: task.description || "",
+        assistant_id: assistantId,
+        config: task.config || {},
+      };
+    }
+  }
+
+  // Stream orchestrator execution
+  const stream = new ReadableStream({
+    async start(controller) {
+      try {
+        const client = new Client({
+          apiUrl: process.env.LANGGRAPH_API_URL,
+          apiKey: process.env.LANGSMITH_API_KEY,
+        });
+
+        // Create orchestrator thread
+        const orchestratorThread = await client.threads.create();
+
+        // Emit orchestrator start event
+        controller.enqueue(
+          encoder.encode(
+            `event: orchestrator-start\n` +
+              `data: ${JSON.stringify({ thread_id: orchestratorThread.thread_id, available_agents: Object.keys(availableAgents) })}\n\n`
+          )
+        );
+
+        // Run orchestrator graph
+        const runStream = await client.runs.stream(
+          orchestratorThread.thread_id,
+          "orchestratorAgent", // Graph ID from langgraph.json
+          {
+            input: {
+              available_agents: availableAgents,
+            },
+            streamMode: "updates" as any,
+            config: {
+              configurable: {
+                user_id: ownerId,
+                orchestrator_config: workflow.orchestrator_config,
+              },
+            },
+          }
+        );
+
+        let finalResult: any = null;
+        let iterationCount = 0;
+
+        // Process stream events
+        for await (const evt of runStream) {
+          const e: any = evt;
+
+          if (e.event === "updates" && e.data) {
+            const node = Object.keys(e.data)[0];
+            const nodeData = e.data[node];
+
+            if (node === "manager") {
+              // Manager made a decision
+              controller.enqueue(
+                encoder.encode(
+                  `event: manager-decision\n` +
+                    `data: ${JSON.stringify({ iteration: iterationCount++, decision: nodeData })}\n\n`
+                )
+              );
+            } else if (node === "execute_agent") {
+              // Sub-agent was executed
+              controller.enqueue(
+                encoder.encode(
+                  `event: agent-execution\n` +
+                    `data: ${JSON.stringify({ result: nodeData })}\n\n`
+                )
+              );
+            }
+
+            finalResult = e.data;
+          }
+        }
+
+        // Update workflow run with final result
+        await supabase
+          .from("workflow_runs")
+          .update({
+            status: "completed",
+            completed_at: new Date().toISOString(),
+            result: finalResult,
+          })
+          .eq("run_id", workflowRunId);
+
+        // Update workflow status
+        await supabase
+          .from("workflows")
+          .update({ status: "completed", last_run_at: new Date().toISOString() })
+          .eq("workflow_id", workflowId);
+
+        // Send completion event
+        controller.enqueue(encoder.encode(`event: done\ndata: {"ok":true}\n\n`));
+        controller.close();
+      } catch (err) {
+        console.error("Orchestrator workflow error:", err);
+
+        // Mark run as failed
+        try {
+          await supabase
+            .from("workflow_runs")
+            .update({
+              status: "failed",
+              completed_at: new Date().toISOString(),
+              error: err instanceof Error ? err.message : String(err),
+            })
+            .eq("run_id", workflowRunId);
+        } catch (e) {
+          console.error("Failed to mark workflow run failed:", e);
+        }
+
+        // Send error event
+        controller.enqueue(
+          encoder.encode(
+            `event: error\n` +
+              `data: ${JSON.stringify({ error: err instanceof Error ? err.message : "Unknown error" })}\n\n`
+          )
+        );
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    },
+  });
+}
+
 export async function POST(
   request: Request,
   props: { params: Promise<{ workflowId: string }> }
@@ -62,6 +258,15 @@ export async function POST(
       );
     }
 
+    // Check workflow type and route to appropriate execution logic
+    const workflowType = workflow.workflow_type || "sequential";
+
+    if (workflowType === "orchestrator") {
+      // Route to orchestrator execution
+      return executeOrchestratorWorkflow(workflow, workflowId, ownerId, supabase, request);
+    }
+
+    // Continue with sequential workflow execution below
     // Optionally accept initial payload from trigger invocation
     let initialPayload: unknown = null;
     try {

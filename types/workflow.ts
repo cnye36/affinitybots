@@ -25,7 +25,9 @@ export interface TaskNodeData {
   // The last known output from the immediately preceding node, if any
   previousNodeOutput?: TaskOutput;
   // Thread id used by the previous node's test execution (for reusing during tests)
+  // Thread id used by the previous node's test execution (for reusing during tests)
   previousNodeThreadId?: string;
+  hasConnectedTask?: boolean;
 }
 
 export interface TriggerNodeData {
@@ -43,12 +45,25 @@ export interface TriggerNodeData {
   hasConnectedTask?: boolean;
 }
 
+export interface OrchestratorNodeData {
+  workflow_id: string;
+  name: string;
+  model: string;
+  system_prompt: string;
+  user_prompt: string;
+  temperature?: number;
+  reasoningEffort?: "low" | "medium" | "high";
+  onConfigure: () => void;
+  isActive?: boolean;
+}
+
 export type WorkflowNode = {
   id: string;
   position: { x: number; y: number };
 } & (
   | { type: "task"; data: TaskNodeData }
   | { type: "trigger"; data: TriggerNodeData }
+  | { type: "orchestrator"; data: OrchestratorNodeData }
 );
 
 export interface NodeHandlers {
@@ -143,6 +158,8 @@ export interface Workflow {
   name: string;
   description?: string;
   owner_id: string;
+  workflow_type?: "sequential" | "orchestrator";
+  orchestrator_config?: OrchestratorConfig;
   nodes: Array<{
     data: {
       assistant_id: string;
@@ -189,3 +206,17 @@ export type IntegrationType =
   | "google_docs"
   | "google_sheets"
   | "google_drive";
+
+export interface OrchestratorConfig {
+  manager: {
+    system_prompt: string;
+    user_prompt: string;
+    model: string;
+    temperature?: number;
+    reasoningEffort?: "low" | "medium" | "high";
+  };
+  execution?: {
+    max_iterations?: number;
+    require_completion_signal?: boolean;
+  };
+}

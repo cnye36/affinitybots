@@ -47,7 +47,7 @@ export async function POST(request: Request) {
           apiKey: process.env.LANGSMITH_API_KEY!,
         });
 
-        const { prompt, preferredName, enabledMCPServers } = await request.json();
+        const { prompt, preferredName, enabledMCPServers, selectedModel } = await request.json();
 
         if (!prompt) {
           return NextResponse.json(
@@ -60,6 +60,7 @@ export async function POST(request: Request) {
         const generatedConfig = await generateAgentConfiguration(prompt, user.id, {
           preferredName,
           selectedTools: Array.isArray(enabledMCPServers) ? enabledMCPServers : [],
+          selectedModel,
         });
 
         // Create LangGraph Platform assistant (langgraphClient already created above)

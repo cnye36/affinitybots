@@ -23,6 +23,7 @@ import { WorkflowExecutions } from "./WorkflowExecutions";
 import { TriggerConfigModal } from "./triggers/TriggerConfigModal";
 import { WorkflowMobileWizard } from "./WorkflowMobileWizard";
 import { TaskSelectionSheet } from "./tasks/TaskSelectionSheet";
+import { WorkflowTypeSelector } from "./WorkflowTypeSelector";
 
 import { Assistant } from "@/types/assistant";
 
@@ -123,6 +124,8 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
   const [selectedTriggerId, setSelectedTriggerId] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [isTaskSheetOpen, setIsTaskSheetOpen] = useState(false);
+  const [workflowType, setWorkflowType] = useState<"sequential" | "orchestrator" | null>(null);
+  const [isTypeSelectionOpen, setIsTypeSelectionOpen] = useState(false);
 
   const createdWorkflowRef = useRef(false);
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -200,6 +203,14 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
     });
   }, [pathname, router, searchParams, workflowId]);
 
+  // Show type selector for new workflows
+  useEffect(() => {
+    const urlWorkflowId = searchParams.get("id");
+    if (!urlWorkflowId && !workflowId && !isTypeSelectionOpen) {
+      setIsTypeSelectionOpen(true);
+    }
+  }, [searchParams, workflowId, isTypeSelectionOpen]);
+
   type DbWorkflowTask = {
     workflow_task_id: string;
     name: string;
@@ -215,6 +226,57 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
   }, []);
 
   const [isTriggerSelectOpen, setIsTriggerSelectOpen] = useState(false);
+
+  const handleTypeSelection = useCallback(async (type: "sequential" | "orchestrator") => {
+    setWorkflowType(type);
+    setIsTypeSelectionOpen(false);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Authentication required",
+          description: "Please sign in to create workflows",
+          variant: "destructive",
+        });
+        router.push("/workflows");
+        return;
+      }
+
+      // Create workflow with selected type
+      const { data: newWorkflow, error } = await supabase
+        .from("workflows")
+        .insert({
+          owner_id: user.id,
+          name: "Untitled Workflow",
+          workflow_type: type,
+          nodes: [],
+          edges: [],
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setWorkflowId(newWorkflow.workflow_id);
+      setWorkflowName(newWorkflow.name);
+
+      // Update URL with new workflow ID
+      router.push(`/workflows/builder?id=${newWorkflow.workflow_id}`);
+
+      toast({
+        title: type === "orchestrator" ? "Orchestrator workflow created" : "Sequential workflow created",
+        description: "Add a trigger to get started",
+      });
+    } catch (error) {
+      console.error("Error creating workflow:", error);
+      toast({
+        title: "Failed to create workflow",
+        variant: "destructive",
+      });
+      router.push("/workflows");
+    }
+  }, [supabase, router]);
 
   const handleAddTrigger = useCallback(async () => {
     if (!workflowId) {
@@ -536,6 +598,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
         if (workflow) {
           setWorkflowId(workflow.workflow_id);
           setWorkflowName(workflow.name);
+          setWorkflowType(workflow.workflow_type || "sequential");
 
           const storedNodes = (workflow.nodes || []) as StoredWorkflowNode[];
 
@@ -572,8 +635,12 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
                   config: node.data.config,
                   onAssignAssistant: handleAssignAgent,
                   onConfigureTask: handleConfigureTask,
-                  isConfigOpen: false,
                   status: "idle",
+                  hasConnectedTask:
+                    Array.isArray(workflow.edges) &&
+                    workflow.edges.some(
+                      (edge: Edge) => edge.source === node.id
+                    ),
                 } as unknown as TaskNodeData,
               })),
             ];
@@ -590,7 +657,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
 
             if (tasksError) throw tasksError;
 
-            const taskNodes: WorkflowNode[] = ((tasks || []) as DbWorkflowTask[]).map((t: DbWorkflowTask) => ({
+            const taskNodes: WorkflowNode[] = ((tasks || []) as DbWorkflowTask[]).map((t: DbWorkflowTask, index: number) => ({
               id: `task-${t.workflow_task_id}`,
               type: "task" as const,
               position: { x: 300 + (t.position || 0) * 400, y: 100 },
@@ -621,6 +688,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
                 onConfigureTask: handleConfigureTask,
                 isConfigOpen: false,
                 onConfigClose: () => setSelectedTaskId(null),
+                hasConnectedTask: index < (tasks || []).length - 1,
               } as unknown as TaskNodeData,
             }));
 
@@ -837,13 +905,19 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
     }
   }, [nodes, activeNodeId]);
 
-  // Handle adding task from an existing task
+  /* Handle adding task - global or from node */
   const handleAddTaskFromNode = useCallback(
-    (sourceNodeId: string) => {
-      const sourceNode = nodes.find((n) => n.id === sourceNodeId);
-      if (sourceNode) {
-        setActiveNodeId(sourceNode.id);
+    (sourceNodeId?: string) => {
+      if (sourceNodeId) {
+        const sourceNode = nodes.find((n) => n.id === sourceNodeId);
+        if (sourceNode) {
+          setActiveNodeId(sourceNode.id);
+        }
+      } else {
+        // Global add - clear active node so we don't auto-connect
+        setActiveNodeId(null);
       }
+
       if (isMobile) {
         setIsTaskSheetOpen(true);
       } else {
@@ -1040,7 +1114,9 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
           } as unknown as TaskNodeData,
         };
 
-        // Position the new node relative to the active node
+        // Position the new node
+        // If we have an active node, place it relative to it.
+        // Otherwise, find a good spot (e.g. below the last node or at top right)
         if (activeNodeId) {
           const sourceNode = nodes.find((n) => n.id === activeNodeId);
           if (sourceNode) {
@@ -1049,15 +1125,25 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
               y: sourceNode.position.y,
             };
 
-            // Create an edge from the source node to the new node
-            const newEdge = {
-              id: `edge-${sourceNode.id}-${newNode.id}`,
-              source: sourceNode.id,
-              target: newNode.id,
-              type: "custom",
-            };
-            setEdges((eds) => [...eds, newEdge]);
+            // OPTIONAL: Auto-connect if users still want that when clicking a specific node
+            // The user requested "connect it manually", so strictly speaking we should NOT auto-connect.
+            // However, if they clicked "Add Agent" ON a specific node, expectation might safely be to connect.
+            // But for the GLOBAL button (activeNodeId is null), we definitely do NOT connect.
+            
+            // Let's Respect "drags and drop... connect it manually" for the general case.
+            // But if activeNodeId exists (contextual add), we might keep it. 
+            // The user complained "Add Task aspect... somehow lost...".
+            // Let's DISABLE auto-connect for now to be safe and strictly follow "connect it manually".
+            // actually, let's keep auto-connect ONLY if they used the inline button, but the user requested removing those?
+            // "I still don't see any way to add an agent after the first agent... refactor things so that the user can drag and drop an agent and then connect it manually."
+            // This strongly implies manual is the goal.
           }
+        } else {
+           // No active node (Global add). Place it somewhere visible.
+           // Ideally we'd know center of screen. Without that, let's place it to the right of the entire graph.
+           const maxX = Math.max(...nodes.map(n => n.position.x), 0);
+           const minY = Math.min(...nodes.map(n => n.position.y), 0);
+           newNode.position = { x: maxX + 400, y: minY };
         }
 
         setNodes((nds) => [...nds, newNode]);
@@ -1065,25 +1151,8 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
         setSelectedTaskId(newTask.workflow_task_id);
         setActiveNodeId(newNode.id);
 
-        // Update the trigger node to indicate it has a connected task
-        if (
-          activeNodeId &&
-          nodes.find((n) => n.id === activeNodeId)?.type === "trigger"
-        ) {
-          setNodes((currentNodes) =>
-            currentNodes.map((node) =>
-              node.id === activeNodeId && node.type === "trigger"
-                ? {
-                    ...node,
-                    data: {
-                      ...node.data,
-                      hasConnectedTask: true,
-                    },
-                  }
-                : node
-            )
-          );
-        }
+        // We do NOT auto-create edges now, per request.
+        // We also don't need to set hasConnectedTask since connections are manual.
 
         // Clean up
         setPendingTask(null);
@@ -1234,6 +1303,7 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
         workflowId={workflowId}
         mode={mode}
         onModeChange={setMode}
+        workflowType={workflowType || "sequential"}
       />
       <div className="flex-1 relative min-h-0 overflow-hidden">
         {mode === "editor" ? (
@@ -1329,6 +1399,18 @@ function WorkflowBuilder({ initialWorkflowId }: WorkflowsBuilderProps) {
           onTaskSelect={handleTaskSelect}
         />
       )}
+
+      <WorkflowTypeSelector
+        open={isTypeSelectionOpen}
+        onOpenChange={(open) => {
+          setIsTypeSelectionOpen(open);
+          if (!open && !workflowId) {
+            // If user cancels without selecting, redirect to workflows page
+            router.push("/workflows");
+          }
+        }}
+        onSelectType={handleTypeSelection}
+      />
     </div>
   );
 }

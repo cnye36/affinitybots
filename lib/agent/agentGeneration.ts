@@ -341,7 +341,7 @@ function generateToolMetadata(tools: string[]): string {
 export async function generateAgentConfiguration(
   description: string,
   ownerId?: string,
-  options?: { preferredName?: string; selectedTools?: string[] }
+  options?: { preferredName?: string; selectedTools?: string[]; selectedModel?: string }
 ): Promise<{
   name: string;
   description: string;
@@ -423,13 +423,16 @@ export async function generateAgentConfiguration(
       finalName || parsedData.name || "Assistant"
     );
 
+    // Use the selectedModel from options if provided, otherwise fall back to AI-generated model or default
+    const finalModel = options?.selectedModel || parsedData.model || "gpt-5-mini";
+
     return {
       name: finalName || parsedData.name || "Unnamed Agent",
       description: parsedData.description || "A helpful AI assistant",
       domain: parsedData.domain,
       instructions: finalInstructions,
       tools, // Save selected tools
-      model: parsedData.model || "gpt-5-mini",
+      model: finalModel,
       memory: {
         enabled: true,
         max_entries: 20,
@@ -455,12 +458,15 @@ export async function generateAgentConfiguration(
       }
     }
 
+    // Use the selectedModel from options if provided, otherwise fall back to default
+    const fallbackModel = options?.selectedModel || "gpt-4.1";
+
     return {
       name: `Custom Agent`,
       description: description || `A helpful assistant`,
       instructions: `You are a specialized assistant. Work with any tools and integrations the user enables to provide the best possible assistance.`,
       tools: [],
-      model: "gpt-4.1",
+      model: fallbackModel,
       memory: { enabled: true, max_entries: 20 },
       knowledge: { enabled: false },
       agent_avatar: avatarUrl,

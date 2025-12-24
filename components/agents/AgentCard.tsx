@@ -129,78 +129,101 @@ export function AgentCard({ assistant, onDelete }: AgentCardProps) {
   return (
     <>
       <div
-        className="border rounded-lg p-4 sm:p-6 hover:border-primary transition-colors cursor-pointer relative group"
+        className="group relative rounded-xl border border-border bg-card shadow-sm hover:shadow-2xl hover:border-violet-500/50 transition-all duration-300 cursor-pointer hover:scale-[1.02] overflow-hidden"
         onClick={handleClick}
       >
+        {/* Gradient border glow on hover */}
+        <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-600 to-purple-600 rounded-xl opacity-0 group-hover:opacity-20 blur transition duration-300" />
+
+        {/* Subtle shine effect on hover */}
+        <div className="absolute top-0 -right-4 w-8 h-full bg-gradient-to-r from-transparent via-white/5 to-transparent transform rotate-12 group-hover:right-full transition-all duration-700 ease-out" />
+
+        {/* Delete button */}
         <Button
           variant="ghost"
           size="icon"
-          className="delete-button absolute right-1 sm:right-2 top-1 sm:top-2 opacity-0 group-hover:opacity-100 transition-opacity"
+          className="delete-button absolute right-2 top-2 z-10 opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-red-500/10 hover:text-red-500"
           onClick={() => setIsDeleteDialogOpen(true)}
         >
-          <Trash2 className="h-4 w-4 text-destructive" />
+          <Trash2 className="h-4 w-4" />
         </Button>
-        <div className="flex items-start space-x-2 sm:space-x-4">
-          <div
-            className="h-10 w-10 sm:h-12 sm:w-12 rounded-full ring-2 ring-background flex items-center justify-center text-xs sm:text-sm font-medium text-white"
-            style={{
-              backgroundImage: avatarUrl ? `url(${avatarUrl})` : undefined,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-              backgroundColor: !avatarUrl
-                ? `hsl(${(assistant.name.length * 30) % 360}, 70%, 50%)`
-                : undefined,
-            }}
-          >
-            {!avatarUrl && assistant.name.slice(0, 2).toUpperCase()}
-          </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="text-base sm:text-lg font-semibold mb-1 truncate">
-              {assistant.name}
-            </h3>
-            <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">
-              {assistant.metadata?.description || "No description provided"}
-            </p>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2 items-center text-xs sm:text-sm text-muted-foreground mt-3 sm:mt-4">
-          <span className="flex items-center">
-            Model: {modelLabel}
-          </span>
-          {enabledServers.length > 0 && (
-            <>
-              <span className="hidden sm:inline">•</span>
-              <div className="flex items-center gap-2">
-                {enabledServers.slice(0, 4).map((name) => {
-                  const src = toolLogos[name];
-                  return (
-                    <div
-                      key={name}
-                      className="w-5 h-5 rounded-full ring-2 ring-background overflow-hidden bg-muted flex items-center justify-center text-[10px]"
-                      title={name}
-                    >
-                      {src ? (
-                        <Image
-                          src={src}
-                          alt={name}
-                          width={20}
-                          height={20}
-                          className="object-cover"
-                        />
-                      ) : (
-                        <span>🛠️</span>
-                      )}
-                    </div>
-                  );
-                })}
-                {enabledServers.length > 4 && (
-                  <div className="w-5 h-5 rounded-full ring-2 ring-background bg-muted text-[10px] flex items-center justify-center">
-                    +{enabledServers.length - 4}
-                  </div>
-                )}
+
+        <div className="relative p-6">
+          {/* Avatar and content section */}
+          <div className="flex items-start space-x-4 mb-4">
+            {/* Avatar with subtle ring */}
+            <div className="relative">
+              <div
+                className="h-14 w-14 rounded-full ring-2 ring-border group-hover:ring-primary/30 flex items-center justify-center text-sm font-semibold text-white shadow-sm transition-all duration-200"
+                style={{
+                  backgroundImage: avatarUrl ? `url(${avatarUrl})` : undefined,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                  backgroundColor: !avatarUrl
+                    ? `hsl(${(assistant.name.length * 30) % 360}, 70%, 50%)`
+                    : undefined,
+                }}
+              >
+                {!avatarUrl && assistant.name.slice(0, 2).toUpperCase()}
               </div>
-            </>
-          )}
+            </div>
+
+            {/* Agent info */}
+            <div className="flex-1 min-w-0">
+              <h3 className="text-lg font-bold mb-1 truncate bg-gradient-to-r from-violet-600 to-purple-600 dark:from-violet-400 dark:to-purple-400 bg-clip-text text-transparent group-hover:from-violet-700 group-hover:to-purple-700 dark:group-hover:from-violet-300 dark:group-hover:to-purple-300 transition-all duration-200">
+                {assistant.name}
+              </h3>
+              <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
+                {assistant.metadata?.description || "No description provided"}
+              </p>
+            </div>
+          </div>
+
+          {/* Model and tools section */}
+          <div className="flex flex-col gap-3 pt-4 border-t border-border/50">
+            {/* Model badge */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary border border-primary/20 text-xs font-medium hover:bg-primary/15 transition-colors duration-200">
+                {modelLabel}
+              </span>
+            </div>
+
+            {/* Tools */}
+            {enabledServers.length > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground font-medium">Tools:</span>
+                <div className="flex items-center gap-1.5">
+                  {enabledServers.slice(0, 5).map((name) => {
+                    const src = toolLogos[name];
+                    return (
+                      <div
+                        key={name}
+                        className="relative w-6 h-6 rounded-full ring-2 ring-border overflow-hidden bg-muted flex items-center justify-center text-[10px] hover:scale-110 hover:ring-primary/30 transition-all duration-200 shadow-sm"
+                        title={name}
+                      >
+                        {src ? (
+                          <Image
+                            src={src}
+                            alt={name}
+                            width={24}
+                            height={24}
+                            className="object-cover"
+                          />
+                        ) : (
+                          <span>🛠️</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {enabledServers.length > 5 && (
+                    <div className="w-6 h-6 rounded-full ring-2 ring-border bg-muted text-[10px] flex items-center justify-center font-semibold text-foreground hover:scale-110 hover:ring-primary/30 transition-all duration-200">
+                      +{enabledServers.length - 5}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

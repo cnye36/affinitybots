@@ -13,7 +13,7 @@ export interface TaskOption {
 export const TASK_OPTIONS: TaskOption[] = [
   {
     type: "ai_task",
-    label: "AI Task",
+    label: "AI Agent",
     description: "Execute a task using the agent's capabilities",
   },
 ];
@@ -38,7 +38,7 @@ export function TaskSidebar({
     >
       <div className="w-80 h-full bg-background border-l flex flex-col">
         <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-lg font-semibold">Add Task</h2>
+          <h2 className="text-lg font-semibold">Add Agent</h2>
           <button
             onClick={onClose}
             className="p-2 hover:bg-secondary rounded-full"

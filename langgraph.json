@@ -9,7 +9,8 @@
 
   "dependencies": ["."],
   "graphs": {
-    "reactAgent": "./lib/agent/reactAgent.ts:graph"
+    "reactAgent": "./lib/agent/reactAgent.ts:graph",
+    "orchestratorAgent": "./lib/agent/orchestratorAgent.ts:orchestratorGraph"
   },
   "env": ".env"
 }

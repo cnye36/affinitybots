@@ -2,18 +2,53 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, Sparkles } from "lucide-react";
+import { motion } from "framer-motion";
 
 export function AgentHeader() {
-  return (
-    <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <h1 className="text-2xl font-bold">My Agents</h1>
-      <Link href="/agents/new" className="w-full sm:w-auto">
-        <Button className="w-full sm:w-auto justify-center" data-tutorial="create-agent-button">
-          <PlusCircle className="mr-2" />
-          Create Agent
-        </Button>
-      </Link>
-    </div>
-  );
+	return (
+		<div className="mb-12">
+			<motion.div
+				initial={{ opacity: 0, y: 20 }}
+				animate={{ opacity: 1, y: 0 }}
+				transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+				className="mb-6"
+			>
+				<h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-3">
+					My Agents
+				</h1>
+				<p className="text-muted-foreground text-base md:text-lg">
+					Manage and configure your AI agents with advanced capabilities
+				</p>
+			</motion.div>
+
+			<motion.div
+				initial={{ opacity: 0, y: 20 }}
+				animate={{ opacity: 1, y: 0 }}
+				transition={{ duration: 0.5, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+			>
+				<Link href="/agents/new" className="inline-block w-full sm:w-auto">
+					<Button
+						size="lg"
+						className="group relative w-full sm:w-auto overflow-hidden shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
+						data-tutorial="create-agent-button"
+					>
+						{/* Shine effect */}
+						<div className="absolute top-0 -right-4 w-8 h-full bg-gradient-to-r from-transparent via-white/20 to-transparent transform rotate-12 group-hover:right-full transition-all duration-700 ease-out" />
+
+						<div className="relative flex items-center justify-center gap-2">
+							<motion.div
+								whileHover={{ rotate: 180 }}
+								transition={{ duration: 0.3 }}
+							>
+								<PlusCircle className="h-5 w-5" />
+							</motion.div>
+							<span className="font-semibold">Create New Agent</span>
+							<Sparkles className="h-4 w-4 opacity-70 group-hover:opacity-100 transition-opacity" />
+						</div>
+					</Button>
+				</Link>
+			</motion.div>
+		</div>
+	);
 }

@@ -30,11 +30,13 @@ import { toast } from "@/hooks/useToast";
 import { WorkflowNode } from "@/types/workflow";
 import { MemoizedTaskNode } from "./tasks/TaskNode";
 import { TriggerNode } from "./triggers/TriggerNode";
+import { OrchestratorNode } from "./orchestrator/OrchestratorNode";
 
 // Define node and edge types outside the component
 const nodeTypes: NodeTypes = {
   task: MemoizedTaskNode,
   trigger: TriggerNode,
+  orchestrator: OrchestratorNode,
 };
 
 const edgeTypes: EdgeTypes = {
@@ -51,7 +53,7 @@ interface WorkflowCanvasProps {
   onTaskConfigClose?: () => void;
   activeNodeId?: string | null;
   setActiveNodeId?: (id: string | null) => void;
-  onAddTask?: (sourceNodeId: string) => void;
+  onAddTask?: (sourceNodeId?: string) => void;
   // When true, automatically fit all nodes into view on mount and when graph changes
   autoFit?: boolean;
   // When true, shows execution-focused instructions instead of editor instructions
@@ -312,6 +314,28 @@ export function WorkflowCanvas({
               : "Add tasks to define your workflow. Press Delete or Backspace to remove nodes and edges."
             }
           </div>
+        </Panel>
+        <Panel position="top-right" className="p-2">
+          <button
+            onClick={() => onAddTask && onAddTask(undefined as any)} 
+            className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-500 hover:bg-blue-600 text-white shadow-lg transition-transform hover:scale-105"
+            title="Add Agent"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+          </button>
         </Panel>
         <DeterministicZoom autoFit={autoFit} />
       </ReactFlow>

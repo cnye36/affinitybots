@@ -285,88 +285,131 @@ export default async function Dashboard() {
                 <div className="mb-8">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
                     <div>
-                      <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-                      <p className="text-muted-foreground mt-1">
+                      <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                        Dashboard
+                      </h1>
+                      <p className="text-muted-foreground mt-2 text-base">
                         Monitor your agents, workflows, and system performance
                       </p>
                     </div>
                     <div className="flex items-center gap-3" data-tutorial="quick-actions">
-                    <Button variant="outline" size="sm" asChild>
-                      <Link href="/agents/new">
-                        <Bot className="h-4 w-4 mr-2" />
-                        New Agent
-                      </Link>
-                    </Button>
-                    <Button variant="outline" size="sm" asChild>
-                      <Link href="/workflows/new">
-                        <Play className="h-4 w-4 mr-2" />
-                        New Workflow
-                      </Link>
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      <Clock className="h-4 w-4 mr-2" />
-                      Last 30 days
-                    </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-indigo-500/30 hover:border-indigo-500 hover:bg-gradient-to-r hover:from-indigo-500/10 hover:to-purple-500/10 transition-all duration-200"
+                        asChild
+                      >
+                        <Link href="/agents/new">
+                          <Bot className="h-4 w-4 mr-2" />
+                          New Agent
+                        </Link>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-blue-500/30 hover:border-blue-500 hover:bg-gradient-to-r hover:from-blue-500/10 hover:to-cyan-500/10 transition-all duration-200"
+                        asChild
+                      >
+                        <Link href="/workflows/new">
+                          <Play className="h-4 w-4 mr-2" />
+                          New Workflow
+                        </Link>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-border hover:bg-accent transition-all duration-200"
+                      >
+                        <Clock className="h-4 w-4 mr-2" />
+                        Last 30 days
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </div>
 
               {/* Summary statistics */}
               <StatsOverview stats={stats} />
 
               {/* Tools and Agents summary grid */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">{/* Agents section */}
-                <Card data-tutorial="agents-section">
-                  <CardHeader>
-                    <CardTitle>Agents</CardTitle>
-                    <CardDescription>
-                      Your most recently created agents
-                    </CardDescription>
+                <Card
+                  data-tutorial="agents-section"
+                  className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-shadow duration-300"
+                >
+                  {/* Decorative gradient header background */}
+                  <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-transparent" />
+
+                  <CardHeader className="relative">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 rounded-lg bg-gradient-to-br from-indigo-500/20 to-purple-500/20 backdrop-blur-sm">
+                        <Bot className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                          Agents
+                        </CardTitle>
+                        <CardDescription>
+                          Your most recently created agents
+                        </CardDescription>
+                      </div>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     {agents.length > 0 ? (
-                      <div className="space-y-4">
+                      <div className="space-y-3">
                         {agents.map((agent: any) => (
                           <Link
                             key={agent.id}
                             href={`/agents/${encodeURIComponent(agent.id)}`}
-                            className="block p-3 border rounded-lg hover:border-primary transition-colors"
+                            className="block group"
                           >
-                            <div className="flex items-start justify-between gap-4">
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <p className="font-medium truncate">
-                                    {agent.name}
-                                  </p>
-                                  <div className="flex items-center gap-1">
-                                    {agent.enabledTools.slice(0, 3).map((tool: string, index: number) => {
-                                      const logo = toolLogos[tool] || officialLogoForQualifiedName(tool);
-                                      return logo ? (
-                                        <Image
-                                          key={index}
-                                          src={logo}
-                                          alt={tool}
-                                          width={20}
-                                          height={20}
-                                          className="object-contain"
-                                          style={{ objectFit: "contain" }}
-                                        />
-                                      ) : (
-                                        <span key={index} className="text-sm" title={tool}>
-                                          {getToolIcon(tool)}
-                                        </span>
-                                      );
-                                    })}
-                                    {agent.enabledTools.length > 3 && (
-                                      <span className="text-xs text-muted-foreground">
-                                        +{agent.enabledTools.length - 3}
-                                      </span>
+                            <div className="p-4 border border-border rounded-xl hover:border-indigo-500/50 hover:bg-gradient-to-br hover:from-indigo-500/5 hover:to-purple-500/5 transition-all duration-200">
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <p className="font-medium truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                                      {agent.name}
+                                    </p>
+                                    {agent.enabledTools.length > 0 && (
+                                      <div className="flex items-center gap-1">
+                                        {agent.enabledTools.slice(0, 3).map((tool: string, index: number) => {
+                                          const logo = toolLogos[tool] || officialLogoForQualifiedName(tool);
+                                          return logo ? (
+                                            <div
+                                              key={index}
+                                              className="p-1 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 rounded-md border border-indigo-500/20"
+                                            >
+                                              <Image
+                                                src={logo}
+                                                alt={tool}
+                                                width={16}
+                                                height={16}
+                                                className="object-contain"
+                                                style={{ objectFit: "contain" }}
+                                              />
+                                            </div>
+                                          ) : (
+                                            <span
+                                              key={index}
+                                              className="text-xs p-1 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 rounded-md border border-indigo-500/20"
+                                              title={tool}
+                                            >
+                                              {getToolIcon(tool)}
+                                            </span>
+                                          );
+                                        })}
+                                        {agent.enabledTools.length > 3 && (
+                                          <Badge variant="secondary" className="text-xs h-5 px-1.5">
+                                            +{agent.enabledTools.length - 3}
+                                          </Badge>
+                                        )}
+                                      </div>
                                     )}
                                   </div>
+                                  <p className="text-sm text-muted-foreground line-clamp-2">
+                                    {agent.description}
+                                  </p>
                                 </div>
-                                <p className="text-sm text-muted-foreground line-clamp-2">
-                                  {agent.description}
-                                </p>
                               </div>
                             </div>
                           </Link>
@@ -374,66 +417,94 @@ export default async function Dashboard() {
                         {assistantsData && assistantsData.length > 3 && (
                           <Link
                             href="/agents"
-                            className="text-sm text-primary underline"
+                            className="inline-flex items-center gap-1 text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium transition-colors"
                           >
                             View all agents
+                            <Bot className="h-3 w-3" />
                           </Link>
                         )}
                       </div>
                     ) : (
-                      <div className="text-center py-8">
-                        <p className="text-muted-foreground mb-4">
-                          You don’t have any agents yet.
+                      <div className="text-center py-12">
+                        <div className="inline-flex p-4 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 mb-4">
+                          <Bot className="h-8 w-8 text-muted-foreground/50" />
+                        </div>
+                        <p className="text-sm font-medium text-muted-foreground mb-2">
+                          You don&apos;t have any agents yet.
+                        </p>
+                        <p className="text-xs text-muted-foreground/70 mb-4">
+                          Create your first AI agent to get started
                         </p>
                         <Button variant="outline" asChild>
-                          <Link href="/agents/new">Create Agent</Link>
+                          <Link href="/agents/new">
+                            <Bot className="h-4 w-4 mr-2" />
+                            Create Agent
+                          </Link>
                         </Button>
                       </div>
                     )}
                   </CardContent>
                 </Card>
                 {/* Tools section */}
-                <Card data-tutorial="tools-section">
-                  <CardHeader>
-                    <CardTitle>Tools</CardTitle>
-                    <CardDescription>
-                      Recently configured Tools
-                    </CardDescription>
+                <Card
+                  data-tutorial="tools-section"
+                  className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-shadow duration-300"
+                >
+                  {/* Decorative gradient header background */}
+                  <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-transparent" />
+
+                  <CardHeader className="relative">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-500/20 backdrop-blur-sm">
+                        <Play className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+                          Tools
+                        </CardTitle>
+                        <CardDescription>
+                          Recently configured Tools
+                        </CardDescription>
+                      </div>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     {tools.length > 0 ? (
-                      <div className="space-y-4">
+                      <div className="space-y-3">
                         {tools.map((tool: any) => (
                           <div
                             key={tool.id}
-                            className="flex items-center justify-between p-3 border rounded-lg"
+                            className="flex items-center justify-between p-4 border border-border rounded-xl hover:border-amber-500/50 hover:bg-gradient-to-br hover:from-amber-500/5 hover:to-orange-500/5 transition-all duration-200 group"
                           >
                             <div className="flex items-center gap-3">
-                              {(toolLogos[tool.qualified_name] || officialLogoForQualifiedName(tool.qualified_name)) ? (
-                                <Image
-                                  src={toolLogos[tool.qualified_name] || officialLogoForQualifiedName(tool.qualified_name) as string}
-                                  alt={tool.qualified_name}
-                                  width={28}
-                                  height={28}
-                                  className="object-contain"
-                                  style={{ objectFit: "contain" }}
-                                />
-                              ) : (
-                                <span className="text-lg" title={tool.qualified_name}>
-                                  {getToolIcon(tool.qualified_name)}
-                                </span>
-                              )}
-                              <div>
-                                <div className="font-medium truncate">
+                              <div className="p-2 bg-gradient-to-br from-amber-500/20 to-orange-500/20 rounded-xl border border-amber-500/30 backdrop-blur-sm">
+                                {(toolLogos[tool.qualified_name] || officialLogoForQualifiedName(tool.qualified_name)) ? (
+                                  <Image
+                                    src={toolLogos[tool.qualified_name] || officialLogoForQualifiedName(tool.qualified_name) as string}
+                                    alt={tool.qualified_name}
+                                    width={20}
+                                    height={20}
+                                    className="object-contain"
+                                    style={{ objectFit: "contain" }}
+                                  />
+                                ) : (
+                                  <span className="text-base" title={tool.qualified_name}>
+                                    {getToolIcon(tool.qualified_name)}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium truncate group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
                                   {formatToolName(tool.qualified_name)}
                                 </div>
-                                <div className="text-xs text-muted-foreground">
+                                <div className="text-xs text-muted-foreground truncate">
                                   {tool.qualified_name}
                                 </div>
                               </div>
                             </div>
                             <Badge
                               variant={tool.is_enabled ? "default" : "secondary"}
+                              className={tool.is_enabled ? "bg-gradient-to-r from-emerald-500 to-green-500 text-white border-0" : ""}
                             >
                               {tool.is_enabled ? "Enabled" : "Disabled"}
                             </Badge>
@@ -442,24 +513,34 @@ export default async function Dashboard() {
                         {toolsData && toolsData.length > 3 && (
                           <Link
                             href="/tools"
-                            className="text-sm text-primary underline"
+                            className="inline-flex items-center gap-1 text-sm text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 font-medium transition-colors"
                           >
                             View all tools
+                            <Play className="h-3 w-3" />
                           </Link>
                         )}
                       </div>
                     ) : (
-                      <div className="text-center py-8">
-                        <p className="text-muted-foreground mb-4">
-                          You haven’t configured any tools yet.
+                      <div className="text-center py-12">
+                        <div className="inline-flex p-4 rounded-2xl bg-gradient-to-br from-amber-500/10 to-orange-500/10 mb-4">
+                          <Play className="h-8 w-8 text-muted-foreground/50" />
+                        </div>
+                        <p className="text-sm font-medium text-muted-foreground mb-2">
+                          You haven&apos;t configured any tools yet.
+                        </p>
+                        <p className="text-xs text-muted-foreground/70 mb-4">
+                          Connect tools to extend your agents&apos; capabilities
                         </p>
                         <Button variant="outline" asChild>
-                          <Link href="/tools">Configure Tools</Link>
+                          <Link href="/tools">
+                            <Play className="h-4 w-4 mr-2" />
+                            Configure Tools
+                          </Link>
                         </Button>
                       </div>
                     )}
                   </CardContent>
-                </Card> 
+                </Card>
               </div>
 
               
