@@ -56,11 +56,19 @@ export function BillingSettings() {
 
   if (loading) {
     return (
-      <Card>
+      <Card className="border-blue-200/50 dark:border-blue-800/50 bg-gradient-to-br from-blue-50/30 to-cyan-50/30 dark:from-blue-950/20 dark:to-cyan-950/20">
         <CardHeader>
-          <CardTitle>Billing & Subscription</CardTitle>
+          <CardTitle className="text-2xl bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent">
+            Billing & Subscription
+          </CardTitle>
           <CardDescription>Loading subscription information...</CardDescription>
         </CardHeader>
+        <CardContent>
+          <div className="animate-pulse space-y-4">
+            <div className="h-24 bg-gradient-to-r from-blue-100 to-cyan-100 dark:from-blue-950/30 dark:to-cyan-950/30 rounded-lg"></div>
+            <div className="h-16 bg-gradient-to-r from-blue-100 to-cyan-100 dark:from-blue-950/30 dark:to-cyan-950/30 rounded-lg"></div>
+          </div>
+        </CardContent>
       </Card>
     );
   }
@@ -84,19 +92,21 @@ export function BillingSettings() {
   };
 
   return (
-    <Card>
+    <Card className="border-blue-200/50 dark:border-blue-800/50 bg-gradient-to-br from-blue-50/30 to-cyan-50/30 dark:from-blue-950/20 dark:to-cyan-950/20">
       <CardHeader>
-        <CardTitle>Billing & Subscription</CardTitle>
+        <CardTitle className="text-2xl bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent">
+          Billing & Subscription
+        </CardTitle>
         <CardDescription>
           Manage your subscription and billing information.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="rounded-lg border p-4">
+        <div className="rounded-lg border border-blue-200/50 dark:border-blue-800/50 bg-gradient-to-br from-blue-50/50 to-cyan-50/50 dark:from-blue-950/30 dark:to-cyan-950/30 p-4">
           <div className="flex justify-between items-start mb-4">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <h3 className="text-2xl font-bold">{planName}</h3>
+                <h3 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent">{planName}</h3>
                 {isTrialing && (
                   <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
                     Trial
@@ -139,7 +149,9 @@ export function BillingSettings() {
             </div>
             {(!subscription || subscription.plan_type === "free") && (
               <Link href="/pricing">
-                <Button>Upgrade Plan</Button>
+                <Button className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white">
+                  Upgrade Plan
+                </Button>
               </Link>
             )}
           </div>
@@ -147,12 +159,12 @@ export function BillingSettings() {
 
         {subscription && subscription.plan_type !== "free" && (
           <>
-            <div className="rounded-lg border p-4">
-              <h3 className="font-medium mb-4">Payment Method</h3>
+            <div className="rounded-lg border border-blue-200/50 dark:border-blue-800/50 bg-gradient-to-br from-blue-50/30 to-cyan-50/30 dark:from-blue-950/20 dark:to-cyan-950/20 p-4">
+              <h3 className="font-medium mb-4 text-blue-700 dark:text-blue-300">Payment Method</h3>
               <p className="text-sm text-muted-foreground mb-4">
                 Payment methods are managed through Stripe. Visit your Stripe customer portal to update your payment method.
               </p>
-              <Button variant="outline" className="w-full" asChild>
+              <Button variant="outline" className="w-full border-blue-300 dark:border-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/50" asChild>
                 <a
                   href="/api/subscriptions/portal"
                   target="_blank"
@@ -164,10 +176,10 @@ export function BillingSettings() {
               </Button>
             </div>
 
-            <div className="rounded-lg border p-4">
-              <h3 className="font-medium mb-2">Subscription Management</h3>
+            <div className="rounded-lg border border-blue-200/50 dark:border-blue-800/50 bg-gradient-to-br from-blue-50/30 to-cyan-50/30 dark:from-blue-950/20 dark:to-cyan-950/20 p-4">
+              <h3 className="font-medium mb-2 text-blue-700 dark:text-blue-300">Subscription Management</h3>
               {isCanceled ? (
-                <div className="flex items-start gap-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                <div className="flex items-start gap-2 p-3 bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 rounded-lg border border-yellow-200/50 dark:border-yellow-800/50">
                   <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-400 mt-0.5" />
                   <div className="flex-1">
                     <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
@@ -179,7 +191,7 @@ export function BillingSettings() {
                   </div>
                 </div>
               ) : (
-                <Button variant="outline" className="w-full" asChild>
+                <Button variant="outline" className="w-full border-blue-300 dark:border-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/50" asChild>
                   <a
                     href="/api/subscriptions/portal"
                     target="_blank"
@@ -193,8 +205,8 @@ export function BillingSettings() {
           </>
         )}
 
-        <div className="rounded-lg border p-4">
-          <h3 className="font-medium mb-2">Billing History</h3>
+        <div className="rounded-lg border border-blue-200/50 dark:border-blue-800/50 bg-gradient-to-br from-blue-50/30 to-cyan-50/30 dark:from-blue-950/20 dark:to-cyan-950/20 p-4">
+          <h3 className="font-medium mb-2 text-blue-700 dark:text-blue-300">Billing History</h3>
           <p className="text-sm text-muted-foreground">
             {subscription && subscription.plan_type !== "free"
               ? "View your billing history in the Stripe customer portal."

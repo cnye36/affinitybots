@@ -111,29 +111,33 @@ export function NavUser({ user: initialUser }: { user?: UserData }) {
       <div className="px-3 py-2 group-data-[collapsible=icon]:hidden">
         <RateLimitProgress userId={userId} />
       </div>
-      
+
       <SidebarMenuItem>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              className="data-[state=open]:bg-gradient-to-r data-[state=open]:from-violet-500/10 data-[state=open]:to-purple-500/10 hover:bg-violet-500/5 transition-all"
             >
-              <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarImage src={user?.avatar_url} alt={user?.name} />
-                <AvatarFallback className="rounded-lg">
-                  {userInitials}
-                </AvatarFallback>
-              </Avatar>
+              {/* Avatar with gradient ring */}
+              <div className="relative">
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-500 to-purple-500 dark:from-violet-600 dark:to-purple-600 rounded-lg blur-sm opacity-75" />
+                <Avatar className="relative h-8 w-8 rounded-lg border-2 border-white dark:border-gray-900">
+                  <AvatarImage src={user?.avatar_url} alt={user?.name} />
+                  <AvatarFallback className="rounded-lg bg-gradient-to-br from-violet-500 to-purple-500 text-white">
+                    {userInitials}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-semibold">
                   {user?.name || "User"}
                 </span>
-                <span className="truncate text-xs">
+                <span className="truncate text-xs text-muted-foreground">
                   {user?.email || "user@example.com"}
                 </span>
               </div>
-              <ChevronsUpDown className="ml-auto size-4" />
+              <ChevronsUpDown className="ml-auto size-4 text-muted-foreground" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
@@ -144,17 +148,20 @@ export function NavUser({ user: initialUser }: { user?: UserData }) {
           >
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarImage src={user?.avatar_url} alt={user?.name} />
-                  <AvatarFallback className="rounded-lg">
-                    {userInitials}
-                  </AvatarFallback>
-                </Avatar>
+                <div className="relative">
+                  <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-500 to-purple-500 dark:from-violet-600 dark:to-purple-600 rounded-lg blur-sm opacity-75" />
+                  <Avatar className="relative h-8 w-8 rounded-lg border-2 border-white dark:border-gray-900">
+                    <AvatarImage src={user?.avatar_url} alt={user?.name} />
+                    <AvatarFallback className="rounded-lg bg-gradient-to-br from-violet-500 to-purple-500 text-white">
+                      {userInitials}
+                    </AvatarFallback>
+                  </Avatar>
+                </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold">
                     {user?.name || "User"}
                   </span>
-                  <span className="truncate text-xs">
+                  <span className="truncate text-xs text-muted-foreground">
                     {user?.email || "user@example.com"}
                   </span>
                 </div>

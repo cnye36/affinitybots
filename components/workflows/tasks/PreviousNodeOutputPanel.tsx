@@ -3,6 +3,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import ReactMarkdown from "react-markdown";
+import { ArrowRight } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -67,40 +68,67 @@ export function PreviousNodeOutputPanel({
   setOutputFormat,
 }: PreviousNodeOutputPanelProps) {
   return (
-    <div className="border rounded-lg p-4">
-      <h3 className="font-medium mb-4">Previous Node Output</h3>
-      <ScrollArea className="h-[600px]">
-        <div className="space-y-2">
-          <div className="flex justify-between items-center">
-            <Label>Output</Label>
-            <Select
-              value={outputFormat}
-              onValueChange={(value) => setOutputFormat(value as OutputFormat)}
-            >
-              <SelectTrigger className="w-[130px]">
-                <SelectValue placeholder="Format" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="json">JSON</SelectItem>
-                <SelectItem value="markdown">Markdown</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          {outputFormat === "markdown" ? (
-            <div className="h-[400px] border rounded-md p-3 overflow-auto">
-              <div className="prose max-w-none text-foreground dark:prose-invert">
-                <ReactMarkdown>{formatOutput(data, outputFormat)}</ReactMarkdown>
-              </div>
-            </div>
-          ) : (
-            <Textarea
-              value={formatOutput(data, outputFormat)}
-              readOnly
-              className="font-mono h-[400px]"
-            />
-          )}
+    <div className="relative overflow-hidden rounded-xl border-2 border-emerald-200/50 dark:border-emerald-800/50 bg-gradient-to-br from-emerald-50/30 to-green-50/30 dark:from-emerald-950/20 dark:to-green-950/20">
+      {/* Subtle animated gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none" />
+
+      <div className="relative">
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-emerald-200/50 dark:border-emerald-800/30 bg-gradient-to-r from-emerald-500/5 to-green-500/5">
+          <h3 className="font-semibold text-base bg-gradient-to-r from-emerald-600 to-green-600 dark:from-emerald-400 dark:to-green-400 bg-clip-text text-transparent">
+            Previous Node Output
+          </h3>
+          <p className="text-xs text-muted-foreground mt-1">
+            Context passed from the upstream task
+          </p>
         </div>
-      </ScrollArea>
+
+        <ScrollArea className="h-[600px]">
+          <div className="space-y-4 p-6">
+            <div className="flex justify-between items-center">
+              <Label className="text-sm font-medium">Format</Label>
+              <Select
+                value={outputFormat}
+                onValueChange={(value) => setOutputFormat(value as OutputFormat)}
+              >
+                <SelectTrigger className="w-[130px] bg-background">
+                  <SelectValue placeholder="Format" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="json">JSON</SelectItem>
+                  <SelectItem value="markdown">Markdown</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {data ? (
+              outputFormat === "markdown" ? (
+                <div className="rounded-lg border border-emerald-200/50 dark:border-emerald-800/50 bg-background p-4 overflow-auto min-h-[400px] max-h-[500px]">
+                  <div className="prose prose-sm max-w-none text-foreground dark:prose-invert">
+                    <ReactMarkdown>{formatOutput(data, outputFormat)}</ReactMarkdown>
+                  </div>
+                </div>
+              ) : (
+                <Textarea
+                  value={formatOutput(data, outputFormat)}
+                  readOnly
+                  className="font-mono text-xs bg-background resize-none min-h-[400px]"
+                />
+              )
+            ) : (
+              <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-emerald-200/50 dark:border-emerald-800/50 bg-gradient-to-br from-emerald-50/30 to-green-50/30 dark:from-emerald-950/20 dark:to-green-950/20 p-12 min-h-[400px]">
+                <div className="p-4 rounded-full bg-gradient-to-br from-emerald-500/10 to-green-500/10 mb-4">
+                  <ArrowRight className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <p className="text-sm font-medium text-muted-foreground mb-1">No previous output</p>
+                <p className="text-xs text-muted-foreground text-center max-w-[250px]">
+                  This is the first task in the workflow or the previous task hasn't been executed yet
+                </p>
+              </div>
+            )}
+          </div>
+        </ScrollArea>
+      </div>
     </div>
   );
 }

@@ -49,7 +49,9 @@ export function NavMain({ items }: { items: NavItem[] }) {
 
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+      <SidebarGroupLabel className="text-xs font-semibold text-violet-600/70 dark:text-violet-400/70 uppercase tracking-wider">
+        Navigation
+      </SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => (
           isCollapsed && item.items ? (
@@ -58,7 +60,11 @@ export function NavMain({ items }: { items: NavItem[] }) {
               <Link href={item.url} onClick={handleNavigate}>
                 <SidebarMenuButton
                   tooltip={item.title}
-                  className={isActiveLink(item.url) ? 'bg-accent' : ''}
+                  className={
+                    isActiveLink(item.url)
+                      ? 'bg-gradient-to-r from-violet-500/10 to-purple-500/10 border-l-2 border-violet-500 dark:border-violet-400 text-violet-600 dark:text-violet-400 hover:from-violet-500/20 hover:to-purple-500/20'
+                      : 'hover:bg-violet-500/5'
+                  }
                 >
                   {item.icon && <item.icon className="h-4 w-4" />}
                   <span>{item.title}</span>
@@ -75,7 +81,14 @@ export function NavMain({ items }: { items: NavItem[] }) {
               <SidebarMenuItem data-tutorial={item.title === "Tools" ? "tools-sidebar" : undefined}>
                 {item.items ? (
                   <CollapsibleTrigger asChild>
-                    <SidebarMenuButton tooltip={item.title}>
+                    <SidebarMenuButton
+                      tooltip={item.title}
+                      className={
+                        isActiveLink(item.url)
+                          ? 'bg-gradient-to-r from-violet-500/10 to-purple-500/10 border-l-2 border-violet-500 dark:border-violet-400 text-violet-600 dark:text-violet-400 hover:from-violet-500/20 hover:to-purple-500/20'
+                          : 'hover:bg-violet-500/5'
+                      }
+                    >
                       {item.icon && <item.icon className="h-4 w-4" />}
                       <span>{item.title}</span>
                       <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
@@ -85,7 +98,11 @@ export function NavMain({ items }: { items: NavItem[] }) {
                   <Link href={item.url} onClick={handleNavigate}>
                     <SidebarMenuButton
                       tooltip={item.title}
-                      className={isActiveLink(item.url) ? 'bg-accent' : ''}
+                      className={
+                        isActiveLink(item.url)
+                          ? 'bg-gradient-to-r from-violet-500/10 to-purple-500/10 border-l-2 border-violet-500 dark:border-violet-400 text-violet-600 dark:text-violet-400 hover:from-violet-500/20 hover:to-purple-500/20'
+                          : 'hover:bg-violet-500/5'
+                      }
                     >
                       {item.icon && <item.icon className="h-4 w-4" />}
                       <span>{item.title}</span>
@@ -99,7 +116,11 @@ export function NavMain({ items }: { items: NavItem[] }) {
                         <SidebarMenuSubItem key={subItem.title}>
                           <SidebarMenuSubButton
                             asChild
-                            className={isActiveLink(subItem.url) ? 'bg-accent' : ''}
+                            className={
+                              isActiveLink(subItem.url)
+                                ? 'bg-gradient-to-r from-violet-500/10 to-purple-500/10 text-violet-600 dark:text-violet-400 border-l-2 border-violet-500 dark:border-violet-400 hover:from-violet-500/20 hover:to-purple-500/20'
+                                : 'hover:bg-violet-500/5'
+                            }
                           >
                             <Link href={subItem.url} onClick={handleNavigate}>
                               <span>{subItem.title}</span>

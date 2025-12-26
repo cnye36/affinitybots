@@ -135,9 +135,11 @@ export function TutorialSettings() {
 	}
 
 	return (
-		<Card>
+		<Card className="border-blue-200/50 dark:border-blue-800/50 bg-gradient-to-br from-blue-50/30 to-cyan-50/30 dark:from-blue-950/20 dark:to-cyan-950/20">
 			<CardHeader>
-				<CardTitle>Tutorial Settings</CardTitle>
+				<CardTitle className="text-2xl bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent">
+					Tutorial Settings
+				</CardTitle>
 				<CardDescription>
 					Manage your onboarding tutorials. Reset tutorials to see them again.
 				</CardDescription>
@@ -151,13 +153,13 @@ export function TutorialSettings() {
 						return (
 							<div
 								key={tutorial.id}
-								className="flex items-center justify-between p-4 border rounded-lg"
+								className="flex items-center justify-between p-4 border border-blue-200/50 dark:border-blue-800/50 bg-gradient-to-br from-blue-50/50 to-cyan-50/50 dark:from-blue-950/30 dark:to-cyan-950/30 rounded-lg"
 							>
 								<div className="flex-1">
 									<div className="flex items-center gap-2 mb-1">
-										<h3 className="font-medium">{tutorial.name}</h3>
+										<h3 className="font-medium text-blue-700 dark:text-blue-300">{tutorial.name}</h3>
 										{completed && (
-											<Badge variant="secondary" className="gap-1">
+											<Badge variant="secondary" className="gap-1 bg-green-100 dark:bg-green-950/50 text-green-700 dark:text-green-300 border-green-200/50 dark:border-green-800/50">
 												<CheckCircle2 className="h-3 w-3" />
 												Completed
 											</Badge>
@@ -171,7 +173,7 @@ export function TutorialSettings() {
 									variant="outline"
 									size="sm"
 									onClick={() => handleResetTutorial(tutorial.id, tutorial.name)}
-									className="ml-4"
+									className="ml-4 border-blue-300 dark:border-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/50"
 								>
 									<RefreshCw className="h-4 w-4 mr-2" />
 									Reset
@@ -182,10 +184,10 @@ export function TutorialSettings() {
 				</div>
 
 				{/* Reset all button */}
-				<div className="pt-4 border-t">
-					<div className="flex items-center justify-between">
+				<div className="pt-4 border-t border-blue-200/50 dark:border-blue-800/50">
+					<div className="flex items-center justify-between p-4 rounded-lg border border-blue-200/50 dark:border-blue-800/50 bg-gradient-to-br from-blue-50/50 to-cyan-50/50 dark:from-blue-950/30 dark:to-cyan-950/30">
 						<div>
-							<h3 className="font-medium mb-1">Reset All Tutorials</h3>
+							<h3 className="font-medium mb-1 text-blue-700 dark:text-blue-300">Reset All Tutorials</h3>
 							<p className="text-sm text-muted-foreground">
 								Clear all tutorial progress and start fresh
 							</p>
@@ -194,6 +196,7 @@ export function TutorialSettings() {
 							variant="outline"
 							onClick={handleResetAll}
 							disabled={isResetting}
+							className="border-blue-300 dark:border-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/50"
 						>
 							<RefreshCw className={`h-4 w-4 mr-2 ${isResetting ? "animate-spin" : ""}`} />
 							Reset All

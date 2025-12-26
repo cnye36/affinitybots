@@ -260,18 +260,32 @@ export function TaskConfigModal({
             />
 
             {loadingAssistants ? (
-              <div className="border rounded-lg p-4 flex items-center justify-center">
-                Loading agent information...
+              <div className="relative overflow-hidden rounded-xl border-2 border-violet-200/50 dark:border-violet-800/50 bg-gradient-to-br from-violet-50/30 to-purple-50/30 dark:from-violet-950/20 dark:to-purple-950/20">
+                <div className="flex flex-col items-center justify-center p-12 min-h-[600px]">
+                  <div className="animate-spin rounded-full h-12 w-12 border-4 border-violet-200 dark:border-violet-800 border-t-violet-600 dark:border-t-violet-400 mb-4"></div>
+                  <p className="text-sm text-muted-foreground">Loading agent information...</p>
+                </div>
               </div>
             ) : !assistant ? (
-              <div className="border rounded-lg p-4 flex items-center justify-center">
-                <Button
-                  variant="outline"
-                  onClick={() => setIsAssistantSelectOpen(true)}
-                >
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Assign Agent
-                </Button>
+              <div className="relative overflow-hidden rounded-xl border-2 border-violet-200/50 dark:border-violet-800/50 bg-gradient-to-br from-violet-50/30 to-purple-50/30 dark:from-violet-950/20 dark:to-purple-950/20">
+                <div className="flex flex-col items-center justify-center p-12 min-h-[600px]">
+                  <div className="p-6 rounded-2xl bg-gradient-to-br from-violet-500/10 to-purple-500/10 mb-6">
+                    <UserPlus className="h-12 w-12 text-violet-600 dark:text-violet-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold bg-gradient-to-r from-violet-600 to-purple-600 dark:from-violet-400 dark:to-purple-400 bg-clip-text text-transparent mb-2">
+                    No Agent Assigned
+                  </h3>
+                  <p className="text-sm text-muted-foreground text-center max-w-[280px] mb-6">
+                    Assign an AI agent to this task to configure its behavior and execute workflows
+                  </p>
+                  <Button
+                    onClick={() => setIsAssistantSelectOpen(true)}
+                    className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white shadow-lg shadow-violet-500/25"
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Assign Agent
+                  </Button>
+                </div>
               </div>
             ) : (
               <TaskConfigurationPanel

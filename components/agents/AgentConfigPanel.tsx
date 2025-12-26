@@ -338,30 +338,12 @@ export function AgentConfigPanel({ assistant }: AgentConfigPanelProps) {
 				{/* Scrollable Configuration Sections */}
 				<ScrollArea className="flex-1">
 					<div className="px-6 py-4">
-						<Accordion type="multiple" defaultValue={["models", "prompt"]} className="space-y-3">
-							{/* Models Section */}
-							<AccordionItem value="models" className="border rounded-lg px-4">
-								<AccordionTrigger className="hover:no-underline py-3">
-									<div className="flex items-center gap-2">
-										<Cpu className="h-4 w-4" />
-										<span className="font-medium">Model</span>
-									</div>
-								</AccordionTrigger>
-								<AccordionContent>
-									<div className="pt-2 pb-1">
-										<ModelConfig
-											config={config.config as AssistantConfiguration}
-											onConfigurableChange={handleConfigurableChange}
-										/>
-									</div>
-								</AccordionContent>
-							</AccordionItem>
-
+						<Accordion type="multiple" defaultValue={["prompt", "models"]} className="space-y-3">
 							{/* Prompt Section */}
-							<AccordionItem value="prompt" className="border rounded-lg px-4">
+							<AccordionItem value="prompt" className="border border-violet-200/30 dark:border-violet-800/30 rounded-lg px-4 bg-gradient-to-br from-violet-50/30 to-purple-50/30 dark:from-violet-950/20 dark:to-purple-950/20">
 								<AccordionTrigger className="hover:no-underline py-3">
 									<div className="flex items-center gap-2">
-										<FileText className="h-4 w-4" />
+										<FileText className="h-4 w-4 text-violet-600 dark:text-violet-400" />
 										<span className="font-medium">System Prompt</span>
 									</div>
 								</AccordionTrigger>
@@ -375,37 +357,57 @@ export function AgentConfigPanel({ assistant }: AgentConfigPanelProps) {
 								</AccordionContent>
 							</AccordionItem>
 
-							{/* Tools Section */}
-							<AccordionItem value="tools" className="border rounded-lg px-4">
+							{/* Models Section - Compact */}
+							<AccordionItem value="models" className="border border-blue-200/30 dark:border-blue-800/30 rounded-lg px-4 bg-gradient-to-br from-blue-50/30 to-cyan-50/30 dark:from-blue-950/20 dark:to-cyan-950/20">
 								<AccordionTrigger className="hover:no-underline py-3">
 									<div className="flex items-center gap-2">
-										<Wrench className="h-4 w-4" />
-										<span className="font-medium">Tools & Integrations</span>
-										{enabledTools > 0 && (
-											<Badge variant="secondary" className="ml-auto">
-												{enabledTools}
+										<Cpu className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+										<span className="font-medium text-sm">Model: {modelLabel}</span>
+									</div>
+								</AccordionTrigger>
+								<AccordionContent>
+									<div className="pt-2 pb-1">
+										<ModelConfig
+											config={config.config as AssistantConfiguration}
+											onConfigurableChange={handleConfigurableChange}
+										/>
+									</div>
+								</AccordionContent>
+							</AccordionItem>
+
+							{/* Memory Section - Sleek */}
+							<AccordionItem value="memory" className="border border-purple-200/30 dark:border-purple-800/30 rounded-lg px-4 bg-gradient-to-br from-purple-50/30 to-pink-50/30 dark:from-purple-950/20 dark:to-pink-950/20">
+								<AccordionTrigger className="hover:no-underline py-3">
+									<div className="flex items-center gap-2">
+										<Brain className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+										<span className="font-medium">Memory</span>
+										{hasMemory && (
+											<Badge variant="secondary" className="ml-auto gap-1 bg-purple-100 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border-purple-200/50 dark:border-purple-800/50">
+												<CheckCircle className="h-3 w-3" />
+												On
 											</Badge>
 										)}
 									</div>
 								</AccordionTrigger>
 								<AccordionContent>
 									<div className="pt-2 pb-1">
-										<ToolSelector
-											enabledMCPServers={config.config.enabled_mcp_servers || []}
-											onMCPServersChange={handleMCPServersChange}
+										<MemoryConfig
+											config={config.config as AssistantConfiguration}
+											onChange={handleConfigurableChange}
+											assistantId={assistant.assistant_id}
 										/>
 									</div>
 								</AccordionContent>
 							</AccordionItem>
 
 							{/* Knowledge Section */}
-							<AccordionItem value="knowledge" className="border rounded-lg px-4">
+							<AccordionItem value="knowledge" className="border border-emerald-200/30 dark:border-emerald-800/30 rounded-lg px-4 bg-gradient-to-br from-emerald-50/30 to-green-50/30 dark:from-emerald-950/20 dark:to-green-950/20">
 								<AccordionTrigger className="hover:no-underline py-3">
 									<div className="flex items-center gap-2">
-										<Database className="h-4 w-4" />
+										<Database className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
 										<span className="font-medium">Knowledge Base</span>
 										{hasKnowledge && (
-											<Badge variant="secondary" className="ml-auto gap-1">
+											<Badge variant="secondary" className="ml-auto gap-1 bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200/50 dark:border-emerald-800/50">
 												<CheckCircle className="h-3 w-3" />
 												Active
 											</Badge>
@@ -423,26 +425,24 @@ export function AgentConfigPanel({ assistant }: AgentConfigPanelProps) {
 								</AccordionContent>
 							</AccordionItem>
 
-							{/* Memory Section */}
-							<AccordionItem value="memory" className="border rounded-lg px-4">
+							{/* Tools Section */}
+							<AccordionItem value="tools" className="border border-orange-200/30 dark:border-orange-800/30 rounded-lg px-4 bg-gradient-to-br from-orange-50/30 to-amber-50/30 dark:from-orange-950/20 dark:to-amber-950/20">
 								<AccordionTrigger className="hover:no-underline py-3">
 									<div className="flex items-center gap-2">
-										<Brain className="h-4 w-4" />
-										<span className="font-medium">Memory</span>
-										{hasMemory && (
-											<Badge variant="secondary" className="ml-auto gap-1">
-												<CheckCircle className="h-3 w-3" />
-												Enabled
+										<Wrench className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+										<span className="font-medium">Tools & Integrations</span>
+										{enabledTools > 0 && (
+											<Badge variant="secondary" className="ml-auto bg-orange-100 dark:bg-orange-950/50 text-orange-700 dark:text-orange-300 border-orange-200/50 dark:border-orange-800/50">
+												{enabledTools}
 											</Badge>
 										)}
 									</div>
 								</AccordionTrigger>
 								<AccordionContent>
 									<div className="pt-2 pb-1">
-										<MemoryConfig
-											config={config.config as AssistantConfiguration}
-											onChange={handleConfigurableChange}
-											assistantId={assistant.assistant_id}
+										<ToolSelector
+											enabledMCPServers={config.config.enabled_mcp_servers || []}
+											onMCPServersChange={handleMCPServersChange}
 										/>
 									</div>
 								</AccordionContent>

@@ -19,6 +19,8 @@ import Link from "next/link";
 import { formatRelativeTime } from "@/lib/utils";
 import { DashboardWithTutorial } from "@/components/dashboard/DashboardWithTutorial";
 
+export const dynamic = "force-dynamic";
+
 // Helper to impose a maximum time for the entire server function.
 function createTimeoutPromise(timeoutMs: number): Promise<never> {
   return new Promise((_, reject) => {

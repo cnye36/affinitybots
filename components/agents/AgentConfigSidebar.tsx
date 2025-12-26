@@ -160,37 +160,37 @@ export function AgentConfigSidebar({ assistant }: AgentConfigSidebarProps) {
 				side="right"
 				className="w-full sm:w-[600px] md:w-[700px] lg:w-[800px] p-0 flex flex-col"
 			>
-				<SheetHeader className="px-6 pt-6 pb-4 border-b">
-					<SheetTitle className="text-2xl font-bold flex items-center gap-2">
-						<Settings2 className="h-6 w-6" />
+				<SheetHeader className="px-6 pt-6 pb-4 border-b border-violet-200/30 dark:border-violet-800/30 bg-gradient-to-r from-violet-500/5 to-purple-500/5">
+					<SheetTitle className="text-2xl font-bold flex items-center gap-2 bg-gradient-to-r from-violet-600 to-purple-600 dark:from-violet-400 dark:to-purple-400 bg-clip-text text-transparent">
+						<Settings2 className="h-6 w-6 text-violet-600 dark:text-violet-400" />
 						Agent Configuration
 					</SheetTitle>
-					<SheetDescription>
+					<SheetDescription className="text-muted-foreground">
 						Customize your agent&apos;s behavior, capabilities, and knowledge
 					</SheetDescription>
 				</SheetHeader>
 
 				{/* Configuration Status Bar */}
-				<div className="px-6 py-3 bg-muted/30 border-b">
+				<div className="px-6 py-3 bg-gradient-to-r from-violet-50/50 to-purple-50/50 dark:from-violet-950/20 dark:to-purple-950/20 border-b border-violet-200/30 dark:border-violet-800/30">
 					<div className="flex flex-wrap gap-2">
-						<Badge variant="outline" className="gap-1">
+						<Badge variant="secondary" className="gap-1 bg-blue-100 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border-blue-200/50 dark:border-blue-800/50">
 							<FileText className="h-3 w-3" />
 							Model: {getLlmLabel(config.config.llm, config.config.model)}
 						</Badge>
 						{hasMemory && (
-							<Badge variant="secondary" className="gap-1">
+							<Badge variant="secondary" className="gap-1 bg-purple-100 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border-purple-200/50 dark:border-purple-800/50">
 								<Brain className="h-3 w-3" />
 								Memory Enabled
 							</Badge>
 						)}
 						{hasKnowledge && (
-							<Badge variant="secondary" className="gap-1">
+							<Badge variant="secondary" className="gap-1 bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200/50 dark:border-emerald-800/50">
 								<Database className="h-3 w-3" />
 								Knowledge Base
 							</Badge>
 						)}
 						{enabledTools > 0 && (
-							<Badge variant="secondary" className="gap-1">
+							<Badge variant="secondary" className="gap-1 bg-orange-100 dark:bg-orange-950/50 text-orange-700 dark:text-orange-300 border-orange-200/50 dark:border-orange-800/50">
 								<Wrench className="h-3 w-3" />
 								{enabledTools} {enabledTools === 1 ? "Tool" : "Tools"}
 							</Badge>
@@ -207,10 +207,10 @@ export function AgentConfigSidebar({ assistant }: AgentConfigSidebarProps) {
 							className="w-full space-y-2"
 						>
 							{/* General Section */}
-							<AccordionItem value="general" className="border rounded-lg px-4">
+							<AccordionItem value="general" className="border border-violet-200/30 dark:border-violet-800/30 rounded-lg px-4 bg-gradient-to-br from-violet-50/30 to-purple-50/30 dark:from-violet-950/20 dark:to-purple-950/20">
 								<AccordionTrigger className="hover:no-underline">
 									<div className="flex items-center gap-2">
-										<Settings2 className="h-4 w-4" />
+										<Settings2 className="h-4 w-4 text-violet-600 dark:text-violet-400" />
 										<span className="font-semibold">General Settings</span>
 									</div>
 								</AccordionTrigger>
@@ -233,10 +233,10 @@ export function AgentConfigSidebar({ assistant }: AgentConfigSidebarProps) {
 							</AccordionItem>
 
 							{/* Prompt Section */}
-							<AccordionItem value="prompt" className="border rounded-lg px-4">
+							<AccordionItem value="prompt" className="border border-violet-200/30 dark:border-violet-800/30 rounded-lg px-4 bg-gradient-to-br from-violet-50/30 to-purple-50/30 dark:from-violet-950/20 dark:to-purple-950/20">
 								<AccordionTrigger className="hover:no-underline">
 									<div className="flex items-center gap-2">
-										<FileText className="h-4 w-4" />
+										<FileText className="h-4 w-4 text-violet-600 dark:text-violet-400" />
 										<span className="font-semibold">System Prompt</span>
 									</div>
 								</AccordionTrigger>
@@ -251,13 +251,13 @@ export function AgentConfigSidebar({ assistant }: AgentConfigSidebarProps) {
 							</AccordionItem>
 
 							{/* Tools Section */}
-							<AccordionItem value="tools" className="border rounded-lg px-4">
+							<AccordionItem value="tools" className="border border-orange-200/30 dark:border-orange-800/30 rounded-lg px-4 bg-gradient-to-br from-orange-50/30 to-amber-50/30 dark:from-orange-950/20 dark:to-amber-950/20">
 								<AccordionTrigger className="hover:no-underline">
 									<div className="flex items-center gap-2">
-										<Wrench className="h-4 w-4" />
+										<Wrench className="h-4 w-4 text-orange-600 dark:text-orange-400" />
 										<span className="font-semibold">Tools & Integrations</span>
 										{enabledTools > 0 && (
-											<Badge variant="secondary" className="ml-2">
+											<Badge variant="secondary" className="ml-2 bg-orange-100 dark:bg-orange-950/50 text-orange-700 dark:text-orange-300 border-orange-200/50 dark:border-orange-800/50">
 												{enabledTools} enabled
 											</Badge>
 										)}
@@ -274,13 +274,13 @@ export function AgentConfigSidebar({ assistant }: AgentConfigSidebarProps) {
 							</AccordionItem>
 
 							{/* Knowledge Section */}
-							<AccordionItem value="knowledge" className="border rounded-lg px-4">
+							<AccordionItem value="knowledge" className="border border-emerald-200/30 dark:border-emerald-800/30 rounded-lg px-4 bg-gradient-to-br from-emerald-50/30 to-green-50/30 dark:from-emerald-950/20 dark:to-green-950/20">
 								<AccordionTrigger className="hover:no-underline">
 									<div className="flex items-center gap-2">
-										<Database className="h-4 w-4" />
+										<Database className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
 										<span className="font-semibold">Knowledge Base</span>
 										{hasKnowledge && (
-											<Badge variant="secondary" className="ml-2 gap-1">
+											<Badge variant="secondary" className="ml-2 gap-1 bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200/50 dark:border-emerald-800/50">
 												<CheckCircle className="h-3 w-3" />
 												Active
 											</Badge>
@@ -299,13 +299,13 @@ export function AgentConfigSidebar({ assistant }: AgentConfigSidebarProps) {
 							</AccordionItem>
 
 							{/* Memory Section */}
-							<AccordionItem value="memory" className="border rounded-lg px-4">
+							<AccordionItem value="memory" className="border border-purple-200/30 dark:border-purple-800/30 rounded-lg px-4 bg-gradient-to-br from-purple-50/30 to-pink-50/30 dark:from-purple-950/20 dark:to-pink-950/20">
 								<AccordionTrigger className="hover:no-underline">
 									<div className="flex items-center gap-2">
-										<Brain className="h-4 w-4" />
+										<Brain className="h-4 w-4 text-purple-600 dark:text-purple-400" />
 										<span className="font-semibold">Memory</span>
 										{hasMemory && (
-											<Badge variant="secondary" className="ml-2 gap-1">
+											<Badge variant="secondary" className="ml-2 gap-1 bg-purple-100 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border-purple-200/50 dark:border-purple-800/50">
 												<CheckCircle className="h-3 w-3" />
 												Enabled
 											</Badge>
@@ -347,7 +347,7 @@ export function AgentConfigSidebar({ assistant }: AgentConfigSidebarProps) {
 						<Button variant="outline" onClick={closeSidebar} disabled={loading}>
 							Cancel
 						</Button>
-						<Button onClick={handleSubmit} disabled={loading} className="min-w-[120px]">
+						<Button onClick={handleSubmit} disabled={loading} className="min-w-[120px] bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white">
 							{loading ? (
 								<>
 									<Loader2 className="h-4 w-4 mr-2 animate-spin" />

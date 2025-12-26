@@ -121,9 +121,11 @@ export function ProfileSettings({
   );
 
   return (
-    <Card>
+    <Card className="border-blue-200/50 dark:border-blue-800/50 bg-gradient-to-br from-blue-50/30 to-cyan-50/30 dark:from-blue-950/20 dark:to-cyan-950/20">
       <CardHeader>
-        <CardTitle>Profile Settings</CardTitle>
+        <CardTitle className="text-2xl bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent">
+          Profile Settings
+        </CardTitle>
         <CardDescription>
           Manage your profile information and preferences.
         </CardDescription>
@@ -132,15 +134,19 @@ export function ProfileSettings({
         <form onSubmit={handleUpdate} className="space-y-6">
           <div className="flex flex-col items-center space-y-4">
             <div className="relative">
-              <Avatar className="h-24 w-24">
+              {/* Gradient ring around avatar */}
+              <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-cyan-500 dark:from-blue-600 dark:to-cyan-600 rounded-full blur-sm opacity-75" />
+              <Avatar className="relative h-24 w-24 border-2 border-white dark:border-gray-900">
                 <AvatarImage src={avatar || undefined} />
-                <AvatarFallback>
+                <AvatarFallback
+                  className="bg-gradient-to-br from-blue-500 to-cyan-500 text-white font-semibold"
+                >
                   {username?.slice(0, 2).toUpperCase() || "U"}
                 </AvatarFallback>
               </Avatar>
               <label
                 htmlFor="avatar-upload"
-                className={`absolute bottom-0 right-0 p-1 rounded-full bg-primary hover:bg-primary/90 cursor-pointer ${
+                className={`absolute bottom-0 right-0 p-2 rounded-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 cursor-pointer shadow-lg ${
                   isUploading ? "opacity-50 cursor-not-allowed" : ""
                 }`}
               >
@@ -209,7 +215,11 @@ export function ProfileSettings({
             </div>
           </div>
 
-          <Button type="submit" disabled={isUploading}>
+          <Button
+            type="submit"
+            disabled={isUploading}
+            className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white"
+          >
             Update Profile
           </Button>
         </form>

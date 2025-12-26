@@ -39,10 +39,10 @@ export default function ChatContainer({ assistant }: ChatContainerProps) {
 				<div
 					className={cn(
 						"border-r transition-all duration-300 flex-shrink-0 overflow-hidden relative z-40",
-						isSidebarOpen ? "w-64 sm:w-80" : "w-0 lg:w-64"
+						isSidebarOpen ? "w-72 sm:w-80" : "w-0 lg:w-80"
 					)}
 				>
-					<div className="h-full w-64 sm:w-80 lg:w-64">
+					<div className="h-full w-72 sm:w-80 lg:w-80">
 						<ThreadSidebar
 							ref={sidebarRef}
 							assistantId={assistant.assistant_id}

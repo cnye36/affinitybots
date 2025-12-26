@@ -4,7 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 import ReactMarkdown from "react-markdown";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { Loader2, Play } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -115,17 +115,40 @@ export function TestOutputPanel({
 }: TestOutputPanelProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
   return (
-    <div className="border rounded-lg p-4">
-      <h3 className="font-medium mb-4">Test Output</h3>
-      <ScrollArea className="h-[600px]">
-        <div className="space-y-2">
+    <div className="relative overflow-hidden rounded-xl border-2 border-blue-200/50 dark:border-blue-800/50 bg-gradient-to-br from-blue-50/30 to-cyan-50/30 dark:from-blue-950/20 dark:to-cyan-950/20">
+      {/* Subtle animated gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none" />
+
+      <div className="relative">
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-r from-blue-500/5 to-cyan-500/5">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold text-base bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent">
+                Test Output
+              </h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                Live results from your agent execution
+              </p>
+            </div>
+            {isStreaming && (
+              <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="text-xs font-medium">Streaming...</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <ScrollArea className="h-[600px]">
+          <div className="space-y-4 p-6">
           <div className="flex justify-between items-center">
-            <Label>Output</Label>
+            <Label className="text-sm font-medium">Format</Label>
             <Select
               value={outputFormat}
               onValueChange={(value) => setOutputFormat(value as OutputFormat)}
             >
-              <SelectTrigger className="w-[130px]">
+              <SelectTrigger className="w-[130px] bg-background">
                 <SelectValue placeholder="Format" />
               </SelectTrigger>
               <SelectContent>
@@ -134,57 +157,62 @@ export function TestOutputPanel({
               </SelectContent>
             </Select>
           </div>
-          <div className="flex justify-end">
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => setShowAdvanced((v) => !v)}
-            >
-              {showAdvanced ? "Hide Advanced Output" : "Show Advanced Output"}
-            </Button>
-          </div>
-          {outputFormat === "markdown" ? (
-            <div className="relative h-[400px] border rounded-md p-3 overflow-auto">
-              {isStreaming && (
-                <div className="absolute top-2 right-2 text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
+
+          {testOutput ? (
+            <>
+              {outputFormat === "markdown" ? (
+                <div className="relative rounded-lg border border-blue-200/50 dark:border-blue-800/50 bg-background p-4 overflow-auto min-h-[400px] max-h-[450px]">
+                  <div className="prose prose-sm max-w-none text-foreground dark:prose-invert">
+                    <ReactMarkdown>
+                      {formatOutput(testOutput, outputFormat)}
+                    </ReactMarkdown>
+                  </div>
                 </div>
+              ) : (
+                <Textarea
+                  value={formatOutput(testOutput, outputFormat)}
+                  readOnly
+                  className="font-mono text-xs bg-background resize-none min-h-[400px]"
+                />
               )}
-              <div className={`prose max-w-none text-foreground dark:prose-invert ${isStreaming ? "animate-pulse" : ""}`}>
-                <ReactMarkdown>
-                  {formatOutput(testOutput, outputFormat)}
-                </ReactMarkdown>
+
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setShowAdvanced((v) => !v)}
+                  className="text-xs"
+                >
+                  {showAdvanced ? "Hide Raw Response" : "Show Raw Response"}
+                </Button>
               </div>
-            </div>
-          ) : (
-            <div className="relative">
-              {isStreaming && (
-                <div className="absolute top-2 right-2 z-10 text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
+
+              {showAdvanced && (
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Raw Response</Label>
+                  <Textarea
+                    value={typeof testOutput === "string" ? testOutput : JSON.stringify(testOutput, null, 2)}
+                    readOnly
+                    className="font-mono text-xs bg-background/50 resize-none h-[300px]"
+                  />
                 </div>
               )}
-              <Textarea
-                value={formatOutput(testOutput, outputFormat)}
-                readOnly
-                className={`font-mono h-[400px] pr-8 ${
-                  isStreaming ? "animate-pulse" : ""
-                }`}
-              />
-            </div>
-          )}
-          {showAdvanced && (
-            <div className="space-y-2 pt-2">
-              <Label>Advanced Output (raw response)</Label>
-              <Textarea
-                value={typeof testOutput === "string" ? testOutput : JSON.stringify(testOutput, null, 2)}
-                readOnly
-                className="font-mono h-[300px]"
-              />
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-blue-200/50 dark:border-blue-800/50 bg-gradient-to-br from-blue-50/30 to-cyan-50/30 dark:from-blue-950/20 dark:to-cyan-950/20 p-12 min-h-[400px]">
+              <div className="p-4 rounded-full bg-gradient-to-br from-blue-500/10 to-cyan-500/10 mb-4">
+                <Play className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+              </div>
+              <p className="text-sm font-medium text-muted-foreground mb-1">No test results yet</p>
+              <p className="text-xs text-muted-foreground text-center max-w-[250px]">
+                Click the Test button above to run your agent and see the output here
+              </p>
             </div>
           )}
         </div>
       </ScrollArea>
+      </div>
     </div>
   );
 }

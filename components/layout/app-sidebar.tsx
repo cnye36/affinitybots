@@ -32,25 +32,29 @@ export function AppSidebar({
   const logoSize = isCollapsed ? 36 : 64;
   return (
     <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader className="border-b">
-        <div className="px-3 py-2">
+      <SidebarHeader className="border-b border-violet-200/30 dark:border-violet-800/30 bg-gradient-to-r from-violet-500/5 to-purple-500/5">
+        <div className="px-3 py-3">
           {/* Top row: logo + brand + trigger (expanded only) */}
           <div className="flex h-[44px] items-center">
-            <Image
-              src="/images/AffinityBots-Icon-Dark-250px.png"
-              alt="AffinityBots Logo"
-              width={logoSize}
-              height={logoSize}
-              className="mr-2 object-contain group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:mr-0"
-            />
-            <span className="font-semibold group-data-[collapsible=icon]:hidden">
+            {/* Logo with subtle gradient ring */}
+            <div className="relative mr-2 group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:mr-0">
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-500/20 to-purple-500/20 rounded-lg blur-sm opacity-0 group-hover:opacity-100 transition-opacity" />
+              <Image
+                src="/images/AffinityBots-Icon-Dark-250px.png"
+                alt="AffinityBots Logo"
+                width={logoSize}
+                height={logoSize}
+                className="relative object-contain"
+              />
+            </div>
+            <span className="font-semibold text-base bg-gradient-to-r from-violet-600 to-purple-600 dark:from-violet-400 dark:to-purple-400 bg-clip-text text-transparent group-data-[collapsible=icon]:hidden">
               AffinityBots
             </span>
-            <SidebarTrigger className="ml-auto group-data-[collapsible=icon]:hidden" />
+            <SidebarTrigger className="ml-auto group-data-[collapsible=icon]:hidden hover:bg-violet-100 dark:hover:bg-violet-950/50" />
           </div>
           {/* Collapsed-only trigger centered below the logo */}
           <div className="hidden group-data-[collapsible=icon]:flex justify-center mt-1">
-            <SidebarTrigger />
+            <SidebarTrigger className="hover:bg-violet-100 dark:hover:bg-violet-950/50" />
           </div>
         </div>
       </SidebarHeader>
