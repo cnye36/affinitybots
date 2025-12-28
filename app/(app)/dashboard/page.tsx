@@ -474,43 +474,46 @@ export default async function Dashboard() {
                     {tools.length > 0 ? (
                       <div className="space-y-3">
                         {tools.map((tool: any) => (
-                          <div
+                          <Link
                             key={tool.id}
-                            className="flex items-center justify-between p-4 border border-border rounded-xl hover:border-amber-500/50 hover:bg-gradient-to-br hover:from-amber-500/5 hover:to-orange-500/5 transition-all duration-200 group"
+                            href={`/tools/${encodeURIComponent(tool.qualified_name)}`}
+                            className="block"
                           >
-                            <div className="flex items-center gap-3">
-                              <div className="p-2 bg-gradient-to-br from-amber-500/20 to-orange-500/20 rounded-xl border border-amber-500/30 backdrop-blur-sm">
-                                {(toolLogos[tool.qualified_name] || officialLogoForQualifiedName(tool.qualified_name)) ? (
-                                  <Image
-                                    src={toolLogos[tool.qualified_name] || officialLogoForQualifiedName(tool.qualified_name) as string}
-                                    alt={tool.qualified_name}
-                                    width={20}
-                                    height={20}
-                                    className="object-contain"
-                                    style={{ objectFit: "contain" }}
-                                  />
-                                ) : (
-                                  <span className="text-base" title={tool.qualified_name}>
-                                    {getToolIcon(tool.qualified_name)}
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="font-medium truncate group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
-                                  {formatToolName(tool.qualified_name)}
+                            <div className="flex items-center justify-between p-4 border border-border rounded-xl hover:border-amber-500/50 hover:bg-gradient-to-br hover:from-amber-500/5 hover:to-orange-500/5 transition-all duration-200 group cursor-pointer">
+                              <div className="flex items-center gap-3">
+                                <div className="p-2 bg-gradient-to-br from-amber-500/20 to-orange-500/20 rounded-xl border border-amber-500/30 backdrop-blur-sm">
+                                  {(toolLogos[tool.qualified_name] || officialLogoForQualifiedName(tool.qualified_name)) ? (
+                                    <Image
+                                      src={toolLogos[tool.qualified_name] || officialLogoForQualifiedName(tool.qualified_name) as string}
+                                      alt={tool.qualified_name}
+                                      width={20}
+                                      height={20}
+                                      className="object-contain"
+                                      style={{ objectFit: "contain" }}
+                                    />
+                                  ) : (
+                                    <span className="text-base" title={tool.qualified_name}>
+                                      {getToolIcon(tool.qualified_name)}
+                                    </span>
+                                  )}
                                 </div>
-                                <div className="text-xs text-muted-foreground truncate">
-                                  {tool.qualified_name}
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-medium truncate group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+                                    {formatToolName(tool.qualified_name)}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground truncate">
+                                    {tool.qualified_name}
+                                  </div>
                                 </div>
                               </div>
+                              <Badge
+                                variant={tool.is_enabled ? "default" : "secondary"}
+                                className={tool.is_enabled ? "bg-gradient-to-r from-emerald-500 to-green-500 text-white border-0" : ""}
+                              >
+                                {tool.is_enabled ? "Enabled" : "Disabled"}
+                              </Badge>
                             </div>
-                            <Badge
-                              variant={tool.is_enabled ? "default" : "secondary"}
-                              className={tool.is_enabled ? "bg-gradient-to-r from-emerald-500 to-green-500 text-white border-0" : ""}
-                            >
-                              {tool.is_enabled ? "Enabled" : "Disabled"}
-                            </Badge>
-                          </div>
+                          </Link>
                         ))}
                         {toolsData && toolsData.length > 3 && (
                           <Link
