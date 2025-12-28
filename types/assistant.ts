@@ -43,6 +43,12 @@ export interface AssistantConfiguration {
     session_id: string;
     expires_at: string;
   }[];
+  /**
+   * Optional array of specific tool names to enable.
+   * If provided, only these tools will be loaded from enabled MCP servers.
+   * If not provided, all tools from enabled servers are loaded.
+   */
+  selected_tools?: string[];
 } 
 
 export interface AssistantMetadata {

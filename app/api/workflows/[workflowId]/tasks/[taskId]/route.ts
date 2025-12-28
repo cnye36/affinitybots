@@ -79,8 +79,11 @@ export async function PUT(
 
     const taskData: Partial<Task> = await request.json();
 
+    // Normalize legacy "ai_agent" to "ai_task"
+    let normalizedTaskType = taskData.task_type;
+
     // Validate task type if it's being updated
-    if (taskData.task_type && !VALID_TASK_TYPES.includes(taskData.task_type)) {
+    if (normalizedTaskType && !VALID_TASK_TYPES.includes(normalizedTaskType)) {
       return NextResponse.json({ error: "Invalid task type" }, { status: 400 });
     }
 
@@ -90,7 +93,7 @@ export async function PUT(
       .update({
         name: taskData.name,
         description: taskData.description,
-        task_type: taskData.task_type,
+        task_type: normalizedTaskType,
         config: taskData.config
           ? {
               ...taskData.config,

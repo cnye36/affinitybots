@@ -46,15 +46,25 @@ export class MCPClientFactory {
         forceRefresh
       });
 
+      let tools = result.tools;
+
+      // Filter tools if selected_tools is specified in agent config
+      if (agentConfig.selected_tools && agentConfig.selected_tools.length > 0) {
+        const beforeCount = tools.length;
+        tools = tools.filter(tool => agentConfig.selected_tools!.includes(tool.name));
+        console.log(`MCPClientFactory: Filtered tools from ${beforeCount} to ${tools.length} based on selected_tools`);
+        console.log(`Selected tools: ${agentConfig.selected_tools.join(", ")}`);
+      }
+
       const factoryResult: MCPFactoryResult = {
         client: result.client,
-        tools: result.tools,
+        tools: tools,
         serverCount: result.oauthClients.size + (result.client ? Object.keys((result.client as any).mcpServers || {}).length - result.oauthClients.size : 0),
         oauthSessions: result.sessions
       };
 
       console.log(`MCPClientFactory: Created ${factoryResult.tools.length} tools from ${factoryResult.serverCount} servers`);
-      
+
       return factoryResult;
     } catch (error) {
       console.error("MCPClientFactory: Error creating MCP clients:", error);

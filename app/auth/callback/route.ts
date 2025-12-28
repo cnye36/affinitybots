@@ -2,13 +2,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import type { Database } from "@/supabase/types";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
   // Get next from query params (passed through Supabase's queryParams option)
-  // OR from the URL if Supabase adds it, OR default to dashboard
-  const next = requestUrl.searchParams.get("next") || "/dashboard";
+  // If explicitly set, use it (e.g., when plan is selected)
+  const explicitNext = requestUrl.searchParams.get("next");
   const origin = requestUrl.origin;
   
   // Log if we're on the wrong origin (this helps debug Supabase redirect issues)
@@ -21,15 +22,15 @@ export async function GET(request: NextRequest) {
   console.log("🔍 Auth Callback: Request URL:", requestUrl.toString());
   console.log("🔍 Auth Callback: Origin:", origin);
   console.log("🔍 Auth Callback: Code present:", !!code);
-  console.log("🔍 Auth Callback: Next redirect:", next);
+  console.log("🔍 Auth Callback: Explicit next redirect:", explicitNext);
 
   if (!code) {
     console.log("❌ Auth Callback: No code parameter, redirecting to sign-in");
     return NextResponse.redirect(new URL("/auth/signin", origin));
   }
 
-  // Create the redirect response FIRST
-  let redirectResponse = NextResponse.redirect(new URL(next, origin));
+  // Collect cookies during session exchange
+  const cookiesToSet: Array<{ name: string; value: string; options?: any }> = [];
   
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -39,11 +40,8 @@ export async function GET(request: NextRequest) {
         getAll() {
           return request.cookies.getAll();
         },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            // Write to the redirect response so cookies are sent to browser
-            redirectResponse.cookies.set(name, value, options);
-          });
+        setAll(cookies) {
+          cookiesToSet.push(...cookies);
         },
       },
     }
@@ -78,7 +76,6 @@ export async function GET(request: NextRequest) {
   
   console.log("✅ Auth Callback: User found:", user?.email);
 
-  console.log("✅ Auth Callback: User authenticated, proceeding to dashboard");
   if (!user?.email) {
       console.log("❌ Auth Callback: No user session found or no email.");
       return NextResponse.redirect(
@@ -90,7 +87,50 @@ export async function GET(request: NextRequest) {
   }
   // --- whitelist check end ---
 
-  console.log("✅ Auth Callback: All checks passed, redirecting to:", redirectResponse.headers.get("location"));
-  return redirectResponse;
+  // Determine final redirect destination
+  let finalRedirect = "/dashboard";
+  
+  // If explicit next is set (e.g., from plan selection), use it
+  if (explicitNext) {
+    console.log("🔍 Auth Callback: Using explicit next redirect:", explicitNext);
+    finalRedirect = explicitNext;
+  } else {
+    // Check if user has a paid subscription (has Stripe customer ID)
+    // New users without payment should be redirected to checkout to complete signup
+    console.log("🔍 Auth Callback: Checking user subscription status...");
+    const adminSupabase = getSupabaseAdmin();
+    const { data: subscription, error: subError } = await adminSupabase
+      .from("subscriptions")
+      .select("stripe_customer_id, plan_type, status")
+      .eq("user_id", user.id)
+      .single();
+
+    if (subError && subError.code !== "PGRST116") {
+      // PGRST116 is "not found" which is fine for new users
+      console.error("❌ Auth Callback: Error checking subscription:", subError);
+    }
+
+    // If no subscription or no Stripe customer ID, redirect to checkout (default to pro plan)
+    // This matches the email signup flow where users go directly to Stripe checkout
+    const subscriptionData = subscription as { stripe_customer_id: string | null } | null;
+    if (!subscriptionData || !subscriptionData.stripe_customer_id) {
+      console.log("🔍 Auth Callback: User has no Stripe customer ID, redirecting to checkout (default: pro plan)");
+      finalRedirect = "/pricing/checkout?plan=pro";
+    } else {
+      console.log("🔍 Auth Callback: User has active subscription, redirecting to dashboard");
+      finalRedirect = "/dashboard";
+    }
+  }
+
+  // Create final redirect response with cookies
+  const finalResponse = NextResponse.redirect(new URL(finalRedirect, origin));
+  
+  // Set all cookies from the session exchange
+  cookiesToSet.forEach(({ name, value, options }) => {
+    finalResponse.cookies.set(name, value, options);
+  });
+
+  console.log("✅ Auth Callback: All checks passed, redirecting to:", finalRedirect);
+  return finalResponse;
 }
 

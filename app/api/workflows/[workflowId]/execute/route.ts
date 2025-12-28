@@ -15,7 +15,63 @@ async function executeOrchestratorWorkflow(
   supabase: any,
   request: Request
 ) {
-  const encoder = new TextEncoder();
+	const encoder = new TextEncoder();
+	const getRunIdFromEvent = (evt: any) => {
+		const candidates = [
+			evt?.run_id,
+			evt?.data?.run_id,
+			evt?.data?.run?.run_id,
+			evt?.data?.run?.id,
+			evt?.data?.id,
+			evt?.data?.runId,
+		];
+		return candidates.find((value) => typeof value === "string" && value.length > 0) || null;
+	};
+
+  // Validate orchestrator configuration
+  if (!workflow.orchestrator_config?.manager) {
+    return NextResponse.json(
+      { error: "Orchestrator configuration is missing. Please configure the orchestrator before executing." },
+      { status: 400 }
+    );
+  }
+
+  const { manager } = workflow.orchestrator_config;
+
+  // Validate required fields
+  if (!manager.model) {
+    return NextResponse.json(
+      { error: "Orchestrator model is not configured" },
+      { status: 400 }
+    );
+  }
+
+  if (!manager.system_prompt || manager.system_prompt.trim() === "") {
+    return NextResponse.json(
+      { error: "Orchestrator system prompt is required" },
+      { status: 400 }
+    );
+  }
+
+  if (!manager.user_prompt || manager.user_prompt.trim() === "") {
+    return NextResponse.json(
+      { error: "Orchestrator user prompt (goal) is required. Please specify what you want to accomplish." },
+      { status: 400 }
+    );
+  }
+
+  // Validate that workflow has tasks (sub-agents)
+  const allTasks = workflow.workflow_tasks || [];
+  const tasksWithAssistants = allTasks.filter((task: any) =>
+    task.assistant_id || task.config?.assigned_assistant?.id
+  );
+
+  if (tasksWithAssistants.length === 0) {
+    return NextResponse.json(
+      { error: "Orchestrator workflows require at least one task with an assigned assistant" },
+      { status: 400 }
+    );
+  }
 
   // Create workflow run record
   const generatedWorkflowRunId = (globalThis as any).crypto?.randomUUID?.();
@@ -57,7 +113,6 @@ async function executeOrchestratorWorkflow(
     .eq("workflow_id", workflowId);
 
   // Build available agents from workflow_tasks
-  const allTasks = workflow.workflow_tasks || [];
   const availableAgents: Record<string, any> = {};
 
   for (const task of allTasks) {
@@ -82,8 +137,16 @@ async function executeOrchestratorWorkflow(
           apiKey: process.env.LANGSMITH_API_KEY,
         });
 
-        // Create orchestrator thread
-        const orchestratorThread = await client.threads.create();
+				// Create orchestrator thread
+				const orchestratorThread = await client.threads.create();
+				try {
+					await supabase
+						.from("workflow_runs")
+						.update({ thread_id: orchestratorThread.thread_id })
+						.eq("run_id", workflowRunId);
+				} catch (e) {
+					console.error("Failed to store orchestrator thread_id:", e);
+				}
 
         // Emit orchestrator start event
         controller.enqueue(
@@ -100,6 +163,7 @@ async function executeOrchestratorWorkflow(
           {
             input: {
               available_agents: availableAgents,
+              max_iterations: workflow.orchestrator_config?.execution?.max_iterations || 10,
             },
             streamMode: "updates" as any,
             config: {
@@ -111,14 +175,18 @@ async function executeOrchestratorWorkflow(
           }
         );
 
-        let finalResult: any = null;
-        let iterationCount = 0;
+				let finalResult: any = null;
+				let langgraphRunId: string | null = null;
+				let iterationCount = 0;
 
         // Process stream events
         for await (const evt of runStream) {
           const e: any = evt;
 
-          if (e.event === "updates" && e.data) {
+					if (!langgraphRunId) {
+						langgraphRunId = getRunIdFromEvent(e);
+					}
+					if (e.event === "updates" && e.data) {
             const node = Object.keys(e.data)[0];
             const nodeData = e.data[node];
 
@@ -145,14 +213,15 @@ async function executeOrchestratorWorkflow(
         }
 
         // Update workflow run with final result
-        await supabase
-          .from("workflow_runs")
-          .update({
-            status: "completed",
-            completed_at: new Date().toISOString(),
-            result: finalResult,
-          })
-          .eq("run_id", workflowRunId);
+				await supabase
+					.from("workflow_runs")
+					.update({
+						status: "completed",
+						completed_at: new Date().toISOString(),
+						result: finalResult,
+						metadata: { execution_type: "orchestrator", langgraph_run_id: langgraphRunId },
+					})
+					.eq("run_id", workflowRunId);
 
         // Update workflow status
         await supabase
@@ -402,12 +471,31 @@ export async function POST(
     });
     // SSE stream for client progress
     const encoder = new TextEncoder();
-    const stream = new ReadableStream({
-      async start(controller) {
-        try {
-          // Default workflow-level thread (used when nodes choose workflow mode)
-          const wfThread = await client.threads.create();
-          const workflowThreadId = wfThread.thread_id;
+		const stream = new ReadableStream({
+			async start(controller) {
+				try {
+					const getRunIdFromEvent = (evt: any) => {
+						const candidates = [
+							evt?.run_id,
+							evt?.data?.run_id,
+							evt?.data?.run?.run_id,
+							evt?.data?.run?.id,
+							evt?.data?.id,
+							evt?.data?.runId,
+						];
+						return candidates.find((value) => typeof value === "string" && value.length > 0) || null;
+					};
+					// Default workflow-level thread (used when nodes choose workflow mode)
+					const wfThread = await client.threads.create();
+					const workflowThreadId = wfThread.thread_id;
+					try {
+						await supabase
+							.from("workflow_runs")
+							.update({ thread_id: workflowThreadId })
+							.eq("run_id", createdWorkflowRunId!);
+					} catch (e) {
+						console.error("Failed to store workflow thread_id:", e);
+					}
           let previousOutput: unknown = null;
           const nodeIdToThreadId: Record<string, string> = {};
 
@@ -458,15 +546,24 @@ export async function POST(
 
             const assistantId = task.assistant_id || task.config?.assigned_assistant?.id;
 
-            if (taskRun?.run_id) {
-              // Attach assistant metadata when the run starts
-              try {
-                await supabase
-                  .from("workflow_task_runs")
-                  .update({ status: "running", metadata: { assistant_id: assistantId } })
-                  .eq("run_id", taskRun.run_id);
-              } catch {}
-            }
+					let langgraphRunId: string | null = null;
+
+				if (taskRun?.run_id) {
+					// Attach assistant metadata when the run starts
+					try {
+						await supabase
+							.from("workflow_task_runs")
+							.update({
+								status: "running",
+								metadata: {
+									assistant_id: assistantId,
+									thread_id: threadIdForNode,
+									langgraph_run_id: langgraphRunId,
+								},
+							})
+							.eq("run_id", taskRun.run_id);
+					} catch {}
+				}
             const runStream = await client.runs.stream(threadIdForNode, assistantId as string, {
               input: { messages },
               streamMode: "updates",
@@ -482,14 +579,32 @@ export async function POST(
               },
             });
 
-            let finalEvent: any = null;
-            let inputTokens = 0;
-            let outputTokens = 0;
-            for await (const evt of runStream) {
-              const e: any = evt as any;
-              if (e.event === "updates" && e.data) {
-                finalEvent = e;
-              }
+					let finalEvent: any = null;
+					let inputTokens = 0;
+					let outputTokens = 0;
+					for await (const evt of runStream) {
+						const e: any = evt as any;
+						if (!langgraphRunId) {
+							langgraphRunId = getRunIdFromEvent(e);
+							// Update metadata with langgraphRunId once we have it
+							if (langgraphRunId && taskRun?.run_id) {
+								try {
+									await supabase
+										.from("workflow_task_runs")
+										.update({
+											metadata: {
+												assistant_id: assistantId,
+												thread_id: threadIdForNode,
+												langgraph_run_id: langgraphRunId,
+											},
+										})
+										.eq("run_id", taskRun.run_id);
+								} catch {}
+							}
+						}
+						if (e.event === "updates" && e.data) {
+							finalEvent = e;
+						}
               if (e.event && /metadata$/i.test(e.event)) {
                 const usage =
                   e.data?.usage ||
@@ -520,16 +635,21 @@ export async function POST(
 
             // Persist completion
             if (taskRun?.run_id) {
-              await supabase
-                .from("workflow_task_runs")
-                .update({
-                  status: "completed",
-                  completed_at: new Date().toISOString(),
-                  result: previousOutput,
-                  metadata: { assistant_id: assistantId, usage: { inputTokens, outputTokens } },
-                })
-                .eq("run_id", taskRun.run_id);
-            }
+				await supabase
+					.from("workflow_task_runs")
+					.update({
+						status: "completed",
+						completed_at: new Date().toISOString(),
+						result: previousOutput,
+						metadata: {
+							assistant_id: assistantId,
+							thread_id: threadIdForNode,
+							langgraph_run_id: langgraphRunId,
+							usage: { inputTokens, outputTokens },
+						},
+					})
+					.eq("run_id", taskRun.run_id);
+			}
 
             // Emit complete event
             controller.enqueue(

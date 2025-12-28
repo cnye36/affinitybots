@@ -27,13 +27,40 @@ interface TaskConfigModalProps {
   onUpdate: (updatedTask: Task, updatedAssistant: Assistant | null) => void;
 }
 
-type OutputFormat = "json" | "markdown";
+type OutputFormat = "json" | "markdown" | "formatted";
 
 type TestOutput = {
   type?: string;
   content?: string;
   result?: unknown;
   error?: string;
+};
+
+const STORAGE_KEY_PREV_FORMAT = "workflow-output-format-previous";
+const STORAGE_KEY_TEST_FORMAT = "workflow-output-format-test";
+
+// Helper to load format preference from localStorage
+const loadFormatPreference = (key: string, defaultValue: OutputFormat): OutputFormat => {
+  if (typeof window === "undefined") return defaultValue;
+  try {
+    const stored = localStorage.getItem(key);
+    if (stored && (stored === "json" || stored === "markdown" || stored === "formatted")) {
+      return stored as OutputFormat;
+    }
+  } catch (error) {
+    console.error("Error loading format preference:", error);
+  }
+  return defaultValue;
+};
+
+// Helper to save format preference to localStorage
+const saveFormatPreference = (key: string, value: OutputFormat): void => {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(key, value);
+  } catch (error) {
+    console.error("Error saving format preference:", error);
+  }
 };
 
 export function TaskConfigModal({
@@ -45,9 +72,21 @@ export function TaskConfigModal({
   onUpdate,
 }: TaskConfigModalProps) {
   const [currentTask, setCurrentTask] = useState<Task>(task);
-  const [prevOutputFormat, setPrevOutputFormat] = useState<OutputFormat>("json");
-  const [testOutputFormat, setTestOutputFormat] = useState<OutputFormat>("json");
+  const [prevOutputFormat, setPrevOutputFormat] = useState<OutputFormat>(() => 
+    loadFormatPreference(STORAGE_KEY_PREV_FORMAT, "formatted")
+  );
+  const [testOutputFormat, setTestOutputFormat] = useState<OutputFormat>(() => 
+    loadFormatPreference(STORAGE_KEY_TEST_FORMAT, "formatted")
+  );
   const [isLoading, setIsLoading] = useState(false);
+
+  // Reload format preferences when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setPrevOutputFormat(loadFormatPreference(STORAGE_KEY_PREV_FORMAT, "formatted"));
+      setTestOutputFormat(loadFormatPreference(STORAGE_KEY_TEST_FORMAT, "formatted"));
+    }
+  }, [isOpen]);
   const [testOutput, setTestOutput] = useState<TestOutput | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const { assistant, isLoading: isAssistantLoading } = useAgent(
@@ -256,7 +295,10 @@ export function TaskConfigModal({
             <PreviousNodeOutputPanel
               data={previousNodeOutput || null}
               outputFormat={prevOutputFormat}
-              setOutputFormat={setPrevOutputFormat}
+              setOutputFormat={(format) => {
+                setPrevOutputFormat(format);
+                saveFormatPreference(STORAGE_KEY_PREV_FORMAT, format);
+              }}
             />
 
             {loadingAssistants ? (
@@ -298,7 +340,10 @@ export function TaskConfigModal({
             <TestOutputPanel
               testOutput={testOutput}
               outputFormat={testOutputFormat}
-              setOutputFormat={(fmt) => setTestOutputFormat(fmt)}
+              setOutputFormat={(format) => {
+                setTestOutputFormat(format);
+                saveFormatPreference(STORAGE_KEY_TEST_FORMAT, format);
+              }}
               isStreaming={isStreaming}
             />
           </div>

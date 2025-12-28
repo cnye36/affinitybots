@@ -232,7 +232,7 @@ export default function ToolsPage() {
 								})}
 							</div>
 						) : (
-							<div className="space-y-4">
+							<div className="space-y-2">
 								{paginatedServers.map((server: any) => {
 									// Check if it's a user-added server
 									const isUserAdded = filteredUserServers.some((s: any) => s.id === server.id);
@@ -243,6 +243,7 @@ export default function ToolsPage() {
 												key={server.id}
 												server={server}
 												isConfigured={true}
+												compact={true}
 											/>
 										);
 									} else {
@@ -252,6 +253,7 @@ export default function ToolsPage() {
 												server={server}
 												isConfigured={isConfigured(server.qualifiedName)}
 												onConnected={refreshData}
+												compact={true}
 											/>
 										);
 									}

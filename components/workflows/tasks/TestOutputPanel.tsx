@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-type OutputFormat = "json" | "markdown";
+type OutputFormat = "json" | "markdown" | "formatted";
 
 type TestOutput = {
   type?: string;
@@ -84,20 +84,29 @@ const formatOutput = (
 
     switch (outputFormat) {
       case "json":
-        if (typeof data === "string") return data;
-        // Prefer structured output if present
-        const structured = extractStructuredJson(data);
-        if (structured !== null) return JSON.stringify(structured, null, 2);
-        // Otherwise show content only
-        const contentOnlyForJson = extractMarkdownContent(data);
-        return contentOnlyForJson !== null
-          ? contentOnlyForJson
-          : JSON.stringify(data, null, 2);
+        // Always return JSON string
+        if (typeof data === "string") {
+          try {
+            // Try to parse and re-stringify to ensure valid JSON
+            return JSON.stringify(JSON.parse(data), null, 2);
+          } catch {
+            return JSON.stringify(data, null, 2);
+          }
+        }
+        return JSON.stringify(data, null, 2);
       case "markdown":
+        // Return raw markdown string (not formatted)
         if (typeof data === "string") return data;
         const contentOnly = extractMarkdownContent(data);
         return contentOnly !== null
           ? contentOnly
+          : "```json\n" + JSON.stringify(data, null, 2) + "\n```";
+      case "formatted":
+        // Return content that will be rendered with ReactMarkdown (formatted/nice looking)
+        if (typeof data === "string") return data;
+        const formattedContent = extractMarkdownContent(data);
+        return formattedContent !== null
+          ? formattedContent
           : "```json\n" + JSON.stringify(data, null, 2) + "\n```";
       default:
         return String(data);
@@ -154,13 +163,14 @@ export function TestOutputPanel({
               <SelectContent>
                 <SelectItem value="json">JSON</SelectItem>
                 <SelectItem value="markdown">Markdown</SelectItem>
+                <SelectItem value="formatted">Formatted</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           {testOutput ? (
             <>
-              {outputFormat === "markdown" ? (
+              {outputFormat === "formatted" ? (
                 <div className="relative rounded-lg border border-blue-200/50 dark:border-blue-800/50 bg-background p-4 overflow-auto min-h-[400px] max-h-[450px]">
                   <div className="prose prose-sm max-w-none text-foreground dark:prose-invert">
                     <ReactMarkdown>

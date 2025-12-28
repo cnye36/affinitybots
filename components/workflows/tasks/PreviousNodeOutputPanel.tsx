@@ -18,7 +18,7 @@ interface TaskOutput {
   metadata?: Record<string, unknown>;
 }
 
-type OutputFormat = "json" | "markdown";
+type OutputFormat = "json" | "markdown" | "formatted";
 
 interface PreviousNodeOutputPanelProps {
   data: TaskOutput | null;
@@ -47,8 +47,25 @@ const formatOutput = (
 
     switch (outputFormat) {
       case "json":
-        return typeof data === "string" ? data : JSON.stringify(data, null, 2);
+        // Always return JSON string
+        if (typeof data === "string") {
+          try {
+            // Try to parse and re-stringify to ensure valid JSON
+            return JSON.stringify(JSON.parse(data), null, 2);
+          } catch {
+            return JSON.stringify(data, null, 2);
+          }
+        }
+        return JSON.stringify(data, null, 2);
       case "markdown":
+        // Return raw markdown string (not formatted)
+        {
+          const content = extractMarkdownContent(data);
+          if (content !== null) return content;
+          return "```json\n" + JSON.stringify(data, null, 2) + "\n```";
+        }
+      case "formatted":
+        // Return content that will be rendered with ReactMarkdown (formatted/nice looking)
         {
           const content = extractMarkdownContent(data);
           if (content !== null) return content;
@@ -97,12 +114,13 @@ export function PreviousNodeOutputPanel({
                 <SelectContent>
                   <SelectItem value="json">JSON</SelectItem>
                   <SelectItem value="markdown">Markdown</SelectItem>
+                  <SelectItem value="formatted">Formatted</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             {data ? (
-              outputFormat === "markdown" ? (
+              outputFormat === "formatted" ? (
                 <div className="rounded-lg border border-emerald-200/50 dark:border-emerald-800/50 bg-background p-4 overflow-auto min-h-[400px] max-h-[500px]">
                   <div className="prose prose-sm max-w-none text-foreground dark:prose-invert">
                     <ReactMarkdown>{formatOutput(data, outputFormat)}</ReactMarkdown>

@@ -51,6 +51,12 @@ const OrchestratorState = Annotation.Root({
     default: () => 0,
   }),
 
+  // Max iterations allowed (from orchestrator_config.execution.max_iterations)
+  max_iterations: Annotation<number>({
+    reducer: (_, update) => update,
+    default: () => 10,
+  }),
+
   // Available sub-agents (from orchestrator_config)
   available_agents: Annotation<Record<string, any>>({
     reducer: (_, update) => update,
@@ -223,28 +229,69 @@ async function executeSubAgent(
       apiKey: process.env.LANGSMITH_API_KEY,
     });
 
-    // Create or reuse thread for this sub-agent
-    const threadId = agent.thread_id || (await client.threads.create()).thread_id;
+    // Create or reuse thread for this sub-agent to maintain context
+    let threadId = agent.thread_id;
+    if (!threadId) {
+      const newThread = await client.threads.create();
+      threadId = newThread.thread_id;
+      console.log(`Created new thread ${threadId} for sub-agent: ${agent.name}`);
+    } else {
+      console.log(`Reusing thread ${threadId} for sub-agent: ${agent.name}`);
+    }
 
     // Invoke the sub-agent using the existing reactAgent graph
     const runStream = await client.runs.stream(threadId, agent.assistant_id, {
       input: { messages: [{ role: "user", content: instruction }] },
       streamMode: "updates" as any,
       config: {
-        configurable: agent.config || {},
+        configurable: {
+          ...agent.config,
+          user_id: config.configurable?.user_id,
+        },
       },
     });
 
-    // Collect output from stream
+    // Collect output from stream with timeout protection
     let finalEvent: any = null;
+    let eventCount = 0;
+    const startTime = Date.now();
+    const timeout = 300000; // 5 minutes timeout
+
     for await (const evt of runStream) {
+      eventCount++;
+
+      // Check timeout
+      if (Date.now() - startTime > timeout) {
+        console.warn(`Sub-agent ${agent.name} execution timed out after ${timeout}ms`);
+        throw new Error(`Sub-agent execution timed out`);
+      }
+
       if (evt.event === "updates" && evt.data) {
         finalEvent = evt;
       }
     }
 
-    // Extract result
-    const resultData = finalEvent?.data ?? "No response";
+    console.log(`Sub-agent ${agent.name} processed ${eventCount} events`);
+
+    // Extract result with better error handling
+    if (!finalEvent?.data) {
+      console.warn(`Sub-agent ${agent.name} returned no data`);
+      return {
+        messages: [
+          new AIMessage({
+            content: `[${agent.name}]: Execution completed but no result was returned`,
+            name: agent.name,
+          }),
+        ],
+        available_agents: {
+          ...state.available_agents,
+          [agentToInvoke]: { ...agent, thread_id: threadId },
+        },
+        next_agent: null,
+      };
+    }
+
+    const resultData = finalEvent.data;
     const resultContent = typeof resultData === "string"
       ? resultData
       : JSON.stringify(resultData);
@@ -254,9 +301,9 @@ async function executeSubAgent(
       name: agent.name,
     });
 
-    console.log(`Sub-agent ${agent.name} completed`);
+    console.log(`Sub-agent ${agent.name} completed successfully`);
 
-    // Update agent state with thread ID for reuse
+    // Update agent state with thread ID for context continuity
     const updatedAgent = { ...agent, thread_id: threadId };
 
     return {
@@ -284,8 +331,6 @@ async function executeSubAgent(
  * Routing Logic: Determine whether to continue orchestration or end
  */
 function shouldContinueOrchestration(state: typeof OrchestratorState.State) {
-  const maxIterations = 10; // TODO: Make this configurable via orchestrator_config.execution.max_iterations
-
   // Check if manager signaled completion
   if (state.is_complete) {
     console.log("Orchestration complete (manager signaled)");
@@ -293,8 +338,8 @@ function shouldContinueOrchestration(state: typeof OrchestratorState.State) {
   }
 
   // Check if max iterations reached
-  if (state.iteration >= maxIterations) {
-    console.warn(`Orchestration reached max iterations (${maxIterations})`);
+  if (state.iteration >= state.max_iterations) {
+    console.warn(`Orchestration reached max iterations (${state.max_iterations})`);
     return "__end__";
   }
 

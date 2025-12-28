@@ -18,6 +18,7 @@ export interface BaseServerCardProps {
   children?: ReactNode;
   onClick?: () => void;
   className?: string;
+  compact?: boolean;
 }
 
 export function BaseServerCard({
@@ -29,7 +30,8 @@ export function BaseServerCard({
   isConfigured = false,
   children,
   onClick,
-  className = ""
+  className = "",
+  compact = false
 }: BaseServerCardProps) {
   const [imageError, setImageError] = useState(false);
   const getTruncatedDescription = (text: string, maxWords: number = 30): string => {
@@ -74,6 +76,73 @@ export function BaseServerCard({
     }
   };
 
+  // Compact list view
+  if (compact) {
+    return (
+      <Card
+        className={`group relative overflow-hidden border border-border hover:border-amber-500/50 cursor-pointer transition-all duration-200 hover:shadow-md ${className}`}
+        onClick={onClick}
+      >
+        <div className="relative bg-card rounded-lg">
+          <div className="flex items-center gap-3 p-3">
+            {/* Logo */}
+            <div className="flex-shrink-0">
+              {logoUrl && !imageError ? (
+                <div className="w-10 h-10 rounded-full bg-background flex items-center justify-center overflow-hidden border border-border">
+                  <Image
+                    src={logoUrl}
+                    alt={displayName}
+                    width={32}
+                    height={32}
+                    className="object-contain p-1"
+                    onError={() => setImageError(true)}
+                  />
+                </div>
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500/10 to-orange-500/10 flex items-center justify-center text-lg border border-border">
+                  {getFallbackEmoji()}
+                </div>
+              )}
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-0.5">
+                <h3 className="font-semibold text-sm truncate bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+                  {displayName}
+                </h3>
+                <Badge
+                  variant="secondary"
+                  className={`text-xs px-1.5 py-0 h-5 ${
+                    serverType === "official"
+                      ? "bg-gradient-to-r from-blue-500/90 to-cyan-500/90 text-white border-0"
+                      : "bg-gradient-to-r from-purple-500/90 to-violet-500/90 text-white border-0"
+                  }`}
+                >
+                  {serverType === "official" ? "Official" : "Custom"}
+                </Badge>
+                {isConfigured && (
+                  <Badge
+                    variant="secondary"
+                    className="text-xs px-1.5 py-0 h-5 bg-gradient-to-r from-emerald-500 to-green-500 text-white border-0 flex items-center gap-1"
+                  >
+                    <CheckCircle2 className="h-3 w-3" />
+                    Configured
+                  </Badge>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground line-clamp-2">
+                {description || "No description provided."}
+              </p>
+            </div>
+          </div>
+          {children}
+        </div>
+      </Card>
+    );
+  }
+
+  // Full card view
   return (
     <Card
       className={`group flex flex-col h-full relative overflow-hidden border-0 shadow-lg hover:shadow-2xl cursor-pointer transition-all duration-300 hover:scale-[1.03] ${className}`}

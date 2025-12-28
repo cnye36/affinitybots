@@ -25,9 +25,10 @@ export interface TaskNodeData {
   // The last known output from the immediately preceding node, if any
   previousNodeOutput?: TaskOutput;
   // Thread id used by the previous node's test execution (for reusing during tests)
-  // Thread id used by the previous node's test execution (for reusing during tests)
   previousNodeThreadId?: string;
   hasConnectedTask?: boolean;
+  workflowType?: "sequential" | "orchestrator";
+  integration?: IntegrationConfig;
 }
 
 export interface TriggerNodeData {
@@ -38,11 +39,13 @@ export interface TriggerNodeData {
   workflow_id: string;
   config: Record<string, unknown>;
   position: { x: number; y: number };
-  status: "idle" | "running" | "completed" | "error";
+  status?: "idle" | "running" | "completed" | "error";
   onConfigureTrigger?: (triggerId: string) => void;
   onOpenTaskSidebar?: () => void;
   onAddTask?: () => void;
   hasConnectedTask?: boolean;
+  workflowType?: "sequential" | "orchestrator";
+  onDelete?: () => void;
 }
 
 export interface OrchestratorNodeData {
@@ -54,7 +57,10 @@ export interface OrchestratorNodeData {
   temperature?: number;
   reasoningEffort?: "low" | "medium" | "high";
   onConfigure: () => void;
+  onAddTask?: () => void;
   isActive?: boolean;
+  status?: "idle" | "running" | "completed" | "error";
+  onDelete?: () => void;
 }
 
 export type WorkflowNode = {
@@ -116,6 +122,12 @@ export interface TaskConfig {
     mode?: "auto" | "manual";
     rememberedTools?: string[];
   };
+  /**
+   * Optional array of specific tool names to enable for this task.
+   * If provided, only these tools will be loaded from enabled MCP servers.
+   * If not provided, all tools from enabled servers are loaded.
+   */
+  selected_tools?: string[];
   // When persisted, some tasks store assistant metadata in config
   assigned_assistant?: {
     id: string;

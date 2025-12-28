@@ -2,8 +2,12 @@
 -- Created: 2026-01-01
 -- Description: Adds workflow_type enum and orchestrator_config to support both sequential and orchestrator-based workflows
 
--- Create enum for workflow types
-CREATE TYPE workflow_type AS ENUM ('sequential', 'orchestrator');
+-- Create enum for workflow types (safe to run if already exists)
+DO $$ BEGIN
+    CREATE TYPE workflow_type AS ENUM ('sequential', 'orchestrator');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
 -- Add workflow_type column to workflows table
 ALTER TABLE workflows

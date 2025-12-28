@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Edge } from "reactflow";
 import { createClient } from "@/supabase/client";
 import { WorkflowNode } from "@/types/workflow";
-import { WorkflowCanvas } from "./WorkflowCanvas";
+import { WorkflowCanvas } from "@/components/workflows/v2/WorkflowCanvas";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -353,14 +353,6 @@ export function WorkflowExecutions({ workflowId }: WorkflowExecutionsProps) {
           <div className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">Loading run…</div>
         )}
         <WorkflowCanvas
-          nodes={decoratedNodes}
-          setNodes={() => {}}
-          edges={edges}
-          setEdges={() => {}}
-          initialWorkflowId={workflowId}
-          activeNodeId={activeNodeId}
-          setActiveNodeId={setActiveNodeId}
-          autoFit
           isExecutionsView={true}
         />
       </div>
@@ -406,7 +398,9 @@ export function WorkflowExecutions({ workflowId }: WorkflowExecutionsProps) {
               if (node.type === "task") {
                 const tr = taskRunsByTaskId[node.data.workflow_task_id];
                 const agentName = (node.data as any)?.assignedAssistant?.name || (node.data as any)?.config?.assigned_assistant?.name || "Agent";
-                const toolsUsed: string[] = (tr?.metadata?.toolsUsed || tr?.metadata?.tools || []) as string[];
+                const toolsUsed: string[] = (tr?.analytics?.tool_calls || tr?.metadata?.toolsUsed || tr?.metadata?.tools || []) as string[];
+                const toolCallCount = tr?.analytics?.tool_call_count ?? toolsUsed.length;
+                const durationMs = tr?.analytics?.duration_ms ?? null;
                 const markdownText = extractMarkdownFrom(tr?.result);
                 const resultText = typeof tr?.result === "string" ? (tr?.result as string) : JSON.stringify(tr?.result ?? null, null, 2);
                 const [copied, setCopied] = [false, undefined] as any; // placeholder for inline TS satisfaction; we will handle copy via inline handler
@@ -420,13 +414,16 @@ export function WorkflowExecutions({ workflowId }: WorkflowExecutionsProps) {
                       <div className="text-xs">Agent: {agentName}</div>
                       {toolsUsed?.length > 0 && (
                         <div className="text-xs flex flex-wrap gap-1 items-center">
-                          <span className="text-muted-foreground">Tools:</span>
-                          {toolsUsed.map((t) => (
-                            <span key={t} className="px-1.5 py-0.5 rounded bg-muted text-[10px] uppercase tracking-wide">{t}</span>
+                          <span className="text-muted-foreground">Tools ({toolCallCount}):</span>
+                          {toolsUsed.map((t, index) => (
+                            <span key={`${t}-${index}`} className="px-1.5 py-0.5 rounded bg-muted text-[10px] uppercase tracking-wide">{t}</span>
                           ))}
                         </div>
                       )}
                       <div className="text-xs">Status: <span className="uppercase">{tr?.status || "unknown"}</span></div>
+                      {durationMs != null && (
+                        <div className="text-xs">Duration: {Math.max(0, Math.round(durationMs / 1000))}s</div>
+                      )}
                       {tr?.started_at && <div className="text-xs">Started: {new Date(tr.started_at).toLocaleString()}</div>}
                       {tr?.completed_at && <div className="text-xs">Completed: {new Date(tr.completed_at).toLocaleString()}</div>}
                       {tr?.error && (
@@ -503,7 +500,5 @@ export function WorkflowExecutions({ workflowId }: WorkflowExecutionsProps) {
     </div>
   );
 }
-
-
 
 

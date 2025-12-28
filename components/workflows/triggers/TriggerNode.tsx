@@ -1,8 +1,8 @@
-import React, { memo } from "react"
+import React, { memo, useState } from "react"
 import { Handle, Position } from "reactflow"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Settings, Play, PlusCircle, AlarmClock, Globe2, Sparkles } from "lucide-react"
+import { Settings, Play, PlusCircle, AlarmClock, Globe2, Sparkles, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
 	Tooltip,
@@ -25,13 +25,39 @@ export interface TriggerNodeData {
 	onAddTask?: () => void,
 	hasConnectedTask?: boolean,
 	isActive?: boolean,
+	workflowType?: "sequential" | "orchestrator",
+	onDelete?: () => void,
 }
 
-const statusColors = {
-	idle: "bg-gray-400 dark:bg-gray-500",
-	running: "bg-blue-500 dark:bg-blue-400 animate-pulse shadow-lg shadow-blue-500/50",
-	completed: "bg-emerald-500 dark:bg-emerald-400 shadow-lg shadow-emerald-500/50",
-	error: "bg-red-500 dark:bg-red-400 shadow-lg shadow-red-500/50",
+const statusConfig: Record<string, { color: string, glow: string }> = {
+	idle: {
+		color: "bg-gray-400 dark:bg-gray-500",
+		glow: "",
+	},
+	running: {
+		color: "bg-blue-500 dark:bg-blue-400",
+		glow: "shadow-lg shadow-blue-500/50 animate-pulse",
+	},
+	completed: {
+		color: "bg-emerald-500 dark:bg-emerald-400",
+		glow: "shadow-lg shadow-emerald-500/50",
+	},
+	error: {
+		color: "bg-red-500 dark:bg-red-400",
+		glow: "shadow-lg shadow-red-500/50",
+	},
+	testing: {
+		color: "bg-yellow-500 dark:bg-yellow-400",
+		glow: "shadow-lg shadow-yellow-500/50 animate-pulse",
+	},
+	testSuccess: {
+		color: "bg-emerald-500 dark:bg-emerald-400",
+		glow: "shadow-lg shadow-emerald-500/50",
+	},
+	testError: {
+		color: "bg-red-500 dark:bg-red-400",
+		glow: "shadow-lg shadow-red-500/50",
+	},
 }
 
 const triggerTypeConfig = {
@@ -73,6 +99,8 @@ const triggerTypeConfig = {
 }
 
 export const TriggerNode = memo(({ data }: { data: TriggerNodeData }) => {
+	const [testStatus, setTestStatus] = useState<"idle" | "testing" | "testSuccess" | "testError">("idle")
+
 	const handleSettingsClick = (e: React.MouseEvent) => {
 		e.stopPropagation()
 		if (data.onConfigureTrigger) {
@@ -94,16 +122,134 @@ export const TriggerNode = memo(({ data }: { data: TriggerNodeData }) => {
 		if (data.onOpenTaskSidebar) data.onOpenTaskSidebar()
 	}
 
+	const handlePlayClick = async (e: React.MouseEvent) => {
+		e.stopPropagation()
+		setTestStatus("testing")
+		try {
+			const response = await fetch(`/api/workflows/${data.workflow_id}/execute`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					triggerId: data.trigger_id,
+				}),
+			})
+
+			if (!response.ok) {
+				throw new Error("Failed to execute workflow")
+			}
+
+			// Read the stream to completion
+			const reader = response.body?.getReader()
+			if (reader) {
+				const decoder = new TextDecoder()
+				while (true) {
+					const { done } = await reader.read()
+					if (done) break
+				}
+			}
+
+			setTestStatus("testSuccess")
+			setTimeout(() => setTestStatus("idle"), 3000)
+		} catch (error) {
+			console.error("Error testing trigger:", error)
+			setTestStatus("testError")
+			setTimeout(() => setTestStatus("idle"), 3000)
+		}
+	}
+
+	const handleDeleteClick = (e: React.MouseEvent) => {
+		e.stopPropagation()
+		if (data.onDelete) {
+			data.onDelete()
+		}
+	}
+
 	const config = triggerTypeConfig[data.trigger_type]
 	const TriggerIcon = config.icon
+	const status = data.status || "idle"
+	const displayStatus = testStatus !== "idle" ? testStatus : status
+	const statusInfo = statusConfig[displayStatus] || statusConfig.idle
 
 	return (
 		<div className="relative group">
+			{/* Status indicator and action buttons - positioned outside top-right */}
+			<div className="absolute -top-8 right-0 flex items-center gap-2 z-20">
+				{/* Play button for testing */}
+				<TooltipProvider>
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<button
+								onClick={handlePlayClick}
+								className={cn(
+									"p-1.5 rounded-lg",
+									"bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm",
+									"hover:bg-white dark:hover:bg-gray-700",
+									"transition-all duration-200 hover:scale-110",
+									"shadow-md border border-gray-200 dark:border-gray-700",
+									testStatus === "testing" && "opacity-50 cursor-not-allowed",
+								)}
+								disabled={testStatus === "testing"}
+							>
+								<Play className="h-3 w-3 text-gray-700 dark:text-gray-300 fill-current" />
+							</button>
+						</TooltipTrigger>
+						<TooltipContent>
+							<p>Test Trigger</p>
+						</TooltipContent>
+					</Tooltip>
+				</TooltipProvider>
+
+				{/* Status indicator dot - positioned next to play button */}
+				<TooltipProvider>
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<div
+								className={cn(
+									"w-3 h-3 rounded-full ring-2 ring-white dark:ring-gray-900",
+									statusInfo.color,
+									statusInfo.glow,
+								)}
+							/>
+						</TooltipTrigger>
+						<TooltipContent>
+							<p className="capitalize">Status: {displayStatus}</p>
+						</TooltipContent>
+					</Tooltip>
+				</TooltipProvider>
+
+				{/* Delete button */}
+				{data.onDelete && (
+					<TooltipProvider>
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<button
+									onClick={handleDeleteClick}
+									className={cn(
+										"p-1.5 rounded-lg",
+										"bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm",
+										"hover:bg-red-50 dark:hover:bg-red-900/20",
+										"transition-all duration-200 hover:scale-110",
+										"shadow-md border border-gray-200 dark:border-gray-700",
+									)}
+								>
+									<Trash2 className="h-3 w-3 text-red-600 dark:text-red-400" />
+								</button>
+							</TooltipTrigger>
+							<TooltipContent>
+								<p>Delete Trigger</p>
+							</TooltipContent>
+						</Tooltip>
+					</TooltipProvider>
+				)}
+			</div>
 			{/* Glowing border effect on hover/active */}
 			<div
 				className={cn(
 					"absolute -inset-[2px] rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300",
 					"bg-gradient-to-r blur-sm",
+					"pointer-events-none",
 					config.borderGradient,
 					data.isActive && "opacity-100 animate-pulse",
 					data.status === "running" && "opacity-100",
@@ -112,7 +258,7 @@ export const TriggerNode = memo(({ data }: { data: TriggerNodeData }) => {
 
 			<Card
 				className={cn(
-					"relative min-w-[280px] max-w-[320px] cursor-pointer overflow-hidden",
+					"relative min-w-[240px] max-w-[280px] cursor-pointer overflow-hidden",
 					"border-2 transition-all duration-300",
 					"hover:shadow-xl hover:-translate-y-0.5",
 					data.isActive
@@ -124,7 +270,7 @@ export const TriggerNode = memo(({ data }: { data: TriggerNodeData }) => {
 				{/* Gradient header with "Start Here" badge */}
 				<CardHeader
 					className={cn(
-						"p-4 relative overflow-hidden",
+						"p-3 relative overflow-hidden",
 						data.isActive
 							? "bg-white/20 dark:bg-black/20 backdrop-blur-sm"
 							: cn("bg-gradient-to-br", config.badgeGradient),
@@ -143,13 +289,13 @@ export const TriggerNode = memo(({ data }: { data: TriggerNodeData }) => {
 							{/* Icon with gradient background */}
 							<div
 								className={cn(
-									"p-2 rounded-lg shadow-md",
+									"p-1.5 rounded-lg shadow-md",
 									"bg-gradient-to-br",
 									config.gradient,
 									"transform transition-transform group-hover:scale-110 group-hover:rotate-3 duration-200",
 								)}
 							>
-								<TriggerIcon className="h-5 w-5 text-white" />
+								<TriggerIcon className="h-4 w-4 text-white" />
 							</div>
 
 							{/* Start Here badge with gradient */}
@@ -169,23 +315,6 @@ export const TriggerNode = memo(({ data }: { data: TriggerNodeData }) => {
 						</div>
 
 						<div className="flex items-center gap-2">
-							{/* Status indicator */}
-							<TooltipProvider>
-								<Tooltip>
-									<TooltipTrigger asChild>
-										<div
-											className={cn(
-												"w-3 h-3 rounded-full ring-2 ring-white dark:ring-gray-800",
-												statusColors[data.status || "idle"],
-											)}
-										/>
-									</TooltipTrigger>
-									<TooltipContent>
-										<p>Status: {data.status || "idle"}</p>
-									</TooltipContent>
-								</Tooltip>
-							</TooltipProvider>
-
 							{/* Settings button - appears on hover */}
 							<TooltipProvider>
 								<Tooltip>
@@ -212,7 +341,7 @@ export const TriggerNode = memo(({ data }: { data: TriggerNodeData }) => {
 					</div>
 				</CardHeader>
 
-				<CardContent className="p-4 pt-3">
+				<CardContent className="p-3 pt-2">
 					{/* Trigger type badge */}
 					<div className="flex flex-wrap gap-2 mb-3">
 						<Badge
@@ -226,18 +355,10 @@ export const TriggerNode = memo(({ data }: { data: TriggerNodeData }) => {
 						>
 							{config.label}
 						</Badge>
-						{data.status && data.status !== "idle" && (
-							<Badge
-								variant={data.status === "error" ? "destructive" : "secondary"}
-								className="text-xs capitalize"
-							>
-								{data.status}
-							</Badge>
-						)}
 					</div>
 
 					{/* Description text */}
-					<p className="text-xs text-muted-foreground leading-relaxed">
+					<p className="text-[11px] text-muted-foreground leading-relaxed">
 						{data.trigger_type === "manual" &&
 							"This workflow will start when manually triggered."}
 						{data.trigger_type === "webhook" &&
@@ -259,18 +380,33 @@ export const TriggerNode = memo(({ data }: { data: TriggerNodeData }) => {
 				</CardContent>
 			</Card>
 
-			{/* Add Agent Button Removed - using global add button now */}
+			{/* Add Agent Button - appears on hover when no outgoing connection */}
+			{data.onAddTask && (
+				<button
+					onClick={handleAddTask}
+					className={cn(
+						"absolute -right-32 top-1/2 -translate-y-1/2",
+						"opacity-0 group-hover:opacity-100 transition-opacity duration-200",
+						"px-3 py-1.5 rounded-lg",
+						"bg-gradient-to-r",
+						config.gradient,
+						"hover:shadow-lg shadow-md text-white",
+						"flex items-center gap-1.5 text-xs font-medium",
+						"whitespace-nowrap z-10",
+						"backdrop-blur-sm",
+					)}
+					title="Add Agent"
+				>
+					<PlusCircle className="w-3.5 h-3.5" />
+					<span>Add Agent</span>
+				</button>
+			)}
 
-			{/* Source handle with gradient ring */}
+			{/* Source handle - RIGHT for horizontal flow */}
 			<Handle
 				type="source"
 				position={Position.Right}
-				className={cn(
-					"w-3 h-3 border-2 border-white dark:border-gray-800",
-					"bg-gradient-to-br shadow-lg",
-					config.gradient,
-					"transition-transform hover:scale-125",
-				)}
+				className="!w-3 !h-3 !border-2 !border-white dark:!border-gray-900 !bg-blue-500 dark:!bg-blue-400 !shadow-[0_0_6px_rgba(59,130,246,0.5)] dark:!shadow-[0_0_8px_rgba(96,165,250,0.6)] !rounded-full"
 				id="trigger-source"
 				style={{ right: -6 }}
 			/>

@@ -1,6 +1,6 @@
-import { WorkflowsBuilder } from '@/components/workflows/WorkflowsBuilder'
+import { redirect } from 'next/navigation'
 
 export default async function WorkflowPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
-  return <WorkflowsBuilder initialWorkflowId={params.id} />
+  redirect(`/workflows/builder?id=${params.id}`)
 } 

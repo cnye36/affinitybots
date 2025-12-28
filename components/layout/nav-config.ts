@@ -1,4 +1,4 @@
-import { Bot, Hammer, Home, Sliders, TestTubeDiagonal, type LucideIcon } from "lucide-react"
+import { BarChart3, Bot, Hammer, Home, Sliders, TestTubeDiagonal, type LucideIcon } from "lucide-react"
 
 export interface AppNavItem {
   title: string
@@ -11,11 +11,16 @@ export interface AppNavItem {
 }
 
 export const appNavigation: AppNavItem[] = [
-  {
-    title: "Dashboard",
-    url: "/dashboard",
-    icon: Home,
-  },
+	{
+		title: "Dashboard",
+		url: "/dashboard",
+		icon: Home,
+	},
+	{
+		title: "Analytics",
+		url: "/analytics",
+		icon: BarChart3,
+	},
   {
     title: "Agents",
     url: "/agents",
@@ -35,8 +40,8 @@ export const appNavigation: AppNavItem[] = [
     
   },
   {
-    title: "Playground (Coming Soon)",
-    url: "/playground/playground-coming-soon",
+    title: "Playground",
+    url: "/playground",
     icon: TestTubeDiagonal,
   },
 ]

@@ -11,9 +11,10 @@ interface Props {
   server: OfficialMcpServerMeta;
   onConnected?: () => void;
   isConfigured?: boolean;
+  compact?: boolean;
 }
 
-export function OfficialServerCard({ server, onConnected, isConfigured = false }: Props) {
+export function OfficialServerCard({ server, onConnected, isConfigured = false, compact = false }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [disconnecting, setDisconnecting] = useState(false);
@@ -55,6 +56,7 @@ export function OfficialServerCard({ server, onConnected, isConfigured = false }
       logoUrl={server.logoUrl}
       isConfigured={isConfigured}
       onClick={handleCardClick}
+      compact={compact}
     >
       {error && (
         <div className="mb-3 text-xs text-red-500 text-center">{error}</div>

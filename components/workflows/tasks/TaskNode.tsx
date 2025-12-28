@@ -1,4 +1,4 @@
-import React, { memo } from "react"
+import React, { memo, useState, useEffect, useMemo } from "react"
 import { Handle, Position, NodeProps } from "reactflow"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import {
@@ -7,7 +7,9 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { Settings, UserPlus, PlusCircle, Bot, Sparkles, CheckCircle2, AlertCircle, Loader2 } from "lucide-react"
+import { Settings, UserPlus, PlusCircle, Bot, Sparkles, CheckCircle2, AlertCircle, Loader2, Play, Trash2 } from "lucide-react"
+import { SiNotion, SiX, SiGoogle } from "react-icons/si"
+import { IntegrationType } from "@/types/workflow"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
@@ -15,6 +17,9 @@ import { TaskConfigModal } from "./TaskConfigModal"
 import { TaskNodeData, Task } from "@/types/workflow"
 import { Assistant } from "@/types/assistant"
 import { cn } from "@/lib/utils"
+import { useAgent } from "@/hooks/useAgent"
+import { OFFICIAL_MCP_SERVERS } from "@/lib/mcp/officialMcpServers"
+import Image from "next/image"
 
 interface TaskNodeProps {
 	data: TaskNodeData & {
@@ -29,7 +34,25 @@ interface TaskNodeProps {
 		onAddTask?: () => void,
 		isConfigOpen?: boolean,
 		onConfigClose?: () => void,
+		onDelete?: () => void,
 	},
+}
+
+// Helper to get integration icon component
+const getIntegrationIcon = (type: IntegrationType) => {
+	switch (type) {
+		case "notion":
+			return SiNotion
+		case "twitter":
+			return SiX
+		case "google_calendar":
+		case "google_docs":
+		case "google_sheets":
+		case "google_drive":
+			return SiGoogle
+		default:
+			return null
+	}
 }
 
 const statusConfig: Record<string, { color: string, glow: string, icon: any }> = {
@@ -63,10 +86,62 @@ const statusConfig: Record<string, { color: string, glow: string, icon: any }> =
 		glow: "shadow-lg shadow-red-500/50",
 		icon: AlertCircle,
 	},
+	testing: {
+		color: "bg-yellow-500 dark:bg-yellow-400",
+		glow: "shadow-lg shadow-yellow-500/50 animate-pulse",
+		icon: null,
+	},
+	testSuccess: {
+		color: "bg-emerald-500 dark:bg-emerald-400",
+		glow: "shadow-lg shadow-emerald-500/50",
+		icon: null,
+	},
+	testError: {
+		color: "bg-red-500 dark:bg-red-400",
+		glow: "shadow-lg shadow-red-500/50",
+		icon: null,
+	},
 }
 
 export const MemoizedTaskNode = memo(
 	(props: NodeProps<TaskNodeProps["data"]>) => {
+		const [testStatus, setTestStatus] = useState<"idle" | "testing" | "testSuccess" | "testError">("idle")
+		const [toolLogos, setToolLogos] = useState<Record<string, string>>({})
+
+		// Fetch assistant data to get enabled tools
+		const { assistant } = useAgent(
+			props.data.assignedAssistant?.id,
+			{ enabled: !!props.data.assignedAssistant?.id }
+		)
+
+		// Extract enabled MCP servers from assistant config
+		const enabledTools = useMemo(() => {
+			if (!assistant?.config?.configurable?.enabled_mcp_servers) return []
+			const enabledMcp = assistant.config.configurable.enabled_mcp_servers
+			if (Array.isArray(enabledMcp)) return enabledMcp as string[]
+			if (typeof enabledMcp === "object" && enabledMcp !== null) {
+				return Object.entries(enabledMcp)
+					.filter(([, v]) => (v as { isEnabled?: boolean })?.isEnabled)
+					.map(([k]) => k)
+			}
+			return []
+		}, [assistant])
+
+		// Load tool logos
+		useEffect(() => {
+			if (enabledTools.length === 0) {
+				setToolLogos({})
+				return
+			}
+			const logos: Record<string, string> = {}
+			OFFICIAL_MCP_SERVERS.forEach((s) => {
+				if (enabledTools.includes(s.qualifiedName) && s.logoUrl) {
+					logos[s.qualifiedName] = s.logoUrl
+				}
+			})
+			setToolLogos(logos)
+		}, [enabledTools])
+
 		const handleSettingsClick = (e: React.MouseEvent) => {
 			e.stopPropagation()
 			if (props.data.onConfigureTask && props.data.workflow_task_id) {
@@ -110,6 +185,7 @@ export const MemoizedTaskNode = memo(
 		type StreamTestResult = { type?: string, content?: string, result?: unknown }
 
 		const handleTestTask = async (overrideConfig?: Record<string, unknown>) => {
+			setTestStatus("testing")
 			try {
 				const response = await fetch(
 					`/api/workflows/${props.data.workflow_id}/tasks/${props.data.workflow_task_id}/execute`,
@@ -309,14 +385,30 @@ export const MemoizedTaskNode = memo(
 								metadata: { event: testResult?.type },
 							},
 						},
-					})
-					window.dispatchEvent(event)
-				} catch {}
+				})
+				window.dispatchEvent(event)
+			} catch {}
 
-				return testResult
-			} catch (error) {
-				console.error("Error testing task:", error)
-				throw error
+			setTestStatus("testSuccess")
+			setTimeout(() => setTestStatus("idle"), 3000) // Reset after 3 seconds
+			return testResult
+		} catch (error) {
+			console.error("Error testing task:", error)
+			setTestStatus("testError")
+			setTimeout(() => setTestStatus("idle"), 3000) // Reset after 3 seconds
+			throw error
+		}
+	}
+
+		const handlePlayClick = async (e: React.MouseEvent) => {
+			e.stopPropagation()
+			await handleTestTask()
+		}
+
+		const handleDeleteClick = (e: React.MouseEvent) => {
+			e.stopPropagation()
+			if (props.data.onDelete) {
+				props.data.onDelete()
 			}
 		}
 
@@ -327,17 +419,89 @@ export const MemoizedTaskNode = memo(
 		}
 
 		const status = props.data.status || "pending"
-		const statusInfo = statusConfig[status] || statusConfig.pending
-		const StatusIcon = statusInfo.icon
+		// Use test status if testing, otherwise use regular status
+		const displayStatus = testStatus !== "idle" ? testStatus : status
+		const statusInfo = statusConfig[displayStatus] || statusConfig.pending
 
 		return (
 			<>
 				<div className="relative group">
+					{/* Status indicator and action buttons - positioned outside top-right */}
+					<div className="absolute -top-8 right-0 flex items-center gap-2 z-20">
+						{/* Play button for testing */}
+						<TooltipProvider>
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<button
+										onClick={handlePlayClick}
+										className={cn(
+											"p-1.5 rounded-lg",
+											"bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm",
+											"hover:bg-white dark:hover:bg-gray-700",
+											"transition-all duration-200 hover:scale-110",
+											"shadow-md border border-gray-200 dark:border-gray-700",
+											testStatus === "testing" && "opacity-50 cursor-not-allowed",
+										)}
+										disabled={testStatus === "testing"}
+									>
+										<Play className="h-3 w-3 text-gray-700 dark:text-gray-300 fill-current" />
+									</button>
+								</TooltipTrigger>
+								<TooltipContent>
+									<p>Test Task</p>
+								</TooltipContent>
+							</Tooltip>
+						</TooltipProvider>
+
+						{/* Status indicator dot - positioned next to play button */}
+						<TooltipProvider>
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<div
+										className={cn(
+											"w-3 h-3 rounded-full ring-2 ring-white dark:ring-gray-900",
+											statusInfo.color,
+											statusInfo.glow,
+										)}
+									/>
+								</TooltipTrigger>
+								<TooltipContent>
+									<p className="capitalize">Status: {displayStatus}</p>
+								</TooltipContent>
+							</Tooltip>
+						</TooltipProvider>
+
+						{/* Delete button */}
+						{props.data.onDelete && (
+							<TooltipProvider>
+								<Tooltip>
+									<TooltipTrigger asChild>
+										<button
+											onClick={handleDeleteClick}
+											className={cn(
+												"p-1.5 rounded-lg",
+												"bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm",
+												"hover:bg-red-50 dark:hover:bg-red-900/20",
+												"transition-all duration-200 hover:scale-110",
+												"shadow-md border border-gray-200 dark:border-gray-700",
+											)}
+										>
+											<Trash2 className="h-3 w-3 text-red-600 dark:text-red-400" />
+										</button>
+									</TooltipTrigger>
+									<TooltipContent>
+										<p>Delete Task</p>
+									</TooltipContent>
+								</Tooltip>
+							</TooltipProvider>
+						)}
+					</div>
 					{/* Glowing border effect on hover/active/status */}
 					<div
 						className={cn(
 							"absolute -inset-[2px] rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300",
 							"bg-gradient-to-r from-violet-500/30 to-purple-500/30 dark:from-violet-400/30 dark:to-purple-400/30 blur-sm",
+							"pointer-events-none",
 							props.data.isActive && "opacity-100 animate-pulse",
 							status === "running" && "opacity-100 from-blue-500/50 to-cyan-500/50",
 							status === "completed" && "from-emerald-500/50 to-green-500/50",
@@ -347,7 +511,7 @@ export const MemoizedTaskNode = memo(
 
 					<Card
 						className={cn(
-							"relative min-w-[280px] max-w-[320px] cursor-pointer overflow-hidden",
+							"relative min-w-[200px] max-w-[240px] cursor-pointer overflow-hidden",
 							"border-2 transition-all duration-300",
 							"hover:shadow-xl hover:-translate-y-0.5",
 							"bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm",
@@ -361,7 +525,7 @@ export const MemoizedTaskNode = memo(
 						onDoubleClick={handleCardDoubleClick}
 					>
 						{/* Header with gradient background */}
-						<CardHeader className="p-4 relative overflow-hidden bg-gradient-to-br from-violet-50/80 to-purple-50/80 dark:from-violet-950/30 dark:to-purple-950/30">
+						<CardHeader className="p-3 relative overflow-hidden bg-gradient-to-br from-violet-50/80 to-purple-50/80 dark:from-violet-950/30 dark:to-purple-950/30">
 							{/* Subtle animated gradient overlay */}
 							<div
 								className={cn(
@@ -375,18 +539,18 @@ export const MemoizedTaskNode = memo(
 									{/* AI Task Icon */}
 									<div
 										className={cn(
-											"p-2 rounded-lg shadow-md shrink-0",
+											"p-1.5 rounded-lg shadow-md shrink-0",
 											"bg-gradient-to-br from-violet-500 to-purple-500 dark:from-violet-600 dark:to-purple-600",
 											"transform transition-transform group-hover:scale-110 duration-200",
 										)}
 									>
-										<Bot className="h-4 w-4 text-white" />
+										<Bot className="h-3.5 w-3.5 text-white" />
 									</div>
 
 									{/* Task Name with gradient text */}
 									<CardTitle
 										className={cn(
-											"text-sm font-semibold truncate",
+											"text-xs font-semibold truncate",
 											"bg-gradient-to-r from-violet-600 to-purple-600 dark:from-violet-400 dark:to-purple-400",
 											"bg-clip-text text-transparent",
 										)}
@@ -396,24 +560,6 @@ export const MemoizedTaskNode = memo(
 								</div>
 
 								<div className="flex items-center gap-2 shrink-0">
-									{/* Status indicator */}
-									<TooltipProvider>
-										<Tooltip>
-											<TooltipTrigger asChild>
-												<div
-													className={cn(
-														"w-3 h-3 rounded-full ring-2 ring-white dark:ring-gray-800",
-														statusInfo.color,
-														statusInfo.glow,
-													)}
-												/>
-											</TooltipTrigger>
-											<TooltipContent>
-												<p className="capitalize">Status: {status}</p>
-											</TooltipContent>
-										</Tooltip>
-									</TooltipProvider>
-
 									{/* Settings button - appears on hover */}
 									<TooltipProvider>
 										<Tooltip>
@@ -440,57 +586,86 @@ export const MemoizedTaskNode = memo(
 							</div>
 						</CardHeader>
 
-						<CardContent className="p-4 pt-3">
-							{/* Task type badge */}
-							<div className="flex flex-wrap gap-2 mb-3">
+						<CardContent className="p-3 pt-2">
+							{/* Task type badge and integration icons */}
+							<div className="flex flex-wrap items-center gap-1.5 mb-2.5">
 								<Badge
 									variant="outline"
 									className={cn(
-										"text-xs font-medium border-2",
+										"text-[10px] font-medium border px-1.5 py-0",
 										"bg-gradient-to-r from-violet-500/10 to-purple-500/10 dark:from-violet-400/20 dark:to-purple-400/20",
 										"border-transparent shadow-sm",
 									)}
 								>
-									<Sparkles className="h-3 w-3 mr-1" />
+									<Sparkles className="h-2.5 w-2.5 mr-0.5" />
 									AI Agent
 								</Badge>
-								{props.data.status && props.data.status !== "pending" && (
-									<Badge
-										variant={status === "error" || status === "failed" ? "destructive" : "secondary"}
-										className={cn(
-											"text-xs capitalize",
-											status === "running" && "bg-blue-500 dark:bg-blue-600 text-white animate-pulse",
-											status === "completed" && "bg-emerald-500 dark:bg-emerald-600 text-white",
-										)}
-									>
-										{StatusIcon && <StatusIcon className="h-3 w-3 mr-1" />}
-										{status}
-									</Badge>
-								)}
+								{/* Integration icon from task integration field */}
+								{props.data.integration && (() => {
+									const IconComponent = getIntegrationIcon(props.data.integration.type)
+									if (!IconComponent) return null
+									return (
+										<TooltipProvider key={`task-integration-${props.data.integration.type}`}>
+											<Tooltip>
+												<TooltipTrigger asChild>
+													<div className="flex items-center justify-center w-5 h-5 rounded border border-violet-200/50 dark:border-violet-800/50 bg-background">
+														<IconComponent className="h-3 w-3 text-violet-600 dark:text-violet-400" />
+													</div>
+												</TooltipTrigger>
+												<TooltipContent>
+													<p className="capitalize">{props.data.integration.type.replace(/_/g, " ")}</p>
+												</TooltipContent>
+											</Tooltip>
+										</TooltipProvider>
+									)
+								})()}
+								{/* Integration icons from assistant's enabled MCP servers */}
+								{enabledTools.map((qualifiedName) => {
+									const logoUrl = toolLogos[qualifiedName]
+									const server = OFFICIAL_MCP_SERVERS.find(s => s.qualifiedName === qualifiedName)
+									const displayName = server?.displayName || qualifiedName.split('/').pop() || qualifiedName
+									return (
+										<TooltipProvider key={`tool-${qualifiedName}`}>
+											<Tooltip>
+												<TooltipTrigger asChild>
+													<div className="flex items-center justify-center w-5 h-5 rounded border border-violet-200/50 dark:border-violet-800/50 bg-background overflow-hidden">
+														{logoUrl ? (
+															<Image
+																src={logoUrl}
+																alt={displayName}
+																width={12}
+																height={12}
+																className="object-contain"
+															/>
+														) : (
+															<div className="text-[8px]">🔧</div>
+														)}
+													</div>
+												</TooltipTrigger>
+												<TooltipContent>
+													<p>{displayName}</p>
+												</TooltipContent>
+											</Tooltip>
+										</TooltipProvider>
+									)
+								})}
 							</div>
 
-							{/* Description */}
-							{props.data.description && (
-								<p className="text-xs text-muted-foreground mb-3 line-clamp-2 leading-relaxed">
-									{props.data.description}
-								</p>
-							)}
-
 							{/* Agent Assignment Section */}
-							<div className="pt-3 border-t border-violet-200/50 dark:border-violet-800/30">
+							<div className="pt-2.5 border-t border-violet-200/50 dark:border-violet-800/30">
 								{props.data.assignedAssistant ? (
 									<div className="flex items-center gap-2">
 										{/* Avatar with gradient ring */}
 										<div className="relative">
 											<div className="absolute -inset-0.5 bg-gradient-to-r from-violet-500 to-purple-500 dark:from-violet-600 dark:to-purple-600 rounded-full blur-sm opacity-75" />
-											<Avatar className="relative h-7 w-7 border-2 border-white dark:border-gray-900">
+											<Avatar className="relative h-6 w-6 border-2 border-white dark:border-gray-900">
 												{props.data.assignedAssistant.avatar ? (
 													<AvatarImage
 														src={props.data.assignedAssistant.avatar}
 														alt={props.data.assignedAssistant.name}
 													/>
 												) : (
-													<AvatarFallback className="text-xs bg-gradient-to-br from-violet-500 to-purple-500 dark:from-violet-600 dark:to-purple-600 text-white">
+													<AvatarFallback className="text-[9px] bg-gradient-to-br from-violet-500 to-purple-500 dark:from-violet-600 dark:to-purple-600 text-white">
 														{props.data.assignedAssistant.name
 															.slice(0, 2)
 															.toUpperCase()}
@@ -498,13 +673,13 @@ export const MemoizedTaskNode = memo(
 												)}
 											</Avatar>
 										</div>
-										<span className="text-xs font-medium flex-1 truncate">
+										<span className="text-[11px] font-medium flex-1 truncate">
 											{props.data.assignedAssistant.name}
 										</span>
 										<Button
 											variant="ghost"
 											size="sm"
-											className="ml-auto h-7 px-2 text-xs hover:bg-violet-500/10 dark:hover:bg-violet-400/10"
+											className="ml-auto h-6 px-1.5 text-[10px] hover:bg-violet-500/10 dark:hover:bg-violet-400/10"
 											onClick={handleAssignAssistant}
 										>
 											Change
@@ -515,47 +690,86 @@ export const MemoizedTaskNode = memo(
 										variant="outline"
 										size="sm"
 										className={cn(
-											"w-full gap-2",
+											"w-full gap-1.5 h-7",
 											"bg-gradient-to-r from-violet-500/10 to-purple-500/10 dark:from-violet-400/20 dark:to-purple-400/20",
-											"border-2 border-violet-300/50 dark:border-violet-700/50",
+											"border border-violet-300/50 dark:border-violet-700/50",
 											"hover:from-violet-500/20 hover:to-purple-500/20 dark:hover:from-violet-400/30 dark:hover:to-purple-400/30",
 											"transition-all duration-200 hover:scale-[1.02]",
 										)}
 										onClick={handleAssignAssistant}
 									>
-										<UserPlus className="h-4 w-4" />
-										<span className="font-medium">Assign Agent</span>
+										<UserPlus className="h-3 w-3" />
+										<span className="font-medium text-[10px]">Assign Agent</span>
 									</Button>
 								)}
 							</div>
 						</CardContent>
-
-						{/* Add Agent Button Removed - using global add button now */}
-
-						{/* Connection Handles with gradient */}
-						<Handle
-							type="target"
-							position={Position.Left}
-							className={cn(
-								"w-3 h-3 border-2 border-white dark:border-gray-800",
-								"bg-gradient-to-br from-violet-500 to-purple-500 dark:from-violet-600 dark:to-purple-600 shadow-lg",
-								"transition-transform hover:scale-125",
-							)}
-							id="task-target"
-							style={{ left: -6 }}
-						/>
-						<Handle
-							type="source"
-							position={Position.Right}
-							className={cn(
-								"w-3 h-3 border-2 border-white dark:border-gray-800",
-								"bg-gradient-to-br from-violet-500 to-purple-500 dark:from-violet-600 dark:to-purple-600 shadow-lg",
-								"transition-transform hover:scale-125",
-							)}
-							id="task-source"
-							style={{ right: -6 }}
-						/>
 					</Card>
+
+					{/* Add Agent Button - appears on hover when no outgoing connection */}
+					{props.data.onAddTask && (
+						<button
+							onClick={(e) => {
+								e.stopPropagation();
+								props.data.onAddTask?.();
+							}}
+							className={cn(
+								"absolute -right-32 top-1/2 -translate-y-1/2",
+								"opacity-0 group-hover:opacity-100 transition-opacity duration-200",
+								"px-3 py-1.5 rounded-lg",
+								"bg-gradient-to-r from-violet-500 to-purple-500 dark:from-violet-600 dark:to-purple-600",
+								"hover:shadow-lg shadow-md text-white",
+								"flex items-center gap-1.5 text-xs font-medium",
+								"whitespace-nowrap z-10",
+								"backdrop-blur-sm",
+							)}
+							title="Add Agent"
+						>
+							<PlusCircle className="w-3.5 h-3.5" />
+							<span>Add Agent</span>
+						</button>
+					)}
+
+					{/* Connection Handles - Conditional based on workflow type */}
+					{props.data.workflowType === "orchestrator" ? (
+						<>
+							{/* Top handle for orchestrator connections (target) */}
+							<Handle
+								type="target"
+								position={Position.Top}
+								className="!w-3 !h-3 !border-2 !border-white dark:!border-gray-900 !bg-violet-500 dark:!bg-violet-400 !shadow-[0_0_6px_rgba(139,92,246,0.5)] dark:!shadow-[0_0_8px_rgba(167,139,250,0.6)] !rounded-full"
+								id="task-target-top"
+								style={{ top: -6 }}
+							/>
+							{/* Bottom handle for output (source) */}
+							<Handle
+								type="source"
+								position={Position.Bottom}
+								className="!w-3 !h-3 !border-2 !border-white dark:!border-gray-900 !bg-violet-500 dark:!bg-violet-400 !shadow-[0_0_6px_rgba(139,92,246,0.5)] dark:!shadow-[0_0_8px_rgba(167,139,250,0.6)] !rounded-full"
+								id="task-source-bottom"
+								style={{ bottom: -6 }}
+							/>
+						</>
+					) : (
+						<>
+							{/* Left handle for sequential connections (target) */}
+							<Handle
+								type="target"
+								position={Position.Left}
+								className="!w-3 !h-3 !border-2 !border-white dark:!border-gray-900 !bg-violet-500 dark:!bg-violet-400 !shadow-[0_0_6px_rgba(139,92,246,0.5)] dark:!shadow-[0_0_8px_rgba(167,139,250,0.6)] !rounded-full"
+								id="task-target-left"
+								style={{ left: -6 }}
+							/>
+							{/* Right handle for output (source) */}
+							<Handle
+								type="source"
+								position={Position.Right}
+								className="!w-3 !h-3 !border-2 !border-white dark:!border-gray-900 !bg-violet-500 dark:!bg-violet-400 !shadow-[0_0_6px_rgba(139,92,246,0.5)] dark:!shadow-[0_0_8px_rgba(167,139,250,0.6)] !rounded-full"
+								id="task-source"
+								style={{ right: -6 }}
+							/>
+						</>
+					)}
 				</div>
 
 				<TaskConfigModal
