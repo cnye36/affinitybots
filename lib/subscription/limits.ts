@@ -5,7 +5,7 @@
  * utility functions to check and enforce these limits.
  */
 
-export type PlanType = "free" | "starter" | "pro"
+export type PlanType = "free" | "starter" | "pro" | "admin"
 
 export interface PlanLimits {
 	/** Maximum number of agents user can create */
@@ -27,9 +27,9 @@ export interface PlanLimits {
 /**
  * Plan limits configuration
  *
- * Free tier: 14-day trial with starter limits
- * Starter: $19.99/month - Good for individuals and small teams
- * Pro: $39.99/month - For power users and larger teams
+ * Trial: 14-day trial with PRO limits (regardless of selected plan)
+ * Starter: $19.99/month - 10 agents, 5 active workflows
+ * Pro: $39.99/month - 50 agents, 25 active workflows
  */
 export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
 	free: {
@@ -43,7 +43,7 @@ export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
 	},
 	starter: {
 		maxAgents: 10,
-		maxActiveWorkflows: 3,
+		maxActiveWorkflows: 5,
 		maxDraftWorkflows: Infinity,
 		maxIntegrations: Infinity, // Unlimited integrations
 		monthlyTokenBudgetUsd: 25.0, // ~$25 worth of AI usage per month
@@ -52,12 +52,21 @@ export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
 	},
 	pro: {
 		maxAgents: 50,
-		maxActiveWorkflows: Infinity,
+		maxActiveWorkflows: 25,
 		maxDraftWorkflows: Infinity,
 		maxIntegrations: Infinity,
 		monthlyTokenBudgetUsd: 100.0, // ~$100 worth of AI usage per month
 		displayName: "Pro",
 		pricePerMonth: 39.99,
+	},
+	admin: {
+		maxAgents: Infinity,
+		maxActiveWorkflows: Infinity,
+		maxDraftWorkflows: Infinity,
+		maxIntegrations: Infinity,
+		monthlyTokenBudgetUsd: Infinity, // Unlimited AI usage
+		displayName: "Admin",
+		pricePerMonth: 0,
 	},
 }
 
@@ -137,8 +146,8 @@ export function getUpgradeRecommendation(
 ): { shouldUpgrade: boolean; reason?: string; recommendedPlan?: PlanType } {
 	const limits = getPlanLimits(planType)
 
-	// Already on highest tier
-	if (planType === "pro") {
+	// Already on highest tier (admin or pro)
+	if (planType === "pro" || planType === "admin") {
 		return { shouldUpgrade: false }
 	}
 
@@ -209,5 +218,5 @@ export function getAllPlans(): Array<{ planType: PlanType; limits: PlanLimits }>
  * Validate if a plan type is valid
  */
 export function isValidPlanType(planType: string): planType is PlanType {
-	return planType === "free" || planType === "starter" || planType === "pro"
+	return planType === "free" || planType === "starter" || planType === "pro" || planType === "admin"
 }

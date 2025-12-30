@@ -3,7 +3,6 @@ import { getAllBlogPosts } from '@/lib/blog'
 
 const publicRoutes = [
   '/',
-  '/early-access',
   '/pitch-deck',
   '/privacy',
   '/terms',

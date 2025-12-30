@@ -58,7 +58,7 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     description:
       "Access and manage your Google Drive files, folders, and permissions. Search files, create documents, upload content, and organize your Drive using your Google account via OAuth.",
     logoUrl: "https://ssl.gstatic.com/docs/doclist/images/drive_2022q3_32dp.png",
-    url: process.env.GOOGLE_DRIVE_MCP_URL || "http://google-drive-mcp:3002",
+    url: process.env.GOOGLE_DRIVE_MCP_URL || "http://localhost:3002",
     docsUrl: "https://developers.google.com/drive",
     authType: "oauth",
     requiresSetup: true,
@@ -69,7 +69,7 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     description:
       "Access and manage your Gmail emails, contacts, and permissions. Search emails, create drafts, send messages, and organize your inbox using your Google account via OAuth.",
     logoUrl: "https://ssl.gstatic.com/ui/v1/icons/mail/images/favicon5.ico",
-    url: process.env.GMAIL_MCP_URL || "http://gmail-mcp-server:3003",
+    url: process.env.GMAIL_MCP_URL || "http://localhost:3003",
     docsUrl: "https://developers.google.com/gmail",
     authType: "oauth",
     requiresSetup: true,

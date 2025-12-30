@@ -317,14 +317,6 @@ export default async function Dashboard() {
                           New Workflow
                         </Link>
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="border-border hover:bg-accent transition-all duration-200"
-                      >
-                        <Clock className="h-4 w-4 mr-2" />
-                        Last 30 days
-                      </Button>
                     </div>
                   </div>
                 </div>

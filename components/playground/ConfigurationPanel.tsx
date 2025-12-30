@@ -32,11 +32,11 @@ export function ConfigurationPanel({
 				<CardHeader className="pb-3">
 					<div className="flex items-center justify-between">
 						<div>
-							<CardTitle className="text-sm font-medium">Execution Mode</CardTitle>
+							<CardTitle className="text-sm font-medium">Orchestrator Mode</CardTitle>
 							<CardDescription className="text-xs mt-1">
 								{mode === "sequential"
 									? "Manually control agent execution"
-									: "Manager coordinates agent team"}
+									: "Test orchestrator workflow step-by-step"}
 							</CardDescription>
 						</div>
 						<Switch
@@ -46,16 +46,6 @@ export function ConfigurationPanel({
 					</div>
 				</CardHeader>
 			</Card>
-
-			{mode === "orchestrator" && (
-				<OrchestratorConfigForm
-					config={orchestratorConfig}
-					availableAgents={availableAgents}
-					onConfigChange={onOrchestratorConfigChange}
-					onTeamChange={onTeamChange}
-					selectedTeam={selectedTeam}
-				/>
-			)}
 		</div>
 	)
 }

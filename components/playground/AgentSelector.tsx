@@ -35,29 +35,27 @@ export function AgentSelector({ agents, currentAgentId, onSelectAgent }: AgentSe
 		<div className="space-y-2">
 			<Label htmlFor="agent-select">Select Agent</Label>
 			<Select value={currentAgentId || undefined} onValueChange={onSelectAgent}>
-				<SelectTrigger id="agent-select">
+				<SelectTrigger id="agent-select" className="w-full">
 					<SelectValue placeholder="Choose an agent..." />
 				</SelectTrigger>
-				<SelectContent>
+				<SelectContent 
+					className="w-[var(--radix-select-trigger-width)]" 
+					style={{ width: 'var(--radix-select-trigger-width)', maxWidth: 'var(--radix-select-trigger-width)' }}
+				>
 					{agents.map((agent) => (
 						<SelectItem key={agent.assistant_id} value={agent.assistant_id}>
-							<div className="flex items-center gap-2">
+							<div className="flex items-center gap-2 min-w-0 w-full">
 								{agent.metadata?.agent_avatar ? (
 									<img
 										src={agent.metadata.agent_avatar}
 										alt={agent.name}
-										className="h-5 w-5 rounded-full"
+										className="h-5 w-5 rounded-full flex-shrink-0"
 									/>
 								) : (
-									<Bot className="h-4 w-4" />
+									<Bot className="h-4 w-4 flex-shrink-0" />
 								)}
-								<div>
-									<div className="font-medium">{agent.name}</div>
-									{agent.metadata?.description && (
-										<div className="text-xs text-muted-foreground line-clamp-1">
-											{agent.metadata.description}
-										</div>
-									)}
+								<div className="min-w-0 flex-1 overflow-hidden">
+									<div className="font-medium truncate">{agent.name}</div>
 								</div>
 							</div>
 						</SelectItem>

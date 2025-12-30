@@ -52,7 +52,6 @@ export async function signUp(formData: FormData) {
       password,
       options: {
         emailRedirectTo,
-        // No invite code metadata needed anymore
       }
     });
 

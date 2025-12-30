@@ -3,6 +3,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { AgentHeader } from "@/components/agents/AgentHeader";
 import { AgentCard } from "@/components/agents/AgentCard";
+import { AgentListItem } from "@/components/agents/AgentListItem";
 import { EmptyAgents } from "@/components/agents/EmptyAgents";
 import { Assistant } from "@/types/assistant";
 import { useAgents } from "@/hooks/useAgents";
@@ -13,6 +14,7 @@ import { createClient } from "@/supabase/client";
 export default function AgentsPage() {
   const { assistants, isLoading } = useAgents();
   const [userCreatedAt, setUserCreatedAt] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const supabase = createClient();
 
   useEffect(() => {
@@ -50,21 +52,35 @@ export default function AgentsPage() {
   return (
     <TutorialLayout tutorials={[agentsTutorial]} userCreatedAt={userCreatedAt}>
       <div className="container mx-auto px-4 py-8">
-        <AgentHeader />
+        <AgentHeader
+          showViewToggle={agents.length > 0}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+        />
 
         {agents.length === 0 ? (
           <EmptyAgents />
+        ) : viewMode === "list" ? (
+          <div className="max-w-5xl space-y-3" data-tutorial="agents-grid">
+            {agents.map((assistant) => (
+              <AgentListItem
+                key={assistant.assistant_id}
+                assistant={assistant}
+                onDelete={handleAgentDelete}
+              />
+            ))}
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" data-tutorial="agents-grid">
-          {agents.map((assistant) => (
-            <AgentCard
-              key={assistant.assistant_id}
-              assistant={assistant}
-              onDelete={handleAgentDelete}
-            />
-          ))}
-        </div>
-      )}
+            {agents.map((assistant) => (
+              <AgentCard
+                key={assistant.assistant_id}
+                assistant={assistant}
+                onDelete={handleAgentDelete}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </TutorialLayout>
   );

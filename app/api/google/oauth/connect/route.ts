@@ -11,11 +11,11 @@ import { sessionStore } from "@/lib/oauth/sessionStore"
  * These work from inside the LangGraph container
  */
 const GOOGLE_SERVICE_CONFIG: Record<string, { qualifiedName: string; urlEnvVar: string; defaultUrl: string; port: number }> = {
-  drive: { qualifiedName: "google-drive", urlEnvVar: "GOOGLE_DRIVE_MCP_URL", defaultUrl: "http://google-drive-mcp:3002", port: 3002 },
-  gmail: { qualifiedName: "gmail", urlEnvVar: "GMAIL_MCP_URL", defaultUrl: "http://gmail-mcp-server:3003", port: 3003 },
-  calendar: { qualifiedName: "google-calendar", urlEnvVar: "GOOGLE_CALENDAR_MCP_URL", defaultUrl: "http://google-calendar-mcp:3004", port: 3004 },
-  docs: { qualifiedName: "google-docs", urlEnvVar: "GOOGLE_DOCS_MCP_URL", defaultUrl: "http://google-docs-mcp:3005", port: 3005 },
-  sheets: { qualifiedName: "google-sheets", urlEnvVar: "GOOGLE_SHEETS_MCP_URL", defaultUrl: "http://google-sheets-mcp:3006", port: 3006 },
+  drive: { qualifiedName: "google-drive", urlEnvVar: "GOOGLE_DRIVE_MCP_URL", defaultUrl: "http://localhost:3002", port: 3002 },
+  gmail: { qualifiedName: "gmail", urlEnvVar: "GMAIL_MCP_URL", defaultUrl: "http://localhost:3003", port: 3003 },
+  calendar: { qualifiedName: "google-calendar", urlEnvVar: "GOOGLE_CALENDAR_MCP_URL", defaultUrl: "http://localhost:3004", port: 3004 },
+  docs: { qualifiedName: "google-docs", urlEnvVar: "GOOGLE_DOCS_MCP_URL", defaultUrl: "http://localhost:3005", port: 3005 },
+  sheets: { qualifiedName: "google-sheets", urlEnvVar: "GOOGLE_SHEETS_MCP_URL", defaultUrl: "http://localhost:3006", port: 3006 },
 }
 
 /**

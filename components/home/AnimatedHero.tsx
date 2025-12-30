@@ -238,10 +238,10 @@ const AnimatedWorkflowHero = () => {
         </span>
         <span className="h-4 w-px bg-gray-300 dark:bg-white/10" />
         <span className="text-xs text-gray-600 dark:text-slate-300 tabular-nums">
-          <span className="font-semibold text-emerald-600 dark:text-emerald-300">6</span> agents
+          <span className="font-semibold text-emerald-600 dark:text-emerald-300">1</span> Orchastrator
         </span>
         <span className="text-xs text-gray-600 dark:text-slate-300 tabular-nums">
-          <span className="font-semibold text-blue-600 dark:text-sky-300">6</span> links
+          <span className="font-semibold text-blue-600 dark:text-sky-300">5</span> Agents
         </span>
       </div>
 

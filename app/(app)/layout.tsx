@@ -4,6 +4,7 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { AppMobileNav } from "@/components/layout/app-mobile-nav";
 import { AutoCollapseWrapper } from "@/components/layout/auto-collapse-wrapper";
+import { AIUsageWrapper } from "@/components/layout/AIUsageWrapper";
 
 export default async function AuthenticatedLayout({
   children,
@@ -35,6 +36,7 @@ export default async function AuthenticatedLayout({
           </div>
         </AutoCollapseWrapper>
       </SidebarInset>
+      <AIUsageWrapper />
     </SidebarProvider>
   );
 }

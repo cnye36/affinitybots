@@ -11,6 +11,15 @@ type AdminMetrics = {
 		last30d: number
 		recent: Array<{ id: string; email: string | null; created_at: string }>
 	}
+	subscriptions: {
+		trialing: number
+		active: number
+		canceled: number
+		pastDue: number
+		freePlan: number
+		starterPlan: number
+		proPlan: number
+	}
 	usage: {
 		activeUsersLast7d: number
 		workflowRunsLast7d: number
@@ -71,11 +80,13 @@ export async function GET() {
 		workflowsLast7dRes,
 		workflowRunsLast7dRes,
 		activityLast7dRes,
+		subscriptionsRes,
 	] = await Promise.all([
 		supabaseAdmin.from("workflows").select("*", { count: "exact", head: true }),
 		supabaseAdmin.from("workflows").select("*", { count: "exact", head: true }).gte("created_at", since7dIso),
 		supabaseAdmin.from("workflow_runs").select("*", { count: "exact", head: true }).gte("started_at", since7dIso),
 		supabaseAdmin.from("activity_log").select("user_id, created_at").gte("created_at", since7dIso),
+		supabaseAdmin.from("subscriptions").select("status, plan_type"),
 	])
 
 	if (workflowsTotalRes.error) {
@@ -89,6 +100,9 @@ export async function GET() {
 	}
 	if (activityLast7dRes.error) {
 		console.error("Admin metrics: failed to fetch activityLast7d:", activityLast7dRes.error)
+	}
+	if (subscriptionsRes.error) {
+		console.error("Admin metrics: failed to fetch subscriptions:", subscriptionsRes.error)
 	}
 
 	const activityEvents = activityLast7dRes.data ?? []
@@ -105,6 +119,28 @@ export async function GET() {
 		.map(([userId, events]) => ({ userId, events }))
 
 	const activeUsersLast7d = eventsByUser.size
+	const subscriptionsRows = subscriptionsRes.data ?? []
+	const subscriptionStats = {
+		trialing: 0,
+		active: 0,
+		canceled: 0,
+		pastDue: 0,
+		freePlan: 0,
+		starterPlan: 0,
+		proPlan: 0,
+	}
+
+	for (const row of subscriptionsRows) {
+		const status = (row as any).status
+		const planType = (row as any).plan_type
+		if (status === "trialing") subscriptionStats.trialing += 1
+		if (status === "active") subscriptionStats.active += 1
+		if (status === "canceled") subscriptionStats.canceled += 1
+		if (status === "past_due") subscriptionStats.pastDue += 1
+		if (planType === "free") subscriptionStats.freePlan += 1
+		if (planType === "starter") subscriptionStats.starterPlan += 1
+		if (planType === "pro") subscriptionStats.proPlan += 1
+	}
 
 	const metrics: AdminMetrics = {
 		users: {
@@ -113,6 +149,7 @@ export async function GET() {
 			last30d: usersLast30d,
 			recent: recentUsers,
 		},
+		subscriptions: subscriptionStats,
 		usage: {
 			activeUsersLast7d,
 			workflowRunsLast7d: workflowRunsLast7dRes.count ?? 0,
@@ -124,5 +161,4 @@ export async function GET() {
 
 	return NextResponse.json(metrics)
 }
-
 

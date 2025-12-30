@@ -1,9 +1,9 @@
 "use client";
 
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import React, { useState, useEffect } from "react";
-import { Trash2, Plus, Zap, Sparkles, Network, Clock, CheckCircle2 } from "lucide-react";
+import { Plus, Zap, Sparkles, Network, Clock, CheckCircle2, Grid3x3, List } from "lucide-react";
 import { createClient } from "@/supabase/client";
 import { toast } from "@/hooks/useToast";
 import { useRouter } from "next/navigation";
@@ -18,6 +18,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { WorkflowListItem } from "@/components/workflows/WorkflowListItem";
 import { WorkflowCard } from "@/components/workflows/WorkflowCard";
 import { TutorialLayout } from "@/components/tutorial/TutorialLayout";
 import { workflowsTutorial } from "@/lib/tutorials";
@@ -33,6 +34,7 @@ export default function WorkflowsPage() {
     name: string;
   } | null>(null);
   const [userCreatedAt, setUserCreatedAt] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const supabase = createClient();
 
   useEffect(() => {
@@ -152,16 +154,22 @@ export default function WorkflowsPage() {
             <div className="h-12 w-64 bg-gradient-to-r from-muted/50 to-muted/30 rounded-lg mb-3 animate-pulse" />
             <div className="h-6 w-96 bg-muted/30 rounded-lg animate-pulse" />
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="relative rounded-xl border border-border bg-card p-6 overflow-hidden">
+          <div className="max-w-5xl space-y-3">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="relative rounded-lg border border-border bg-card px-5 py-4 overflow-hidden">
                 <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/5 to-transparent" />
-                <div className="h-6 w-3/4 bg-muted/30 rounded mb-4 animate-pulse" />
-                <div className="h-4 w-1/2 bg-muted/20 rounded mb-6 animate-pulse" />
-                <div className="flex gap-2">
-                  <div className="h-6 w-6 rounded-full bg-muted/30 animate-pulse" />
-                  <div className="h-6 w-6 rounded-full bg-muted/30 animate-pulse" />
-                  <div className="h-6 w-6 rounded-full bg-muted/30 animate-pulse" />
+                <div className="flex items-center gap-6">
+                  <div className="h-10 w-10 bg-muted/30 rounded-lg animate-pulse" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-5 w-48 bg-muted/30 rounded animate-pulse" />
+                    <div className="h-4 w-64 bg-muted/20 rounded animate-pulse" />
+                  </div>
+                  <div className="hidden md:flex gap-1.5">
+                    <div className="h-8 w-8 rounded-full bg-muted/30 animate-pulse" />
+                    <div className="h-8 w-8 rounded-full bg-muted/30 animate-pulse" />
+                    <div className="h-8 w-8 rounded-full bg-muted/30 animate-pulse" />
+                  </div>
+                  <div className="h-6 w-24 bg-muted/30 rounded animate-pulse" />
                 </div>
               </div>
             ))}
@@ -231,6 +239,7 @@ export default function WorkflowsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+            className="flex flex-col sm:flex-row gap-3 items-start sm:items-center"
           >
             <Link href="/workflows/new" className="inline-block w-full sm:w-auto">
               <Button
@@ -252,55 +261,73 @@ export default function WorkflowsPage() {
                 </div>
               </Button>
             </Link>
+
+            {/* View Toggle */}
+            {workflows.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={viewMode === "grid" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setViewMode("grid")}
+                  className={viewMode === "grid" ? "bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white border-0" : ""}
+                >
+                  <Grid3x3 className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={viewMode === "list" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setViewMode("list")}
+                  className={viewMode === "list" ? "bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white border-0" : ""}
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </motion.div>
         </div>
 
         {workflows.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" data-tutorial="workflows-grid">
-            {workflows.map((workflow, index) => (
-              <motion.div
-                key={workflow.workflow_id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: index * 0.1, ease: [0.22, 1, 0.36, 1] }}
-                onClick={() =>
-                  router.push(`/workflows/${workflow.workflow_id}`)
-                }
-                className="group relative rounded-xl border border-border bg-card shadow-sm hover:shadow-2xl hover:border-blue-500/50 transition-all duration-300 cursor-pointer hover:scale-[1.02] overflow-hidden"
-              >
-                {/* Gradient glow effect on hover */}
-                <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-xl opacity-0 group-hover:opacity-20 blur transition-all duration-300" />
-
-                {/* Subtle shine effect */}
-                <div className="absolute top-0 -right-4 w-8 h-full bg-gradient-to-r from-transparent via-white/5 to-transparent transform rotate-12 group-hover:right-full transition-all duration-700 ease-out" />
-
-                {/* Delete button */}
-                <div className="absolute bottom-4 right-4 z-10 opacity-0 group-hover:opacity-100 transition-all duration-200">
-                  <button
-                    type="button"
-                    onClick={(e) =>
-                      handleDeleteWorkflow(
-                        e,
-                        workflow.workflow_id,
-                        workflow.name
-                      )
-                    }
-                    className={`${buttonVariants({
-                      variant: "ghost",
-                      size: "icon",
-                    })} hover:bg-red-500/10 hover:text-red-500 transition-colors duration-200`}
-                    title="Delete Workflow"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-
-                <div className="relative p-6">
-                  <WorkflowCard workflow={workflow} />
-                </div>
-              </motion.div>
-            ))}
-          </div>
+          viewMode === "list" ? (
+            <div className="max-w-5xl space-y-3" data-tutorial="workflows-grid">
+              {workflows.map((workflow, index) => (
+                <WorkflowListItem
+                  key={workflow.workflow_id}
+                  workflow={workflow}
+                  onDelete={handleDeleteWorkflow}
+                  onClick={() => router.push(`/workflows/${workflow.workflow_id}`)}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" data-tutorial="workflows-grid">
+              {workflows.map((workflow, index) => (
+                <motion.div
+                  key={workflow.workflow_id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: index * 0.1, ease: [0.22, 1, 0.36, 1] }}
+                  onClick={() => router.push(`/workflows/${workflow.workflow_id}`)}
+                  className="group relative rounded-xl border border-border bg-card shadow-sm hover:shadow-2xl hover:border-blue-500/50 transition-all duration-300 cursor-pointer hover:scale-[1.02] overflow-hidden"
+                >
+                  <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-xl opacity-0 group-hover:opacity-20 blur transition-all duration-300" />
+                  <div className="absolute top-0 -right-4 w-8 h-full bg-gradient-to-r from-transparent via-white/5 to-transparent transform rotate-12 group-hover:right-full transition-all duration-700 ease-out" />
+                  <div className="absolute bottom-4 right-4 z-10 opacity-0 group-hover:opacity-100 transition-all duration-200">
+                    <button
+                      type="button"
+                      onClick={(e) => handleDeleteWorkflow(e, workflow.workflow_id, workflow.name)}
+                      className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-red-500/10 hover:text-red-500 h-10 w-10 hover:bg-accent hover:text-accent-foreground"
+                      title="Delete Workflow"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                    </button>
+                  </div>
+                  <div className="relative p-6">
+                    <WorkflowCard workflow={workflow} />
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )
         ) : (
           <div className="relative min-h-[600px] flex items-center justify-center py-16 px-4">
             <div className="relative max-w-4xl mx-auto text-center">

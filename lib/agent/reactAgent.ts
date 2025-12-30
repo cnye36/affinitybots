@@ -21,7 +21,7 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from "uuid";
 import { mcpClientFactory, MCPFactoryResult } from "../mcp/mcpClientFactory";
 import { rateLimiter, RateLimitError, TokenUsage } from "../rateLimiting";
-import { createImageGenerationTool } from "../tools/imageGeneration";
+import { createImageGenerationTool } from "../imageGeneration";
 
 // Local fallback store for development. On LangGraph Platform, a persistent
 // store is injected into config.store; we only use this if none is provided.

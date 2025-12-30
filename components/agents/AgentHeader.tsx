@@ -2,10 +2,16 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Sparkles } from "lucide-react";
+import { PlusCircle, Sparkles, Grid3x3, List } from "lucide-react";
 import { motion } from "framer-motion";
 
-export function AgentHeader() {
+interface AgentHeaderProps {
+	showViewToggle?: boolean
+	viewMode?: "grid" | "list"
+	onViewModeChange?: (mode: "grid" | "list") => void
+}
+
+export function AgentHeader({ showViewToggle, viewMode, onViewModeChange }: AgentHeaderProps) {
 	return (
 		<div className="mb-12">
 			<motion.div
@@ -26,6 +32,7 @@ export function AgentHeader() {
 				initial={{ opacity: 0, y: 20 }}
 				animate={{ opacity: 1, y: 0 }}
 				transition={{ duration: 0.5, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+				className="flex flex-col sm:flex-row gap-3 items-start sm:items-center"
 			>
 				<Link href="/agents/new" className="inline-block w-full sm:w-auto">
 					<Button
@@ -48,6 +55,28 @@ export function AgentHeader() {
 						</div>
 					</Button>
 				</Link>
+
+				{/* View Toggle */}
+				{showViewToggle && viewMode && onViewModeChange && (
+					<div className="flex items-center gap-2">
+						<Button
+							variant={viewMode === "grid" ? "default" : "outline"}
+							size="sm"
+							onClick={() => onViewModeChange("grid")}
+							className={viewMode === "grid" ? "bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white border-0" : ""}
+						>
+							<Grid3x3 className="h-4 w-4" />
+						</Button>
+						<Button
+							variant={viewMode === "list" ? "default" : "outline"}
+							size="sm"
+							onClick={() => onViewModeChange("list")}
+							className={viewMode === "list" ? "bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white border-0" : ""}
+						>
+							<List className="h-4 w-4" />
+						</Button>
+					</div>
+				)}
 			</motion.div>
 		</div>
 	);

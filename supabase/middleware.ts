@@ -46,8 +46,34 @@ export async function updateSession(request: NextRequest) {
     return response
   }
 
-  const adminEmail = (process.env.ADMIN_EMAIL ?? "cnye@affinitybots.com").toLowerCase()
-  const isAdmin = (user?.email ?? "").toLowerCase() === adminEmail
+  // Check if user is admin using the admin utility
+  // Import at top would cause circular dependency, so we inline the check
+  const adminEmailsEnv = process.env.ADMIN_EMAILS ?? process.env.ADMIN_EMAIL ?? "cnye@affinitybots.com"
+  const adminEmails = adminEmailsEnv
+    .split(",")
+    .map((email) => email.trim().toLowerCase())
+    .filter((email) => email.length > 0)
+  const userEmail = (user?.email ?? "").toLowerCase()
+  const isAdmin = adminEmails.includes(userEmail)
+
+  // Public routes that don't require subscription
+  const publicRoutes = [
+    '/',
+    '/pricing',
+    '/features',
+    '/blog',
+    '/privacy',
+    '/terms',
+    '/about',
+    '/contact',
+  ]
+  const isPublicRoute = publicRoutes.some(route =>
+    request.nextUrl.pathname === route ||
+    request.nextUrl.pathname.startsWith(`${route}/`)
+  )
+  const isAuthRoute = request.nextUrl.pathname.startsWith('/auth/')
+  const isApiRoute = request.nextUrl.pathname.startsWith('/api/')
+  const isPaymentRoute = request.nextUrl.pathname.startsWith('/payment/')
 
   // Always protect admin routes regardless of domain/hostname checks below.
   if (request.nextUrl.pathname.startsWith("/api/admin")) {
@@ -93,6 +119,43 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
+  // Check subscription status for authenticated users (except admins and on public/auth/api routes)
+  if (user && !isAdmin && !isPublicRoute && !isAuthRoute && !isApiRoute && !isPaymentRoute) {
+    // Get user's subscription
+    const { data: subscription } = await supabase
+      .from('subscriptions')
+      .select('status, trial_end, plan_type')
+      .eq('user_id', user.id)
+      .single()
+
+    if (subscription) {
+      const now = new Date()
+      const trialEnd = subscription.trial_end ? new Date(subscription.trial_end) : null
+
+      // Check if user has access
+      const hasAccess =
+        subscription.status === 'trialing' && trialEnd && trialEnd > now || // In trial period
+        subscription.status === 'active' || // Active paid subscription
+        subscription.status === 'past_due' // Allow access but show warning
+
+      if (!hasAccess) {
+        // User's trial ended or subscription canceled - redirect to pricing
+        console.log(`Blocking access for user ${user.id}: status=${subscription.status}, trial_end=${subscription.trial_end}`)
+        const url = request.nextUrl.clone()
+        url.pathname = '/pricing'
+        url.searchParams.set('reason', 'subscription_required')
+        return withSessionCookies(NextResponse.redirect(url))
+      }
+    } else {
+      // No subscription record - shouldn't happen but redirect to pricing to be safe
+      console.log(`No subscription found for user ${user.id}, redirecting to pricing`)
+      const url = request.nextUrl.clone()
+      url.pathname = '/pricing'
+      url.searchParams.set('reason', 'no_subscription')
+      return withSessionCookies(NextResponse.redirect(url))
+    }
+  }
+
   // Get the hostname from the request
   const hostname = request.headers.get("host") || "";
 
@@ -109,7 +172,6 @@ export async function updateSession(request: NextRequest) {
       !request.nextUrl.pathname.startsWith("/auth/signup") &&
       // Allow OAuth callback to run unauthenticated so it can set the session
       !request.nextUrl.pathname.startsWith("/auth/callback") &&
-      !request.nextUrl.pathname.startsWith("/auth/validate-invite") &&
       !request.nextUrl.pathname.startsWith("/auth/verify-email") &&
       request.nextUrl.pathname !== "/"
     ) {

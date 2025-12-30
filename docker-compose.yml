@@ -41,7 +41,7 @@ services:
         env_file:
             - .env
         healthcheck:
-            test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+            test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3002/health"]
             interval: 10s
             timeout: 5s
             retries: 3
@@ -53,7 +53,7 @@ services:
         env_file:
             - .env
         healthcheck:
-            test: ["CMD", "curl", "-f", "http://localhost:3003/health"]
+            test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3003/health"]
             interval: 10s
             timeout: 5s
             retries: 3

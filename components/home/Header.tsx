@@ -105,8 +105,6 @@ export function Header() {
             </Button>
           </Link>
 
-          {/* Sign In with invite confirmation (desktop) */}
-          {/* Sign In Button (desktop) */}
           <Link href="/auth/signin" className="hidden md:block">
             <div className="relative p-0.5 rounded-md bg-gradient-to-r from-blue-500 to-purple-600">
               <Button
@@ -179,8 +177,6 @@ export function Header() {
                 </Button>
               </Link>
 
-              {/* Sign In with invite confirmation (mobile) */}
-              {/* Sign In Button (mobile) */}
               <Link href="/auth/signin" onClick={handleNavClick}>
                 <div className="relative p-0.5 rounded-md bg-gradient-to-r from-blue-500 to-purple-600 w-full">
                   <Button variant="ghost" className="w-full bg-background hover:bg-background/80">

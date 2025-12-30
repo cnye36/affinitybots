@@ -40,6 +40,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if user has already had a trial
+    const { data: subscription } = await supabase
+      .from('subscriptions')
+      .select('had_trial, trial_end')
+      .eq('user_id', user.id)
+      .single();
+
+    // Determine if user is eligible for trial
+    let trialDays = 0;
+    if (subscription?.had_trial) {
+      // User already had a trial - no trial for you!
+      console.log(`User ${user.id} already had a trial, creating subscription without trial`);
+      trialDays = 0;
+    } else {
+      // First time subscriber - give them the 14 day trial
+      trialDays = 14;
+    }
+
     // Get or create Stripe customer
     const customer = await getOrCreateCustomer(user.id, user.email);
 
@@ -70,14 +88,14 @@ export async function POST(request: NextRequest) {
     // Final fallback
     baseUrl = baseUrl || (process.env.NODE_ENV === 'production' ? 'https://affinitybots.com' : 'http://localhost:3000');
 
-    // Create checkout session with 14-day trial
+    // Create checkout session (with or without trial based on eligibility)
     const session = await createSubscriptionCheckoutSession({
       priceId,
       customerId: customer.id,
       userId: user.id,
       successUrl: `${baseUrl}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
       cancelUrl: `${baseUrl}/pricing`,
-      trialPeriodDays: 14,
+      trialPeriodDays: trialDays,
     });
 
     return NextResponse.json({ url: session.url });

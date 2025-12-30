@@ -3,12 +3,15 @@
 import { useEffect, useState } from "react"
 import { usePlaygroundStore } from "@/lib/stores/playgroundStore"
 import { AgentSelector } from "./AgentSelector"
-import { ToolSelector } from "./ToolSelector"
-import { ContextPreview } from "./ContextPreview"
 import { ConfigurationPanel } from "./ConfigurationPanel"
 import { PlaygroundChat } from "./PlaygroundChat"
+import { PlaygroundAgentConfig } from "./PlaygroundAgentConfig"
+import { OrchestratorSidebar } from "./OrchestratorSidebar"
+import { OrchestratorChat } from "./OrchestratorChat"
 import { Assistant } from "@/types/assistant"
 import { Tool, ServerInfo } from "@/types/playground"
+import { Button } from "@/components/ui/button"
+import { Plus } from "lucide-react"
 
 interface PlaygroundContainerProps {
 	sessionId?: string
@@ -30,11 +33,13 @@ export function PlaygroundContainer({ sessionId, assistants }: PlaygroundContain
 		setMode,
 		setOrchestratorConfig,
 		setSelectedTeam,
+		clearContext,
 	} = usePlaygroundStore()
 
 	const [availableTools, setAvailableTools] = useState<Tool[]>([])
 	const [servers, setServers] = useState<ServerInfo[]>([])
 	const [isLoadingTools, setIsLoadingTools] = useState(false)
+	const [orchestratorInstructions, setOrchestratorInstructions] = useState("")
 
 	// Load session on mount if sessionId provided
 	useEffect(() => {
@@ -74,12 +79,30 @@ export function PlaygroundContainer({ sessionId, assistants }: PlaygroundContain
 	return (
 		<div className="flex h-screen bg-background">
 			{/* Left Panel - Configuration */}
-			<div className="w-96 border-r border-border flex flex-col bg-card">
+			<div className="w-98 border-r border-border flex flex-col bg-card">
 				<div className="p-4 border-b border-border">
-					<h2 className="text-lg font-semibold">Playground</h2>
-					{currentSession && (
-						<p className="text-sm text-muted-foreground mt-1">{currentSession.name}</p>
-					)}
+					<div className="flex items-center justify-between">
+						<div>
+							<h2 className="text-lg font-semibold">Playground</h2>
+							{currentSession && (
+								<p className="text-sm text-muted-foreground mt-1">{currentSession.name}</p>
+							)}
+						</div>
+						<Button
+							variant="ghost"
+							size="icon"
+							onClick={() => {
+								// Clear context for new chat
+								clearContext()
+								// Trigger a re-render by changing a key or using a state update
+								// The chat component will handle clearing messages via useEffect
+							}}
+							className="h-8 w-8"
+							title="New Chat"
+						>
+							<Plus className="h-4 w-4" />
+						</Button>
+					</div>
 				</div>
 
 				<div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -93,6 +116,19 @@ export function PlaygroundContainer({ sessionId, assistants }: PlaygroundContain
 						selectedTeam={selectedTeam}
 						onTeamChange={setSelectedTeam}
 					/>
+
+					{/* Orchestrator Sidebar (only show in orchestrator mode) */}
+					{mode === "orchestrator" && (
+						<OrchestratorSidebar
+							orchestratorConfig={orchestratorConfig}
+							onOrchestratorConfigChange={setOrchestratorConfig}
+							availableAgents={assistants}
+							selectedTeam={selectedTeam}
+							onTeamChange={setSelectedTeam}
+							instructions={orchestratorInstructions}
+							onInstructionsChange={setOrchestratorInstructions}
+						/>
+					)}
 
 					{/* Agent Selector (only show in sequential mode) */}
 					{mode === "sequential" && (
@@ -108,22 +144,34 @@ export function PlaygroundContainer({ sessionId, assistants }: PlaygroundContain
 								}}
 							/>
 
-							{/* Tool Selector */}
-							{currentAgentId && (
-								<ToolSelector
-									tools={availableTools}
-									servers={servers}
-									selectedTools={selectedTools}
-									isLoading={isLoadingTools}
-								/>
-							)}
-
-							{/* Context Preview */}
-							{currentContext && (
-								<ContextPreview
-									previousOutput={currentContext}
-									agentName={currentAgent?.name}
-								/>
+							{/* Agent Configuration Panel - Shows when agent is selected */}
+							{currentAgentId && currentAgent && (
+								<div className="border-t border-border pt-4 mt-4">
+									<PlaygroundAgentConfig
+										assistant={currentAgent}
+										onConfigChange={() => {
+											// Refresh tools when config changes
+											if (currentAgentId) {
+												const fetchTools = async () => {
+													setIsLoadingTools(true)
+													try {
+														const response = await fetch(`/api/playground/agents/${currentAgentId}/tools`)
+														if (response.ok) {
+															const data = await response.json()
+															setAvailableTools(data.tools || [])
+															setServers(data.servers || [])
+														}
+													} catch (error) {
+														console.error("Error fetching tools:", error)
+													} finally {
+														setIsLoadingTools(false)
+													}
+												}
+												fetchTools()
+											}
+										}}
+									/>
+								</div>
 							)}
 						</>
 					)}
@@ -132,10 +180,18 @@ export function PlaygroundContainer({ sessionId, assistants }: PlaygroundContain
 
 			{/* Right Panel - Chat */}
 			<div className="flex-1 flex flex-col">
-				{currentSession && (mode === "orchestrator" || currentAgentId) ? (
+				{mode === "orchestrator" && orchestratorConfig && currentSession ? (
+					<OrchestratorChat
+						sessionId={currentSession.session_id}
+						orchestratorConfig={orchestratorConfig}
+						selectedTeam={selectedTeam}
+						instructions={orchestratorInstructions}
+						availableAgents={assistants}
+					/>
+				) : currentSession && currentAgentId ? (
 					<PlaygroundChat
 						sessionId={currentSession.session_id}
-						agentId={currentAgentId || ""}
+						agentId={currentAgentId}
 						selectedTools={selectedTools}
 						previousContext={currentContext || undefined}
 						mode={mode}
@@ -145,8 +201,16 @@ export function PlaygroundContainer({ sessionId, assistants }: PlaygroundContain
 				) : (
 					<div className="flex-1 flex items-center justify-center text-muted-foreground">
 						<div className="text-center">
-							<p className="text-lg">Select an agent to get started</p>
-							<p className="text-sm mt-2">Choose an agent from the left panel to begin testing</p>
+							<p className="text-lg">
+								{mode === "orchestrator"
+									? "Configure orchestrator to get started"
+									: "Select an agent to get started"}
+							</p>
+							<p className="text-sm mt-2">
+								{mode === "orchestrator"
+									? "Set up the orchestrator configuration and select team members"
+									: "Choose an agent from the left panel to begin testing"}
+							</p>
 						</div>
 					</div>
 				)}

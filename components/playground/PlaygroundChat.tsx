@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { usePlaygroundStore } from "@/lib/stores/playgroundStore"
 import { OrchestratorConfig } from "@/types/workflow"
 import { Button } from "@/components/ui/button"
@@ -30,18 +30,31 @@ export function PlaygroundChat({
 	orchestratorConfig,
 	selectedTeam,
 }: PlaygroundChatProps) {
-	const { handoffContext, currentAgentId, addStep, isExecuting } = usePlaygroundStore()
+	const { handoffContext, currentAgentId, addStep, isExecuting, currentContext: storeContext } = usePlaygroundStore()
 	const [userPrompt, setUserPrompt] = useState("")
 	const [messages, setMessages] = useState<Array<{ role: "user" | "assistant"; content: string }>>([])
 	const [threadId, setThreadId] = useState<string | null>(null)
 	const [isStreaming, setIsStreaming] = useState(false)
+	const prevContextRef = useRef<string | null | undefined>(previousContext)
 
 	// Reset chat when agent changes (sequential mode) or mode changes
 	useEffect(() => {
 		setMessages([])
 		setThreadId(null)
 		setUserPrompt("")
-	}, [agentId, mode])
+		prevContextRef.current = previousContext
+	}, [agentId, mode, previousContext])
+
+	// Reset chat when context is cleared (new chat button)
+	useEffect(() => {
+		// If context was cleared (was present, now null) and we had messages, clear chat
+		if (prevContextRef.current && !storeContext && messages.length > 0) {
+			setMessages([])
+			setThreadId(null)
+			setUserPrompt("")
+		}
+		prevContextRef.current = storeContext
+	}, [storeContext, messages.length])
 
 	const apiUrl = process.env.NEXT_PUBLIC_LANGGRAPH_API_URL || "/api/chat"
 
@@ -52,7 +65,7 @@ export function PlaygroundChat({
 		apiUrl,
 		assistantId: effectiveAssistantId,
 		messagesKey: "messages",
-		threadId: threadId ?? undefined,
+		threadId: threadId || undefined,
 		onThreadId: (newThreadId) => {
 			if (!threadId) setThreadId(newThreadId)
 		},
@@ -153,7 +166,13 @@ export function PlaygroundChat({
 		// Get last assistant message
 		const lastAssistantMessage = messages.filter(m => m.role === "assistant").pop()
 		if (lastAssistantMessage) {
+			// Save context for next agent
 			handoffContext(lastAssistantMessage.content, threadId || undefined)
+			
+			// Clear chat - ready for new conversation
+			setMessages([])
+			setThreadId(null)
+			setUserPrompt("")
 		}
 	}
 
@@ -298,7 +317,7 @@ export function PlaygroundChat({
 							) : (
 								<>
 									<Send className="mr-2 h-4 w-4" />
-									{previousContext && !userPrompt.trim() ? "Run with Context" : "Send"}
+									{previousContext && !userPrompt.trim() ? "Run with Context" : "Run"}
 								</>
 							)}
 						</Button>

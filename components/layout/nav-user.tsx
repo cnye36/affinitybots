@@ -11,8 +11,6 @@ import {
 import { signOut } from "@/app/auth/actions";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { createClient } from "@/supabase/client";
-import { RateLimitProgress } from "@/components/RateLimitProgress";
-
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -87,31 +85,8 @@ export function NavUser({ user: initialUser }: { user?: UserData }) {
     ? user.name.substring(0, 2).toUpperCase()
     : "U";
 
-  // Get user ID for rate limiting
-  const [userId, setUserId] = useState<string | undefined>();
-
-  useEffect(() => {
-    async function getUserId() {
-      try {
-        const supabase = createClient();
-        const { data: { user: authUser } } = await supabase.auth.getUser();
-        if (authUser) {
-          setUserId(authUser.id);
-        }
-      } catch (err) {
-        console.error("Error getting user ID:", err);
-      }
-    }
-    getUserId();
-  }, []);
-
   return (
     <SidebarMenu>
-      {/* Rate limit progress bar */}
-      <div className="px-3 py-2 group-data-[collapsible=icon]:hidden">
-        <RateLimitProgress userId={userId} />
-      </div>
-
       <SidebarMenuItem>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

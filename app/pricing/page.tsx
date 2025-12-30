@@ -27,8 +27,9 @@ export default function PricingPage() {
       popular: false,
       features: [
         "Up to 10 AI agents",
-        "5 active workflows*",
-        "5,000 AI credits per day",
+        "3 active workflows",
+        "5,000 AI credits per month",
+        "Unlimited integrations",
         "Basic templates",
         "Email support",
         "Standard integrations",
@@ -50,7 +51,8 @@ export default function PricingPage() {
       features: [
         "Up to 50 AI agents",
         "Unlimited active workflows",
-        "25,000 AI credits per day",
+        "25,000 AI credits per month",
+        "Unlimited integrations",
         "Advanced templates",
         "Priority support",
         "All integrations",
@@ -93,19 +95,19 @@ export default function PricingPage() {
   const faqs = [
     {
       question: "What is included in the free trial?",
-      answer: "During your 14-day free trial, you get full Pro-level access to all features regardless of which plan you choose. This includes up to 50 agents, unlimited workflows, and 25,000 AI credits per day. A payment method is required to start your trial, but you won't be charged until after the trial ends."
+      answer: "During your 14-day free trial, you get access to test the platform with limited credits. This includes up to 3 agents, 1 active workflow, and 3 integrations. A payment method is required to start your trial, but you won't be charged until after the trial ends."
     },
     {
       question: "What happens after my trial ends?",
-      answer: "After your 14-day trial ends, you'll automatically be charged for the plan you selected. If you chose Starter, you'll be charged $19.99/month and your limits will be set to Starter (10 agents, 5 workflows, 5,000 credits/day). If you chose Pro, you'll be charged $39.99/month and keep Pro limits. You can cancel anytime before the trial ends to avoid charges."
+      answer: "After your 14-day trial ends, you'll automatically be charged for the plan you selected. If you chose Starter, you'll be charged $19.99/month and your limits will be set to Starter (10 agents, 3 workflows, 5,000 credits/month). If you chose Pro, you'll be charged $39.99/month and keep Pro limits (50 agents, unlimited workflows, 25,000 credits/month). You can cancel anytime before the trial ends to avoid charges."
     },
     {
       question: "What are AI credits?",
-      answer: "AI credits are used for each interaction with your agents. Simple text responses use 1 credit, while complex tasks with multiple steps may use 2-5 credits. Credits reset daily at midnight UTC."
+      answer: "AI credits are used for each interaction with your agents. The number of credits used depends on the AI model and the length of the conversation. Credits reset monthly on the 1st of each month."
     },
     {
-      question: "What happens when I reach my daily credit limit?",
-      answer: "Your agents will pause until the next day when your credits reset. You can monitor your usage in the dashboard and plan your agent interactions accordingly. Pro plan users get priority processing."
+      question: "What happens when I reach my monthly credit limit?",
+      answer: "When you reach 90% of your monthly credits, you'll receive a notification with the option to purchase additional credits. At 100%, your agents will be paused until you purchase more credits or wait for the next monthly reset. You can monitor your usage in the dashboard."
     },
     {
       question: "Can I upgrade or downgrade my plan?",

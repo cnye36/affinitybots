@@ -11,9 +11,9 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table"
-import { EarlyAccessInvitesPanel } from "@/components/admin/EarlyAccessInvitesPanel"
 import { AdminRateLimitPanel } from "@/components/admin/AdminRateLimitPanel"
 import { BlogPostsList } from "@/components/admin/blog/BlogPostsList"
+import { AdminUsersPanel } from "@/components/admin/AdminUsersPanel"
 
 type AdminMetrics = {
 	users: {
@@ -21,6 +21,15 @@ type AdminMetrics = {
 		last7d: number
 		last30d: number
 		recent: Array<{ id: string; email: string | null; created_at: string }>
+	}
+	subscriptions: {
+		trialing: number
+		active: number
+		canceled: number
+		pastDue: number
+		freePlan: number
+		starterPlan: number
+		proPlan: number
 	}
 	usage: {
 		activeUsersLast7d: number
@@ -80,8 +89,8 @@ export function AdminDashboard() {
 			<Tabs defaultValue="overview">
 				<TabsList>
 					<TabsTrigger value="overview">Overview</TabsTrigger>
+					<TabsTrigger value="users">Users</TabsTrigger>
 					<TabsTrigger value="blog">Blog</TabsTrigger>
-					<TabsTrigger value="invites">Invites</TabsTrigger>
 					<TabsTrigger value="rate-limits">Rate Limits</TabsTrigger>
 				</TabsList>
 
@@ -109,6 +118,42 @@ export function AdminDashboard() {
 							title="Workflow runs (7d)"
 							value={loading ? "…" : String(metrics?.usage.workflowRunsLast7d ?? 0)}
 							sub={`Workflows: ${metrics?.usage.workflowsTotal ?? 0} total`}
+						/>
+					</div>
+
+					<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+						<MetricCard
+							title="Trialing users"
+							value={loading ? "…" : String(metrics?.subscriptions.trialing ?? 0)}
+							sub="14-day free trial"
+						/>
+						<MetricCard
+							title="Active subscriptions"
+							value={loading ? "…" : String(metrics?.subscriptions.active ?? 0)}
+							sub="Paid + free"
+						/>
+						<MetricCard
+							title="Past due"
+							value={loading ? "…" : String(metrics?.subscriptions.pastDue ?? 0)}
+						/>
+						<MetricCard
+							title="Canceled"
+							value={loading ? "…" : String(metrics?.subscriptions.canceled ?? 0)}
+						/>
+					</div>
+
+					<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+						<MetricCard
+							title="Free plan"
+							value={loading ? "…" : String(metrics?.subscriptions.freePlan ?? 0)}
+						/>
+						<MetricCard
+							title="Starter plan"
+							value={loading ? "…" : String(metrics?.subscriptions.starterPlan ?? 0)}
+						/>
+						<MetricCard
+							title="Pro plan"
+							value={loading ? "…" : String(metrics?.subscriptions.proPlan ?? 0)}
 						/>
 					</div>
 
@@ -195,8 +240,8 @@ export function AdminDashboard() {
 					<BlogPostsList />
 				</TabsContent>
 
-				<TabsContent value="invites">
-					<EarlyAccessInvitesPanel />
+				<TabsContent value="users">
+					<AdminUsersPanel />
 				</TabsContent>
 
 				<TabsContent value="rate-limits">
@@ -206,5 +251,3 @@ export function AdminDashboard() {
 		</div>
 	)
 }
-
-

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { enforcePlanLimits } from "@/lib/subscription/usage";
 import Stripe from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
@@ -132,7 +133,7 @@ async function handleSubscriptionUpdate(
   // Find subscription by customer ID
   const { data: existing } = await (supabase
     .from("subscriptions") as any)
-    .select("user_id")
+    .select("user_id, status")
     .eq("stripe_customer_id", customerId)
     .single();
 
@@ -141,13 +142,17 @@ async function handleSubscriptionUpdate(
     return;
   }
 
+  const newStatus = mapStripeStatus(subscription.status);
+  const wasTrialing = existing.status === "trialing";
+  const isNowActive = newStatus === "active";
+
   await (supabase
     .from("subscriptions") as any)
     .update({
       stripe_subscription_id: subscription.id,
       stripe_price_id: priceId,
       plan_type: planType,
-      status: mapStripeStatus(subscription.status),
+      status: newStatus,
       trial_start: subscription.trial_start ? new Date(subscription.trial_start * 1000).toISOString() : null,
       trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
       current_period_start: new Date((subscription as any).current_period_start * 1000).toISOString(),
@@ -156,6 +161,19 @@ async function handleSubscriptionUpdate(
       canceled_at: subscription.canceled_at ? new Date(subscription.canceled_at * 1000).toISOString() : null,
     })
     .eq("user_id", existing.user_id);
+
+  // When trial ends and subscription becomes active, enforce plan limits
+  if (wasTrialing && isNowActive) {
+    try {
+      const result = await enforcePlanLimits(existing.user_id);
+      console.log(`Enforced plan limits for user ${existing.user_id}:`, {
+        deactivatedWorkflows: result.deactivatedWorkflows.length,
+        inaccessibleAgents: result.inaccessibleAgents.length,
+      });
+    } catch (error) {
+      console.error("Error enforcing plan limits:", error);
+    }
+  }
 }
 
 async function handleSubscriptionDeleted(

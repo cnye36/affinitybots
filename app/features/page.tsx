@@ -38,9 +38,9 @@ export default function FeaturesPage() {
       title: "Model Agnostic AI Platform",
       description: "Choose from leading AI providers including OpenAI, Anthropic, and Google Gemini with more models coming soon.",
       details: [
-        "OpenAI GPT-5 & GPT-4o",
-        "Anthropic Claude 4.5 & Opus",
-        "Google Gemini 2.5 Pro & Flash",
+        "OpenAI GPT-5.2 & GPT-4o",
+        "Anthropic Claude Opus 4.5",
+        "Google Gemini 3 Pro & Flash",
         "Easy model switching and comparison"
       ]
     },
@@ -68,7 +68,7 @@ export default function FeaturesPage() {
     },
     {
       icon: <BarChart3 className="h-8 w-8 text-cyan-500" />,
-      title: "Analytics & Insights (Coming Soon)",
+      title: "Analytics & Insights",
       description: "Comprehensive analytics to track agent performance and optimize your automation strategy.",
       details: [
         "Real-time performance metrics",
