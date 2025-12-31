@@ -147,10 +147,12 @@ export function WorkflowBuilder() {
     loadAssistants()
   }, [supabase])
 
+  // Extract workflow ID from URL to use as dependency (prevents unnecessary reloads)
+  const urlWorkflowId = searchParams.get("id")
+
   // Load workflow
   useEffect(() => {
-    const idFromUrl = searchParams.get("id")
-    if (!idFromUrl) {
+    if (!urlWorkflowId) {
       // Reset state when navigating to new workflow (no id in URL)
       // This ensures we don't carry over state from a previous workflow
       const currentState = useWorkflowState.getState()
@@ -169,6 +171,12 @@ export function WorkflowBuilder() {
       return
     }
 
+    // Skip reload if we're in the middle of creating a workflow and the ID matches what we already have
+    // This prevents double-loading when the URL is updated during workflow creation
+    if (isCreatingWorkflowRef.current && workflowId === urlWorkflowId) {
+      return
+    }
+
     async function loadWorkflow() {
       try {
         setLoading(true)
@@ -177,7 +185,7 @@ export function WorkflowBuilder() {
         const { data: workflow, error: workflowError } = await supabase
           .from("workflows")
           .select("*")
-          .eq("workflow_id", idFromUrl)
+          .eq("workflow_id", urlWorkflowId)
           .single()
 
         if (workflowError) throw workflowError
@@ -191,7 +199,7 @@ export function WorkflowBuilder() {
         const { data: triggers, error: triggersError } = await supabase
           .from("workflow_triggers")
           .select("*")
-          .eq("workflow_id", idFromUrl)
+          .eq("workflow_id", urlWorkflowId)
 
         if (triggersError) throw triggersError
 
@@ -257,6 +265,7 @@ export function WorkflowBuilder() {
               temperature: workflow.orchestrator_config.manager.temperature,
               reasoningEffort: workflow.orchestrator_config.manager.reasoningEffort,
               onConfigure: () => openOrchestratorConfig(),
+              orchestratorConfig: workflow.orchestrator_config,
             },
           })
         }
@@ -292,8 +301,7 @@ export function WorkflowBuilder() {
     }
 
     loadWorkflow()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, supabase])
+  }, [urlWorkflowId, supabase])
 
   const handleSave = useCallback(async () => {
     if (!workflowId) return
@@ -467,7 +475,7 @@ export function WorkflowBuilder() {
           manager: config,
         }
 
-        // Update orchestrator node
+        // Update orchestrator node with all config data
         setNodes((nds) =>
           nds.map((node) =>
             node.id === "orchestrator-manager" && node.type === "orchestrator"
@@ -480,6 +488,7 @@ export function WorkflowBuilder() {
                     user_prompt: config.user_prompt,
                     temperature: config.temperature,
                     reasoningEffort: config.reasoningEffort,
+                    orchestratorConfig: fullConfig, // Keep config in sync
                   },
                 }
               : node
@@ -496,12 +505,8 @@ export function WorkflowBuilder() {
           })
           .eq("workflow_id", workflowId)
 
-        toast({
-          title: "Orchestrator configured",
-          description: "Manager agent settings saved successfully",
-        })
-
-        closeModals()
+        // Don't close modal or show toast on auto-save - just save silently
+        // The modal will stay open for continued editing
       } catch (error) {
         console.error("Error saving orchestrator config:", error)
         toast({
@@ -645,6 +650,17 @@ export function WorkflowBuilder() {
 
         // For orchestrator workflows, auto-add the orchestrator node
         if (workflowType === "orchestrator") {
+          // Save orchestrator config first with proper model format
+          const defaultConfig = {
+            manager: {
+              model: "openai:gpt-5.2",
+              system_prompt: "You are an orchestrator agent responsible for coordinating multiple AI agents to complete tasks efficiently.",
+              user_prompt: "Analyze the user's request and delegate tasks to the appropriate agents.",
+              temperature: 0.7,
+              reasoningEffort: "medium" as const,
+            },
+          }
+
           const orchestratorNode: WorkflowNode = {
             id: "orchestrator-manager",
             type: "orchestrator",
@@ -652,12 +668,13 @@ export function WorkflowBuilder() {
             data: {
               workflow_id: workflowId,
               name: "Manager Agent",
-              model: "gpt-4o",
+              model: "openai:gpt-5.2",
               system_prompt: "You are an orchestrator agent responsible for coordinating multiple AI agents to complete tasks efficiently.",
               user_prompt: "Analyze the user's request and delegate tasks to the appropriate agents.",
               temperature: 0.7,
               reasoningEffort: "medium",
               onConfigure: () => openOrchestratorConfig(),
+              orchestratorConfig: defaultConfig,
             },
           }
 
@@ -670,17 +687,6 @@ export function WorkflowBuilder() {
 
           setNodes((nds) => [...nds, orchestratorNode])
           setEdges((eds) => [...eds, edge])
-
-          // Save orchestrator config
-          const defaultConfig = {
-            manager: {
-              model: "gpt-4o",
-              system_prompt: "You are an orchestrator agent responsible for coordinating multiple AI agents to complete tasks efficiently.",
-              user_prompt: "Analyze the user's request and delegate tasks to the appropriate agents.",
-              temperature: 0.7,
-              reasoningEffort: "medium",
-            },
-          }
           setOrchestratorConfig(defaultConfig)
 
           // Auto-layout for orchestrator workflow

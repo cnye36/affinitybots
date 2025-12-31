@@ -80,7 +80,7 @@ export function BaseServerCard({
   if (compact) {
     return (
       <Card
-        className={`group relative overflow-hidden border border-border hover:border-amber-500/50 cursor-pointer transition-all duration-200 hover:shadow-md ${className}`}
+        className={`group relative overflow-hidden border border-border hover:border-teal-500/50 cursor-pointer transition-all duration-200 hover:shadow-md ${className}`}
         onClick={onClick}
       >
         <div className="relative bg-card rounded-lg">
@@ -88,18 +88,16 @@ export function BaseServerCard({
             {/* Logo */}
             <div className="flex-shrink-0">
               {logoUrl && !imageError ? (
-                <div className="w-10 h-10 rounded-full bg-background flex items-center justify-center overflow-hidden border border-border">
-                  <Image
-                    src={logoUrl}
-                    alt={displayName}
-                    width={32}
-                    height={32}
-                    className="object-contain p-1"
-                    onError={() => setImageError(true)}
-                  />
-                </div>
+                <Image
+                  src={logoUrl}
+                  alt={displayName}
+                  width={40}
+                  height={40}
+                  className="object-contain"
+                  onError={() => setImageError(true)}
+                />
               ) : (
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500/10 to-orange-500/10 flex items-center justify-center text-lg border border-border">
+                <div className="w-10 h-10 flex items-center justify-center text-2xl">
                   {getFallbackEmoji()}
                 </div>
               )}
@@ -108,7 +106,7 @@ export function BaseServerCard({
             {/* Content */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
-                <h3 className="font-semibold text-sm truncate bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+                <h3 className="font-semibold text-sm truncate bg-gradient-to-r from-teal-600 to-emerald-600 dark:from-teal-400 dark:to-emerald-400 bg-clip-text text-transparent">
                   {displayName}
                 </h3>
                 <Badge
@@ -145,15 +143,15 @@ export function BaseServerCard({
   // Full card view
   return (
     <Card
-      className={`group flex flex-col h-full relative overflow-hidden border-0 shadow-lg hover:shadow-2xl cursor-pointer transition-all duration-300 hover:scale-[1.03] ${className}`}
+      className={`group flex flex-col h-full relative overflow-hidden border-0 shadow-lg hover:shadow-2xl cursor-pointer transition-all duration-300 hover:scale-[1.02] ${className}`}
       onClick={onClick}
     >
       {/* Gradient border effect */}
-      <div className="absolute inset-0 bg-gradient-to-br from-amber-500/20 via-orange-500/20 to-amber-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg" />
-      <div className="absolute inset-0 bg-gradient-to-br from-amber-500/0 via-orange-500/10 to-amber-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" />
+      <div className="absolute inset-0 bg-gradient-to-br from-teal-500/20 via-emerald-500/20 to-teal-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg" />
+      <div className="absolute inset-0 bg-gradient-to-br from-teal-500/0 via-emerald-500/10 to-teal-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" />
 
       {/* Card content */}
-      <div className="relative bg-card border border-border rounded-lg h-full flex flex-col">
+      <div className="relative bg-blue-50/50 dark:bg-card border border-border rounded-lg h-full flex flex-col">
         {getServerTypeBadge()}
         {isConfigured && (
           <Badge
@@ -166,31 +164,26 @@ export function BaseServerCard({
         )}
 
         <CardHeader className="flex flex-col items-center pb-2 pt-12">
-          {/* Logo with gradient ring */}
+          {/* Logo without circle */}
           <div className="mb-3 relative">
-            <div className="absolute inset-0 bg-gradient-to-br from-amber-500 to-orange-500 rounded-full opacity-0 group-hover:opacity-20 blur-lg transition-opacity duration-300" />
-            <div className="relative p-1 bg-gradient-to-br from-amber-500/20 to-orange-500/20 rounded-full ring-2 ring-amber-500/30 group-hover:ring-amber-500/60 transition-all duration-300">
-              {logoUrl && !imageError ? (
-                <div className="w-16 h-16 rounded-full bg-background flex items-center justify-center overflow-hidden">
-                  <Image
-                    src={logoUrl}
-                    alt={displayName}
-                    width={56}
-                    height={56}
-                    className="object-contain p-2"
-                    onError={() => setImageError(true)}
-                  />
-                </div>
-              ) : (
-                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-500/10 to-orange-500/10 flex items-center justify-center text-3xl backdrop-blur-sm">
-                  {getFallbackEmoji()}
-                </div>
-              )}
-            </div>
+            {logoUrl && !imageError ? (
+              <Image
+                src={logoUrl}
+                alt={displayName}
+                width={64}
+                height={64}
+                className="object-contain transition-transform duration-300 group-hover:scale-110"
+                onError={() => setImageError(true)}
+              />
+            ) : (
+              <div className="text-5xl transition-transform duration-300 group-hover:scale-110">
+                {getFallbackEmoji()}
+              </div>
+            )}
           </div>
 
           {/* Title with gradient */}
-          <CardTitle className="text-center text-lg font-semibold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent group-hover:from-amber-500 group-hover:to-orange-500 transition-all duration-300">
+          <CardTitle className="text-center text-lg font-semibold bg-gradient-to-r from-teal-600 to-emerald-600 dark:from-teal-400 dark:to-emerald-400 bg-clip-text text-transparent group-hover:from-teal-500 group-hover:to-emerald-500 transition-all duration-300">
             {displayName}
           </CardTitle>
         </CardHeader>

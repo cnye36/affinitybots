@@ -189,7 +189,7 @@ export async function POST(
     });
 
     // Get the model being used for budget checking
-    const llmId = fullConfig.llm || "openai:gpt-5"; // Default to gpt-5 if not specified
+    const llmId = fullConfig.llm || "openai:gpt-5.2"; // Default to gpt-5.2 if not specified
     const modelId = extractModelId(llmId);
 
     // Check if user can afford this AI request (budget check)

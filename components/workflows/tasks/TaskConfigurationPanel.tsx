@@ -18,13 +18,16 @@ interface TaskConfigurationPanelProps {
   currentTask: Task;
   setCurrentTask: (task: Task) => void;
   assistant: Assistant | null;
+  workflowType?: "sequential" | "orchestrator";
 }
 
 export function TaskConfigurationPanel({
   currentTask,
   setCurrentTask,
   assistant,
+  workflowType = "sequential",
 }: TaskConfigurationPanelProps) {
+  const isOrchestratorMode = workflowType === "orchestrator";
 
   return (
     <div className="relative overflow-hidden rounded-xl border-2 border-violet-200/50 dark:border-violet-800/50 bg-gradient-to-br from-violet-50/30 to-purple-50/30 dark:from-violet-950/20 dark:to-purple-950/20">
@@ -91,70 +94,93 @@ export function TaskConfigurationPanel({
               <h4 className="text-sm font-medium text-foreground">Prompt Configuration</h4>
             </div>
 
-            {/* Context Options */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Input Source</Label>
-              <Select
-                value={
-                  ((currentTask as any)?.config?.context?.inputSource === "previous_output")
-                    ? "previous_output"
-                    : "prompt"
-                }
-                onValueChange={(value) => {
-                  const inputSource = (value as "prompt" | "previous_output");
-                  const thread = (inputSource === "previous_output")
-                    ? { mode: "workflow" as const }
-                    : { mode: "new" as const };
-                  setCurrentTask({
-                    ...currentTask,
-                    config: {
-                      ...currentTask.config,
-                      context: {
-                        ...(currentTask as any).config?.context,
-                        inputSource,
-                        thread,
+            {/* Context Options - Hidden in orchestrator mode */}
+            {!isOrchestratorMode && (
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Input Source</Label>
+                <Select
+                  value={
+                    ((currentTask as any)?.config?.context?.inputSource === "previous_output")
+                      ? "previous_output"
+                      : "prompt"
+                  }
+                  onValueChange={(value) => {
+                    const inputSource = (value as "prompt" | "previous_output");
+                    const thread = (inputSource === "previous_output")
+                      ? { mode: "workflow" as const }
+                      : { mode: "new" as const };
+                    setCurrentTask({
+                      ...currentTask,
+                      config: {
+                        ...currentTask.config,
+                        context: {
+                          ...(currentTask as any).config?.context,
+                          inputSource,
+                          thread,
+                        },
                       },
-                    },
-                  });
-                }}
-              >
-                <SelectTrigger onClick={(e) => e.stopPropagation()} className="bg-background">
-                  <SelectValue placeholder="Select source" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="previous_output">Previous Node Output</SelectItem>
-                  <SelectItem value="prompt">Custom Prompt</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Choose whether to use output from the previous task or define a custom prompt
-              </p>
-            </div>
+                    });
+                  }}
+                >
+                  <SelectTrigger onClick={(e) => e.stopPropagation()} className="bg-background">
+                    <SelectValue placeholder="Select source" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="previous_output">Previous Node Output</SelectItem>
+                    <SelectItem value="prompt">Custom Prompt</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Choose whether to use output from the previous task or define a custom prompt
+                </p>
+              </div>
+            )}
 
             {/* Prompt Input */}
             <div className="space-y-2">
               <Label className="flex items-center gap-2 text-sm font-medium">
                 Prompt
-                <span className="text-xs text-violet-600 dark:text-violet-400 font-normal">(Required)</span>
+                {!isOrchestratorMode && (
+                  <span className="text-xs text-violet-600 dark:text-violet-400 font-normal">(Required)</span>
+                )}
+                {isOrchestratorMode && (
+                  <span className="text-xs text-amber-600 dark:text-amber-400 font-normal">(Orchestrator Controlled)</span>
+                )}
               </Label>
               <Textarea
                 value={currentTask.config?.input?.prompt || ""}
                 onChange={(e) => {
-                  setCurrentTask({
-                    ...currentTask,
-                    config: {
-                      ...currentTask.config,
-                      input: {
-                        ...currentTask.config.input,
-                        prompt: e.target.value,
+                  if (!isOrchestratorMode) {
+                    setCurrentTask({
+                      ...currentTask,
+                      config: {
+                        ...currentTask.config,
+                        input: {
+                          ...currentTask.config.input,
+                          prompt: e.target.value,
+                        },
                       },
-                    },
-                  });
+                    });
+                  }
                 }}
-                placeholder={`Enter instructions for ${assistant?.name || "the agent"}...\n\nExample: "Analyze the data from the previous step and summarize key insights."`}
-                className="min-h-[200px] bg-background resize-none font-mono text-sm"
-                required
+                placeholder={
+                  isOrchestratorMode
+                    ? "In orchestrator mode, this agent will receive instructions dynamically from the orchestrator manager based on the overall workflow goal."
+                    : `Enter instructions for ${assistant?.name || "the agent"}...\n\nExample: "Analyze the data from the previous step and summarize key insights."`
+                }
+                className={`min-h-[200px] resize-none font-mono text-sm ${
+                  isOrchestratorMode
+                    ? "bg-muted/50 cursor-not-allowed opacity-70"
+                    : "bg-background"
+                }`}
+                disabled={isOrchestratorMode}
+                required={!isOrchestratorMode}
               />
+              {isOrchestratorMode && (
+                <p className="text-xs text-muted-foreground bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded p-2">
+                  <strong>Note:</strong> The orchestrator will provide task-specific instructions to this agent during workflow execution. The agent's system prompt and capabilities will still apply.
+                </p>
+              )}
             </div>
           </div>
 

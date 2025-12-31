@@ -25,6 +25,7 @@ interface TaskConfigModalProps {
   previousNodeOutput?: TaskOutput;
   onTest: (overrideConfig?: Record<string, unknown>) => Promise<unknown>;
   onUpdate: (updatedTask: Task, updatedAssistant: Assistant | null) => void;
+  workflowType?: "sequential" | "orchestrator";
 }
 
 type OutputFormat = "json" | "markdown" | "formatted";
@@ -70,6 +71,7 @@ export function TaskConfigModal({
   previousNodeOutput,
   onTest,
   onUpdate,
+  workflowType = "sequential",
 }: TaskConfigModalProps) {
   const [currentTask, setCurrentTask] = useState<Task>(task);
   const [prevOutputFormat, setPrevOutputFormat] = useState<OutputFormat>(() => 
@@ -334,6 +336,7 @@ export function TaskConfigModal({
                 currentTask={currentTask}
                 setCurrentTask={setCurrentTask}
                 assistant={assistant}
+                workflowType={workflowType}
               />
             )}
 

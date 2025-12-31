@@ -186,9 +186,19 @@ async function executeOrchestratorWorkflow(
 					if (!langgraphRunId) {
 						langgraphRunId = getRunIdFromEvent(e);
 					}
+					
+					// Log all events for debugging
+					console.log(`[Orchestrator] Stream event:`, {
+						event: e.event,
+						hasData: !!e.data,
+						dataKeys: e.data ? Object.keys(e.data) : [],
+					});
+					
 					if (e.event === "updates" && e.data) {
             const node = Object.keys(e.data)[0];
             const nodeData = e.data[node];
+
+            console.log(`[Orchestrator] Processing node update:`, { node, hasNodeData: !!nodeData });
 
             if (node === "manager") {
               // Manager made a decision
@@ -209,8 +219,12 @@ async function executeOrchestratorWorkflow(
             }
 
             finalResult = e.data;
-          }
+          } else if (e.event === "end") {
+						console.log(`[Orchestrator] Stream ended`);
+					}
         }
+        
+        console.log(`[Orchestrator] Stream processing complete. Final result:`, finalResult ? "has result" : "no result");
 
         // Update workflow run with final result
 				await supabase

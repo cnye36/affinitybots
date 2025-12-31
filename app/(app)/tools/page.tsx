@@ -21,6 +21,7 @@ export default function ToolsPage() {
 	const [debouncedSearch, setDebouncedSearch] = useState("");
 	const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 	const [currentPage, setCurrentPage] = useState(1);
+	const [filterMode, setFilterMode] = useState<"all" | "configured">("all");
 
 	// Debounce search term
 	useEffect(() => {
@@ -90,10 +91,23 @@ export default function ToolsPage() {
 		});
 	}, [userAddedServers, debouncedSearch]);
 
-	// Combine and paginate all servers
+	// Combine and filter servers based on filterMode
 	const allServers = useMemo(() => {
-		return [...filteredUserServers, ...filteredOfficialServers];
-	}, [filteredUserServers, filteredOfficialServers]);
+		const combined = [...filteredUserServers, ...filteredOfficialServers];
+
+		if (filterMode === "configured") {
+			return combined.filter((server: any) => {
+				// Check if user-added server
+				const isUserAdded = filteredUserServers.some((s: any) => s.id === server.id);
+				if (isUserAdded) return true; // User-added servers are always configured
+
+				// Check if official server is configured
+				return isConfigured(server.qualifiedName);
+			});
+		}
+
+		return combined;
+	}, [filteredUserServers, filteredOfficialServers, filterMode]);
 
 	const totalPages = Math.ceil(allServers.length / ITEMS_PER_PAGE);
 	const paginatedServers = useMemo(() => {
@@ -115,11 +129,11 @@ export default function ToolsPage() {
 	return (
 		<div className="min-h-screen bg-background">
 			<div className="container mx-auto px-4 py-8">
-				{/* Enhanced Header matching dashboard */}
+				{/* Enhanced Header */}
 				<div className="mb-8">
 					<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
 						<div>
-							<h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+							<h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-teal-600 to-emerald-600 dark:from-teal-400 dark:to-emerald-400 bg-clip-text text-transparent">
 								Tools
 							</h1>
 							<p className="text-muted-foreground mt-2 text-base">
@@ -130,12 +144,40 @@ export default function ToolsPage() {
 							<Button
 								size="sm"
 								onClick={() => setAddOpen(true)}
-								className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300"
+								className="bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300"
 							>
 								<Plus className="h-4 w-4 mr-2" />
 								Add Custom MCP
 							</Button>
 						</div>
+					</div>
+				</div>
+
+				{/* Filter Tabs */}
+				<div className="mb-6">
+					<div className="inline-flex rounded-lg border border-border p-1 bg-muted">
+						<Button
+							variant={filterMode === "all" ? "default" : "ghost"}
+							size="sm"
+							onClick={() => {
+								setFilterMode("all");
+								setCurrentPage(1);
+							}}
+							className={filterMode === "all" ? "bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white border-0" : "text-muted-foreground hover:text-foreground"}
+						>
+							All Tools
+						</Button>
+						<Button
+							variant={filterMode === "configured" ? "default" : "ghost"}
+							size="sm"
+							onClick={() => {
+								setFilterMode("configured");
+								setCurrentPage(1);
+							}}
+							className={filterMode === "configured" ? "bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white border-0" : "text-muted-foreground hover:text-foreground"}
+						>
+							Configured
+						</Button>
 					</div>
 				</div>
 
@@ -161,7 +203,7 @@ export default function ToolsPage() {
 							variant={viewMode === "grid" ? "default" : "outline"}
 							size="sm"
 							onClick={() => setViewMode("grid")}
-							className={viewMode === "grid" ? "bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white border-0" : ""}
+							className={viewMode === "grid" ? "bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white border-0" : ""}
 						>
 							<Grid3x3 className="h-4 w-4" />
 						</Button>
@@ -169,7 +211,7 @@ export default function ToolsPage() {
 							variant={viewMode === "list" ? "default" : "outline"}
 							size="sm"
 							onClick={() => setViewMode("list")}
-							className={viewMode === "list" ? "bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white border-0" : ""}
+							className={viewMode === "list" ? "bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white border-0" : ""}
 						>
 							<List className="h-4 w-4" />
 						</Button>
@@ -179,23 +221,28 @@ export default function ToolsPage() {
 				{/* Tools Display */}
 				{allServers.length === 0 ? (
 					<Card className="relative overflow-hidden border-0 shadow-lg">
-						<div className="absolute top-0 left-0 right-0 h-full bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-transparent" />
+						<div className="absolute top-0 left-0 right-0 h-full bg-gradient-to-br from-teal-500/10 via-emerald-500/5 to-transparent" />
 						<CardContent className="relative py-16 text-center">
 							<div className="max-w-md mx-auto space-y-4">
-								<div className="inline-flex p-4 rounded-2xl bg-gradient-to-br from-amber-500/10 to-orange-500/10 backdrop-blur-sm mb-2">
+								<div className="inline-flex p-4 rounded-2xl bg-gradient-to-br from-teal-500/10 to-emerald-500/10 backdrop-blur-sm mb-2">
 									<Search className="h-12 w-12 text-muted-foreground/50" />
 								</div>
 								<h3 className="text-xl font-semibold text-muted-foreground">
-									No tools found
+									{filterMode === "configured" ? "No configured tools" : "No tools found"}
 								</h3>
 								<p className="text-sm text-muted-foreground/70">
-									{debouncedSearch ? "Try adjusting your search term" : "Get started by adding a custom MCP server"}
+									{filterMode === "configured"
+										? "Connect to tools to see them here"
+										: debouncedSearch
+											? "Try adjusting your search term"
+											: "Get started by adding a custom MCP server"
+									}
 								</p>
 								{debouncedSearch && (
 									<Button
 										variant="outline"
 										onClick={() => setSearchTerm("")}
-										className="border-2 hover:border-amber-500/50 hover:bg-amber-500/5"
+										className="border-2 hover:border-teal-500/50 hover:bg-teal-500/5"
 									>
 										Clear search
 									</Button>
@@ -269,7 +316,7 @@ export default function ToolsPage() {
 									size="sm"
 									onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
 									disabled={currentPage === 1}
-									className="border-2 hover:border-amber-500/50 hover:bg-amber-500/5"
+									className="border-2 hover:border-teal-500/50 hover:bg-teal-500/5"
 								>
 									<ChevronLeft className="h-4 w-4" />
 									Previous
@@ -299,7 +346,7 @@ export default function ToolsPage() {
 												variant={currentPage === page ? "default" : "outline"}
 												size="sm"
 												onClick={() => setCurrentPage(page)}
-												className={currentPage === page ? "bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white border-0" : "border-2 hover:border-amber-500/50 hover:bg-amber-500/5"}
+												className={currentPage === page ? "bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white border-0" : "border-2 hover:border-teal-500/50 hover:bg-teal-500/5"}
 											>
 												{page}
 											</Button>
@@ -312,7 +359,7 @@ export default function ToolsPage() {
 									size="sm"
 									onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
 									disabled={currentPage === totalPages}
-									className="border-2 hover:border-amber-500/50 hover:bg-amber-500/5"
+									className="border-2 hover:border-teal-500/50 hover:bg-teal-500/5"
 								>
 									Next
 									<ChevronRight className="h-4 w-4" />

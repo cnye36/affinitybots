@@ -803,6 +803,7 @@ export const MemoizedTaskNode = memo(
 					previousNodeOutput={props.data.previousNodeOutput as any}
 					onTest={handleTestTask}
 					onUpdate={handleTaskUpdate}
+					workflowType={props.data.workflowType}
 				/>
 			</>
 		)

@@ -51,39 +51,9 @@ interface OrchestratorNodeProps {
 export function OrchestratorNode({ data, selected }: OrchestratorNodeProps) {
 	const [testStatus, setTestStatus] = useState<"idle" | "testing" | "testSuccess" | "testError">("idle")
 
-	const handlePlayClick = async (e: React.MouseEvent) => {
+	const handlePlayClick = (e: React.MouseEvent) => {
 		e.stopPropagation()
-		setTestStatus("testing")
-		try {
-			const response = await fetch(`/api/workflows/${data.workflow_id}/execute`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({}),
-			})
-
-			if (!response.ok) {
-				throw new Error("Failed to execute orchestrator workflow")
-			}
-
-			// Read the stream to completion
-			const reader = response.body?.getReader()
-			if (reader) {
-				const decoder = new TextDecoder()
-				while (true) {
-					const { done } = await reader.read()
-					if (done) break
-				}
-			}
-
-			setTestStatus("testSuccess")
-			setTimeout(() => setTestStatus("idle"), 3000)
-		} catch (error) {
-			console.error("Error executing orchestrator:", error)
-			setTestStatus("testError")
-			setTimeout(() => setTestStatus("idle"), 3000)
-		}
+		data.onConfigure()
 	}
 
 	const handleDeleteClick = (e: React.MouseEvent) => {
@@ -98,7 +68,13 @@ export function OrchestratorNode({ data, selected }: OrchestratorNodeProps) {
 	const statusInfo = statusConfig[displayStatus] || statusConfig.idle
 
   return (
-    <div className="relative group">
+    <div
+      className="relative group"
+      onDoubleClick={(e) => {
+        e.stopPropagation()
+        data.onConfigure()
+      }}
+    >
 			{/* Status indicator and action buttons - positioned outside top-right */}
 			<div className="absolute -top-8 right-0 flex items-center gap-2 z-20">
 				{/* Play button for executing orchestrator */}

@@ -13,6 +13,7 @@ import { Slider } from "@/components/ui/slider"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Bot, Sparkles } from "lucide-react"
+import { LLM_OPTIONS, legacyModelToLlmId, llmIdToModelId } from "@/lib/llm/catalog"
 
 interface OrchestratorConfigFormProps {
 	config: OrchestratorConfig | null
@@ -38,6 +39,24 @@ To complete: {"complete": true, "final_result": "summary"}`
 
 const DEFAULT_USER_PROMPT = "Complete the user's request by coordinating the available agents."
 
+/**
+ * Determines if a model uses temperature instead of reasoning effort.
+ * Most models use reasoning effort - only a few legacy models use temperature.
+ */
+function usesTemperature(model?: string): boolean {
+	if (!model) return false
+	const modelLower = model.toLowerCase()
+	// Temperature models (exceptions): GPT-4.1 variants and GPT-4o
+	const temperatureModels = [
+		"gpt-4.1",
+		"gpt-4.1-mini",
+		"gpt-4.1-nano",
+		"gpt-4o",
+		"claude-3-5-haiku-latest", // Exception: old haiku 3.5 uses temperature
+	]
+	return temperatureModels.some((m) => modelLower === m.toLowerCase() || modelLower.startsWith(m.toLowerCase() + "-"))
+}
+
 export function OrchestratorConfigForm({
 	config,
 	availableAgents,
@@ -45,7 +64,11 @@ export function OrchestratorConfigForm({
 	onTeamChange,
 	selectedTeam = [],
 }: OrchestratorConfigFormProps) {
-	const [managerModel, setManagerModel] = useState(config?.manager?.model || "gpt-5")
+	// Handle both legacy model format (without provider prefix) and new LLM format (with provider prefix)
+	const legacyModel = config?.manager?.model || "gpt-5.2"
+	const managerLlm = legacyModelToLlmId(legacyModel) || "openai:gpt-5.2"
+	
+	const [managerLlmId, setManagerLlmId] = useState(managerLlm)
 	const [systemPrompt, setSystemPrompt] = useState(config?.manager?.system_prompt || DEFAULT_SYSTEM_PROMPT)
 	const [userPrompt, setUserPrompt] = useState(config?.manager?.user_prompt || DEFAULT_USER_PROMPT)
 	const [temperature, setTemperature] = useState(config?.manager?.temperature || 0.3)
@@ -54,14 +77,20 @@ export function OrchestratorConfigForm({
 	)
 	const [maxIterations, setMaxIterations] = useState(config?.execution?.max_iterations || 10)
 	const [teamAgentIds, setTeamAgentIds] = useState<string[]>(selectedTeam)
+	
+	// Get the model ID (without provider prefix) for usesTemperature check
+	const effectiveModelId = llmIdToModelId(managerLlmId)
+	const useTemp = usesTemperature(effectiveModelId)
 
 	// Update config whenever form values change
 	useEffect(() => {
+		// Store model in legacy format for backward compatibility, but also support LLM format
+		const modelId = llmIdToModelId(managerLlmId)
 		const newConfig: OrchestratorConfig = {
 			manager: {
 				system_prompt: systemPrompt,
 				user_prompt: userPrompt,
-				model: managerModel,
+				model: managerLlmId, // Store full LLM ID (provider:model) for future compatibility
 				temperature,
 				reasoningEffort,
 			},
@@ -71,7 +100,7 @@ export function OrchestratorConfigForm({
 			},
 		}
 		onConfigChange(newConfig)
-	}, [systemPrompt, userPrompt, managerModel, temperature, reasoningEffort, maxIterations])
+	}, [systemPrompt, userPrompt, managerLlmId, temperature, reasoningEffort, maxIterations])
 
 	// Update team whenever selection changes
 	useEffect(() => {
@@ -108,53 +137,60 @@ export function OrchestratorConfigForm({
 					{/* Model Selection */}
 					<div className="space-y-2">
 						<Label htmlFor="manager-model">Manager Model</Label>
-						<Select value={managerModel} onValueChange={setManagerModel}>
+						<Select value={managerLlmId} onValueChange={setManagerLlmId}>
 							<SelectTrigger id="manager-model">
-								<SelectValue />
+								<SelectValue placeholder="Select a model" />
 							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value="gpt-5">GPT-5</SelectItem>
-								<SelectItem value="gpt-5-mini">GPT-5 Mini</SelectItem>
-								<SelectItem value="claude-3-7-sonnet-20250219">Claude 3.7 Sonnet</SelectItem>
-								<SelectItem value="claude-opus-4-5-20251101">Claude Opus 4.5</SelectItem>
-								<SelectItem value="gemini-2.0-flash-exp">Gemini 2.0 Flash</SelectItem>
+							<SelectContent position="popper" className="z-[1000]">
+								{LLM_OPTIONS.map((opt) => (
+									<SelectItem key={opt.id} value={opt.id}>
+										{opt.label}
+									</SelectItem>
+								))}
 							</SelectContent>
 						</Select>
 					</div>
 
-					{/* Temperature */}
-					<div className="space-y-2">
-						<div className="flex items-center justify-between">
-							<Label htmlFor="temperature">Temperature</Label>
-							<span className="text-sm text-muted-foreground">{temperature}</span>
+					{/* Conditional params: reasoning effort for most models, temperature for legacy models */}
+					{useTemp ? (
+						<div className="space-y-2">
+							<div className="flex items-center justify-between">
+								<Label htmlFor="temperature">Temperature</Label>
+								<span className="text-sm text-muted-foreground">{temperature}</span>
+							</div>
+							<Slider
+								id="temperature"
+								min={0}
+								max={2}
+								step={0.1}
+								value={[temperature]}
+								onValueChange={(value) => setTemperature(value[0])}
+							/>
+							<p className="text-xs text-muted-foreground">
+								Lower values (0.0-0.5) = more focused, higher values (0.5-2.0) = more creative
+							</p>
 						</div>
-						<Slider
-							id="temperature"
-							min={0}
-							max={1}
-							step={0.1}
-							value={[temperature]}
-							onValueChange={(value) => setTemperature(value[0])}
-						/>
-					</div>
-
-					{/* Reasoning Effort */}
-					<div className="space-y-2">
-						<Label htmlFor="reasoning-effort">Reasoning Effort</Label>
-						<Select
-							value={reasoningEffort}
-							onValueChange={(value: "low" | "medium" | "high") => setReasoningEffort(value)}
-						>
-							<SelectTrigger id="reasoning-effort">
-								<SelectValue />
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value="low">Low</SelectItem>
-								<SelectItem value="medium">Medium</SelectItem>
-								<SelectItem value="high">High</SelectItem>
-							</SelectContent>
-						</Select>
-					</div>
+					) : (
+						<div className="space-y-2">
+							<Label htmlFor="reasoning-effort">Reasoning Effort</Label>
+							<Select
+								value={reasoningEffort}
+								onValueChange={(value: "low" | "medium" | "high") => setReasoningEffort(value)}
+							>
+								<SelectTrigger id="reasoning-effort">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="low">Low</SelectItem>
+									<SelectItem value="medium">Medium</SelectItem>
+									<SelectItem value="high">High</SelectItem>
+								</SelectContent>
+							</Select>
+							<p className="text-xs text-muted-foreground">
+								Higher effort means more thorough reasoning but slower responses
+							</p>
+						</div>
+					)}
 
 					{/* System Prompt */}
 					<div className="space-y-2">

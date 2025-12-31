@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Bot, ChevronDown, ChevronUp, Maximize } from "lucide-react"
-import { getLlmLabel } from "@/lib/llm/catalog"
+import { getLlmLabel, LLM_OPTIONS, legacyModelToLlmId } from "@/lib/llm/catalog"
 import {
 	Dialog,
 	DialogContent,
@@ -56,7 +56,10 @@ export function OrchestratorSidebar({
 	const [systemPrompt, setSystemPrompt] = useState(
 		orchestratorConfig?.manager?.system_prompt || DEFAULT_SYSTEM_PROMPT
 	)
-	const [model, setModel] = useState(orchestratorConfig?.manager?.model || "gpt-5")
+	// Handle both legacy and new model formats, default to gpt-5.2
+	const legacyModel = orchestratorConfig?.manager?.model || "gpt-5.2"
+	const managerLlm = legacyModelToLlmId(legacyModel) || "openai:gpt-5.2"
+	const [model, setModel] = useState(managerLlm)
 	const [isAgentDropdownOpen, setIsAgentDropdownOpen] = useState(false)
 	const [isDialogOpen, setIsDialogOpen] = useState(false)
 	const [dialogDraft, setDialogDraft] = useState("")
@@ -107,12 +110,12 @@ export function OrchestratorSidebar({
 							<SelectTrigger id="orchestrator-model">
 								<SelectValue />
 							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value="gpt-5">GPT-5</SelectItem>
-								<SelectItem value="gpt-5-mini">GPT-5 Mini</SelectItem>
-								<SelectItem value="claude-3-7-sonnet-20250219">Claude 3.7 Sonnet</SelectItem>
-								<SelectItem value="claude-opus-4-5-20251101">Claude Opus 4.5</SelectItem>
-								<SelectItem value="gemini-2.0-flash-exp">Gemini 2.0 Flash</SelectItem>
+							<SelectContent position="popper" className="z-[1000]">
+								{LLM_OPTIONS.map((opt) => (
+									<SelectItem key={opt.id} value={opt.id}>
+										{opt.label}
+									</SelectItem>
+								))}
 							</SelectContent>
 						</Select>
 					</div>

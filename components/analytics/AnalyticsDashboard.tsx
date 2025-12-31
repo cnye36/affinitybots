@@ -6,7 +6,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { RefreshCcw } from "lucide-react"
+import { RefreshCcw, X, Trash2 } from "lucide-react"
+import { useToast } from "@/hooks/useToast"
+import { useSectionTheme } from "@/hooks/useSectionTheme"
 
 type ActivityItem = {
 	type: "workflow" | "task"
@@ -48,6 +50,7 @@ const formatDuration = (durationMs: number | null) => {
 }
 
 export function AnalyticsDashboard() {
+	const theme = useSectionTheme()
 	const [items, setItems] = useState<ActivityItem[]>([])
 	const [workflows, setWorkflows] = useState<FilterOption[]>([])
 	const [agents, setAgents] = useState<FilterOption[]>([])
@@ -58,6 +61,9 @@ export function AnalyticsDashboard() {
 	const [startDate, setStartDate] = useState<string>("")
 	const [endDate, setEndDate] = useState<string>("")
 	const [loading, setLoading] = useState(false)
+	const [cancellingIds, setCancellingIds] = useState<Set<string>>(new Set())
+	const [cleaningUp, setCleaningUp] = useState(false)
+	const { toast } = useToast()
 
 	const fetchAnalytics = async () => {
 		setLoading(true)
@@ -89,24 +95,117 @@ export function AnalyticsDashboard() {
 		const workflowCount = items.filter((item) => item.type === "workflow").length
 		const taskCount = items.filter((item) => item.type === "task").length
 		const failed = items.filter((item) => item.status === "failed" || item.status === "error").length
+		const running = items.filter((item) => item.status === "running").length
 		const durations = items.map((item) => item.duration_ms).filter((value) => typeof value === "number") as number[]
 		const averageDuration = durations.length
 			? Math.round(durations.reduce((sum, value) => sum + value, 0) / durations.length)
 			: null
-		return { total, workflowCount, taskCount, failed, averageDuration }
+		return { total, workflowCount, taskCount, failed, running, averageDuration }
 	}, [items])
+
+	const handleCancelRun = async (item: ActivityItem) => {
+		if (item.type !== "workflow" || !item.workflow_id || item.status !== "running") {
+			return
+		}
+
+		setCancellingIds((prev) => new Set(prev).add(item.id))
+		try {
+			const res = await fetch(`/api/workflows/${item.workflow_id}/runs/${item.id}/cancel`, {
+				method: "POST",
+			})
+
+			if (!res.ok) {
+				const error = await res.json().catch(() => ({ error: "Failed to cancel workflow run" }))
+				throw new Error(error.error || "Failed to cancel workflow run")
+			}
+
+			toast({
+				title: "Workflow cancelled",
+				description: "The workflow run has been marked as failed.",
+			})
+
+			// Refresh the list
+			await fetchAnalytics()
+		} catch (error) {
+			toast({
+				title: "Error cancelling workflow",
+				description: error instanceof Error ? error.message : "Failed to cancel workflow run",
+				variant: "destructive",
+			})
+		} finally {
+			setCancellingIds((prev) => {
+				const next = new Set(prev)
+				next.delete(item.id)
+				return next
+			})
+		}
+	}
+
+	const handleCleanupStuckRuns = async () => {
+		setCleaningUp(true)
+		try {
+			const res = await fetch("/api/workflows/cleanup-stuck-runs?maxAgeHours=1", {
+				method: "POST",
+			})
+
+			if (!res.ok) {
+				const error = await res.json().catch(() => ({ error: "Failed to cleanup stuck runs" }))
+				throw new Error(error.error || "Failed to cleanup stuck runs")
+			}
+
+			const data = await res.json()
+			toast({
+				title: "Cleanup complete",
+				description: data.message || `Updated ${data.updated || 0} stuck workflow run(s)`,
+			})
+
+			// Refresh the list
+			await fetchAnalytics()
+		} catch (error) {
+			toast({
+				title: "Error cleaning up",
+				description: error instanceof Error ? error.message : "Failed to cleanup stuck runs",
+				variant: "destructive",
+			})
+		} finally {
+			setCleaningUp(false)
+		}
+	}
 
 	return (
 		<div className="flex flex-col gap-6 p-6">
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-2xl font-semibold">Analytics</h1>
-					<p className="text-sm text-muted-foreground">Trace workflow and agent activity across runs.</p>
+					<h1 className={`text-3xl font-bold ${theme.headerGradient} bg-clip-text text-transparent`}>
+						Analytics
+					</h1>
+					<p className="text-sm text-muted-foreground mt-1">
+						Trace workflow and agent activity across runs.
+					</p>
 				</div>
-				<Button variant="outline" size="sm" onClick={fetchAnalytics}>
-					<RefreshCcw className="h-4 w-4 mr-2" />
-					Refresh
-				</Button>
+				<div className="flex gap-2">
+					{stats.running > 0 && (
+						<Button
+							variant="outline"
+							size="sm"
+							onClick={handleCleanupStuckRuns}
+							disabled={cleaningUp}
+							className={`${theme.borderColor} hover:${theme.subtleBg}`}
+						>
+							<Trash2 className="h-4 w-4 mr-2" />
+							{cleaningUp ? "Cleaning up..." : `Cleanup ${stats.running} stuck`}
+						</Button>
+					)}
+					<Button
+						variant="outline"
+						size="sm"
+						onClick={fetchAnalytics}
+						className={`${theme.borderColor} hover:${theme.subtleBg}`}
+					>
+						<RefreshCcw className="h-4 w-4 mr-2" />
+						Refresh
+					</Button>
+				</div>
 			</div>
 
 			<Card>
@@ -228,11 +327,18 @@ export function AnalyticsDashboard() {
 					{items.map((item) => (
 						<div
 							key={item.id}
-							className="flex flex-col gap-2 rounded-lg border p-3 text-sm md:flex-row md:items-center md:justify-between"
+							className={`flex flex-col gap-2 rounded-lg border p-3 text-sm md:flex-row md:items-center md:justify-between ${theme.borderColor}`}
 						>
 							<div className="space-y-1">
 								<div className="flex items-center gap-2">
-									<Badge variant={item.type === "workflow" ? "default" : "secondary"}>
+									<Badge
+										variant={item.type === "workflow" ? "default" : "secondary"}
+										className={
+											item.type === "workflow"
+												? `${theme.accentBg} text-white border-0`
+												: ""
+										}
+									>
 										{item.type === "workflow" ? "Workflow" : "Task"}
 									</Badge>
 									<span className="font-medium">{item.workflow_name || "Untitled Workflow"}</span>
@@ -243,13 +349,26 @@ export function AnalyticsDashboard() {
 								</div>
 							</div>
 							<div className="flex flex-wrap items-center gap-2">
-								<Badge variant="outline">{item.status || "unknown"}</Badge>
+								<Badge variant="outline" className={theme.borderColor}>
+									{item.status || "unknown"}
+								</Badge>
 								<span className="text-xs text-muted-foreground">
 									{item.started_at ? new Date(item.started_at).toLocaleString() : "—"}
 								</span>
 								<span className="text-xs text-muted-foreground">
 									Duration {formatDuration(item.duration_ms)}
 								</span>
+								{item.type === "workflow" && item.status === "running" && item.workflow_id && (
+									<Button
+										variant="ghost"
+										size="sm"
+										className={`h-7 px-2 ${theme.sidebarText}`}
+										onClick={() => handleCancelRun(item)}
+										disabled={cancellingIds.has(item.id)}
+									>
+										<X className="h-3 w-3" />
+									</Button>
+								)}
 							</div>
 						</div>
 					))}

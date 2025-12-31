@@ -10,6 +10,7 @@ const publicRoutes = [
   '/pricing',
   '/docs',
   '/blog',
+  '/contact',
 ]
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

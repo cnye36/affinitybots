@@ -24,6 +24,7 @@ import {
   LangGraphRunnableConfig,
 } from "@langchain/langgraph";
 import { Client } from "@langchain/langgraph-sdk";
+import { llmIdToModelId } from "@/lib/llm/catalog";
 
 // Define orchestrator state
 const OrchestratorState = Annotation.Root({
@@ -111,11 +112,32 @@ To signal completion, respond with JSON only:
 IMPORTANT: Respond with ONLY valid JSON. No additional text before or after.`;
 
   try {
-    // Initialize model
-    const model = await initChatModel(managerConfig.model, {
-      temperature: managerConfig.temperature ?? 0.3,
+    // Normalize model format - handle both legacy (model name only) and new (provider:model) formats
+    const modelId = managerConfig.model || "";
+    
+    // Extract model name (without provider prefix) for GPT-5 detection
+    const modelName = llmIdToModelId(modelId);
+    
+    // Determine if model is GPT-5 (reasoning model that uses reasoningEffort instead of temperature)
+    const isGpt5 = /^gpt-5(?![a-zA-Z0-9-])/.test(modelName);
+    
+    // Build params conditionally: GPT-5 rejects temperature and expects reasoningEffort
+    const modelParams: Record<string, any> = {
       streaming: false,
-    });
+    };
+    
+    if (isGpt5) {
+      modelParams.reasoningEffort = managerConfig.reasoningEffort ?? "medium";
+    } else {
+      modelParams.temperature = (typeof managerConfig.temperature === 'number' ? managerConfig.temperature : 0.3);
+      // Some models support both, so include reasoningEffort if provided
+      if (managerConfig.reasoningEffort) {
+        modelParams.reasoningEffort = managerConfig.reasoningEffort;
+      }
+    }
+    
+    // Initialize model - initChatModel handles both "gpt-5" and "openai:gpt-5" formats
+    const model = await initChatModel(modelId, modelParams);
 
     // Build conversation history
     const conversationMessages = [

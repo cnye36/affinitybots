@@ -27,7 +27,7 @@ export default function PricingPage() {
       popular: false,
       features: [
         "Up to 10 AI agents",
-        "3 active workflows",
+        "3 active workflows*",
         "5,000 AI credits per month",
         "Unlimited integrations",
         "Basic templates",
@@ -50,7 +50,7 @@ export default function PricingPage() {
       popular: true,
       features: [
         "Up to 50 AI agents",
-        "Unlimited active workflows",
+        "25 active workflows*",
         "25,000 AI credits per month",
         "Unlimited integrations",
         "Advanced templates",

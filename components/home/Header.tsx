@@ -91,6 +91,12 @@ export function Header() {
           >
             Blog
           </Link>
+          <Link
+            href="/contact"
+            className="text-md font-medium hover:text-primary"
+          >
+            Contact
+          </Link>
         </nav>
 
         <div className="flex items-center space-x-4">

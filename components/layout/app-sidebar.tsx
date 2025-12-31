@@ -30,6 +30,7 @@ export function AppSidebar({
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
   const logoSize = isCollapsed ? 36 : 64;
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader className="border-b border-violet-200/30 dark:border-violet-800/30 bg-gradient-to-r from-violet-500/5 to-purple-500/5">

@@ -12,6 +12,7 @@ import { Assistant } from "@/types/assistant"
 import { Tool, ServerInfo } from "@/types/playground"
 import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
+import { useSectionTheme } from "@/hooks/useSectionTheme"
 
 interface PlaygroundContainerProps {
 	sessionId?: string
@@ -19,6 +20,7 @@ interface PlaygroundContainerProps {
 }
 
 export function PlaygroundContainer({ sessionId, assistants }: PlaygroundContainerProps) {
+	const theme = useSectionTheme()
 	const {
 		currentSession,
 		currentAgentId,
@@ -80,10 +82,12 @@ export function PlaygroundContainer({ sessionId, assistants }: PlaygroundContain
 		<div className="flex h-screen bg-background">
 			{/* Left Panel - Configuration */}
 			<div className="w-98 border-r border-border flex flex-col bg-card">
-				<div className="p-4 border-b border-border">
+				<div className={`p-4 border-b ${theme.borderColor}`}>
 					<div className="flex items-center justify-between">
 						<div>
-							<h2 className="text-lg font-semibold">Playground</h2>
+							<h2 className={`text-xl font-bold ${theme.headerGradient} bg-clip-text text-transparent`}>
+								Playground
+							</h2>
 							{currentSession && (
 								<p className="text-sm text-muted-foreground mt-1">{currentSession.name}</p>
 							)}
@@ -97,7 +101,7 @@ export function PlaygroundContainer({ sessionId, assistants }: PlaygroundContain
 								// Trigger a re-render by changing a key or using a state update
 								// The chat component will handle clearing messages via useEffect
 							}}
-							className="h-8 w-8"
+							className={`h-8 w-8 ${theme.sidebarText}`}
 							title="New Chat"
 						>
 							<Plus className="h-4 w-4" />

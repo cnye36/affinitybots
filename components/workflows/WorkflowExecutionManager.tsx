@@ -34,8 +34,21 @@ export async function executeWorkflow({
       method: "POST",
     });
 
-    if (!response.ok || !response.body) {
-      throw new Error("Failed to execute workflow");
+    if (!response.ok) {
+      // Try to parse error response
+      let errorMessage = "Failed to execute workflow";
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorData.message || errorMessage;
+        console.error("Workflow execution error:", errorData);
+      } catch (e) {
+        console.error("Failed to parse error response:", e);
+      }
+      throw new Error(errorMessage);
+    }
+
+    if (!response.body) {
+      throw new Error("No response body received from server");
     }
 
     const reader = response.body.getReader();
@@ -105,8 +118,13 @@ export async function executeWorkflow({
     });
   } catch (error) {
     console.error("Error executing workflow:", error);
+
+    // Extract error message
+    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+
     toast({
-      title: "Failed to execute workflow",
+      title: "Workflow Execution Failed",
+      description: errorMessage,
       variant: "destructive",
     });
 

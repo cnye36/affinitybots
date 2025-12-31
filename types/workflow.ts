@@ -61,6 +61,7 @@ export interface OrchestratorNodeData {
   isActive?: boolean;
   status?: "idle" | "running" | "completed" | "error";
   onDelete?: () => void;
+  orchestratorConfig?: OrchestratorConfig;
 }
 
 export type WorkflowNode = {

@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ChevronRight, type LucideIcon } from "lucide-react"
+import { getSectionFromPath, getSectionTheme } from "@/lib/sectionColors"
 
 import {
   Collapsible,
@@ -26,6 +27,7 @@ interface NavItem {
   url: string
   icon?: LucideIcon
   isActive?: boolean
+  section?: string
   items?: {
     title: string
     url: string
@@ -47,6 +49,20 @@ export function NavMain({ items }: { items: NavItem[] }) {
     }
   }
 
+  // Get theme colors for active item based on its section
+  const getItemClasses = (itemUrl: string, itemSection?: string) => {
+    const isActive = isActiveLink(itemUrl)
+    if (!isActive) {
+      return 'hover:bg-muted'
+    }
+
+    // Use item's section if provided, otherwise derive from URL
+    const section = itemSection || getSectionFromPath(itemUrl)
+    const theme = getSectionTheme(section)
+
+    return `${theme.sidebarBg} border-l-2 ${theme.sidebarBorder} ${theme.sidebarText} ${theme.sidebarHoverBg}`
+  }
+
   return (
     <SidebarGroup>
       <SidebarGroupLabel className="text-xs font-semibold text-violet-600/70 dark:text-violet-400/70 uppercase tracking-wider">
@@ -60,11 +76,7 @@ export function NavMain({ items }: { items: NavItem[] }) {
               <Link href={item.url} onClick={handleNavigate}>
                 <SidebarMenuButton
                   tooltip={item.title}
-                  className={
-                    isActiveLink(item.url)
-                      ? 'bg-gradient-to-r from-violet-500/10 to-purple-500/10 border-l-2 border-violet-500 dark:border-violet-400 text-violet-600 dark:text-violet-400 hover:from-violet-500/20 hover:to-purple-500/20'
-                      : 'hover:bg-violet-500/5'
-                  }
+                  className={getItemClasses(item.url, item.section)}
                 >
                   {item.icon && <item.icon className="h-4 w-4" />}
                   <span>{item.title}</span>
@@ -83,11 +95,7 @@ export function NavMain({ items }: { items: NavItem[] }) {
                   <CollapsibleTrigger asChild>
                     <SidebarMenuButton
                       tooltip={item.title}
-                      className={
-                        isActiveLink(item.url)
-                          ? 'bg-gradient-to-r from-violet-500/10 to-purple-500/10 border-l-2 border-violet-500 dark:border-violet-400 text-violet-600 dark:text-violet-400 hover:from-violet-500/20 hover:to-purple-500/20'
-                          : 'hover:bg-violet-500/5'
-                      }
+                      className={getItemClasses(item.url, item.section)}
                     >
                       {item.icon && <item.icon className="h-4 w-4" />}
                       <span>{item.title}</span>
@@ -98,11 +106,7 @@ export function NavMain({ items }: { items: NavItem[] }) {
                   <Link href={item.url} onClick={handleNavigate}>
                     <SidebarMenuButton
                       tooltip={item.title}
-                      className={
-                        isActiveLink(item.url)
-                          ? 'bg-gradient-to-r from-violet-500/10 to-purple-500/10 border-l-2 border-violet-500 dark:border-violet-400 text-violet-600 dark:text-violet-400 hover:from-violet-500/20 hover:to-purple-500/20'
-                          : 'hover:bg-violet-500/5'
-                      }
+                      className={getItemClasses(item.url, item.section)}
                     >
                       {item.icon && <item.icon className="h-4 w-4" />}
                       <span>{item.title}</span>
@@ -116,11 +120,7 @@ export function NavMain({ items }: { items: NavItem[] }) {
                         <SidebarMenuSubItem key={subItem.title}>
                           <SidebarMenuSubButton
                             asChild
-                            className={
-                              isActiveLink(subItem.url)
-                                ? 'bg-gradient-to-r from-violet-500/10 to-purple-500/10 text-violet-600 dark:text-violet-400 border-l-2 border-violet-500 dark:border-violet-400 hover:from-violet-500/20 hover:to-purple-500/20'
-                                : 'hover:bg-violet-500/5'
-                            }
+                            className={getItemClasses(subItem.url, item.section)}
                           >
                             <Link href={subItem.url} onClick={handleNavigate}>
                               <span>{subItem.title}</span>
