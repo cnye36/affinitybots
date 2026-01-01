@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import type { Database } from "@/supabase/types";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { notifyAdminOfNewSignup } from "@/lib/admin/notifications";
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
@@ -86,6 +87,24 @@ export async function GET(request: NextRequest) {
       );
   }
   // --- whitelist check end ---
+
+  // Check if this is a new OAuth signup (user created very recently)
+  // Email signups are already notified in the signUp action, so we only notify here for OAuth
+  if (user.created_at) {
+    const createdTime = new Date(user.created_at).getTime()
+    const now = Date.now()
+    const timeSinceCreation = now - createdTime
+    // If user was created in the last 5 minutes, this is likely a new OAuth signup
+    // (OAuth callbacks happen immediately, while email verification callbacks happen later)
+    const isNewOAuthSignup = timeSinceCreation < 5 * 60 * 1000 // 5 minutes
+    
+    if (isNewOAuthSignup) {
+      // Notify admin of new OAuth signup (don't await - fire and forget)
+      notifyAdminOfNewSignup(user.email, user.id).catch((err) => {
+        console.error("Failed to send admin notification for new OAuth signup:", err)
+      })
+    }
+  }
 
   // Determine final redirect destination
   let finalRedirect = "/dashboard";

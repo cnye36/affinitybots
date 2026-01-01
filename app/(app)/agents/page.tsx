@@ -10,11 +10,12 @@ import { useAgents } from "@/hooks/useAgents";
 import { TutorialLayout } from "@/components/tutorial/TutorialLayout";
 import { agentsTutorial } from "@/lib/tutorials";
 import { createClient } from "@/supabase/client";
+import { useViewPreference } from "@/hooks/useViewPreference";
 
 export default function AgentsPage() {
   const { assistants, isLoading } = useAgents();
   const [userCreatedAt, setUserCreatedAt] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const { viewMode, setViewMode } = useViewPreference("agents", "grid");
   const supabase = createClient();
 
   useEffect(() => {
@@ -61,7 +62,7 @@ export default function AgentsPage() {
         {agents.length === 0 ? (
           <EmptyAgents />
         ) : viewMode === "list" ? (
-          <div className="max-w-5xl space-y-3" data-tutorial="agents-grid">
+          <div className="space-y-3" data-tutorial="agents-grid">
             {agents.map((assistant) => (
               <AgentListItem
                 key={assistant.assistant_id}

@@ -11,7 +11,7 @@ import type { ChatMessage as Message } from "@/components/chat/types";
 interface ThreadProps {
   messages: Message[];
   isRunning: boolean;
-  onSendMessage: (content: string, attachments: any[]) => void;
+  onSendMessage: (content: string, attachments: any[], webSearchEnabled: boolean) => void;
   onCancel: () => void;
 }
 

@@ -23,6 +23,7 @@ import { WorkflowCard } from "@/components/workflows/WorkflowCard";
 import { TutorialLayout } from "@/components/tutorial/TutorialLayout";
 import { workflowsTutorial } from "@/lib/tutorials";
 import { motion } from "framer-motion";
+import { useViewPreference } from "@/hooks/useViewPreference";
 
 export default function WorkflowsPage() {
   const router = useRouter();
@@ -34,7 +35,7 @@ export default function WorkflowsPage() {
     name: string;
   } | null>(null);
   const [userCreatedAt, setUserCreatedAt] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<"grid" | "list">("list");
+  const { viewMode, setViewMode } = useViewPreference("workflows", "grid");
   const supabase = createClient();
 
   useEffect(() => {
@@ -288,7 +289,7 @@ export default function WorkflowsPage() {
 
         {workflows.length > 0 ? (
           viewMode === "list" ? (
-            <div className="max-w-5xl space-y-3" data-tutorial="workflows-grid">
+            <div className="space-y-3" data-tutorial="workflows-grid">
               {workflows.map((workflow, index) => (
                 <WorkflowListItem
                   key={workflow.workflow_id}

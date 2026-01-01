@@ -2,7 +2,8 @@
 
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { GitBranch, GitMerge, CheckCircle2 } from "lucide-react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { GitBranch, GitMerge, CheckCircle2, Calendar } from "lucide-react"
 
 interface WorkflowListItemProps {
 	workflow: any
@@ -10,10 +11,61 @@ interface WorkflowListItemProps {
 	onClick: () => void
 }
 
+function formatRelativeTime(dt?: string | null): string {
+	if (!dt) return "Never"
+	try {
+		const d = new Date(dt)
+		if (isNaN(d.getTime())) return "Never"
+		const now = new Date()
+		const diffMs = now.getTime() - d.getTime()
+		const diffMins = Math.floor(diffMs / 60000)
+		const diffHours = Math.floor(diffMs / 3600000)
+		const diffDays = Math.floor(diffMs / 86400000)
+
+		if (diffMins < 1) return "just now"
+		if (diffMins < 60) return `${diffMins}m ago`
+		if (diffHours < 24) return `${diffHours}h ago`
+		if (diffDays < 7) return `${diffDays}d ago`
+		return d.toLocaleDateString()
+	} catch {
+		return "Never"
+	}
+}
+
+function formatDate(dt?: string | null): string {
+	if (!dt) return "Never"
+	try {
+		const d = new Date(dt)
+		if (isNaN(d.getTime())) return "Never"
+		return d.toLocaleDateString()
+	} catch {
+		return "Never"
+	}
+}
+
 export function WorkflowListItem({ workflow, onDelete, onClick }: WorkflowListItemProps) {
 	const nodes: any[] = Array.isArray(workflow?.nodes) ? (workflow.nodes as any[]) : []
 	const taskNodes = nodes.filter((n) => (n?.type ?? "task") === "task")
 	const nodeCount = (taskNodes.length || nodes.length || 0) as number
+
+	// Collect unique assistants from node data
+	const assistants: Array<{ id?: string; name?: string; avatar?: string }> = []
+	const seen = new Set<string>()
+	const nodesToProcess = taskNodes.length > 0 ? taskNodes : nodes
+	nodesToProcess.forEach((n) => {
+		const data = n?.data || {}
+		const a = data.assignedAssistant || data.assigned_assistant || data?.config?.assigned_assistant
+		if (a) {
+			const key = a.id || a.name || JSON.stringify(a)
+			if (key && !seen.has(key)) {
+				seen.add(key)
+				assistants.push({ id: a.id, name: a.name, avatar: a.avatar })
+			}
+		}
+	})
+
+	const displayAssistants = assistants.slice(0, 3)
+	const overflow = assistants.length - displayAssistants.length
 
 	// Check if workflow was run recently
 	const isRecentlyRun = workflow?.last_run_at &&
@@ -25,32 +77,14 @@ export function WorkflowListItem({ workflow, onDelete, onClick }: WorkflowListIt
 	const getDescription = () => {
 		const parts = []
 		parts.push(`${nodeCount} ${nodeCount === 1 ? "node" : "nodes"}`)
+		if (workflow?.created_at) {
+			parts.push(`Created: ${formatDate(workflow.created_at)}`)
+		}
 		if (workflow?.last_run_at) {
 			const lastRun = formatRelativeTime(workflow.last_run_at)
 			parts.push(`Last run: ${lastRun}`)
 		}
 		return parts.join(" • ")
-	}
-
-	function formatRelativeTime(dt?: string | null): string {
-		if (!dt) return "Never"
-		try {
-			const d = new Date(dt)
-			if (isNaN(d.getTime())) return "Never"
-			const now = new Date()
-			const diffMs = now.getTime() - d.getTime()
-			const diffMins = Math.floor(diffMs / 60000)
-			const diffHours = Math.floor(diffMs / 3600000)
-			const diffDays = Math.floor(diffMs / 86400000)
-
-			if (diffMins < 1) return "just now"
-			if (diffMins < 60) return `${diffMins}m ago`
-			if (diffHours < 24) return `${diffHours}h ago`
-			if (diffDays < 7) return `${diffDays}d ago`
-			return d.toLocaleDateString()
-		} catch {
-			return "Never"
-		}
 	}
 
 	return (
@@ -101,10 +135,35 @@ export function WorkflowListItem({ workflow, onDelete, onClick }: WorkflowListIt
 								</Badge>
 							)}
 						</div>
-						<p className="text-xs text-muted-foreground line-clamp-2">
+						<p className="text-xs text-muted-foreground line-clamp-1">
 							{getDescription()}
 						</p>
 					</div>
+
+					{/* Agents */}
+					{displayAssistants.length > 0 && (
+						<div className="hidden md:flex items-center gap-1.5 flex-shrink-0">
+							{displayAssistants.map((a, idx) => (
+								<Avatar
+									key={(a.id || a.name || idx) as string}
+									className="h-7 w-7 ring-2 ring-border/50 group-hover:ring-blue-500/30 transition-all duration-200"
+								>
+									{a.avatar ? (
+										<AvatarImage src={a.avatar} alt={a.name || "Agent"} />
+									) : (
+										<AvatarFallback className="text-[10px] font-semibold bg-gradient-to-br from-blue-500/10 to-cyan-500/10 text-blue-700">
+											{(a.name || "AG").slice(0, 2).toUpperCase()}
+										</AvatarFallback>
+									)}
+								</Avatar>
+							))}
+							{overflow > 0 && (
+								<div className="h-7 px-1.5 rounded-full border border-border/50 bg-gradient-to-br from-blue-500/5 to-cyan-500/5 text-[10px] font-semibold flex items-center justify-center text-blue-700 ring-2 ring-border/50 group-hover:ring-blue-500/30 transition-all duration-200">
+									+{overflow}
+								</div>
+							)}
+						</div>
+					)}
 				</div>
 			</div>
 		</Card>

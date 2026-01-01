@@ -135,6 +135,7 @@ export interface TaskConfig {
     name: string;
     avatar?: string;
   };
+  web_search_enabled?: boolean;
 }
 
 export interface TaskOutput {

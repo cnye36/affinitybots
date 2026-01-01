@@ -144,7 +144,9 @@ export async function POST(
       enabled_mcp_servers: assistantData.config?.configurable?.enabled_mcp_servers
     });
 
-    const { threadId, messages, attachments,command } = await request.json();
+    // Read request body once
+    const requestBody = await request.json();
+    const { threadId, messages, attachments, command, config } = requestBody;
 
     // Handle resume commands (for tool approval)
     if (command?.resume) {
@@ -174,13 +176,22 @@ export async function POST(
     // Get the assistant's configurable settings
     const assistantConfig = assistantData.config?.configurable || {};
     
-    // Merge assistant config with runtime context (user_id, assistant_id, thread_id)
+    // Get runtime config from request (including web_search_enabled from toggle)
+    const requestConfig = config?.configurable || {};
+    
+    // Merge assistant config with runtime context
+    // IMPORTANT: web_search_enabled from request takes precedence and defaults to false
     const fullConfig = {
       ...assistantConfig,
+      ...requestConfig,
+      // Explicitly set web_search_enabled to false if not explicitly true in request
+      web_search_enabled: requestConfig.web_search_enabled === true ? true : false,
       user_id: user.id,
       assistant_id: assistantId,
       thread_id: threadId,
     };
+
+    console.log(`[CHAT API] Web search enabled:`, fullConfig.web_search_enabled);
 
     console.log(`[CHAT API] Streaming with config:`, {
       knowledge_base: fullConfig.knowledge_base,

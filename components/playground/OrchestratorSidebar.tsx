@@ -280,7 +280,7 @@ export function OrchestratorSidebar({
 							Orchestrator System Prompt Editor
 						</DialogTitle>
 						<DialogDescription>
-							Edit the orchestrator manager's system prompt with a larger view
+							Edit the orchestrator manager&apos;s system prompt with a larger view.
 						</DialogDescription>
 					</DialogHeader>
 

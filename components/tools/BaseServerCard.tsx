@@ -129,7 +129,7 @@ export function BaseServerCard({
                   </Badge>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground line-clamp-2">
+              <p className="text-xs text-muted-foreground line-clamp-1">
                 {description || "No description provided."}
               </p>
             </div>

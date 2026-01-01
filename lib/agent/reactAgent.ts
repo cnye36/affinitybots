@@ -22,6 +22,7 @@ import { v4 as uuidv4 } from "uuid";
 import { mcpClientFactory, MCPFactoryResult } from "../mcp/mcpClientFactory";
 import { rateLimiter, RateLimitError, TokenUsage } from "../rateLimiting";
 import { createImageGenerationTool } from "../imageGeneration";
+import { createWebSearchTool } from "../tavilySearch";
 
 // Local fallback store for development. On LangGraph Platform, a persistent
 // store is injected into config.store; we only use this if none is provided.
@@ -484,7 +485,29 @@ async function callModel(
     console.error("Failed to add image generation tool:", error);
     // Continue without image generation if there's an error
   }
-  
+
+  // Add web search tool if enabled via config
+  // This is controlled by the frontend toggle in the composer
+  console.log("🌐 Web Search Tool Check:", {
+    enabled: configurable.web_search_enabled,
+    hasTavilyKey: !!process.env.TAVILY_API_KEY,
+  });
+
+  if (configurable.web_search_enabled === true) {
+    try {
+      const webSearchTool = createWebSearchTool();
+      if (!tools.some((t) => t?.name === "web_search")) {
+        tools.push(webSearchTool);
+      }
+      console.log("✅ Added built-in web search tool to agent");
+    } catch (error) {
+      console.error("❌ Failed to add web search tool:", error);
+      // Continue without web search if there's an error
+    }
+  } else {
+    console.log("⏭️  Web search tool NOT added (toggle is disabled)");
+  }
+
   console.log(`Assistant ${userId || assistantId}: Binding ${tools.length} tools to model`);
   console.log(`Enabled servers: ${enabledServersForRun.join(", ") || "none"}`);
   

@@ -170,24 +170,22 @@ export function AgentCard({ assistant, onDelete }: AgentCardProps) {
 
             {/* Agent info */}
             <div className="flex-1 min-w-0">
-              <h3 className="text-lg font-bold mb-1 truncate bg-gradient-to-r from-violet-600 to-purple-600 dark:from-violet-400 dark:to-purple-400 bg-clip-text text-transparent group-hover:from-violet-700 group-hover:to-purple-700 dark:group-hover:from-violet-300 dark:group-hover:to-purple-300 transition-all duration-200">
-                {assistant.name}
-              </h3>
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <h3 className="text-lg font-bold truncate bg-gradient-to-r from-violet-600 to-purple-600 dark:from-violet-400 dark:to-purple-400 bg-clip-text text-transparent group-hover:from-violet-700 group-hover:to-purple-700 dark:group-hover:from-violet-300 dark:group-hover:to-purple-300 transition-all duration-200">
+                  {assistant.name}
+                </h3>
+                <span className="px-2 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20 text-[10px] font-medium whitespace-nowrap flex-shrink-0">
+                  {modelLabel}
+                </span>
+              </div>
               <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
                 {assistant.metadata?.description || "No description provided"}
               </p>
             </div>
           </div>
 
-          {/* Model and tools section */}
+          {/* Tools section */}
           <div className="flex flex-col gap-3 pt-4 border-t border-border/50">
-            {/* Model badge */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary border border-primary/20 text-xs font-medium hover:bg-primary/15 transition-colors duration-200">
-                {modelLabel}
-              </span>
-            </div>
-
             {/* Tools */}
             {enabledServers.length > 0 && (
               <div className="flex items-center gap-2">

@@ -131,19 +131,17 @@ export function AgentListItem({ assistant, onDelete }: AgentListItemProps) {
 
 				{/* Name and description */}
 				<div className="relative flex-1 min-w-0">
-					<h3 className="text-base font-semibold text-foreground group-hover:text-violet-600 transition-colors duration-200 truncate">
-						{assistant.name}
-					</h3>
+					<div className="flex items-center gap-2 flex-wrap">
+						<h3 className="text-base font-semibold text-foreground group-hover:text-violet-600 transition-colors duration-200 truncate">
+							{assistant.name}
+						</h3>
+						<span className="px-2 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20 text-[10px] font-medium whitespace-nowrap">
+							{modelLabel}
+						</span>
+					</div>
 					<p className="text-sm text-muted-foreground line-clamp-1 mt-0.5">
 						{assistant.metadata?.description || "No description provided"}
 					</p>
-				</div>
-
-				{/* Model badge */}
-				<div className="relative hidden sm:flex items-center gap-2 flex-shrink-0">
-					<span className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary border border-primary/20 text-xs font-medium">
-						{modelLabel}
-					</span>
 				</div>
 
 				{/* Tools */}

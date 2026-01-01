@@ -6,6 +6,7 @@ import { OrganizationJsonLd } from '@/components/seo/OrganizationJsonLd'
 import { Toaster } from "@/components/ui/toaster"
 import { CookieBanner } from "@/components/CookieBanner";
 import { Analytics } from "@vercel/analytics/next";
+import { SupportWidget } from "@/components/support-widget/SupportWidget";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -88,6 +89,7 @@ export default function RootLayout({
           <CookieBanner />
           <Toaster />
           <Analytics />
+          <SupportWidget />
         </ThemeProvider>
       </body>
     </html>

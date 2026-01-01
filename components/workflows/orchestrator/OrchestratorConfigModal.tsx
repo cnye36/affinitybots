@@ -59,15 +59,27 @@ export function OrchestratorConfigModal({
 Your job is to:
 1. Analyze the user's request
 2. Break it down into sub-tasks
-3. Delegate each sub-task to the appropriate agent
+3. Delegate each sub-task to the appropriate agent (ONE agent at a time)
 4. Review agent outputs and decide next steps
 5. Signal completion when the goal is achieved
 
 Available agents and their capabilities will be provided below.
 
-Respond with JSON only:
-- To delegate: {"agent": "Agent Name", "instruction": "what to do"}
-- To complete: {"complete": true, "final_result": "summary"}`;
+CRITICAL: Respond with ONLY valid JSON. No markdown, no explanations.
+
+To delegate work to ONE agent, respond with JSON only:
+{
+  "agent": "agent_name",
+  "instruction": "what you want them to do"
+}
+
+To signal completion, respond with JSON only:
+{
+  "complete": true,
+  "final_result": "summary of work completed"
+}
+
+Remember: Delegate ONE agent at a time, not a plan with multiple agents.`;
 
   const [systemPrompt, setSystemPrompt] = useState(
     initialConfig?.system_prompt || defaultSystemPrompt
@@ -484,22 +496,54 @@ function TimelineStep({
   totalSteps: number;
   outputFormat: "json" | "formatted";
 }) {
-  // Extract content from JSON string
+  // Extract content from JSON string for formatted display
   const extractContent = (jsonString: string | undefined): string => {
     if (!jsonString) return "";
     
     try {
       const parsed = JSON.parse(jsonString);
       
-      // Try to extract content from various structures
+      // If it's already a string, return it
       if (typeof parsed === "string") return parsed;
       
-      // Check for content in messages array
+      // Check for content in messages array (common in orchestrator responses)
       if (Array.isArray(parsed.messages) && parsed.messages.length > 0) {
+        // Get the last message's content
         const lastMessage = parsed.messages[parsed.messages.length - 1];
         if (lastMessage?.content) {
-          return typeof lastMessage.content === "string" ? lastMessage.content : JSON.stringify(lastMessage.content, null, 2);
+          const content = typeof lastMessage.content === "string" 
+            ? lastMessage.content 
+            : JSON.stringify(lastMessage.content, null, 2);
+          
+          // Try to extract JSON from content if it contains agent delegation info
+          try {
+            const jsonMatch = content.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              const innerJson = JSON.parse(jsonMatch[0]);
+              // If it's a delegation or completion, format it nicely
+              if (innerJson.instruction) {
+                return innerJson.instruction;
+              }
+              if (innerJson.final_result) {
+                return innerJson.final_result;
+              }
+            }
+          } catch {
+            // Continue with the content as-is
+          }
+          
+          return content;
         }
+      }
+      
+      // Check for instruction field (from agent delegation)
+      if (parsed.instruction && typeof parsed.instruction === "string") {
+        return parsed.instruction;
+      }
+      
+      // Check for final_result field
+      if (parsed.final_result && typeof parsed.final_result === "string") {
+        return parsed.final_result;
       }
       
       // Check for content field directly
@@ -512,16 +556,21 @@ function TimelineStep({
         return parsed.result.content;
       }
       
+      // Check for agent and instruction together (delegation format)
+      if (parsed.agent && parsed.instruction) {
+        return `Delegating to ${parsed.agent}:\n\n${parsed.instruction}`;
+      }
+      
       // If it's an object with a single string field, return that
       const keys = Object.keys(parsed);
       if (keys.length === 1 && typeof parsed[keys[0]] === "string") {
         return parsed[keys[0]];
       }
       
-      // Otherwise return formatted JSON
+      // Otherwise return formatted JSON (fallback)
       return JSON.stringify(parsed, null, 2);
     } catch {
-      // If it's not valid JSON, return as-is
+      // If it's not valid JSON, return as-is (might already be plain text)
       return jsonString;
     }
   };
@@ -546,7 +595,17 @@ function TimelineStep({
             </span>
           </div>
           {step.decision && (
-            <p className="text-sm text-muted-foreground mb-3 italic">{step.decision}</p>
+            <div className="mb-3">
+              {outputFormat === "formatted" ? (
+                <div className="prose prose-sm max-w-none text-foreground dark:prose-invert break-words">
+                  <ReactMarkdown>{extractContent(step.decision)}</ReactMarkdown>
+                </div>
+              ) : (
+                <pre className="text-sm text-muted-foreground whitespace-pre-wrap font-mono bg-muted/50 p-3 rounded overflow-auto">
+                  {step.decision}
+                </pre>
+              )}
+            </div>
           )}
           {step.agent && step.instruction && (
             <div className="mt-2 p-3 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border border-blue-200/50 dark:border-blue-800/50">

@@ -129,7 +129,7 @@ export function Chat({ assistantId, threadId, onThreadId }: { assistantId: strin
     });
 
   
-  const handleSend = (text: string) => {
+  const handleSend = (text: string, attachments: any[], webSearchEnabled: boolean) => {
     const newMessage = { type: "human" as const, content: text };
     const isFirstMessage = uiMessages.length === 0;
 
@@ -142,6 +142,11 @@ export function Chat({ assistantId, threadId, onThreadId }: { assistantId: strin
         // Add metadata for thread creation
         metadata: {
           assistant_id: assistantId,
+        },
+        config: {
+          configurable: {
+            web_search_enabled: webSearchEnabled,
+          },
         },
         optimisticValues(prev) {
           const prevMessages = (prev as any).messages ?? [];
@@ -164,7 +169,7 @@ export function Chat({ assistantId, threadId, onThreadId }: { assistantId: strin
         <Thread
           messages={uiMessages}
           isRunning={thread.isLoading}
-          onSendMessage={(content) => handleSend(content)}
+          onSendMessage={(content, attachments, webSearchEnabled) => handleSend(content, attachments, webSearchEnabled)}
           onCancel={() => thread.stop()}
         />
       </div>

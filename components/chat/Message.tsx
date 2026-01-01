@@ -8,8 +8,10 @@ import { AttachmentUI } from "./attachments/AttachmentUI";
 import type { ChatMessage as MessageType } from "@/components/chat/types";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import rehypeRaw from "rehype-raw";
 import { cn } from "@/lib/utils";
 import { ReasoningDisplay } from "./ReasoningDisplay";
+import { WebSearchResults, extractWebSearchResults } from "./WebSearchResults";
 
 interface MessageProps {
   message: MessageType;
@@ -147,6 +149,9 @@ export const AssistantMessage: FC<MessageProps> = ({ message, isThinking = false
   };
 
   const hasContent = shouldShowContent(message.content);
+  
+  // Extract web search results from content
+  const { cleanedContent, hasWebSearch } = extractWebSearchResults(message.content);
 
   // Thinking animation component
   const ThinkingDots = () => {
@@ -200,56 +205,141 @@ export const AssistantMessage: FC<MessageProps> = ({ message, isThinking = false
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="text-foreground leading-7 break-words">
+      <div className="text-foreground text-base leading-7 break-words">
         {isThinking && !hasContent ? (
           <ThinkingDots />
         ) : hasContent ? (
           <>
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              className="prose dark:prose-invert max-w-none"
-              components={{
-                h1: ({ className, ...props }) => (
-                  <h1 className={cn("mb-8 scroll-m-20 text-4xl font-extrabold tracking-tight last:mb-0", className)} {...props} />
-                ),
-                h2: ({ className, ...props }) => (
-                  <h2 className={cn("mb-4 mt-8 scroll-m-20 text-3xl font-semibold tracking-tight first:mt-0 last:mb-0", className)} {...props} />
-                ),
-                h3: ({ className, ...props }) => (
-                  <h3 className={cn("mb-4 mt-6 scroll-m-20 text-2xl font-semibold tracking-tight first:mt-0 last:mb-0", className)} {...props} />
-                ),
-                p: ({ className, ...props }) => (
-                  <p className={cn("mb-5 mt-5 leading-7 first:mt-0 last:mb-0", className)} {...props} />
-                ),
-                a: ({ className, ...props }) => (
-                  <a className={cn("text-primary font-medium underline underline-offset-4", className)} {...props} />
-                ),
-                img: ({ ...props }) => (
-                  <MarkdownImage src={(props as any).src} alt={(props as any).alt} />
-                ),
-                ul: ({ className, ...props }) => (
-                  <ul className={cn("my-5 ml-6 list-disc [&>li]:mt-2", className)} {...props} />
-                ),
-                ol: ({ className, ...props }) => (
-                  <ol className={cn("my-5 ml-6 list-decimal [&>li]:mt-2", className)} {...props} />
-                ),
-                code: ({ className, inline, ...props }: any) => (
-                  <code
-                    className={cn(
-                      inline ? "bg-muted rounded border px-1 py-0.5 font-mono text-sm" : "block",
-                      className
-                    )}
-                    {...props}
-                  />
-                ),
-                pre: ({ className, ...props }) => (
-                  <pre className={cn("bg-muted rounded-lg p-4 overflow-x-auto my-4", className)} {...props} />
-                ),
-              }}
-            >
-              {message.content}
-            </ReactMarkdown>
+            <div className="markdown-content">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                rehypePlugins={[rehypeRaw]}
+                components={{
+                  h1: ({ className, children, ...props }) => (
+                    <h1 className={cn("mb-4 mt-6 text-2xl font-bold text-foreground first:mt-0", className)} {...props}>
+                      {children}
+                    </h1>
+                  ),
+                  h2: ({ className, children, ...props }) => (
+                    <h2 className={cn("mb-3 mt-5 text-xl font-semibold text-foreground first:mt-0", className)} {...props}>
+                      {children}
+                    </h2>
+                  ),
+                  h3: ({ className, children, ...props }) => (
+                    <h3 className={cn("mb-3 mt-4 text-lg font-semibold text-foreground first:mt-0", className)} {...props}>
+                      {children}
+                    </h3>
+                  ),
+                  h4: ({ className, children, ...props }) => (
+                    <h4 className={cn("mb-2 mt-4 text-base font-semibold text-foreground first:mt-0", className)} {...props}>
+                      {children}
+                    </h4>
+                  ),
+                  h5: ({ className, children, ...props }) => (
+                    <h5 className={cn("mb-2 mt-3 text-base font-semibold text-foreground first:mt-0", className)} {...props}>
+                      {children}
+                    </h5>
+                  ),
+                  h6: ({ className, children, ...props }) => (
+                    <h6 className={cn("mb-2 mt-3 text-sm font-semibold text-foreground first:mt-0", className)} {...props}>
+                      {children}
+                    </h6>
+                  ),
+                  p: ({ className, children, ...props }) => (
+                    <p className={cn("mb-4 text-base leading-7 text-foreground first:mt-0 last:mb-0", className)} {...props}>
+                      {children}
+                    </p>
+                  ),
+                  a: ({ className, children, ...props }) => (
+                    <a className={cn("text-primary font-medium underline underline-offset-4 hover:text-primary/80", className)} {...props}>
+                      {children}
+                    </a>
+                  ),
+                  img: ({ ...props }) => (
+                    <MarkdownImage src={(props as any).src} alt={(props as any).alt} />
+                  ),
+                  ul: ({ className, children, ...props }) => (
+                    <ul className={cn("my-4 ml-6 list-disc space-y-1", className)} {...props}>
+                      {children}
+                    </ul>
+                  ),
+                  ol: ({ className, children, ...props }) => (
+                    <ol className={cn("my-4 ml-6 list-decimal space-y-1", className)} {...props}>
+                      {children}
+                    </ol>
+                  ),
+                  li: ({ className, children, ...props }) => (
+                    <li className={cn("text-base leading-7 text-foreground", className)} {...props}>
+                      {children}
+                    </li>
+                  ),
+                  blockquote: ({ className, children, ...props }) => (
+                    <blockquote className={cn("my-4 border-l-4 border-muted-foreground/30 pl-4 italic text-base text-muted-foreground", className)} {...props}>
+                      {children}
+                    </blockquote>
+                  ),
+                  hr: ({ className, ...props }) => (
+                    <hr className={cn("my-6 border-border", className)} {...props} />
+                  ),
+                  code: ({ className, inline, children, ...props }: any) => {
+                    if (inline) {
+                      return (
+                        <code
+                          className={cn("bg-muted rounded border px-1.5 py-0.5 font-mono text-sm text-foreground", className)}
+                          {...props}
+                        >
+                          {children}
+                        </code>
+                      );
+                    }
+                    return (
+                      <code
+                        className={cn("block bg-muted rounded-lg p-3 font-mono text-sm text-foreground overflow-x-auto", className)}
+                        {...props}
+                      >
+                        {children}
+                      </code>
+                    );
+                  },
+                  pre: ({ className, children, ...props }) => (
+                    <pre className={cn("bg-muted rounded-lg p-4 overflow-x-auto my-4 text-sm", className)} {...props}>
+                      {children}
+                    </pre>
+                  ),
+                  table: ({ className, children, ...props }) => (
+                    <div className="my-4 overflow-x-auto">
+                      <table className={cn("w-full border-collapse border border-border", className)} {...props}>
+                        {children}
+                      </table>
+                    </div>
+                  ),
+                  th: ({ className, children, ...props }) => (
+                    <th className={cn("border border-border px-4 py-2 text-left font-semibold bg-muted text-base", className)} {...props}>
+                      {children}
+                    </th>
+                  ),
+                  td: ({ className, children, ...props }) => (
+                    <td className={cn("border border-border px-4 py-2 text-base", className)} {...props}>
+                      {children}
+                    </td>
+                  ),
+                  strong: ({ className, children, ...props }) => (
+                    <strong className={cn("font-semibold text-foreground", className)} {...props}>
+                      {children}
+                    </strong>
+                  ),
+                  em: ({ className, children, ...props }) => (
+                    <em className={cn("italic text-foreground", className)} {...props}>
+                      {children}
+                    </em>
+                  ),
+                }}
+              >
+                {cleanedContent}
+              </ReactMarkdown>
+            </div>
             {message.reasoning && <ReasoningDisplay reasoning={message.reasoning} />}
+            {hasWebSearch && <WebSearchResults content={message.content} />}
           </>
         ) : null}
       </div>

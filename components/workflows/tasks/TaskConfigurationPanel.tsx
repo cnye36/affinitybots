@@ -220,6 +220,38 @@ export function TaskConfigurationPanel({
             </div>
           </div>
 
+          {/* Web Search Section */}
+          <div className="space-y-4 rounded-lg border border-teal-200/30 dark:border-teal-800/30 bg-background/50 p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="h-1 w-1 rounded-full bg-teal-500" />
+              <h4 className="text-sm font-medium text-foreground">Web Search</h4>
+            </div>
+
+            <div className="rounded-lg border border-teal-200/50 dark:border-teal-800/50 bg-gradient-to-br from-teal-50/50 to-cyan-50/50 dark:from-teal-950/30 dark:to-cyan-950/30 p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium text-sm text-foreground">Enable web search</p>
+                    <Switch
+                      checked={(currentTask as any)?.config?.web_search_enabled || false}
+                      onCheckedChange={(checked) => {
+                        setCurrentTask({
+                          ...currentTask,
+                          config: {
+                            ...currentTask.config,
+                            web_search_enabled: checked,
+                          },
+                        });
+                      }}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    When enabled, the agent can search the web for current information, news, and real-time data during workflow execution.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
 
           {/* Output Options */}
           <div className="space-y-4 rounded-lg border border-violet-200/30 dark:border-violet-800/30 bg-background/50 p-4">

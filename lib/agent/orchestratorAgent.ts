@@ -96,20 +96,26 @@ async function callManager(
 Available Agents:
 ${agentsList}
 
-Instructions:
-To delegate work to an agent, respond with JSON only:
+CRITICAL: You must respond with ONLY valid JSON. No markdown, no explanations, no additional text.
+
+To delegate work to ONE agent, respond with JSON only:
 {
   "agent": "agent_name",
   "instruction": "what you want them to do"
 }
 
-To signal completion, respond with JSON only:
+IMPORTANT: 
+- Delegate to ONE agent at a time (not a list/plan of multiple agents)
+- Use the exact agent name from the list above
+- After the agent completes, you will see their output and can then delegate to the next agent
+
+To signal completion (when all work is done), respond with JSON only:
 {
   "complete": true,
   "final_result": "summary of work completed"
 }
 
-IMPORTANT: Respond with ONLY valid JSON. No additional text before or after.`;
+Remember: Respond with ONLY the JSON object, nothing else.`;
 
   try {
     // Normalize model format - handle both legacy (model name only) and new (provider:model) formats
@@ -153,27 +159,39 @@ IMPORTANT: Respond with ONLY valid JSON. No additional text before or after.`;
     // Parse manager's decision
     let decision;
     const content = typeof response.content === "string" ? response.content : String(response.content);
+    
+    console.log(`[Manager] Raw response content (first 500 chars):`, content.substring(0, 500));
 
     try {
-      // Try to extract JSON from the response (in case there's extra text)
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        decision = JSON.parse(jsonMatch[0]);
+      // Try to extract JSON from the response (in case there's extra text like markdown code blocks)
+      // First try to find JSON in code blocks
+      const codeBlockMatch = content.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
+      if (codeBlockMatch) {
+        decision = JSON.parse(codeBlockMatch[1]);
       } else {
-        decision = JSON.parse(content);
+        // Try to find JSON object directly
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          decision = JSON.parse(jsonMatch[0]);
+        } else {
+          decision = JSON.parse(content);
+        }
       }
+      
+      console.log(`[Manager] Parsed decision:`, JSON.stringify(decision, null, 2));
     } catch (parseError) {
-      console.warn("Manager did not return valid JSON, treating as completion:", content);
+      console.error("[Manager] Failed to parse JSON response:", parseError);
+      console.warn("[Manager] Raw content:", content);
       return {
-        messages: [new AIMessage(content)],
+        messages: [new AIMessage(`Error: Manager did not return valid JSON. Response: ${content.substring(0, 200)}`)],
         is_complete: true,
         next_agent: null,
       };
     }
 
     // Handle completion signal
-    if (decision.complete) {
-      console.log("Manager signaled completion");
+    if (decision.complete === true) {
+      console.log("[Manager] Signaled completion");
       return {
         messages: [new AIMessage(decision.final_result || "Task completed")],
         is_complete: true,
@@ -181,9 +199,22 @@ IMPORTANT: Respond with ONLY valid JSON. No additional text before or after.`;
       };
     }
 
-    // Handle agent delegation
-    if (decision.agent) {
-      console.log(`Manager delegating to: ${decision.agent}`);
+    // Handle agent delegation - check for agent field (required for delegation)
+    if (decision.agent && typeof decision.agent === "string") {
+      console.log(`[Manager] Delegating to agent: ${decision.agent}`);
+      console.log(`[Manager] Instruction: ${decision.instruction || "No instruction provided"}`);
+      
+      // Validate that the agent exists in available agents
+      if (!state.available_agents[decision.agent]) {
+        const availableAgentNames = Object.keys(state.available_agents);
+        console.error(`[Manager] Agent "${decision.agent}" not found. Available agents:`, availableAgentNames);
+        return {
+          messages: [new AIMessage(`Error: Agent "${decision.agent}" not found. Available agents: ${availableAgentNames.join(", ")}`)],
+          is_complete: true,
+          next_agent: null,
+        };
+      }
+      
       return {
         messages: [response],
         next_agent: decision.agent,
@@ -191,10 +222,14 @@ IMPORTANT: Respond with ONLY valid JSON. No additional text before or after.`;
       };
     }
 
-    // Fallback: no clear decision
-    console.warn("Manager decision unclear, ending workflow");
+    // Fallback: no clear decision - log what we received for debugging
+    console.error("[Manager] Decision unclear - missing required fields");
+    console.error("[Manager] Decision keys:", Object.keys(decision));
+    console.error("[Manager] Full decision:", JSON.stringify(decision, null, 2));
+    console.error("[Manager] Available agents:", Object.keys(state.available_agents));
+    
     return {
-      messages: [response],
+      messages: [new AIMessage(`Error: Manager decision unclear. Expected {"agent": "agent_name", "instruction": "..."} or {"complete": true, "final_result": "..."}. Got: ${JSON.stringify(decision)}`)],
       is_complete: true,
       next_agent: null,
     };

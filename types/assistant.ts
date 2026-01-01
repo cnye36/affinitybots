@@ -49,6 +49,11 @@ export interface AssistantConfiguration {
    * If not provided, all tools from enabled servers are loaded.
    */
   selected_tools?: string[];
+  /**
+   * Runtime flag to enable web search tool for this request.
+   * Controlled by the frontend toggle in the chat composer.
+   */
+  web_search_enabled?: boolean;
 } 
 
 export interface AssistantMetadata {

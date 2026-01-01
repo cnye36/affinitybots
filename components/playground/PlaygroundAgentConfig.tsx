@@ -9,6 +9,8 @@ import {
 } from "@/components/ui/accordion"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
 import {
 	FileText,
 	Wrench,
@@ -17,6 +19,7 @@ import {
 	Cpu,
 	Loader2,
 	ArrowRight,
+	Globe,
 } from "lucide-react"
 import { ModelConfig } from "@/components/configuration/ModelConfig"
 import { PromptsConfig } from "@/components/configuration/PromptsConfig"
@@ -310,7 +313,33 @@ export function PlaygroundAgentConfig({ assistant, onConfigChange }: PlaygroundA
 							</div>
 						</AccordionContent>
 					</AccordionItem>
+				</Accordion>
 
+				{/* Web Search Toggle - Simple inline control */}
+				<div className="border border-teal-200/30 dark:border-teal-800/30 rounded-lg px-4 py-3 bg-gradient-to-br from-teal-50/30 to-cyan-50/30 dark:from-teal-950/20 dark:to-cyan-950/20">
+					<div className="flex items-center justify-between">
+						<div className="flex items-center gap-2">
+							<Globe className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+							<div>
+								<Label htmlFor="web-search-toggle" className="text-sm font-medium cursor-pointer">
+									Web Search
+								</Label>
+								<p className="text-xs text-muted-foreground">
+									Search the web for current information
+								</p>
+							</div>
+						</div>
+						<Switch
+							id="web-search-toggle"
+							checked={config.web_search_enabled || false}
+							onCheckedChange={(checked) =>
+								handleConfigurableChange("web_search_enabled", checked)
+							}
+						/>
+					</div>
+				</div>
+
+				<Accordion type="multiple" className="space-y-3">
 					{/* Tools Section */}
 					<AccordionItem value="tools" className="border border-orange-200/30 dark:border-orange-800/30 rounded-lg px-4 bg-gradient-to-br from-orange-50/30 to-amber-50/30 dark:from-orange-950/20 dark:to-amber-950/20">
 						<AccordionTrigger className="hover:no-underline py-2.5">

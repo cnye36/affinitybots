@@ -9,6 +9,7 @@ import { OFFICIAL_MCP_SERVERS } from "@/lib/mcp/officialMcpServers";
 import { OfficialServerCard } from "@/components/tools/OfficialServerCard";
 import { CustomServerCard } from "@/components/tools/CustomServerCard";
 import { AddMCPServerModal } from "@/components/tools/AddMCPServerModal";
+import { useViewPreference } from "@/hooks/useViewPreference";
 
 const ITEMS_PER_PAGE = 12;
 
@@ -19,7 +20,7 @@ export default function ToolsPage() {
 	const [addOpen, setAddOpen] = useState(false);
 	const [searchTerm, setSearchTerm] = useState("");
 	const [debouncedSearch, setDebouncedSearch] = useState("");
-	const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+	const { viewMode, setViewMode } = useViewPreference("tools", "grid");
 	const [currentPage, setCurrentPage] = useState(1);
 	const [filterMode, setFilterMode] = useState<"all" | "configured">("all");
 
@@ -279,7 +280,7 @@ export default function ToolsPage() {
 								})}
 							</div>
 						) : (
-							<div className="space-y-2">
+							<div className="space-y-3">
 								{paginatedServers.map((server: any) => {
 									// Check if it's a user-added server
 									const isUserAdded = filteredUserServers.some((s: any) => s.id === server.id);

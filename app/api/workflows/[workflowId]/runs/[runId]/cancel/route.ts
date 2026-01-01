@@ -74,7 +74,7 @@ export async function POST(
 				// Try to cancel the run if we have a run_id
 				if (langgraphRunId) {
 					try {
-						await client.runs.cancel(langgraphRunId)
+						await client.runs.cancel(langgraphRunId, workflowId)
 					} catch (e) {
 						console.warn("Failed to cancel LangGraph run (may already be completed):", e)
 					}

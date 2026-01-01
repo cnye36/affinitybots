@@ -132,3 +132,21 @@
     hsl(var(--primary) / 0.7) 60%
   );
 }
+
+/* Ensure markdown content has consistent base styling */
+.markdown-content {
+  font-size: 1rem;
+  line-height: 1.75rem;
+}
+
+.markdown-content > * {
+  font-size: inherit;
+}
+
+.markdown-content p,
+.markdown-content li,
+.markdown-content td,
+.markdown-content th {
+  font-size: 1rem;
+  line-height: 1.75rem;
+}

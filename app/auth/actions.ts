@@ -4,6 +4,7 @@ import { createClient } from "@/supabase/server";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
+import { notifyAdminOfNewSignup } from "@/lib/admin/notifications";
 
 export async function signIn(formData: FormData) {
   const supabase = await createClient();
@@ -62,6 +63,11 @@ export async function signUp(formData: FormData) {
   if (!signUpData.user) {
     return { error: "User registration failed. Please try again." };
   }
+
+  // Notify admin of new signup (don't await - fire and forget to avoid blocking)
+  notifyAdminOfNewSignup(email, signUpData.user.id).catch((err) => {
+    console.error("Failed to send admin notification for new signup:", err)
+  })
 
   revalidatePath("/", "layout");
   redirect(`/auth/verify-email?email=${encodeURIComponent(email)}`);
