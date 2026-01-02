@@ -17,13 +17,22 @@ export async function POST(
     // Fetch trigger config
     const { data: trig } = await supabase
       .from("workflow_triggers")
-      .select("*, workflows(owner_id)")
+      .select("*, workflows(owner_id, is_active)")
       .eq("trigger_id", triggerId)
       .eq("workflow_id", workflowId)
       .single();
     if (!trig) return NextResponse.json({ error: "Trigger not found" }, { status: 404 });
     if (trig.trigger_type !== "webhook") {
       return NextResponse.json({ error: "Trigger is not a webhook" }, { status: 400 });
+    }
+
+    // Check if workflow is active (skip check for manual triggers since they're on-demand)
+    const workflow = trig.workflows as any;
+    if (workflow && !workflow.is_active) {
+      return NextResponse.json(
+        { error: "Workflow is not active", message: "This workflow must be activated before it can be triggered" },
+        { status: 403 }
+      );
     }
     const expectedSecret = (trig.config?.webhook_secret || trig.config?.secret) as string | undefined;
     if (!expectedSecret) {

@@ -3,10 +3,10 @@ import { createClient } from "@/supabase/server";
 
 export async function GET(
   request: NextRequest,
-  props: { params: Promise<{ qualifiedName: string }> }
+  props: { params: Promise<{ serverSlug: string }> }
 ) {
   const params = await props.params;
-  const { qualifiedName } = params;
+  const { serverSlug } = params;
 
   try {
     const supabase = await createClient();
@@ -20,9 +20,9 @@ export async function GET(
     // Get server configuration from Supabase
     const { data, error } = await supabase
       .from('user_mcp_servers')
-      .select('qualified_name, config, is_enabled, created_at, updated_at')
+      .select('server_slug, config, is_enabled, created_at, updated_at')
       .eq('user_id', user.id)
-      .eq('qualified_name', decodeURIComponent(qualifiedName))
+      .eq('server_slug', decodeURIComponent(serverSlug))
       .single();
 
     if (error) {
@@ -50,10 +50,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  props: { params: Promise<{ qualifiedName: string }> }
+  props: { params: Promise<{ serverSlug: string }> }
 ) {
   const params = await props.params;
-  const { qualifiedName } = params;
+  const { serverSlug } = params;
 
   try {
     const body = await request.json();
@@ -77,7 +77,7 @@ export async function PUT(
       .from('user_mcp_servers')
       .upsert({
         user_id: user.id,
-        qualified_name: decodeURIComponent(qualifiedName),
+        server_slug: decodeURIComponent(serverSlug),
         config: config,
         is_enabled: isEnabled,
         updated_at: new Date().toISOString()
@@ -101,10 +101,10 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  props: { params: Promise<{ qualifiedName: string }> }
+  props: { params: Promise<{ serverSlug: string }> }
 ) {
   const params = await props.params;
-  const { qualifiedName } = params;
+  const { serverSlug } = params;
 
   try {
     const supabase = await createClient();
@@ -119,7 +119,7 @@ export async function DELETE(
       .from('user_mcp_servers')
       .delete()
       .eq('user_id', user.id)
-      .eq('qualified_name', decodeURIComponent(qualifiedName))
+      .eq('server_slug', decodeURIComponent(serverSlug))
       .select()
       .single();
 

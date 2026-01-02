@@ -118,6 +118,116 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     authType: "oauth",
     requiresSetup: true,
   },
+  {
+    qualifiedName: "sentry",
+    displayName: "Sentry",
+    description:
+      "Official Sentry MCP server. Access error tracking and performance monitoring data. Search issues, query projects, create DSNs, and use Seer AI to automatically fix issues. OAuth authentication with 16+ tool calls for comprehensive error management.",
+    logoUrl: "https://sentry-brand.storage.googleapis.com/sentry-glyph-black.png",
+    url: "https://mcp.sentry.dev/mcp",
+    docsUrl: "https://docs.sentry.io/product/sentry-mcp/",
+    authType: "oauth",
+    requiresSetup: true,
+  },
+  {
+    qualifiedName: "zapier",
+    displayName: "Zapier",
+    description:
+      "Official Zapier MCP server. Connect to 8,000+ apps and 30,000+ actions through a single integration. Automate workflows across your favorite tools including Gmail, Slack, Google Sheets, and thousands more. OAuth or API key authentication.",
+    logoUrl: "https://cdn.zapier.com/ssr/f37df0e6a8edf51e51d218c00db0fdde73afe1be/_next/static/images/favicon-080660e80c21e7b657e15e107d4a8c2e.png",
+    url: process.env.ZAPIER_MCP_URL || "https://mcp.zapier.com",
+    docsUrl: "https://zapier.com/mcp",
+    authType: "oauth",
+    requiresSetup: true,
+  },
+  {
+    qualifiedName: "firecrawl",
+    displayName: "FireCrawl",
+    description:
+      "Official FireCrawl MCP server by Mendable. Advanced web scraping and crawling capabilities with structured data extraction. Transform any website into clean, AI-ready markdown or structured data. Requires FireCrawl API key.",
+    logoUrl: "https://www.firecrawl.dev/favicon.ico",
+    url: process.env.FIRECRAWL_MCP_URL || "https://mcp.firecrawl.dev",
+    docsUrl: "https://docs.firecrawl.dev/mcp-server",
+    authType: "api_key",
+    requiresSetup: true,
+  },
+  {
+    qualifiedName: "browserbase",
+    displayName: "Browserbase",
+    description:
+      "Official Browserbase MCP server. Cloud-based browser automation powered by Stagehand. Remotely control browsers for testing, scraping, and visual analysis without local infrastructure. Requires Browserbase API key.",
+    logoUrl: "https://www.browserbase.com/favicon.ico",
+    url: process.env.BROWSERBASE_MCP_URL || "https://api.browserbase.com/mcp",
+    docsUrl: "https://docs.browserbase.com/integrations/mcp/introduction",
+    authType: "api_key",
+    requiresSetup: true,
+  },
+  {
+    qualifiedName: "prisma-postgres",
+    displayName: "Prisma Postgres",
+    description:
+      "Official Prisma MCP server. Manage Prisma Postgres databases with AI assistance. Create backups, generate connection strings, and restore databases. Integrates with Prisma Console for enterprise database operations.",
+    logoUrl: "https://www.prisma.io/images/favicon-32x32.png",
+    url: "https://mcp.prisma.io/mcp",
+    docsUrl: "https://www.prisma.io/docs/postgres/integrations/mcp-server",
+    authType: "api_key",
+    requiresSetup: true,
+  },
+  {
+    qualifiedName: "snowflake",
+    displayName: "Snowflake",
+    description:
+      "Official Snowflake MCP server. Fully managed remote server providing secure access to Snowflake's data platform. Query structured data with Cortex Analyst, search unstructured data, and orchestrate AI agents with enterprise-grade security.",
+    logoUrl: "https://www.snowflake.com/wp-content/themes/snowflake/assets/img/brand-guidelines/logo-sno-blue-example.svg",
+    url: process.env.SNOWFLAKE_MCP_URL || "https://mcp.snowflake.com",
+    docsUrl: "https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents-mcp",
+    authType: "oauth",
+    requiresSetup: true,
+  },
+  {
+    qualifiedName: "dbt",
+    displayName: "dbt",
+    description:
+      "Official dbt Labs MCP server. Connect AI workflows to dbt Cloud for data transformation. Execute CLI commands, access Discovery API, query Semantic Layer, and manage jobs through the Admin API. Remote cloud-hosted server.",
+    logoUrl: "https://www.getdbt.com/ui/img/favicon.ico",
+    url: process.env.DBT_MCP_URL || "https://mcp.dbt.com",
+    docsUrl: "https://docs.getdbt.com/docs/dbt-ai/about-mcp",
+    authType: "api_key",
+    requiresSetup: true,
+  },
+  {
+    qualifiedName: "dynatrace",
+    displayName: "Dynatrace",
+    description:
+      "Official Dynatrace MCP server. Real-time observability and monitoring data for production environments. Fetch metrics, logs, anomalies, and security events directly into your development workflow. Requires Dynatrace API token.",
+    logoUrl: "https://dt-cdn.net/wp-content/uploads/2021/11/dynatrace-logo-icon.png",
+    url: process.env.DYNATRACE_MCP_URL || "https://mcp.dynatrace.com",
+    docsUrl: "https://github.com/dynatrace-oss/dynatrace-mcp",
+    authType: "api_key",
+    requiresSetup: true,
+  },
+  {
+    qualifiedName: "aws-knowledge",
+    displayName: "AWS Knowledge",
+    description:
+      "Official AWS MCP server. Fully managed remote server providing up-to-date AWS documentation, API references, code samples, and regional availability information. Search AWS docs and get service recommendations through natural language.",
+    logoUrl: "https://a0.awsstatic.com/libra-css/images/logos/aws_logo_smile_1200x630.png",
+    url: "https://knowledge-mcp.global.api.aws",
+    docsUrl: "https://awslabs.github.io/mcp/servers/aws-knowledge-mcp-server",
+    authType: "api_key",
+    requiresSetup: true,
+  },
+  {
+    qualifiedName: "brave-search",
+    displayName: "Brave Search",
+    description:
+      "Official Brave Search MCP server. Comprehensive web search with rich result types, image search, news, and local business discovery. Privacy-focused search API with AI-generated descriptions for places. Requires Brave API key.",
+    logoUrl: "https://brave.com/static-assets/images/brave-logo-sans-text.svg",
+    url: process.env.BRAVE_SEARCH_MCP_URL || "https://mcp.brave.com",
+    docsUrl: "https://brave.com/search/api/",
+    authType: "api_key",
+    requiresSetup: true,
+  },
 
 ];
 

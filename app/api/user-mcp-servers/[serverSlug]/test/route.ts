@@ -5,10 +5,10 @@ import { createGoogleDriveClient } from "@/lib/mcp/googleDriveMcpClient";
 
 export async function POST(
   request: NextRequest,
-  props: { params: Promise<{ qualifiedName: string }> }
+  props: { params: Promise<{ serverSlug: string }> }
 ) {
   const params = await props.params;
-  const { qualifiedName } = params;
+  const { serverSlug } = params;
 
   try {
     const body = await request.json();
@@ -16,9 +16,9 @@ export async function POST(
 
     // Try to find the server URL from official servers or user-added servers
     let deploymentUrl: string | null = null;
-    
+
     // Check official servers first
-    const officialServer = findOfficialServer(decodeURIComponent(qualifiedName));
+    const officialServer = findOfficialServer(decodeURIComponent(serverSlug));
     if (officialServer && officialServer.url) {
       deploymentUrl = officialServer.url;
     } else {
@@ -27,23 +27,23 @@ export async function POST(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!
       );
-      
+
       const { data: userServer } = await supabase
         .from('user_mcp_servers')
         .select('url')
-        .eq('qualified_name', decodeURIComponent(qualifiedName))
+        .eq('server_slug', decodeURIComponent(serverSlug))
         .single();
-      
+
       if (userServer && userServer.url) {
         deploymentUrl = userServer.url;
       }
     }
 
     if (!deploymentUrl) {
-      return NextResponse.json({ 
-        error: 'No URL configured for this server', 
-        details: { 
-          server: qualifiedName,
+      return NextResponse.json({
+        error: 'No URL configured for this server',
+        details: {
+          server: serverSlug,
           message: 'Server must have a URL to test the connection'
         }
       }, { status: 400 });
@@ -52,13 +52,13 @@ export async function POST(
     console.log('Testing MCP server:', deploymentUrl);
 
     // Check if this is a Google Drive MCP server (custom protocol)
-    const isGoogleDriveServer = qualifiedName.toLowerCase().includes('google') || 
-                                qualifiedName.toLowerCase().includes('drive') ||
+    const isGoogleDriveServer = serverSlug.toLowerCase().includes('google') ||
+                                serverSlug.toLowerCase().includes('drive') ||
                                 deploymentUrl.includes('localhost:3002') ||
                                 deploymentUrl.includes('google-drive');
 
     if (isGoogleDriveServer) {
-      return await testGoogleDriveConnection(qualifiedName, deploymentUrl);
+      return await testGoogleDriveConnection(serverSlug, deploymentUrl);
     }
 
     // Test the connection using a simple HTTP request to the MCP server
@@ -225,7 +225,7 @@ export async function POST(
 /**
  * Test Google Drive MCP server connection with OAuth validation
  */
-async function testGoogleDriveConnection(qualifiedName: string, serverUrl: string): Promise<NextResponse> {
+async function testGoogleDriveConnection(serverSlug: string, serverUrl: string): Promise<NextResponse> {
   try {
     console.log(`Testing Google Drive MCP server: ${serverUrl}`);
 
@@ -242,7 +242,7 @@ async function testGoogleDriveConnection(qualifiedName: string, serverUrl: strin
           success: false,
           error: `Google Drive MCP server health check failed (${healthResponse.status})`,
           details: {
-            server: qualifiedName,
+            server: serverSlug,
             url: serverUrl,
             status: healthResponse.status,
             statusText: healthResponse.statusText
@@ -257,7 +257,7 @@ async function testGoogleDriveConnection(qualifiedName: string, serverUrl: strin
         success: false,
         error: `Cannot connect to Google Drive MCP server: ${healthError.message}`,
         details: {
-          server: qualifiedName,
+          server: serverSlug,
           url: serverUrl,
           error: healthError.toString()
         }
@@ -280,7 +280,7 @@ async function testGoogleDriveConnection(qualifiedName: string, serverUrl: strin
           success: false,
           error: `Google Drive MCP server tools endpoint failed (${toolsResponse.status})`,
           details: {
-            server: qualifiedName,
+            server: serverSlug,
             url: serverUrl,
             status: toolsResponse.status,
             statusText: toolsResponse.statusText
@@ -295,7 +295,7 @@ async function testGoogleDriveConnection(qualifiedName: string, serverUrl: strin
         success: true,
         message: 'Google Drive MCP server connection successful',
         details: {
-          server: qualifiedName,
+          server: serverSlug,
           url: serverUrl,
           availableTools: toolsData.tools?.length || 0,
           tools: toolsData.tools || []
@@ -308,7 +308,7 @@ async function testGoogleDriveConnection(qualifiedName: string, serverUrl: strin
         success: false,
         error: `Google Drive MCP server tools endpoint error: ${toolsError.message}`,
         details: {
-          server: qualifiedName,
+          server: serverSlug,
           url: serverUrl,
           error: toolsError.toString()
         }
@@ -321,7 +321,7 @@ async function testGoogleDriveConnection(qualifiedName: string, serverUrl: strin
       success: false,
       error: `Google Drive MCP server test failed: ${error.message}`,
       details: {
-        server: qualifiedName,
+        server: serverSlug,
         url: serverUrl,
         error: error.toString()
       }

@@ -298,12 +298,12 @@ export async function syncSchedulesFromDatabase(supabaseClient?: any): Promise<v
   try {
     const supabase = supabaseClient || await createClient();
     
-    // Get all active scheduled triggers
+    // Get all active scheduled triggers for active workflows
     const { data: triggers, error } = await supabase
       .from('workflow_triggers')
-      .select('trigger_id, workflow_id, config, schedule_enabled')
+      .select('trigger_id, workflow_id, config, schedule_enabled, workflows!inner(is_active)')
       .eq('trigger_type', 'schedule')
-      .eq('is_active', true);
+      .eq('workflows.is_active', true);
 
     if (error) throw error;
 

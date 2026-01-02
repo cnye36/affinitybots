@@ -51,6 +51,9 @@ export function WorkflowBuilder() {
     reset,
   } = useWorkflowState()
 
+  const [isWorkflowActive, setIsWorkflowActive] = useState(false)
+  const [triggers, setTriggers] = useState<any[]>([])
+
   const {
     openWorkflowTypeSelect,
     openTriggerSelect,
@@ -158,6 +161,8 @@ export function WorkflowBuilder() {
       const currentState = useWorkflowState.getState()
       if (currentState.workflowId || currentState.nodes.length > 0 || currentState.edges.length > 0) {
         reset()
+        setIsWorkflowActive(false)
+        setTriggers([])
         hasOpenedTypeSelectorRef.current = false
         isCreatingWorkflowRef.current = false
       }
@@ -194,24 +199,27 @@ export function WorkflowBuilder() {
         setWorkflowName(workflow.name)
         setWorkflowType(workflow.workflow_type)
         setOrchestratorConfig(workflow.orchestrator_config)
+        setIsWorkflowActive(workflow.is_active || false)
 
         // Load triggers
-        const { data: triggers, error: triggersError } = await supabase
+        const { data: triggersData, error: triggersError } = await supabase
           .from("workflow_triggers")
           .select("*")
           .eq("workflow_id", urlWorkflowId)
 
         if (triggersError) throw triggersError
 
+        setTriggers(triggersData || [])
+
         // If workflow has no triggers, set loading to false early so modals can render
         // This is important for newly created workflows that need trigger selection
-        if ((triggers || []).length === 0) {
+        if ((triggersData || []).length === 0) {
           setLoading(false)
         }
 
         // Build nodes and edges from workflow
         const workflowTypeValue = workflow.workflow_type || "sequential"
-        const triggerNodes: WorkflowNode[] = (triggers || []).map((trigger) => ({
+        const triggerNodes: WorkflowNode[] = (triggersData || []).map((trigger) => ({
           id: `trigger-${trigger.trigger_id}`,
           type: "trigger" as const,
           position: { x: 100, y: 100 },
@@ -303,32 +311,23 @@ export function WorkflowBuilder() {
     loadWorkflow()
   }, [urlWorkflowId, supabase])
 
-  const handleSave = useCallback(async () => {
-    if (!workflowId) return
+  const handleNameBlur = useCallback(async () => {
+    if (!workflowId || !workflowName.trim()) return
 
     try {
-      setSaving(true)
-
       const { error } = await supabase
         .from("workflows")
         .update({
           name: workflowName,
-          nodes,
-          edges,
-          orchestrator_config: orchestratorConfig,
         })
         .eq("workflow_id", workflowId)
 
       if (error) throw error
-
-      toast({ title: "Workflow saved" })
     } catch (error) {
-      console.error("Error saving workflow:", error)
-      toast({ title: "Failed to save workflow", variant: "destructive" })
-    } finally {
-      setSaving(false)
+      console.error("Error saving workflow name:", error)
+      toast({ title: "Failed to save workflow name", variant: "destructive" })
     }
-  }, [workflowId, workflowName, nodes, edges, orchestratorConfig, supabase, setSaving])
+  }, [workflowId, workflowName, supabase])
 
   const handleAddTask = useCallback((sourceNodeId?: string) => {
     openAgentSelect(sourceNodeId)
@@ -540,7 +539,7 @@ export function WorkflowBuilder() {
           return
         }
 
-        // Create workflow with selected type
+        // Create workflow with selected type (always starts inactive)
         const { data: newWorkflow, error } = await supabase
           .from("workflows")
           .insert({
@@ -549,6 +548,7 @@ export function WorkflowBuilder() {
             workflow_type: type,
             nodes: [],
             edges: [],
+            is_active: false,
           })
           .select()
           .single()
@@ -557,6 +557,7 @@ export function WorkflowBuilder() {
 
         setWorkflowId(newWorkflow.workflow_id)
         setWorkflowName(newWorkflow.name)
+        setIsWorkflowActive(newWorkflow.is_active || false)
         setIsCreatingWorkflow(false)
 
         // Open the trigger select modal immediately
@@ -723,6 +724,9 @@ export function WorkflowBuilder() {
         // Reset the creating workflow flag after trigger is created
         isCreatingWorkflowRef.current = false
 
+        // Update triggers state
+        setTriggers((prev) => [...prev, newTrigger])
+
         toast({ title: "Trigger added to workflow" })
 
         // If orchestrator workflow, open orchestrator config modal
@@ -762,13 +766,14 @@ export function WorkflowBuilder() {
           <WorkflowHeader
             workflowName={workflowName}
             setWorkflowName={setWorkflowName}
-            onSave={handleSave}
+            onNameBlur={handleNameBlur}
             onExecute={() => {}}
             onBack={() => router.push("/workflows")}
-            saving={saving}
             executing={isExecuting}
             workflowId={workflowId || undefined}
             workflowType={workflowType || undefined}
+            isActive={isWorkflowActive}
+            onActiveToggle={(isActive) => setIsWorkflowActive(isActive)}
           />
 
           <div className="flex-1 relative">
