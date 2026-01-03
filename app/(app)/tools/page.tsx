@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,8 @@ import { useViewPreference } from "@/hooks/useViewPreference";
 const ITEMS_PER_PAGE = 12;
 
 export default function ToolsPage() {
+	const searchParams = useSearchParams();
+	const router = useRouter();
 	const [userServers, setUserServers] = useState<any[]>([]);
 	const [userAddedServers, setUserAddedServers] = useState<any[]>([]);
 	const [loading, setLoading] = useState(true);
@@ -21,8 +24,33 @@ export default function ToolsPage() {
 	const [searchTerm, setSearchTerm] = useState("");
 	const [debouncedSearch, setDebouncedSearch] = useState("");
 	const { viewMode, setViewMode } = useViewPreference("tools", "grid");
-	const [currentPage, setCurrentPage] = useState(1);
+	
+	// Initialize currentPage from URL params or default to 1
+	const pageParam = searchParams.get("page");
+	const initialPage = pageParam ? parseInt(pageParam, 10) : 1;
+	const [currentPage, setCurrentPage] = useState(initialPage);
 	const [filterMode, setFilterMode] = useState<"all" | "configured">("all");
+
+	// Sync currentPage with URL params
+	useEffect(() => {
+		const pageParam = searchParams.get("page");
+		const pageFromUrl = pageParam ? parseInt(pageParam, 10) : 1;
+		if (pageFromUrl !== currentPage && pageFromUrl >= 1) {
+			setCurrentPage(pageFromUrl);
+		}
+	}, [searchParams]);
+
+	// Update URL when page changes
+	useEffect(() => {
+		const params = new URLSearchParams(searchParams.toString());
+		if (currentPage === 1) {
+			params.delete("page");
+		} else {
+			params.set("page", currentPage.toString());
+		}
+		const newUrl = params.toString() ? `/tools?${params.toString()}` : "/tools";
+		router.replace(newUrl, { scroll: false });
+	}, [currentPage, router, searchParams]);
 
 	// Debounce search term
 	useEffect(() => {
@@ -55,9 +83,9 @@ export default function ToolsPage() {
 	}, []);
 
 	// Helper to check if a server is configured (enabled + has tokens for OAuth)
-	const isConfigured = (qualifiedName: string) => {
-		const server = OFFICIAL_MCP_SERVERS.find((s) => s.qualifiedName === qualifiedName);
-		const serverEntry = userServers.find((s: any) => s.qualified_name === qualifiedName);
+	const isConfigured = (serverName: string) => {
+		const server = OFFICIAL_MCP_SERVERS.find((s) => s.serverName === serverName);
+		const serverEntry = userServers.find((s: any) => s.server_slug === serverName);
 		if (!serverEntry) return false;
 		// For OAuth servers, must be enabled AND have tokens
 		if (server?.authType === "oauth") {
@@ -74,7 +102,7 @@ export default function ToolsPage() {
 			const searchLower = debouncedSearch.toLowerCase();
 			return (
 				server.displayName.toLowerCase().includes(searchLower) ||
-				server.qualifiedName.toLowerCase().includes(searchLower) ||
+				server.serverName.toLowerCase().includes(searchLower) ||
 				(server.description || "").toLowerCase().includes(searchLower)
 			);
 		});
@@ -85,8 +113,8 @@ export default function ToolsPage() {
 			if (!debouncedSearch) return true;
 			const searchLower = debouncedSearch.toLowerCase();
 			return (
-				(server.display_name || server.qualified_name || "").toLowerCase().includes(searchLower) ||
-				(server.qualified_name || "").toLowerCase().includes(searchLower) ||
+				(server.display_name || server.server_slug || "").toLowerCase().includes(searchLower) ||
+				(server.server_slug || "").toLowerCase().includes(searchLower) ||
 				(server.description || "").toLowerCase().includes(searchLower)
 			);
 		});
@@ -103,7 +131,7 @@ export default function ToolsPage() {
 				if (isUserAdded) return true; // User-added servers are always configured
 
 				// Check if official server is configured
-				return isConfigured(server.qualifiedName);
+				return isConfigured(server.serverName);
 			});
 		}
 
@@ -116,7 +144,7 @@ export default function ToolsPage() {
 		return allServers.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 	}, [allServers, currentPage]);
 
-	const refreshData = async () => {
+	const refreshData = useCallback(async () => {
 		const [userRes, userAddedRes] = await Promise.all([
 			fetch("/api/user-mcp-servers").then((r) => r.json()),
 			fetch("/api/user-added-servers").then((r) => r.json())
@@ -125,7 +153,30 @@ export default function ToolsPage() {
 		const userAddedList = userAddedRes.servers || [];
 		setUserServers(userList);
 		setUserAddedServers(userAddedList);
-	};
+	}, []);
+
+	// Refresh data when page becomes visible or when connected query param is present
+	useEffect(() => {
+		const handleVisibilityChange = () => {
+			if (document.visibilityState === 'visible') {
+				refreshData();
+			}
+		};
+		document.addEventListener('visibilitychange', handleVisibilityChange);
+		
+		// Check for connected query param and refresh
+		const connected = searchParams.get('connected');
+		if (connected === 'true') {
+			refreshData();
+			// Remove the query param from URL
+			const params = new URLSearchParams(searchParams.toString());
+			params.delete('connected');
+			const newUrl = params.toString() ? `/tools?${params.toString()}` : '/tools';
+			router.replace(newUrl, { scroll: false });
+		}
+		
+		return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+	}, [searchParams, router, refreshData]);
 
 	return (
 		<div className="min-h-screen bg-background">
@@ -270,9 +321,9 @@ export default function ToolsPage() {
 									} else {
 										return (
 											<OfficialServerCard
-												key={`official-${server.qualifiedName}`}
+												key={`official-${server.serverName}`}
 												server={server}
-												isConfigured={isConfigured(server.qualifiedName)}
+												isConfigured={isConfigured(server.serverName)}
 												onConnected={refreshData}
 											/>
 										);
@@ -297,9 +348,9 @@ export default function ToolsPage() {
 									} else {
 										return (
 											<OfficialServerCard
-												key={`official-${server.qualifiedName}`}
+												key={`official-${server.serverName}`}
 												server={server}
-												isConfigured={isConfigured(server.qualifiedName)}
+												isConfigured={isConfigured(server.serverName)}
 												onConnected={refreshData}
 												compact={true}
 											/>

@@ -13,7 +13,7 @@ interface Props {
 }
 
 export function AddMCPServerModal({ open, onOpenChange, onAdded }: Props) {
-  const [qualifiedName, setQualifiedName] = useState("");
+  const [serverName, setServerName] = useState("");
   const [serverUrl, setServerUrl] = useState("");
   const [authType, setAuthType] = useState<"unknown" | "none" | "oauth">("unknown");
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -56,7 +56,7 @@ export function AddMCPServerModal({ open, onOpenChange, onAdded }: Props) {
       const res = await fetch("/api/mcp/auth/connect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ serverUrl, callbackUrl, serverName: qualifiedName }),
+        body: JSON.stringify({ serverUrl, callbackUrl, serverName: serverName }),
       });
       const data = await res.json();
       if (data?.requiresAuth && data.authUrl) {
@@ -80,13 +80,13 @@ export function AddMCPServerModal({ open, onOpenChange, onAdded }: Props) {
       const res = await fetch("/api/user-added-servers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          qualified_name: qualifiedName, 
-          display_name: qualifiedName,
-          description: `Custom MCP server: ${qualifiedName}`,
-          url: serverUrl, 
+        body: JSON.stringify({
+          server_slug: serverName,
+          display_name: serverName,
+          description: `Custom MCP server: ${serverName}`,
+          url: serverUrl,
           auth_type: authType === "oauth" ? "oauth" : "none",
-          config: {} 
+          config: {}
         }),
       });
       const data = await res.json();
@@ -100,7 +100,7 @@ export function AddMCPServerModal({ open, onOpenChange, onAdded }: Props) {
     }
   }
 
-  const canSubmit = qualifiedName.trim() && serverUrl.trim();
+  const canSubmit = serverName.trim() && serverUrl.trim();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -110,8 +110,8 @@ export function AddMCPServerModal({ open, onOpenChange, onAdded }: Props) {
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Qualified name</Label>
-            <Input value={qualifiedName} onChange={(e) => setQualifiedName(e.target.value)} placeholder="e.g. github, zapier, custom-server" />
+            <Label>Server name</Label>
+            <Input value={serverName} onChange={(e) => setServerName(e.target.value)} placeholder="e.g. github, zapier, custom-server" />
           </div>
           <div className="space-y-2">
             <Label>Server URL</Label>

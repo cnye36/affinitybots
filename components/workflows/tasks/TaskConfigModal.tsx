@@ -11,6 +11,7 @@ import { UserPlus } from "lucide-react";
 import { AgentSelectModal } from "../AgentSelectModal";
 import { Assistant } from "@/types/assistant";
 import { useAgent } from "@/hooks/useAgent";
+import { createClient } from "@/supabase/client";
 
 interface TaskOutput {
   result: unknown;
@@ -91,6 +92,8 @@ export function TaskConfigModal({
   }, [isOpen]);
   const [testOutput, setTestOutput] = useState<TestOutput | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [streamingFormat, setStreamingFormat] = useState<OutputFormat>("json");
+  const [loadedPreviousNodeOutput, setLoadedPreviousNodeOutput] = useState<TaskOutput | null>(previousNodeOutput || null);
   const { assistant, isLoading: isAssistantLoading } = useAgent(
     currentTask.assignedAssistant?.id,
     { enabled: isOpen }
@@ -104,13 +107,47 @@ export function TaskConfigModal({
     const onStream = (e: Event) => {
       const evt = e as CustomEvent<{ workflowTaskId: string; partial: string }>;
       if (evt.detail?.workflowTaskId !== currentTask.workflow_task_id) return;
-      setTestOutput({ type: "messages/partial", content: evt.detail.partial });
+      
+      // Only set output if we have actual content (not empty or just the prompt)
+      const partialContent = evt.detail.partial?.trim() || "";
+      if (partialContent && partialContent !== currentTask.config?.input?.prompt) {
+        // During streaming, show as JSON format for better readability
+        setStreamingFormat("json");
+        setTestOutput({ type: "messages/partial", content: partialContent });
+      }
     };
-    // Mark stream end on completion
-    const onComplete = (e: Event) => {
-      const evt = e as CustomEvent<{ workflowTaskId: string; output: { result: unknown } }>;
+    // Mark stream end on completion and persist the result
+    const onComplete = async (e: Event) => {
+      const evt = e as CustomEvent<{ workflowTaskId: string; output: { result: unknown; metadata?: Record<string, unknown> } }>;
       if (evt.detail?.workflowTaskId !== currentTask.workflow_task_id) return;
       setIsStreaming(false);
+      
+      // Switch to formatted view when streaming completes
+      setStreamingFormat("formatted");
+      setTestOutputFormat("formatted");
+      
+      // Persist the test output in task metadata
+      const testOutputData: TestOutput = {
+        type: "messages/complete",
+        result: evt.detail.output.result,
+        content: typeof evt.detail.output.result === "string" ? evt.detail.output.result : JSON.stringify(evt.detail.output.result),
+      };
+      setTestOutput(testOutputData);
+      
+      const updatedTask = {
+        ...currentTask,
+        metadata: {
+          ...(currentTask.metadata || {}),
+          testOutput: testOutputData,
+          lastTestAt: new Date().toISOString(),
+        },
+      };
+      setCurrentTask(updatedTask);
+      try {
+        await saveTask(updatedTask);
+      } catch (error) {
+        console.error("Error persisting test output:", error);
+      }
     };
     window.addEventListener("taskTestStream", onStream as EventListener);
     window.addEventListener("taskTestCompleted", onComplete as EventListener);
@@ -123,10 +160,120 @@ export function TaskConfigModal({
   useEffect(() => {
     // Only sync from props when opening or switching to a different task id
     if (isOpen) {
-      setCurrentTask(task);
+      // Update loaded previousNodeOutput from prop
+      setLoadedPreviousNodeOutput(previousNodeOutput || null);
+      
+      // Load the latest task data from the database to ensure we have the most recent prompt
+      const loadLatestTask = async () => {
+        try {
+          const supabase = createClient();
+          
+          // Load workflow to get edges and find upstream node if previousNodeOutput is missing
+          if (!previousNodeOutput) {
+            const { data: workflow } = await supabase
+              .from("workflows")
+              .select("edges, nodes")
+              .eq("workflow_id", task.workflow_id)
+              .single();
+            
+            if (workflow) {
+              const edges = workflow.edges || [];
+              const nodes = workflow.nodes || [];
+              
+              // Find incoming edge to this task
+              const taskNodeId = `task-${task.workflow_task_id}`;
+              const incomingEdge = edges.find((e: any) => e.target === taskNodeId);
+              
+              if (incomingEdge) {
+                // Find source node
+                const sourceNode = nodes.find((n: any) => n.id === incomingEdge.source);
+                if (sourceNode && sourceNode.type === "task") {
+                  const sourceTaskId = sourceNode.data?.workflow_task_id;
+                  if (sourceTaskId) {
+                    // Load source task to get test output
+                    const { data: sourceTask } = await supabase
+                      .from("workflow_tasks")
+                      .select("*")
+                      .eq("workflow_task_id", sourceTaskId)
+                      .single();
+                    
+                    if (sourceTask?.metadata?.testOutput) {
+                      const upstreamTaskOutput: TaskOutput = {
+                        result: sourceTask.metadata.testOutput.result,
+                        metadata: sourceTask.metadata.testOutput.metadata,
+                      };
+                      setLoadedPreviousNodeOutput(upstreamTaskOutput);
+                    }
+                  }
+                }
+              }
+            }
+          }
+          
+          const response = await fetch(
+            `/api/workflows/${task.workflow_id}/tasks/${task.workflow_task_id}`
+          );
+          if (response.ok) {
+            const latestTask = await response.json();
+            // Transform the task to ensure assignedAssistant is properly set
+            const transformedTask: Task = {
+              ...latestTask,
+              assignedAssistant: latestTask.config?.assigned_assistant
+                ? {
+                    id: latestTask.config.assigned_assistant.id,
+                    name: latestTask.config.assigned_assistant.name,
+                    avatar: latestTask.config.assigned_assistant.avatar,
+                  }
+                : latestTask.assignedAssistant || undefined,
+            };
+            
+            setCurrentTask(transformedTask);
+            
+            // Load persisted test output from metadata
+            if (latestTask.metadata) {
+              if (latestTask.metadata.testOutput) {
+                setTestOutput(latestTask.metadata.testOutput as TestOutput);
+              }
+            }
+          } else {
+            // Fallback to prop task if fetch fails
+            const transformedTask: Task = {
+              ...task,
+              assignedAssistant: task.config?.assigned_assistant
+                ? {
+                    id: task.config.assigned_assistant.id,
+                    name: task.config.assigned_assistant.name,
+                    avatar: task.config.assigned_assistant.avatar,
+                  }
+                : task.assignedAssistant || undefined,
+            };
+            setCurrentTask(transformedTask);
+            
+            if (task.metadata?.testOutput) {
+              setTestOutput(task.metadata.testOutput as TestOutput);
+            }
+          }
+        } catch (error) {
+          console.error("Error loading latest task:", error);
+          // Fallback to prop task
+          const transformedTask: Task = {
+            ...task,
+            assignedAssistant: task.config?.assigned_assistant
+              ? {
+                  id: task.config.assigned_assistant.id,
+                  name: task.config.assigned_assistant.name,
+                  avatar: task.config.assigned_assistant.avatar,
+                }
+              : task.assignedAssistant || undefined,
+          };
+          setCurrentTask(transformedTask);
+        }
+      };
+      
+      loadLatestTask();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, task.workflow_task_id]);
+  }, [isOpen, task.workflow_task_id, previousNodeOutput]);
 
   useEffect(() => {
     let isMounted = true;
@@ -162,11 +309,13 @@ export function TaskConfigModal({
     setLoadingAssistants(isAssistantLoading);
   }, [isAssistantLoading]);
 
+  // Only update parent when task or assistant actually changes meaningfully
+  // Don't trigger on every render to avoid unnecessary updates
   useEffect(() => {
-    if (currentTask && assistant) {
+    if (currentTask && assistant && currentTask.assignedAssistant?.id === assistant.assistant_id) {
       onUpdate(currentTask, assistant);
     }
-  }, [currentTask, assistant, onUpdate]);
+  }, [currentTask.workflow_task_id, currentTask.assignedAssistant?.id, assistant?.assistant_id, onUpdate]);
 
   const saveTask = async (taskToSave: Task) => {
     const payload = {
@@ -176,6 +325,7 @@ export function TaskConfigModal({
       config: taskToSave.config,
       assignedAssistant: taskToSave.assignedAssistant,
       integration: taskToSave.integration,
+      metadata: taskToSave.metadata || {},
     };
 
     const url = `/api/workflows/${taskToSave.workflow_id}/tasks/${taskToSave.workflow_task_id}`;
@@ -188,6 +338,24 @@ export function TaskConfigModal({
       const err = await response.json().catch(() => ({}));
       throw new Error(err?.error || err?.message || "Failed to save task");
     }
+    
+    // Reload the task to get the latest data
+    const updatedTask = await response.json();
+    
+    // Transform the API response to match our Task interface
+    // The API stores assigned_assistant in config, but we need it at the top level
+    const transformedTask: Task = {
+      ...updatedTask,
+      assignedAssistant: updatedTask.config?.assigned_assistant
+        ? {
+            id: updatedTask.config.assigned_assistant.id,
+            name: updatedTask.config.assigned_assistant.name,
+            avatar: updatedTask.config.assigned_assistant.avatar,
+          }
+        : updatedTask.assignedAssistant || undefined,
+    };
+    
+    return transformedTask;
   };
 
   const handleTest = async () => {
@@ -198,17 +366,40 @@ export function TaskConfigModal({
 
       setIsLoading(true);
       setIsStreaming(true);
+      // Clear test output when starting a new test and reset to JSON format for streaming
       setTestOutput(null);
+      setStreamingFormat("json");
 
       if (!currentTask.config?.input?.prompt) {
         throw new Error("Please provide a prompt before testing");
       }
 
       // Save first so state persists and next nodes can use it
-      await saveTask(currentTask);
+      const savedTask = await saveTask(currentTask);
+      if (savedTask) {
+        setCurrentTask(savedTask);
+      }
+      
       // Pass current configuration so the server can honor latest toggles immediately
       const result = await onTest((currentTask?.config as unknown as Record<string, unknown>) || {});
-      setTestOutput(result as TestOutput);
+      const testOutputData = result as TestOutput;
+      
+      // Only set output if we have actual content (not empty or just the prompt)
+      if (testOutputData && testOutputData.content && testOutputData.content.trim() !== currentTask.config?.input?.prompt) {
+        setTestOutput(testOutputData);
+        
+        // Persist test output in task metadata
+        const updatedTask = {
+          ...currentTask,
+          metadata: {
+            ...(currentTask.metadata || {}),
+            testOutput: testOutputData,
+            lastTestAt: new Date().toISOString(),
+          },
+        };
+        setCurrentTask(updatedTask);
+        await saveTask(updatedTask);
+      }
     } catch (err) {
       console.error("Error testing task:", err);
       toast({
@@ -220,10 +411,23 @@ export function TaskConfigModal({
             : "Failed to test task",
         variant: "destructive",
       });
-      setTestOutput({
+      const errorOutput: TestOutput = {
         type: "error",
         error: err instanceof Error ? err.message : "Unknown error occurred",
-      });
+      };
+      setTestOutput(errorOutput);
+      
+      // Persist error output too
+      const updatedTask = {
+        ...currentTask,
+        metadata: {
+          ...(currentTask.metadata || {}),
+          testOutput: errorOutput,
+          lastTestAt: new Date().toISOString(),
+        },
+      };
+      setCurrentTask(updatedTask);
+      await saveTask(updatedTask);
     } finally {
       setIsLoading(false);
       // allow streaming indicator to be cleared by completion event if provided
@@ -289,13 +493,12 @@ export function TaskConfigModal({
             assistant={assistant ?? null}
             isLoading={isLoading || loadingAssistants}
             onTest={handleTest}
-            onSave={() => saveTask(currentTask)}
             onChangeAssistant={() => setIsAssistantSelectOpen(true)}
           />
 
           <div className="grid grid-cols-3 gap-4 mt-4">
             <PreviousNodeOutputPanel
-              data={previousNodeOutput || null}
+              data={loadedPreviousNodeOutput || previousNodeOutput || null}
               outputFormat={prevOutputFormat}
               setOutputFormat={(format) => {
                 setPrevOutputFormat(format);
@@ -337,15 +540,45 @@ export function TaskConfigModal({
                 setCurrentTask={setCurrentTask}
                 assistant={assistant}
                 workflowType={workflowType}
+                onSave={async () => {
+                  // Preserve assignedAssistant before saving
+                  const taskToSave = {
+                    ...currentTask,
+                    assignedAssistant: currentTask.assignedAssistant || (currentTask.config?.assigned_assistant
+                      ? {
+                          id: currentTask.config.assigned_assistant.id,
+                          name: currentTask.config.assigned_assistant.name,
+                          avatar: currentTask.config.assigned_assistant.avatar,
+                        }
+                      : undefined),
+                  };
+                  
+                  const updatedTask = await saveTask(taskToSave);
+                  if (updatedTask) {
+                    setCurrentTask(updatedTask);
+                    // Notify parent to update the task in the workflow
+                    // Make sure we pass the assistant if it exists
+                    const assistantToPass = assistant || (updatedTask.assignedAssistant ? {
+                      assistant_id: updatedTask.assignedAssistant.id,
+                      name: updatedTask.assignedAssistant.name,
+                      metadata: {
+                        agent_avatar: updatedTask.assignedAssistant.avatar,
+                      },
+                    } as Assistant : null);
+                    onUpdate(updatedTask, assistantToPass);
+                  }
+                }}
               />
             )}
 
             <TestOutputPanel
               testOutput={testOutput}
-              outputFormat={testOutputFormat}
+              outputFormat={isStreaming ? streamingFormat : testOutputFormat}
               setOutputFormat={(format) => {
-                setTestOutputFormat(format);
-                saveFormatPreference(STORAGE_KEY_TEST_FORMAT, format);
+                if (!isStreaming) {
+                  setTestOutputFormat(format);
+                  saveFormatPreference(STORAGE_KEY_TEST_FORMAT, format);
+                }
               }}
               isStreaming={isStreaming}
             />

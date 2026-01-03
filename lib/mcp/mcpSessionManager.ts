@@ -110,7 +110,7 @@ export class MCPSessionManager {
       .from('user_mcp_servers')
       .select('*')
       .eq('user_id', userId)
-      .eq('qualified_name', serverName)
+      .eq('server_slug', serverName)
       .single();
 
     if (error || !serverData) {
@@ -156,7 +156,7 @@ export class MCPSessionManager {
         is_enabled: false // Disable expired servers
       })
       .eq('user_id', userId)
-      .eq('qualified_name', serverName);
+      .eq('server_slug', serverName);
 
     if (error) {
       console.error(`Failed to mark session as expired for ${serverName}:`, error);
@@ -176,7 +176,7 @@ export class MCPSessionManager {
       // Clean up expired sessions from database
       const { data: expiredSessions, error } = await this.getSupabase()
         .from('user_mcp_servers')
-        .select('session_id, qualified_name, user_id')
+        .select('session_id, server_slug, user_id')
         .not('expires_at', 'is', null)
         .lt('expires_at', new Date().toISOString());
 
@@ -196,12 +196,12 @@ export class MCPSessionManager {
           }
 
           // Update database
-          await this.markSessionAsExpired(session.user_id, session.qualified_name);
-          
+          await this.markSessionAsExpired(session.user_id, session.server_slug);
+
           result.cleaned++;
-          console.log(`Cleaned up expired session for ${session.qualified_name}`);
+          console.log(`Cleaned up expired session for ${session.server_slug}`);
         } catch (error) {
-          result.errors.push(`Failed to clean ${session.qualified_name}: ${error}`);
+          result.errors.push(`Failed to clean ${session.server_slug}: ${error}`);
         }
       }
 
@@ -339,7 +339,7 @@ export class MCPSessionManager {
       // Get all sessions for the user
       const { data: userSessions, error } = await this.getSupabase()
         .from('user_mcp_servers')
-        .select('session_id, qualified_name')
+        .select('session_id, server_slug')
         .eq('user_id', userId)
         .not('session_id', 'is', null);
 
@@ -354,11 +354,11 @@ export class MCPSessionManager {
           if (session.session_id) {
             await sessionStore.removeClient(session.session_id);
           }
-          
-          await this.markSessionAsExpired(userId, session.qualified_name);
+
+          await this.markSessionAsExpired(userId, session.server_slug);
           result.cleaned++;
         } catch (error) {
-          result.errors.push(`Failed to clean ${session.qualified_name}: ${error}`);
+          result.errors.push(`Failed to clean ${session.server_slug}: ${error}`);
         }
       }
 

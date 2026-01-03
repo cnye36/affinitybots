@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ExternalLink } from "lucide-react";
 import { BaseServerCard } from "./BaseServerCard";
@@ -15,6 +16,7 @@ interface Props {
 }
 
 export function OfficialServerCard({ server, onConnected, isConfigured = false, compact = false }: Props) {
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [disconnecting, setDisconnecting] = useState(false);
@@ -30,7 +32,7 @@ export function OfficialServerCard({ server, onConnected, isConfigured = false, 
       const res = await fetch("/api/mcp/auth/disconnect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ serverName: server.qualifiedName }),
+        body: JSON.stringify({ serverName: server.serverName }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to disconnect");
@@ -43,17 +45,23 @@ export function OfficialServerCard({ server, onConnected, isConfigured = false, 
   }
 
   const handleCardClick = () => {
-    // Navigate to server detail page
-    window.location.href = `/tools/${encodeURIComponent(server.qualifiedName)}`;
+    // Navigate to server detail page, preserving the current page number
+    const page = searchParams.get("page");
+    const url = page 
+      ? `/tools/${encodeURIComponent(server.serverName)}?page=${page}`
+      : `/tools/${encodeURIComponent(server.serverName)}`;
+    window.location.href = url;
   };
 
   return (
     <BaseServerCard
       serverType="official"
-      qualifiedName={server.qualifiedName}
+      serverName={server.serverName}
       displayName={server.displayName}
       description={server.description || "Official MCP server"}
       logoUrl={server.logoUrl}
+      logoUrlLight={server.logoUrlLight}
+      logoUrlDark={server.logoUrlDark}
       isConfigured={isConfigured}
       onClick={handleCardClick}
       compact={compact}

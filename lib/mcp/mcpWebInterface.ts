@@ -81,6 +81,13 @@ export class MCPWebInterface {
    * Initiates connection to an MCP server (handles both OAuth and API key flows)
    */
   async connectServer(request: MCPServerConnectRequest): Promise<MCPServerConnectResponse> {
+    // Check if this is a known OAuth server for better error handling
+    let officialServer = null;
+    if (request.serverName) {
+      const { findOfficialServer } = await import('./officialMcpServers');
+      officialServer = findOfficialServer(request.serverName);
+    }
+
     try {
       const { serverUrl, callbackUrl, userId, serverName } = request;
 
@@ -120,9 +127,30 @@ export class MCPWebInterface {
       }
     } catch (error) {
       console.error('MCPWebInterface: Connect error:', error);
+      
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      // Check if this is a network/connection error (not an OAuth error)
+      const isNetworkError = 
+        errorMessage.includes('ENOTFOUND') ||
+        errorMessage.includes('ECONNREFUSED') ||
+        errorMessage.includes('fetch failed') ||
+        errorMessage.includes('404') ||
+        errorMessage.includes('Cannot POST') ||
+        errorMessage.includes('Unexpected content type');
+      
+      // For known OAuth servers with network errors, provide helpful context
+      if (isNetworkError && officialServer?.authType === 'oauth') {
+        return {
+          success: false,
+          error: `Cannot reach ${officialServer.displayName} server at ${request.serverUrl}. The server may be unreachable, misconfigured, or the URL may be incorrect. Please verify the server is running and accessible.`,
+          requiresAuth: true, // Still indicate OAuth is required
+        };
+      }
+      
       return {
         success: false,
-        error: error instanceof Error ? error.message : String(error)
+        error: errorMessage
       };
     }
   }
@@ -135,12 +163,12 @@ export class MCPWebInterface {
       console.log(`MCPWebInterface: Finishing OAuth for session ${sessionId}`);
 
       const supabase = this.getSupabase();
-      let serverRow: { url: string; config: any; qualified_name?: string } | null = null;
+      let serverRow: { url: string; config: any; server_slug?: string } | null = null;
 
       try {
-        const { data, error } = await supabase
+        const { data, error} = await supabase
           .from('user_mcp_servers')
-          .select('url, config, qualified_name')
+          .select('url, config, server_slug')
           .eq('user_id', userId)
           .eq('session_id', sessionId)
           .single();
@@ -197,7 +225,7 @@ export class MCPWebInterface {
       await mcpClientFactory.completeOAuth(sessionId, authCode);
 
       // Update database with successful authentication and persist tokens/state
-      const client = sessionStore.getClient(sessionId);
+      const client = await sessionStore.getClient(sessionId);
       let tokens: OAuthTokens | undefined;
       let expiresAt: string | undefined;
       let providerState = serverRow?.config?.providerState;
@@ -210,6 +238,13 @@ export class MCPWebInterface {
         tokens = client.getTokens();
         expiresAt = client.getTokenExpiry();
       }
+      
+      console.log(`Retrieved tokens from client:`, { 
+        hasClient: !!client, 
+        clientType: client?.constructor?.name,
+        hasTokens: !!tokens,
+        tokenPreview: tokens?.access_token ? `${tokens.access_token.substring(0, 20)}...` : 'none'
+      });
 
       await this.updateOAuthCompletion(sessionId, userId, {
         tokens,
@@ -401,7 +436,7 @@ export class MCPWebInterface {
   private async storeOAuthAttempt(userId: string, serverName: string, sessionId: string, serverUrl: string, callbackUrl: string, providerState?: any): Promise<void> {
     const insertData = {
       user_id: userId,
-      qualified_name: serverName,
+      server_slug: serverName,
       session_id: sessionId,
       url: serverUrl,
       // Persist callbackUrl so we can reconstruct the OAuth client on callback
@@ -410,12 +445,12 @@ export class MCPWebInterface {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
-    
+
     console.log('Storing OAuth attempt with data:', JSON.stringify(insertData, null, 2));
-    
+
     const { error } = await this.getSupabase()
       .from('user_mcp_servers')
-      .upsert(insertData, { onConflict: 'user_id,qualified_name' });
+      .upsert(insertData, { onConflict: 'user_id,server_slug' });
 
     if (error) {
       console.error('Failed to store OAuth attempt:', error);
@@ -427,7 +462,7 @@ export class MCPWebInterface {
   private async storeSuccessfulConnection(userId: string, serverName: string, sessionId: string, serverUrl: string): Promise<void> {
     const insertData = {
       user_id: userId,
-      qualified_name: serverName,
+      server_slug: serverName,
       session_id: sessionId,
       url: serverUrl,
       config: {}, // Add empty config object to satisfy not-null constraint
@@ -435,12 +470,12 @@ export class MCPWebInterface {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
-    
+
     console.log('Storing successful connection with data:', JSON.stringify(insertData, null, 2));
-    
+
     const { error } = await this.getSupabase()
       .from('user_mcp_servers')
-      .upsert(insertData, { onConflict: 'user_id,qualified_name' });
+      .upsert(insertData, { onConflict: 'user_id,server_slug' });
 
     if (error) {
       console.error('Failed to store successful connection:', error);
@@ -538,7 +573,7 @@ export class MCPWebInterface {
         .from('user_mcp_servers')
         .select('session_id')
         .eq('user_id', userId)
-        .eq('qualified_name', serverName)
+        .eq('server_slug', serverName)
         .single();
 
       if (fetchError) {
@@ -563,7 +598,7 @@ export class MCPWebInterface {
         .from('user_mcp_servers')
         .delete()
         .eq('user_id', userId)
-        .eq('qualified_name', serverName);
+        .eq('server_slug', serverName);
 
       if (deleteError) {
         throw new Error(deleteError.message);

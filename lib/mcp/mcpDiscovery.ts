@@ -41,7 +41,7 @@ export interface MCPPrompt {
 }
 
 export interface MCPServerCapabilities {
-	qualifiedName: string
+	serverName: string
 	tools: MCPTool[]
 	resources: MCPResource[]
 	prompts: MCPPrompt[]
@@ -58,17 +58,17 @@ export interface MCPServerCapabilities {
  */
 export async function discoverServerCapabilities(
 	serverUrl: string,
-	qualifiedName: string,
+	serverName: string,
 	options: {
 		sessionId?: string
 		apiKey?: string
 		bearerToken?: string
 	} = {}
 ): Promise<MCPServerCapabilities> {
-	console.log(`🔍 Discovering capabilities for ${qualifiedName} at ${serverUrl}`)
+	console.log(`🔍 Discovering capabilities for ${serverName} at ${serverUrl}`)
 
 	const capabilities: MCPServerCapabilities = {
-		qualifiedName,
+		serverName,
 		tools: [],
 		resources: [],
 		prompts: [],
@@ -80,10 +80,21 @@ export async function discoverServerCapabilities(
 		if (options.sessionId) {
 			const client = await sessionStore.getClient(options.sessionId)
 			if (client) {
-				console.log(`Using OAuth client for ${qualifiedName}`)
-				capabilities.tools = await discoverToolsFromOAuthClient(client, qualifiedName)
-				capabilities.resources = await discoverResourcesFromOAuthClient(client, qualifiedName)
-				capabilities.prompts = await discoverPromptsFromOAuthClient(client, qualifiedName)
+				console.log(`Using OAuth client for ${serverName}`)
+				
+				// Check if client is connected before using it
+				if ("isConnected" in client && typeof (client as any).isConnected === "function") {
+					const isConnected = (client as any).isConnected()
+					if (!isConnected) {
+						console.warn(`OAuth client for ${serverName} is not connected; discovery will be skipped. Client may need to reconnect.`)
+						// Return empty capabilities rather than failing - static capabilities will be shown as fallback
+						return capabilities
+					}
+				}
+				
+				capabilities.tools = await discoverToolsFromOAuthClient(client, serverName)
+				capabilities.resources = await discoverResourcesFromOAuthClient(client, serverName)
+				capabilities.prompts = await discoverPromptsFromOAuthClient(client, serverName)
 				return capabilities
 			}
 		}
@@ -95,7 +106,7 @@ export async function discoverServerCapabilities(
 
 		return capabilities
 	} catch (error) {
-		console.error(`Error discovering capabilities for ${qualifiedName}:`, error)
+		console.error(`Error discovering capabilities for ${serverName}:`, error)
 		return capabilities // Return empty capabilities rather than throwing
 	}
 }
@@ -105,7 +116,7 @@ export async function discoverServerCapabilities(
  */
 async function discoverToolsFromOAuthClient(
 	client: MCPOAuthClient | GitHubOAuthClient | any,
-	qualifiedName: string
+	serverName: string
 ): Promise<MCPTool[]> {
 	try {
 		const result = await client.listTools()
@@ -124,7 +135,7 @@ async function discoverToolsFromOAuthClient(
 			metadata: tool.metadata || {},
 		}))
 	} catch (error) {
-		console.warn(`Failed to discover tools for ${qualifiedName}:`, error)
+		console.warn(`Failed to discover tools for ${serverName}:`, error)
 		return []
 	}
 }
@@ -134,12 +145,12 @@ async function discoverToolsFromOAuthClient(
  */
 async function discoverResourcesFromOAuthClient(
 	client: MCPOAuthClient | GitHubOAuthClient | any,
-	qualifiedName: string
+	serverName: string
 ): Promise<MCPResource[]> {
 	try {
 		// Check if client supports listResources method
 		if (typeof client.listResources !== "function") {
-			console.log(`${qualifiedName} client does not support listResources`)
+			console.log(`${serverName} client does not support listResources`)
 			return []
 		}
 
@@ -159,7 +170,7 @@ async function discoverResourcesFromOAuthClient(
 			metadata: resource.metadata || {},
 		}))
 	} catch (error) {
-		console.warn(`Failed to discover resources for ${qualifiedName}:`, error)
+		console.warn(`Failed to discover resources for ${serverName}:`, error)
 		return []
 	}
 }
@@ -169,12 +180,12 @@ async function discoverResourcesFromOAuthClient(
  */
 async function discoverPromptsFromOAuthClient(
 	client: MCPOAuthClient | GitHubOAuthClient | any,
-	qualifiedName: string
+	serverName: string
 ): Promise<MCPPrompt[]> {
 	try {
 		// Check if client supports listPrompts method
 		if (typeof client.listPrompts !== "function") {
-			console.log(`${qualifiedName} client does not support listPrompts`)
+			console.log(`${serverName} client does not support listPrompts`)
 			return []
 		}
 
@@ -193,7 +204,7 @@ async function discoverPromptsFromOAuthClient(
 			metadata: prompt.metadata || {},
 		}))
 	} catch (error) {
-		console.warn(`Failed to discover prompts for ${qualifiedName}:`, error)
+		console.warn(`Failed to discover prompts for ${serverName}:`, error)
 		return []
 	}
 }
@@ -292,6 +303,7 @@ async function discoverPromptsViaHttp(
 
 /**
  * Makes a JSON-RPC 2.0 request to an MCP server
+ * Handles both JSON and SSE (Server-Sent Events) response formats
  */
 async function makeMcpRequest(
 	serverUrl: string,
@@ -301,6 +313,7 @@ async function makeMcpRequest(
 ): Promise<any> {
 	const headers: Record<string, string> = {
 		"Content-Type": "application/json",
+		"Accept": "application/json, text/event-stream",
 	}
 
 	// Add authentication if provided
@@ -327,10 +340,34 @@ async function makeMcpRequest(
 	})
 
 	if (!response.ok) {
-		throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+		const errorText = await response.text().catch(() => response.statusText)
+		throw new Error(`HTTP ${response.status}: ${errorText}`)
 	}
 
-	return await response.json()
+	const contentType = response.headers.get("content-type") || ""
+	const responseText = await response.text()
+
+	// Handle SSE (Server-Sent Events) format
+	if (contentType.includes("text/event-stream") || responseText.includes("event:") && responseText.includes("data:")) {
+		const lines = responseText.split("\n")
+		const dataLine = lines.find((line) => line.startsWith("data: "))
+		if (dataLine) {
+			const jsonString = dataLine.substring(6) // Remove 'data: ' prefix
+			try {
+				return JSON.parse(jsonString)
+			} catch (parseError) {
+				throw new Error(`Failed to parse SSE data: ${parseError instanceof Error ? parseError.message : String(parseError)}`)
+			}
+		}
+		throw new Error("SSE response format detected but no data field found")
+	}
+
+	// Handle plain JSON response
+	try {
+		return JSON.parse(responseText)
+	} catch (parseError) {
+		throw new Error(`Failed to parse JSON response: ${parseError instanceof Error ? parseError.message : String(parseError)}`)
+	}
 }
 
 /**
@@ -338,7 +375,7 @@ async function makeMcpRequest(
  */
 export async function discoverMultipleServers(
 	servers: Array<{
-		qualifiedName: string
+		serverName: string
 		url: string
 		sessionId?: string
 		apiKey?: string
@@ -347,7 +384,7 @@ export async function discoverMultipleServers(
 ): Promise<MCPServerCapabilities[]> {
 	const discoveries = await Promise.allSettled(
 		servers.map((server) =>
-			discoverServerCapabilities(server.url, server.qualifiedName, {
+			discoverServerCapabilities(server.url, server.serverName, {
 				sessionId: server.sessionId,
 				apiKey: server.apiKey,
 				bearerToken: server.bearerToken,

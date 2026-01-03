@@ -34,11 +34,10 @@ export function TaskModalHeader({
   isLoading,
   onTest,
   onChangeAssistant,
-  onSave,
 }: TaskModalHeaderProps) {
   const [isAgentConfigOpen, setIsAgentConfigOpen] = useState(false);
   // Compute enabled MCP servers and display their names as pills
-  const enabledQualifiedNames: string[] = (() => {
+  const enabledServerNames: string[] = (() => {
     const enabledMcp = assistant?.config?.configurable?.enabled_mcp_servers as
       | string[]
       | Record<string, { isEnabled?: boolean }>
@@ -128,16 +127,7 @@ export function TaskModalHeader({
                 <span className="font-medium">{task.name}</span>
               </div>
             </div>
-            <div className="flex space-x-2">
-              {onSave && (
-                <Button
-                  onClick={() => onSave?.()}
-                  disabled={isLoading || !assistant}
-                  variant="outline"
-                >
-                  Save
-                </Button>
-              )}
+            <div className="flex space-x-3">
               <Button
                 onClick={onTest}
                 disabled={isLoading || !assistant}
@@ -164,14 +154,14 @@ export function TaskModalHeader({
                   </Badge>
                 </div>
               )}
-              {enabledQualifiedNames.length > 0 && (
+              {enabledServerNames.length > 0 && (
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-medium text-muted-foreground">Tools:</span>
                   <div className="flex flex-wrap gap-1">
-                    {enabledQualifiedNames.map((qualified) => (
-                      <Badge key={qualified} variant="secondary" className="gap-1 text-xs">
+                    {enabledServerNames.map((serverName) => (
+                      <Badge key={serverName} variant="secondary" className="gap-1 text-xs">
                         <Wrench className="h-3 w-3" />
-                        {formatToolLabel(qualified)}
+                        {formatToolLabel(serverName)}
                       </Badge>
                     ))}
                   </div>

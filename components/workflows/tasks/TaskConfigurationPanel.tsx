@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -13,12 +13,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 interface TaskConfigurationPanelProps {
   currentTask: Task;
   setCurrentTask: (task: Task) => void;
   assistant: Assistant | null;
   workflowType?: "sequential" | "orchestrator";
+  onSave?: () => Promise<void> | void;
 }
 
 export function TaskConfigurationPanel({
@@ -26,8 +33,22 @@ export function TaskConfigurationPanel({
   setCurrentTask,
   assistant,
   workflowType = "sequential",
+  onSave,
 }: TaskConfigurationPanelProps) {
   const isOrchestratorMode = workflowType === "orchestrator";
+
+  // Auto-save handler for blur events
+  const handleBlur = async () => {
+    if (onSave) {
+      try {
+        await onSave();
+        // Update local state with saved data to ensure persistence
+        // The onSave callback will handle the actual save and reload
+      } catch (error) {
+        console.error("Error auto-saving task:", error);
+      }
+    }
+  };
 
   return (
     <div className="relative overflow-hidden rounded-xl border-2 border-violet-200/50 dark:border-violet-800/50 bg-gradient-to-br from-violet-50/30 to-purple-50/30 dark:from-violet-950/20 dark:to-purple-950/20">
@@ -47,45 +68,52 @@ export function TaskConfigurationPanel({
 
         <ScrollArea className="h-[600px]">
           <div className="space-y-6 p-6">
-          {/* Basic Info Section */}
-          <div className="space-y-4 rounded-lg border border-violet-200/30 dark:border-violet-800/30 bg-background/50 p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="h-1 w-1 rounded-full bg-violet-500" />
-              <h4 className="text-sm font-medium text-foreground">Basic Information</h4>
-            </div>
+          {/* Basic Info Section - Collapsible */}
+          <Accordion type="single" collapsible className="rounded-lg border border-violet-200/30 dark:border-violet-800/30 bg-background/50">
+            <AccordionItem value="basic-info" className="border-none">
+              <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                <div className="flex items-center gap-2">
+                  <div className="h-1 w-1 rounded-full bg-violet-500" />
+                  <h4 className="text-sm font-medium text-foreground">Basic Information</h4>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="px-4 pb-4 space-y-4">
+                {/* Task Name */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Task Name</Label>
+                  <Input
+                    value={currentTask.name}
+                    onChange={(e) =>
+                      setCurrentTask({ ...currentTask, name: e.target.value })
+                    }
+                    onBlur={handleBlur}
+                    className="bg-background"
+                  />
+                </div>
 
-            {/* Task Name */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Task Name</Label>
-              <Input
-                value={currentTask.name}
-                onChange={(e) =>
-                  setCurrentTask({ ...currentTask, name: e.target.value })
-                }
-                className="bg-background"
-              />
-            </div>
-
-            {/* Task Description (Optional) */}
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2 text-sm font-medium">
-                Description
-                <span className="text-xs text-muted-foreground font-normal">(Optional)</span>
-              </Label>
-              <Textarea
-                value={currentTask.description || ""}
-                onChange={(e) =>
-                  setCurrentTask({
-                    ...currentTask,
-                    description: e.target.value,
-                  })
-                }
-                placeholder="Add a description to help identify this task's purpose"
-                className="bg-background resize-none"
-                rows={3}
-              />
-            </div>
-          </div>
+                {/* Task Description (Optional) */}
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2 text-sm font-medium">
+                    Description
+                    <span className="text-xs text-muted-foreground font-normal">(Optional)</span>
+                  </Label>
+                  <Textarea
+                    value={currentTask.description || ""}
+                    onChange={(e) =>
+                      setCurrentTask({
+                        ...currentTask,
+                        description: e.target.value,
+                      })
+                    }
+                    onBlur={handleBlur}
+                    placeholder="Add a description to help identify this task's purpose"
+                    className="bg-background resize-none"
+                    rows={3}
+                  />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
 
           {/* Prompt Configuration Section */}
           <div className="space-y-4 rounded-lg border border-violet-200/30 dark:border-violet-800/30 bg-background/50 p-4">
@@ -163,6 +191,7 @@ export function TaskConfigurationPanel({
                     });
                   }
                 }}
+                onBlur={handleBlur}
                 placeholder={
                   isOrchestratorMode
                     ? "In orchestrator mode, this agent will receive instructions dynamically from the orchestrator manager based on the overall workflow goal."

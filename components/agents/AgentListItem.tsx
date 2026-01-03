@@ -95,8 +95,8 @@ export function AgentListItem({ assistant, onDelete }: AgentListItemProps) {
 	const enabledServers = getEnabledMcpServers()
 	const toolLogos: Record<string, string> = {}
 	OFFICIAL_MCP_SERVERS.forEach((s) => {
-		if (enabledServers.includes(s.qualifiedName) && s.logoUrl) {
-			toolLogos[s.qualifiedName] = s.logoUrl as string
+		if (enabledServers.includes(s.serverName) && s.logoUrl) {
+			toolLogos[s.serverName] = s.logoUrl as string
 		}
 	})
 

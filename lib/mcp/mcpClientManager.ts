@@ -9,7 +9,7 @@ import { OAuthTokens } from "@modelcontextprotocol/sdk/shared/auth.js";
 import { DynamicStructuredTool } from "@langchain/core/tools";
 
 export interface MCPServerInfo {
-  qualified_name: string;
+  server_slug: string;
   url: string;
   oauth_token?: string;
   session_id?: string;
@@ -287,58 +287,58 @@ export class MCPClientManager {
       let allTools: any[] = [];
 
       // Build server configuration, handling both OAuth and API key methods
-      for (const qualifiedName of serversToLoad) {
-        if (!allServers[qualifiedName]) {
-          console.warn(`Server ${qualifiedName} not found in available servers`);
+      for (const serverName of serversToLoad) {
+        if (!allServers[serverName]) {
+          console.warn(`Server ${serverName} not found in available servers`);
           continue;
         }
 
-        const serverConfig = allServers[qualifiedName];
-        console.log(`Processing server: ${qualifiedName} with URL: ${serverConfig.url}`);
+        const serverConfig = allServers[serverName];
+        console.log(`Processing server: ${serverName} with URL: ${serverConfig.url}`);
         
         let finalUrl = serverConfig.url;
         
         // Check if this server uses OAuth
         if (this.isOAuthServer(serverConfig)) {
-          const oauthResult = await this.handleOAuthServer(qualifiedName, serverConfig, userId);
+          const oauthResult = await this.handleOAuthServer(serverName, serverConfig, userId);
           if (oauthResult) {
             // For OAuth servers, we'll use our OAuth client wrapper
             finalUrl = oauthResult.url;
             if (oauthResult.client) {
-              oauthClients.set(qualifiedName, oauthResult.client);
+              oauthClients.set(serverName, oauthResult.client);
               
               // Try to get tools directly from the OAuth client
               try {
-                console.log(`Getting tools from OAuth client for ${qualifiedName}...`);
-                const oauthTools = await this.getToolsFromOAuthClient(oauthResult.client, qualifiedName);
+                console.log(`Getting tools from OAuth client for ${serverName}...`);
+                const oauthTools = await this.getToolsFromOAuthClient(oauthResult.client, serverName);
                 allTools.push(...oauthTools);
-                console.log(`Got ${oauthTools.length} tools from OAuth client for ${qualifiedName}`);
+                console.log(`Got ${oauthTools.length} tools from OAuth client for ${serverName}`);
               } catch (error) {
-                console.warn(`Failed to get tools from OAuth client for ${qualifiedName}:`, error);
+                console.warn(`Failed to get tools from OAuth client for ${serverName}:`, error);
               }
             }
             if (oauthResult.sessionId) {
-              sessions.set(qualifiedName, oauthResult.sessionId);
+              sessions.set(serverName, oauthResult.sessionId);
             }
           } else {
-            console.warn(`Failed to set up OAuth for server ${qualifiedName}, skipping`);
+            console.warn(`Failed to set up OAuth for server ${serverName}, skipping`);
             continue;
           }
         } else {
           // Handle API key-based servers (existing logic)
-          finalUrl = this.buildApiKeyUrl(qualifiedName, serverConfig);
+          finalUrl = this.buildApiKeyUrl(serverName, serverConfig);
         }
         
         // Only add to mcpServers if it's not an OAuth server (since we handle OAuth servers separately)
         if (!this.isOAuthServer(serverConfig)) {
-          mcpServers[qualifiedName] = {
+          mcpServers[serverName] = {
             url: finalUrl,
             // Allow adapter to fall back to SSE on intermediary/network glitches (eg. CF 5xx)
             automaticSSEFallback: true,
             // pass through optional headers (e.g., Authorization Bearer)
             headers: (serverConfig as any).headers
           };
-          console.log(`✅ Added server ${qualifiedName} to mcpServers with headers:`, (serverConfig as any).headers);
+          console.log(`✅ Added server ${serverName} to mcpServers with headers:`, (serverConfig as any).headers);
         }
       }
 
@@ -432,7 +432,7 @@ export class MCPClientManager {
   /**
    * Handles OAuth server setup and authentication
    */
-  private async handleOAuthServer(qualifiedName: string, serverConfig: any, userId: string): Promise<{
+  private async handleOAuthServer(serverName: string, serverConfig: any, userId: string): Promise<{
     url: string;
     client?: MCPOAuthClient | GitHubOAuthClient | GoogleDriveMCPClient | GmailMCPClient;
     sessionId?: string;
@@ -440,11 +440,11 @@ export class MCPClientManager {
     try {
       // Check if this is a Google service that needs custom client handling
       const isGoogleDriveServer =
-        qualifiedName === 'google-drive' ||
+        serverName === 'google-drive' ||
         serverConfig.config?.provider === 'google-drive';
       
       const isGmailServer =
-        qualifiedName === 'gmail' ||
+        serverName === 'gmail' ||
         serverConfig.config?.provider === 'gmail';
       
       // Skip sessionStore lookup for Google services - they use custom clients
@@ -453,7 +453,7 @@ export class MCPClientManager {
       if (serverConfig.session_id && !isGoogleService) {
         const existingClient = await sessionStore.getClient(serverConfig.session_id);
         if (existingClient) {
-          console.log(`Using existing OAuth session for ${qualifiedName}`);
+          console.log(`Using existing OAuth session for ${serverName}`);
           return {
             url: serverConfig.url,
             client: existingClient,
@@ -484,7 +484,7 @@ export class MCPClientManager {
         isTokenExpired = expiryDate.getTime() - bufferMs <= Date.now();
 
         if (isTokenExpired) {
-          console.log(`OAuth token for ${qualifiedName} is expired (expired at ${expiresAt})`);
+          console.log(`OAuth token for ${serverName} is expired (expired at ${expiresAt})`);
         }
       }
 
@@ -498,13 +498,13 @@ export class MCPClientManager {
           }
         : null;
 
-      console.log(`🔍 Google Drive Debug - qualifiedName: ${qualifiedName}, isGoogleDriveServer: ${isGoogleDriveServer}, hasStoredToken: ${hasStoredToken}`);
+      console.log(`🔍 Google Drive Debug - serverName: ${serverName}, isGoogleDriveServer: ${isGoogleDriveServer}, hasStoredToken: ${hasStoredToken}`);
       console.log(`🔍 Google Drive Debug - serverConfig.oauth_token: ${serverConfig.oauth_token ? 'PRESENT' : 'MISSING'}`);
 
       // Handle Google Drive servers with custom client FIRST
       if (isGoogleDriveServer) {
         console.log(`🔍 Google Drive Debug - Attempting to create client regardless of token status`);
-        console.log(`Creating Google Drive MCP client for ${qualifiedName}`);
+        console.log(`Creating Google Drive MCP client for ${serverName}`);
         try {
           const googleClient = await createGoogleDriveClient(userId, serverConfig);
           
@@ -528,9 +528,9 @@ export class MCPClientManager {
       // Handle Gmail servers with custom client (same pattern as Drive)
       
       if (isGmailServer) {
-        console.log(`🔍 Gmail Debug - qualifiedName: ${qualifiedName}, hasStoredToken: ${hasStoredToken}`);
+        console.log(`🔍 Gmail Debug - serverName: ${serverName}, hasStoredToken: ${hasStoredToken}`);
         console.log(`🔍 Gmail Debug - serverConfig.oauth_token: ${serverConfig.oauth_token ? 'PRESENT' : 'MISSING'}`);
-        console.log(`Creating Gmail MCP client for ${qualifiedName}`);
+        console.log(`Creating Gmail MCP client for ${serverName}`);
         try {
           const gmailClient = await createGmailClient(userId, serverConfig);
           
@@ -552,12 +552,12 @@ export class MCPClientManager {
       }
 
       const isGitHubServer =
-        qualifiedName === 'github' ||
+        serverName === 'github' ||
         serverConfig.url?.includes('githubcopilot.com') ||
         serverConfig.url?.includes('github.com');
 
       if (isGitHubServer && tokens) {
-        console.log(`Rehydrating GitHub OAuth client for ${qualifiedName}`);
+        console.log(`Rehydrating GitHub OAuth client for ${serverName}`);
         const githubClient = new GitHubOAuthClient(
           serverConfig.url,
           callbackUrl,
@@ -581,17 +581,17 @@ export class MCPClientManager {
             sessionId: serverConfig.session_id,
           };
         } catch (error) {
-          console.warn(`Failed to reconnect GitHub OAuth session for ${qualifiedName}:`, error);
+          console.warn(`Failed to reconnect GitHub OAuth session for ${serverName}:`, error);
         }
       }
 
       if (tokens) {
-        console.log(`Rehydrating OAuth client for ${qualifiedName}`);
+        console.log(`Rehydrating OAuth client for ${serverName}`);
         const oauthClient = new MCPOAuthClient(
           serverConfig.url,
           callbackUrl,
           (redirectUrl: string) => {
-            console.log(`OAuth redirect for ${qualifiedName}: ${redirectUrl}`);
+            console.log(`OAuth redirect for ${serverName}: ${redirectUrl}`);
           }
         );
 
@@ -612,19 +612,19 @@ export class MCPClientManager {
             sessionId: serverConfig.session_id,
           };
         } catch (error) {
-          console.warn(`Failed to reconnect OAuth session for ${qualifiedName}:`, error);
+          console.warn(`Failed to reconnect OAuth session for ${serverName}:`, error);
         }
       }
 
       console.warn(
-        `OAuth server ${qualifiedName} is enabled but no reusable session tokens were found; agent may need to reauthorize.`
+        `OAuth server ${serverName} is enabled but no reusable session tokens were found; agent may need to reauthorize.`
       );
 
       return {
         url: serverConfig.url,
       };
     } catch (error) {
-      console.error(`Error handling OAuth server ${qualifiedName}:`, error);
+      console.error(`Error handling OAuth server ${serverName}:`, error);
       return null;
     }
   }
@@ -632,15 +632,15 @@ export class MCPClientManager {
   /**
    * Builds URL for non-OAuth servers
    */
-  private buildApiKeyUrl(qualifiedName: string, serverConfig: any): string {
+  private buildApiKeyUrl(serverName: string, serverConfig: any): string {
     // If server has a URL configured, use it
     if (serverConfig.url) {
       return serverConfig.url;
     }
 
     // Servers without URLs cannot be used
-    console.error(`❌ Server ${qualifiedName} has no URL configured`);
-    throw new Error(`Server ${qualifiedName} requires a URL to be configured`);
+    console.error(`❌ Server ${serverName} has no URL configured`);
+    throw new Error(`Server ${serverName} requires a URL to be configured`);
   }
 
 
@@ -714,6 +714,11 @@ export class MCPClientManager {
     let authUrl: string | null = null;
     let stateParam: string | undefined;
 
+    // Check if this is a known OAuth server (from official servers list)
+    const { findOfficialServer } = await import('./officialMcpServers');
+    const officialServer = serverName ? findOfficialServer(serverName) : null;
+    const isKnownOAuthServer = officialServer?.authType === 'oauth';
+
     // Use GitHub-specific OAuth client for GitHub MCP server
     const isGitHubServer = serverUrl.includes('githubcopilot.com') || serverUrl.includes('github.com');
     
@@ -743,13 +748,95 @@ export class MCPClientManager {
       );
     }
 
+    // For known OAuth servers, we still need to call connect() to initialize the OAuth provider
+    // The connect() call will attempt to connect, and if OAuth is required, the onRedirect callback
+    // will be triggered. However, network errors may occur before OAuth is detected.
+    if (isKnownOAuthServer) {
+      console.log(`Initializing OAuth flow for known OAuth server: ${serverName}`);
+      
+      // Initialize the client (this sets up the OAuth provider)
+      // The connect() call will trigger the onRedirect callback if OAuth is needed
+      try {
+        await client.connect();
+        // If connection succeeds (unlikely for OAuth servers), return success
+        await sessionStore.setClient(sessionId, client);
+        return { client, sessionId };
+      } catch (error: any) {
+        // For OAuth servers, connection will likely fail
+        // The authUrl should be set via the onRedirect callback during connect()
+        // However, network errors may prevent the callback from being triggered
+        
+        // Check if we got an authUrl from the callback
+        if (authUrl) {
+          // Generate cryptographically secure state parameter for CSRF protection
+          const crypto = await import('crypto');
+          stateParam = crypto.randomBytes(32).toString('hex');
+
+          // Store state mapping for validation on callback
+          if (userId && serverName) {
+            await sessionStore.setOAuthState(stateParam, {
+              sessionId,
+              userId,
+              serverName,
+              serverUrl,
+              expiresAt: Date.now() + 5 * 60 * 1000, // 5 minute expiration
+            });
+
+            // Append state parameter to auth URL
+            try {
+              const url = new URL(authUrl);
+              url.searchParams.set('state', stateParam);
+              authUrl = url.toString();
+            } catch (urlError) {
+              console.error('Failed to append state parameter to OAuth URL:', urlError);
+            }
+          }
+
+          // Store client for later use (even though connection failed, we have the provider state)
+          await sessionStore.setClient(sessionId, client);
+
+          // Capture provider state for rehydration on callback
+          let providerState: any = undefined;
+          if (client instanceof MCPOAuthClient) {
+            providerState = client.getProviderState();
+          }
+
+          return {
+            client,
+            sessionId,
+            requiresAuth: true,
+            authUrl,
+            providerState,
+            state: stateParam
+          };
+        }
+        
+        // If no authUrl was set, the connection failed before OAuth could be detected
+        // This typically means the server URL is invalid or unreachable
+        // For known OAuth servers, we should still try to proceed if possible
+        // by checking if the error is specifically about OAuth being required
+        if (error.message === "OAuth authorization required") {
+          // OAuth was detected but no URL was generated - this shouldn't happen
+          console.error(`OAuth required for ${serverName} but no auth URL was generated`);
+          throw new Error(`OAuth flow initialization failed for ${serverName}`);
+        }
+        
+        // For network errors on known OAuth servers, we can't proceed without an authUrl
+        // Log the error but provide a helpful message
+        console.error(`Connection failed for OAuth server ${serverName}:`, error.message);
+        throw new Error(`Cannot connect to ${serverName}. The server may be unreachable or misconfigured. Error: ${error.message}`);
+      }
+    }
+
+    // For unknown servers, try connecting normally
     try {
       await client.connect();
       // If we get here, connection succeeded without OAuth
       await sessionStore.setClient(sessionId, client);
       return { client, sessionId };
     } catch (error: any) {
-      if (error.message === "OAuth authorization required" && authUrl) {
+      // Check if we already have an authUrl from the callback
+      if (authUrl) {
         // Generate cryptographically secure state parameter for CSRF protection
         const crypto = await import('crypto');
         stateParam = crypto.randomBytes(32).toString('hex');

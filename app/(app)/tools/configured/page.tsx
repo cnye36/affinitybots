@@ -43,7 +43,7 @@ export default function ConfiguredToolsPage() {
         const rawServers: any[] = serversJson.servers || [];
         const filtered = (rawServers || [])
           .filter((s) => s?.is_enabled)
-          .filter((s) => (s?.qualified_name || '').toLowerCase() !== 'notion');
+          .filter((s) => (s?.server_slug || '').toLowerCase() !== 'notion');
         setServers(filtered);
 
         // 2) Build enabled counts per server from assistants' configs
@@ -66,7 +66,7 @@ export default function ConfiguredToolsPage() {
         // 3) Build metadata map from Official + User-added
         const meta: Record<string, ToolMeta> = {};
         for (const s of OFFICIAL_MCP_SERVERS) {
-          meta[s.qualifiedName] = {
+          meta[s.serverName] = {
             displayName: s.displayName,
             description: s.description,
             logoUrl: s.logoUrl,
@@ -74,7 +74,7 @@ export default function ConfiguredToolsPage() {
         }
         const userAdded: any[] = userAddedJson?.servers || [];
         for (const s of userAdded) {
-          const q = s?.qualified_name;
+          const q = s?.server_slug;
           if (!q) continue;
           meta[q] = {
             displayName: s.display_name || meta[q]?.displayName || q,
@@ -108,14 +108,14 @@ export default function ConfiguredToolsPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
             {servers.map((s: any) => {
-              const qualified = s.qualified_name as string;
-              const meta = metaByName[qualified] || {};
-              const displayName = meta.displayName || qualified;
+              const serverSlug = s.server_slug as string;
+              const meta = metaByName[serverSlug] || {};
+              const displayName = meta.displayName || serverSlug;
               const description = meta.description || s.url || "";
               const logoUrl = meta.logoUrl || "";
-              const enabledIn = enabledCounts[qualified] || 0;
+              const enabledIn = enabledCounts[serverSlug] || 0;
               return (
-                <Link key={s.id || qualified} href={`/tools/${encodeURIComponent(qualified)}`} className="block">
+                <Link key={s.id || serverSlug} href={`/tools/${encodeURIComponent(serverSlug)}`} className="block">
                   <Card className="hover:shadow-md transition-shadow h-full">
                     <CardHeader>
                       <div className="flex items-center gap-3">
@@ -159,7 +159,7 @@ export default function ConfiguredToolsPage() {
           const rawServers: any[] = serversJson.servers || [];
           const filtered = (rawServers || [])
             .filter((s: any) => s?.is_enabled)
-            .filter((s: any) => (s?.qualified_name || '').toLowerCase() !== 'notion');
+            .filter((s: any) => (s?.server_slug || '').toLowerCase() !== 'notion');
           setServers(filtered || []);
           const assistants: any[] = assistantsJson?.assistants || [];
           const counts: Record<string, number> = {};
@@ -176,7 +176,7 @@ export default function ConfiguredToolsPage() {
           setEnabledCounts(counts);
           const meta: Record<string, ToolMeta> = {};
           for (const s of OFFICIAL_MCP_SERVERS) {
-            meta[s.qualifiedName] = {
+            meta[s.serverName] = {
               displayName: s.displayName,
               description: s.description,
               logoUrl: s.logoUrl,
@@ -184,7 +184,7 @@ export default function ConfiguredToolsPage() {
           }
           const userAdded: any[] = userAddedJson?.servers || [];
           for (const s of userAdded) {
-            const q = s?.qualified_name;
+            const q = s?.server_slug;
             if (!q) continue;
             meta[q] = {
               displayName: s.display_name || meta[q]?.displayName || q,

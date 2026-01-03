@@ -6,13 +6,7 @@ import { createClient } from "@/supabase/client";
 import { WorkflowNode } from "@/types/workflow";
 import { WorkflowCanvas } from "@/components/workflows/v2/WorkflowCanvas";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import { Check, Copy } from "lucide-react";
-import { useSidebar } from "@/components/ui/sidebar";
+import { NodeDetailPanel } from "@/components/workflows/execution/NodeDetailPanel";
 
 interface WorkflowTrigger {
   trigger_id: string;
@@ -38,7 +32,6 @@ type RunListItem = {
 
 export function WorkflowExecutions({ workflowId }: WorkflowExecutionsProps) {
   const supabase = createClient();
-  const { state } = useSidebar();
   const [runs, setRuns] = useState<RunListItem[]>([]);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [nodes, setNodes] = useState<WorkflowNode[]>([]);
@@ -46,6 +39,8 @@ export function WorkflowExecutions({ workflowId }: WorkflowExecutionsProps) {
   const [taskRunsByTaskId, setTaskRunsByTaskId] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(false);
   const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
+  const [detailedTaskRuns, setDetailedTaskRuns] = useState<Record<string, any>>({});
+  const [loadingNodeData, setLoadingNodeData] = useState<string | null>(null);
 
   const isValidUuid = (value?: string | null) =>
     typeof value === "string" &&
@@ -222,6 +217,42 @@ export function WorkflowExecutions({ workflowId }: WorkflowExecutionsProps) {
     })();
   }, [workflowId, selectedRunId]);
 
+  // Fetch detailed thread data when node is clicked
+  useEffect(() => {
+    if (!activeNodeId || !selectedRunId || !isValidUuid(workflowId) || !isValidUuid(selectedRunId)) return;
+
+    // Extract task ID from node ID
+    const taskId = activeNodeId.replace(/^task-/, "");
+
+    // If already loaded, skip
+    if (detailedTaskRuns[taskId]) return;
+
+    // Fetch detailed thread data
+    const fetchNodeDetails = async () => {
+      setLoadingNodeData(taskId);
+      try {
+        const res = await fetch(
+          `/api/workflows/${workflowId}/executions/${selectedRunId}?includeThreadData=true`
+        );
+        if (!res.ok) return;
+
+        const { taskRuns } = await res.json();
+        const taskRunsById: Record<string, any> = {};
+        for (const tr of taskRuns || []) {
+          taskRunsById[tr.workflow_task_id] = tr;
+        }
+
+        setDetailedTaskRuns((prev) => ({ ...prev, ...taskRunsById }));
+      } catch (error) {
+        console.error("Failed to fetch node details:", error);
+      } finally {
+        setLoadingNodeData(null);
+      }
+    };
+
+    fetchNodeDetails();
+  }, [activeNodeId, selectedRunId, workflowId, detailedTaskRuns]);
+
   // Decorate nodes with execution status and result
   const decoratedNodes = useMemo(() => {
     return nodes.map((n) => {
@@ -251,66 +282,6 @@ export function WorkflowExecutions({ workflowId }: WorkflowExecutionsProps) {
       return n;
     });
   }, [nodes, taskRunsByTaskId, activeNodeId]);
-
-  // Helpers for sidebar rendering
-  const extractMarkdownFrom = useMemo(() => {
-    const walk = (val: any): string | null => {
-      if (val == null) return null;
-      // Direct string
-      if (typeof val === "string" && val.trim().length > 0) return val;
-
-      // Arrays: search each element
-      if (Array.isArray(val)) {
-        for (const item of val) {
-          const found = walk(item);
-          if (found) return found;
-        }
-        return null;
-      }
-
-      // Objects: check common shapes, then recursively scan all fields
-      if (typeof val === "object") {
-        // Common content locations
-        if (typeof (val as any).content === "string" && (val as any).content.trim().length > 0) {
-          return (val as any).content as string;
-        }
-        if (Array.isArray((val as any).content)) {
-          const joined = ((val as any).content as any[])
-            .map((p) =>
-              typeof p === "string"
-                ? p
-                : typeof (p as any)?.text === "string"
-                ? (p as any).text
-                : typeof (p as any)?.content === "string"
-                ? (p as any).content
-                : ""
-            )
-            .filter(Boolean)
-            .join("\n\n");
-          if (joined.trim().length > 0) return joined;
-        }
-
-        // Specific shape observed: result.agent.messages[0].content
-        const maybeAgent = (val as any).agent;
-        if (maybeAgent && Array.isArray(maybeAgent.messages)) {
-          const foundInMessages = walk(maybeAgent.messages);
-          if (foundInMessages) return foundInMessages;
-        }
-
-        // Try common alternative keys
-        const alt = walk((val as any).output) || walk((val as any).result);
-        if (alt) return alt;
-
-        // Finally, deep-scan all properties
-        for (const key of Object.keys(val as Record<string, unknown>)) {
-          const found = walk((val as any)[key]);
-          if (found) return found;
-        }
-      }
-      return null;
-    };
-    return walk;
-  }, []);
 
   return (
     <div className="flex h-full">
@@ -357,146 +328,20 @@ export function WorkflowExecutions({ workflowId }: WorkflowExecutionsProps) {
         />
       </div>
 
-      {/* Slide-out Node details panel */}
-      <div className={`fixed top-0 right-0 h-full w-[420px] bg-background border-l shadow-lg transform transition-all duration-300 ease-in-out z-50 ${
-        activeNodeId ? 'translate-x-0' : 'translate-x-full'
-      }`}>
-        <div className="h-full flex flex-col">
-          <div className="flex items-center justify-between p-3 border-b">
-            <h3 className="text-sm font-medium">Node Details</h3>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setActiveNodeId(null)}
-              className="h-6 w-6 p-0"
-            >
-              ×
-            </Button>
+      {/* Node details panel */}
+      {activeNodeId && (() => {
+        const node = nodes.find((n) => n.id === activeNodeId);
+        if (!node) return null;
+
+        const taskId = activeNodeId.replace(/^task-/, "");
+        const taskRun = detailedTaskRuns[taskId] || taskRunsByTaskId[taskId] || null;
+
+        return (
+          <div className={`fixed top-0 right-0 h-full w-[480px] max-w-[90vw] bg-background border-l shadow-xl transform transition-transform duration-300 ease-in-out z-50 translate-x-0`}>
+            <NodeDetailPanel node={node} taskRun={taskRun} onClose={() => setActiveNodeId(null)} />
           </div>
-          <div className="flex-1 p-3 overflow-y-auto">
-            {activeNodeId && (() => {
-              const node = nodes.find((n) => n.id === activeNodeId);
-              if (!node) return <div className="text-sm text-muted-foreground">Select a node to view details.</div>;
-              
-              if (node.type === "trigger") {
-                return (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">{node.data.name || "Trigger"}</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="text-xs text-muted-foreground">Type: {node.data.trigger_type || "trigger"}</div>
-                      <div className="text-xs">Status: <span className="uppercase">ready</span></div>
-                      <div className="text-xs text-muted-foreground">
-                        This trigger starts the workflow execution when its conditions are met.
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              }
-              
-              if (node.type === "task") {
-                const tr = taskRunsByTaskId[node.data.workflow_task_id];
-                const agentName = (node.data as any)?.assignedAssistant?.name || (node.data as any)?.config?.assigned_assistant?.name || "Agent";
-                const toolsUsed: string[] = (tr?.analytics?.tool_calls || tr?.metadata?.toolsUsed || tr?.metadata?.tools || []) as string[];
-                const toolCallCount = tr?.analytics?.tool_call_count ?? toolsUsed.length;
-                const durationMs = tr?.analytics?.duration_ms ?? null;
-                const markdownText = extractMarkdownFrom(tr?.result);
-                const resultText = typeof tr?.result === "string" ? (tr?.result as string) : JSON.stringify(tr?.result ?? null, null, 2);
-                const [copied, setCopied] = [false, undefined] as any; // placeholder for inline TS satisfaction; we will handle copy via inline handler
-                return (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">{node.data.name}</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="text-xs text-muted-foreground">Type: {node.data.task_type}</div>
-                      <div className="text-xs">Agent: {agentName}</div>
-                      {toolsUsed?.length > 0 && (
-                        <div className="text-xs flex flex-wrap gap-1 items-center">
-                          <span className="text-muted-foreground">Tools ({toolCallCount}):</span>
-                          {toolsUsed.map((t, index) => (
-                            <span key={`${t}-${index}`} className="px-1.5 py-0.5 rounded bg-muted text-[10px] uppercase tracking-wide">{t}</span>
-                          ))}
-                        </div>
-                      )}
-                      <div className="text-xs">Status: <span className="uppercase">{tr?.status || "unknown"}</span></div>
-                      {durationMs != null && (
-                        <div className="text-xs">Duration: {Math.max(0, Math.round(durationMs / 1000))}s</div>
-                      )}
-                      {tr?.started_at && <div className="text-xs">Started: {new Date(tr.started_at).toLocaleString()}</div>}
-                      {tr?.completed_at && <div className="text-xs">Completed: {new Date(tr.completed_at).toLocaleString()}</div>}
-                      {tr?.error && (
-                        <div className="text-xs text-red-600 break-words">Error: {tr.error}</div>
-                      )}
-                      <Separator />
-                      <Tabs defaultValue="result">
-                        <TabsList className="grid grid-cols-3 w-full">
-                          <TabsTrigger value="result">Result</TabsTrigger>
-                          <TabsTrigger value="markdown">Markdown</TabsTrigger>
-                          <TabsTrigger value="raw">Raw JSON</TabsTrigger>
-                        </TabsList>
-                        <TabsContent value="result">
-                          <div className="relative">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="absolute right-1 top-1 h-7 px-2"
-                              onClick={() => navigator.clipboard.writeText(resultText)}
-                              title="Copy"
-                            >
-                              <Copy className="h-3.5 w-3.5" />
-                            </Button>
-                            <pre className="text-xs whitespace-pre-wrap break-words bg-muted p-2 rounded-md max-h-[320px] overflow-auto">{resultText}</pre>
-                          </div>
-                        </TabsContent>
-                        <TabsContent value="markdown">
-                          {markdownText ? (
-                            <div className="relative border rounded-md p-2 max-h-[320px] overflow-auto">
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="absolute right-1 top-1 h-7 px-2"
-                                onClick={() => navigator.clipboard.writeText(markdownText)}
-                                title="Copy"
-                              >
-                                <Copy className="h-3.5 w-3.5" />
-                              </Button>
-                              <div className="prose max-w-none dark:prose-invert">
-                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                  {markdownText}
-                                </ReactMarkdown>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="text-xs text-muted-foreground">No markdown text available.</div>
-                          )}
-                        </TabsContent>
-                        <TabsContent value="raw">
-                          <div className="relative">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="absolute right-1 top-1 h-7 px-2"
-                              onClick={() => navigator.clipboard.writeText(JSON.stringify(tr ?? {}, null, 2))}
-                              title="Copy"
-                            >
-                              <Copy className="h-3.5 w-3.5" />
-                            </Button>
-                            <pre className="text-xs whitespace-pre bg-muted p-2 rounded-md max-h-[320px] overflow-auto">{JSON.stringify(tr ?? {}, null, 2)}</pre>
-                          </div>
-                        </TabsContent>
-                      </Tabs>
-                    </CardContent>
-                  </Card>
-                );
-              }
-              
-              return <div className="text-sm text-muted-foreground">Select a node to view details.</div>;
-            })()}
-          </div>
-        </div>
-      </div>
+        );
+      })()}
     </div>
   );
 }

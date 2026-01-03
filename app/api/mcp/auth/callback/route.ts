@@ -58,13 +58,29 @@ export async function GET(request: NextRequest) {
     // Now safe to proceed with OAuth completion using validated sessionId
     const result = await mcpWebInterface.finishAuth(storedState.sessionId, authCode, user.id);
 
-    // Optionally redirect back to a UI page
+    // Redirect to the specific server page on success
     if (result.success) {
-      const redirectTo = url.searchParams.get('redirectTo') || '/tools';
+      const serverSlug = storedState.serverName;
+      
+      // Trigger capability discovery after successful OAuth connection
+      if (serverSlug) {
+        try {
+          // Discover capabilities in the background (don't wait for it)
+          fetch(`${url.origin}/api/mcp/servers/${serverSlug}/discover`, {
+            method: "POST",
+          }).catch((err) => {
+            console.warn(`Failed to discover capabilities for ${serverSlug} after OAuth:`, err);
+          });
+        } catch (discoverError) {
+          console.warn(`Error triggering capability discovery:`, discoverError);
+        }
+      }
+      
+      const redirectTo = serverSlug ? `/tools/${serverSlug}?connected=true` : '/tools?connected=true';
       return NextResponse.redirect(new URL(redirectTo, url.origin));
     }
 
-    return NextResponse.json(result, { status: 500 });
+    return NextResponse.redirect(new URL('/tools?error=connection_failed', url.origin));
   } catch (error: unknown) {
     if (error instanceof Error) {
       return NextResponse.json({ error: error.message }, { status: 500 });

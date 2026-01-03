@@ -135,8 +135,8 @@ export const MemoizedTaskNode = memo(
 			}
 			const logos: Record<string, string> = {}
 			OFFICIAL_MCP_SERVERS.forEach((s) => {
-				if (enabledTools.includes(s.qualifiedName) && s.logoUrl) {
-					logos[s.qualifiedName] = s.logoUrl
+				if (enabledTools.includes(s.serverName) && s.logoUrl) {
+					logos[s.serverName] = s.logoUrl
 				}
 			})
 			setToolLogos(logos)
@@ -247,31 +247,67 @@ export const MemoizedTaskNode = memo(
 				}
 
 				const extractTextFromPayload = (payload: unknown): string => {
-					const items = Array.isArray(payload)
-						? payload
-						: payload != null
-						? [payload]
-						: []
-					return items
-						.map((item: any) => {
-							if (typeof item === "string") return item
-							if (typeof item?.delta === "string") return item.delta
-							if (typeof item?.text === "string") return item.text
-							if (typeof item?.token === "string") return item.token
-							const content = item?.content
-							if (typeof content === "string") return content
-							if (Array.isArray(content)) {
-								return content
-									.map((part) => {
-										if (typeof part === "string") return part
-										if (typeof part?.text === "string") return part.text
-										return ""
-									})
-									.join("")
-							}
-							return ""
+					// Handle messages array (messages-tuple format)
+					if (Array.isArray(payload)) {
+						// Filter to only AI messages, skip human/user messages
+						const aiMessages = payload.filter((msg: any) => {
+							const type = msg?.type || msg?.role
+							return type === "ai" || type === "assistant" || (!type && msg?.content)
 						})
-						.join("")
+						
+						return aiMessages
+							.map((item: any) => {
+								// Skip human messages
+								if (item?.type === "human" || item?.role === "user") return ""
+								
+								if (typeof item === "string") return item
+								if (typeof item?.delta === "string") return item.delta
+								if (typeof item?.text === "string") return item.text
+								if (typeof item?.token === "string") return item.token
+								
+								const content = item?.content
+								if (typeof content === "string") return content
+								if (Array.isArray(content)) {
+									return content
+										.map((part) => {
+											if (typeof part === "string") return part
+											if (typeof part?.text === "string") return part.text
+											return ""
+										})
+										.join("")
+								}
+								return ""
+							})
+							.filter(Boolean)
+							.join("")
+					}
+					
+					// Handle single object
+					if (payload != null && typeof payload === "object") {
+						// Skip if it's a human message
+						if ((payload as any)?.type === "human" || (payload as any)?.role === "user") {
+							return ""
+						}
+						
+						const item = payload as any
+						if (typeof item.delta === "string") return item.delta
+						if (typeof item.text === "string") return item.text
+						if (typeof item.token === "string") return item.token
+						
+						const content = item.content
+						if (typeof content === "string") return content
+						if (Array.isArray(content)) {
+							return content
+								.map((part) => {
+									if (typeof part === "string") return part
+									if (typeof part?.text === "string") return part.text
+									return ""
+								})
+								.join("")
+						}
+					}
+					
+					return ""
 				}
 
 				// Proper SSE parsing with buffering across chunks
@@ -279,6 +315,7 @@ export const MemoizedTaskNode = memo(
 				let accumulatedText = ""
 				let finalPayload: any = null
 				let finalEventType: string | null = null
+				let hasStartedStreaming = false
 
 				while (true) {
 					const { done, value } = await reader.read()
@@ -321,38 +358,46 @@ export const MemoizedTaskNode = memo(
 
 							if (resolvedEventType === "messages/partial") {
 								const textDelta = extractTextFromPayload(payload)
-								if (textDelta) {
+								if (textDelta && textDelta.trim()) {
+									// Only accumulate if we have actual AI content (not user prompt)
 									accumulatedText += textDelta
+									hasStartedStreaming = true
+									
+									try {
+										window.dispatchEvent(
+											new CustomEvent("taskTestStream", {
+												detail: {
+													workflowTaskId: props.data.workflow_task_id,
+													partial: accumulatedText,
+												},
+											}),
+										)
+									} catch {}
 								}
-								try {
-									window.dispatchEvent(
-										new CustomEvent("taskTestStream", {
-											detail: {
-												workflowTaskId: props.data.workflow_task_id,
-												partial: accumulatedText,
-											},
-										}),
-									)
-								} catch {}
 							}
 
 							if (resolvedEventType === "messages/complete") {
 								const finalText = extractTextFromPayload(payload)
-								if (finalText) {
+								if (finalText && finalText.trim()) {
+									// Use the final extracted text, which should only contain AI response
 									accumulatedText = finalText
 								}
 								finalEventType = resolvedEventType
 								finalPayload = { event: resolvedEventType, data: payload }
-								try {
-									window.dispatchEvent(
-										new CustomEvent("taskTestStream", {
-											detail: {
-												workflowTaskId: props.data.workflow_task_id,
-												partial: accumulatedText,
-											},
-										}),
-									)
-								} catch {}
+								
+								// Only dispatch if we have actual content
+								if (accumulatedText.trim()) {
+									try {
+										window.dispatchEvent(
+											new CustomEvent("taskTestStream", {
+												detail: {
+													workflowTaskId: props.data.workflow_task_id,
+													partial: accumulatedText,
+												},
+											}),
+										)
+									} catch {}
+								}
 							}
 
 							if (resolvedEventType === "error" && payload?.error) {
@@ -622,7 +667,7 @@ export const MemoizedTaskNode = memo(
 								{/* Integration icons from assistant's enabled MCP servers */}
 								{enabledTools.map((qualifiedName) => {
 									const logoUrl = toolLogos[qualifiedName]
-									const server = OFFICIAL_MCP_SERVERS.find(s => s.qualifiedName === qualifiedName)
+									const server = OFFICIAL_MCP_SERVERS.find(s => s.serverName === qualifiedName)
 									const displayName = server?.displayName || qualifiedName.split('/').pop() || qualifiedName
 									return (
 										<TooltipProvider key={`tool-${qualifiedName}`}>
@@ -783,11 +828,11 @@ export const MemoizedTaskNode = memo(
 						task_type: props.data.task_type,
 						assignedAssistant: props.data.assignedAssistant,
 						status: props.data.status,
-						config: {
+						config: props.data.config || {
 							input: {
 								source: "previous_node",
 								parameters: {},
-								prompt: props.data.config?.input?.prompt || "",
+								prompt: "",
 							},
 							output: {
 								destination: "next_node",
@@ -798,7 +843,7 @@ export const MemoizedTaskNode = memo(
 						updated_at: new Date().toISOString(),
 						last_run_at: new Date().toISOString(),
 						owner_id: props.data.owner_id,
-						metadata: {},
+						metadata: (props.data as any).metadata || (props.data as any).task?.metadata || {},
 					}}
 					previousNodeOutput={props.data.previousNodeOutput as any}
 					onTest={handleTestTask}

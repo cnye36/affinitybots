@@ -10,7 +10,7 @@ export interface MCPServerValidationResult {
 }
 
 export interface MCPServerConfig {
-  qualified_name: string;
+  server_slug: string;
   url?: string;
   oauth_token?: string;
   session_id?: string;
@@ -31,8 +31,8 @@ export function validateMCPServerConfig(serverConfig: MCPServerConfig): MCPServe
   };
 
   // Check basic requirements
-  if (!serverConfig.qualified_name || serverConfig.qualified_name.trim() === '') {
-    result.errors.push('Server must have a qualified_name');
+  if (!serverConfig.server_slug || serverConfig.server_slug.trim() === '') {
+    result.errors.push('Server must have a server_slug');
     result.isValid = false;
   }
 

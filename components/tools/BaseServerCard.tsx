@@ -5,14 +5,17 @@ import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
 import { ReactNode, useState } from "react";
 import { CheckCircle2 } from "lucide-react";
+import { useTheme } from "next-themes";
 
 export type ServerType = "official" | "custom";
 
 export interface BaseServerCardProps {
-  qualifiedName: string;
+  serverName: string;
   displayName: string;
   description: string;
-  logoUrl?: string;
+  logoUrl?: string; // Fallback for backward compatibility
+  logoUrlLight?: string; // Icon for light theme
+  logoUrlDark?: string; // Icon for dark theme
   serverType: ServerType;
   isConfigured?: boolean;
   children?: ReactNode;
@@ -22,10 +25,12 @@ export interface BaseServerCardProps {
 }
 
 export function BaseServerCard({
-  qualifiedName,
+  serverName,
   displayName,
   description,
   logoUrl,
+  logoUrlLight,
+  logoUrlDark,
   serverType,
   isConfigured = false,
   children,
@@ -34,6 +39,22 @@ export function BaseServerCard({
   compact = false
 }: BaseServerCardProps) {
   const [imageError, setImageError] = useState(false);
+  const { theme, resolvedTheme } = useTheme();
+  
+  // Determine which logo URL to use based on theme
+  const getLogoUrl = () => {
+    const currentTheme = resolvedTheme || theme || "light";
+    if (currentTheme === "dark" && logoUrlDark) {
+      return logoUrlDark;
+    }
+    if (currentTheme === "light" && logoUrlLight) {
+      return logoUrlLight;
+    }
+    // Fallback to logoUrl for backward compatibility
+    return logoUrl;
+  };
+  
+  const effectiveLogoUrl = getLogoUrl();
   const getTruncatedDescription = (text: string, maxWords: number = 30): string => {
     const safe = text || "";
     const words = safe.split(/\s+/).filter(Boolean);
@@ -64,7 +85,7 @@ export function BaseServerCard({
   };
 
   const getFallbackEmoji = () => {
-    switch (qualifiedName) {
+    switch (serverName) {
       case 'github':
         return '🐙';
       case 'notion':
@@ -87,9 +108,9 @@ export function BaseServerCard({
           <div className="flex items-center gap-3 p-3">
             {/* Logo */}
             <div className="flex-shrink-0">
-              {logoUrl && !imageError ? (
+              {effectiveLogoUrl && !imageError ? (
                 <Image
-                  src={logoUrl}
+                  src={effectiveLogoUrl}
                   alt={displayName}
                   width={40}
                   height={40}
@@ -166,9 +187,9 @@ export function BaseServerCard({
         <CardHeader className="flex flex-col items-center pb-2 pt-12">
           {/* Logo without circle */}
           <div className="mb-3 relative">
-            {logoUrl && !imageError ? (
+            {effectiveLogoUrl && !imageError ? (
               <Image
-                src={logoUrl}
+                src={effectiveLogoUrl}
                 alt={displayName}
                 width={64}
                 height={64}

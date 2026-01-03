@@ -88,7 +88,7 @@ export async function POST(
               const inputSource: "prompt" | "previous_output" | "prompt_and_previous_output" =
                 ((overrideConfig as any)?.context?.inputSource as any) ||
                 (task.config as any)?.context?.inputSource ||
-                "prompt";
+                "prompt_and_previous_output";
               const messages: Array<{ role: string; content: string }> = [];
               const promptText = task.config?.input?.prompt || input?.prompt || "";
               const previousText = previousOutputFromClient
@@ -100,12 +100,14 @@ export async function POST(
                     : ((input as any)?.previous_output
                         ? JSON.stringify((input as any).previous_output)
                         : ""));
-              // Always include this node's instruction if provided
-              if (promptText) {
+
+              // Include this node's prompt if inputSource includes prompt mode
+              if ((inputSource === "prompt" || inputSource === "prompt_and_previous_output") && promptText) {
                 messages.push({ role: "user", content: promptText });
               }
-              // Optionally include previous node output
-              if (inputSource === "previous_output" && previousText) {
+
+              // Include previous node output if inputSource includes previous_output mode
+              if ((inputSource === "previous_output" || inputSource === "prompt_and_previous_output") && previousText) {
                 messages.push({ role: "user", content: previousText });
               }
 

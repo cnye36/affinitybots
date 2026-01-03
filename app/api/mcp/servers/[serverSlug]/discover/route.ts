@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
+import { createClient } from "@/supabase/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
 import { discoverServerCapabilities } from "@/lib/mcp/mcpDiscovery"
+import { findOfficialServer } from "@/lib/mcp/officialMcpServers"
 
 /**
  * POST /api/mcp/servers/[serverSlug]/discover
@@ -13,7 +15,7 @@ export async function POST(
 ) {
 	try {
 		const { serverSlug } = await params
-		const supabase = getSupabaseAdmin()
+		const supabase = await createClient()
 
 		// Get user ID from session
 		const { data: sessionData } = await supabase.auth.getUser()
@@ -91,6 +93,33 @@ export async function POST(
 			)
 		}
 
+		// Also update global cache if this is an official server and we got capabilities
+		const officialServer = findOfficialServer(serverSlug)
+		if (officialServer && (capabilities.tools.length > 0 || capabilities.resources.length > 0 || capabilities.prompts.length > 0)) {
+			try {
+				const adminSupabase = getSupabaseAdmin()
+				await adminSupabase
+					.from("global_server_capabilities")
+					.upsert(
+						{
+							server_slug: serverSlug,
+							tools: capabilities.tools,
+							resources: capabilities.resources,
+							prompts: capabilities.prompts,
+							server_info: capabilities.serverInfo,
+							discovered_at: new Date().toISOString(),
+						} as any,
+						{
+							onConflict: "server_slug",
+						}
+					)
+				console.log(`Updated global capabilities cache for ${serverSlug}`)
+			} catch (globalError) {
+				// Don't fail the request if global update fails
+				console.warn(`Failed to update global cache for ${serverSlug}:`, globalError)
+			}
+		}
+
 		return NextResponse.json({
 			success: true,
 			capabilities,
@@ -115,7 +144,7 @@ export async function GET(
 ) {
 	try {
 		const { serverSlug } = await params
-		const supabase = getSupabaseAdmin()
+		const supabase = await createClient()
 
 		// Get user ID from session
 		const { data: sessionData } = await supabase.auth.getUser()

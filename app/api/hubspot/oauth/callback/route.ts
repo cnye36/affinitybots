@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
 
     const upsert = {
       user_id: user.id,
-      qualified_name: "hubspot",
+      server_slug: "hubspot",
       url: hubspotMcpUrl,
       // Store access token in oauth_token field (expected by mcpClientManager)
       oauth_token: tokens.access_token,
@@ -65,7 +65,7 @@ export async function GET(req: NextRequest) {
 
     await supabase
       .from("user_mcp_servers")
-      .upsert(upsert, { onConflict: "user_id,qualified_name" });
+      .upsert(upsert, { onConflict: "user_id,server_slug" });
 
     const redirectTo = req.nextUrl.searchParams.get("redirectTo") || "/tools/hubspot";
     return NextResponse.redirect(new URL(redirectTo, req.nextUrl.origin));

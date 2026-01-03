@@ -178,6 +178,13 @@ export function TestOutputPanel({
                     </ReactMarkdown>
                   </div>
                 </div>
+              ) : outputFormat === "json" ? (
+                <Textarea
+                  value={formatOutput(testOutput, outputFormat)}
+                  readOnly
+                  className="font-mono text-xs bg-background resize-none border-0 p-0 h-auto min-h-[400px] overflow-auto"
+                  style={{ height: "auto" }}
+                />
               ) : (
                 <Textarea
                   value={formatOutput(testOutput, outputFormat)}

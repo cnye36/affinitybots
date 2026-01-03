@@ -111,8 +111,8 @@ export function AgentCard({ assistant, onDelete }: AgentCardProps) {
       // Load official server logos
       const logos: Record<string, string> = {};
       OFFICIAL_MCP_SERVERS.forEach((s) => {
-        if (enabledServers.includes(s.qualifiedName) && s.logoUrl) {
-          logos[s.qualifiedName] = s.logoUrl as string;
+        if (enabledServers.includes(s.serverName) && s.logoUrl) {
+          logos[s.serverName] = s.logoUrl as string;
         }
       });
 
@@ -137,16 +137,6 @@ export function AgentCard({ assistant, onDelete }: AgentCardProps) {
 
         {/* Subtle shine effect on hover */}
         <div className="absolute top-0 -right-4 w-8 h-full bg-gradient-to-r from-transparent via-white/5 to-transparent transform rotate-12 group-hover:right-full transition-all duration-700 ease-out" />
-
-        {/* Delete button */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="delete-button absolute right-2 top-2 z-10 opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-red-500/10 hover:text-red-500"
-          onClick={() => setIsDeleteDialogOpen(true)}
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
 
         <div className="relative p-6">
           {/* Avatar and content section */}
@@ -221,6 +211,21 @@ export function AgentCard({ assistant, onDelete }: AgentCardProps) {
                 </div>
               </div>
             )}
+
+            {/* Delete button */}
+            <div className="flex justify-end pt-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="delete-button opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-red-500/10 hover:text-red-500 text-xs h-7"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsDeleteDialogOpen(true);
+                }}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </div>
           </div>
         </div>
       </div>

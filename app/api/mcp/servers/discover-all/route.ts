@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
 
 		// Prepare server list for batch discovery
 		const serverList = (servers as any[]).map((server) => ({
-			qualifiedName: server.server_slug || server.qualified_name,
+			serverName: server.server_slug,
 			url: server.url,
 			sessionId: server.session_id,
 			apiKey: server.config?.apiKey || server.config?.api_key,
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
 			supabase.from("mcp_server_capabilities").upsert(
 				{
 					user_id: userId,
-					server_slug: cap.qualifiedName,
+					server_slug: cap.serverName,
 					tools: cap.tools,
 					resources: cap.resources,
 					prompts: cap.prompts,
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
 			success: true,
 			summary,
 			discovered: capabilities.map((cap) => ({
-				qualifiedName: cap.qualifiedName,
+				serverName: cap.serverName,
 				toolCount: cap.tools.length,
 				resourceCount: cap.resources.length,
 				promptCount: cap.prompts.length,
@@ -148,7 +148,7 @@ export async function GET(request: NextRequest) {
 
 		// Format response
 		const formattedCapabilities = (capabilities as any[]).map((cap) => ({
-			qualifiedName: cap.server_slug || cap.qualified_name,
+			serverName: cap.server_slug,
 			tools: cap.tools || [],
 			resources: cap.resources || [],
 			prompts: cap.prompts || [],

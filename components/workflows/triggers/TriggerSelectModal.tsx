@@ -127,7 +127,7 @@ export function TriggerSelectModal({ isOpen, onClose, onCreate }: TriggerSelectM
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   type ConfiguredServer = {
-    qualifiedName: string;
+    serverName: string;
     displayName?: string;
     logoUrl?: string;
     tools: Array<{ name: string; description?: string }>;
@@ -179,21 +179,21 @@ export function TriggerSelectModal({ isOpen, onClose, onCreate }: TriggerSelectM
         const data = await res.json();
         const raw: any[] = data?.servers || [];
         const enabled = raw.filter((s) => s?.is_enabled);
-        const qualifiedNames = enabled.map((s) => s.qualified_name).filter(Boolean);
-        if (qualifiedNames.length === 0) {
+        const serverNames = enabled.map((s) => s.server_slug).filter(Boolean);
+        if (serverNames.length === 0) {
           if (isMounted) setConfiguredServers([]);
           return;
         }
         const bulk = await fetch('/api/smithery/bulk', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ qualifiedNames })
+          body: JSON.stringify({ qualifiedNames: serverNames })
         }).then(r => r.json());
-        const servers: ConfiguredServer[] = qualifiedNames.map((q) => {
+        const servers: ConfiguredServer[] = serverNames.map((q) => {
           const entry = bulk?.servers?.[q] || {};
           const tools = Array.isArray(entry?.tools) ? entry.tools : (entry?.server?.tools || []);
           return {
-            qualifiedName: q,
+            serverName: q,
             displayName: entry.displayName || entry.name || entry.server?.displayName || q,
             logoUrl: entry.logo || entry.iconUrl || entry.logoUrl || entry.server?.logo || entry.server?.iconUrl,
             tools: (tools || []).map((t: any) => ({ name: t.name, description: t.description }))
@@ -544,15 +544,15 @@ export function TriggerSelectModal({ isOpen, onClose, onCreate }: TriggerSelectM
                                 ) : (
                                   configuredServers.map((s) => (
                                     <button
-                                      key={s.qualifiedName}
-                                      className={`w-full text-left px-2 py-1 rounded ${selectedServer===s.qualifiedName?"bg-primary/10":"hover:bg-muted"}`}
+                                      key={s.serverName}
+                                      className={`w-full text-left px-2 py-1 rounded ${selectedServer===s.serverName?"bg-primary/10":"hover:bg-muted"}`}
                                       onClick={() => {
-                                        setSelectedServer(s.qualifiedName);
+                                        setSelectedServer(s.serverName);
                                         setSelectedTool("");
                                       }}
                                     >
                                       <div className="flex items-center gap-2">
-                                        <div className="text-sm truncate">{s.displayName || s.qualifiedName}</div>
+                                        <div className="text-sm truncate">{s.displayName || s.serverName}</div>
                                       </div>
                                     </button>
                                   ))
@@ -567,10 +567,10 @@ export function TriggerSelectModal({ isOpen, onClose, onCreate }: TriggerSelectM
                             <ScrollArea className="h-40">
                               <div className="p-1 space-y-1">
                                 {selectedServer ? (
-                                  (configuredServers.find(s=>s.qualifiedName===selectedServer)?.tools || []).length === 0 ? (
+                                  (configuredServers.find(s=>s.serverName===selectedServer)?.tools || []).length === 0 ? (
                                     <div className="text-xs text-muted-foreground p-2">No actions found for this tool.</div>
                                   ) : (
-                                    configuredServers.find(s=>s.qualifiedName===selectedServer)!.tools.map((t) => (
+                                    configuredServers.find(s=>s.serverName===selectedServer)!.tools.map((t) => (
                                       <button
                                         key={t.name}
                                         className={`w-full text-left px-2 py-1 rounded ${selectedTool===t.name?"bg-primary/10":"hover:bg-muted"}`}

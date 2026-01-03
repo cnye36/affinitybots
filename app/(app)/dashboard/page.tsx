@@ -71,11 +71,11 @@ function getToolIcon(toolName: string) {
 /**
  * A utility to format tool names for display
  */
-function formatToolName(qualifiedName: string): string {
-  // Extract the tool name from qualified name (e.g., "mcp-server-hubspot" -> "hubspot")
-  const parts = qualifiedName.toLowerCase().split('-');
-  const toolName = parts[parts.length - 1] || qualifiedName;
-  
+function formatToolName(serverName: string): string {
+  // Extract the tool name from server name (e.g., "mcp-server-hubspot" -> "hubspot")
+  const parts = serverName.toLowerCase().split('-');
+  const toolName = parts[parts.length - 1] || serverName;
+
   // Capitalize first letter
   return toolName.charAt(0).toUpperCase() + toolName.slice(1);
 }
@@ -155,7 +155,7 @@ export default async function Dashboard() {
         // --------------------------------------------------------------------
         const { data: toolsData, error: toolsError } = await supabase
           .from("user_mcp_servers")
-          .select("id, qualified_name, is_enabled, created_at")
+          .select("id, server_slug, is_enabled, created_at")
           .eq("user_id", user!.id)
           .order("created_at", { ascending: false })
           .limit(3);
@@ -237,7 +237,7 @@ export default async function Dashboard() {
             toolsData.slice(0, 1).forEach((tool: any) => {
               sampleActivity.push({
                 type: "agent_created" as const,
-                message: `Tool "${formatToolName(tool.qualified_name)}" was configured`,
+                message: `Tool "${formatToolName(tool.server_slug)}" was configured`,
                 time: formatRelativeTime(tool.created_at),
               });
             });
@@ -249,30 +249,30 @@ export default async function Dashboard() {
         // --------------------------------------------------------------------
         // Build tool logo map from official servers
         // --------------------------------------------------------------------
-        const allQualifiedNamesSet = new Set<string>();
-        agents.forEach((a: any) => (a.enabledTools || []).forEach((q: string) => q && allQualifiedNamesSet.add(q)));
-        tools.forEach((t: any) => t?.qualified_name && allQualifiedNamesSet.add(t.qualified_name));
+        const allServerNamesSet = new Set<string>();
+        agents.forEach((a: any) => (a.enabledTools || []).forEach((q: string) => q && allServerNamesSet.add(q)));
+        tools.forEach((t: any) => t?.server_slug && allServerNamesSet.add(t.server_slug));
 
         const toolLogos: Record<string, string> = {};
         // Build logo map from official servers
         OFFICIAL_MCP_SERVERS.forEach((s) => {
           if (s.logoUrl) {
-            // Seed by exact name and any qualified names that include the official key
-            if (allQualifiedNamesSet.has(s.qualifiedName)) {
-              toolLogos[s.qualifiedName] = s.logoUrl as string;
+            // Seed by exact name and any server names that include the official key
+            if (allServerNamesSet.has(s.serverName)) {
+              toolLogos[s.serverName] = s.logoUrl as string;
             }
-            Array.from(allQualifiedNamesSet).forEach((q) => {
-              if (q.toLowerCase().includes(s.qualifiedName.toLowerCase())) {
+            Array.from(allServerNamesSet).forEach((q) => {
+              if (q.toLowerCase().includes(s.serverName.toLowerCase())) {
                 toolLogos[q] = s.logoUrl as string;
               }
             });
           }
         });
 
-        // Helper to get an official logo by qualified name
-        const officialLogoForQualifiedName = (qualified: string): string | undefined => {
-          const lower = (qualified || "").toLowerCase();
-          const match = OFFICIAL_MCP_SERVERS.find((s) => lower.includes(s.qualifiedName.toLowerCase()) && s.logoUrl);
+        // Helper to get an official logo by server name
+        const officialLogoForServerName = (serverName: string): string | undefined => {
+          const lower = (serverName || "").toLowerCase();
+          const match = OFFICIAL_MCP_SERVERS.find((s) => lower.includes(s.serverName.toLowerCase()) && s.logoUrl);
           return match?.logoUrl as string | undefined;
         };
 
@@ -367,7 +367,7 @@ export default async function Dashboard() {
                                     {agent.enabledTools.length > 0 && (
                                       <div className="flex items-center gap-1">
                                         {agent.enabledTools.slice(0, 3).map((tool: string, index: number) => {
-                                          const logo = toolLogos[tool] || officialLogoForQualifiedName(tool);
+                                          const logo = toolLogos[tool] || officialLogoForServerName(tool);
                                           return logo ? (
                                             <div
                                               key={index}
@@ -468,33 +468,33 @@ export default async function Dashboard() {
                         {tools.map((tool: any) => (
                           <Link
                             key={tool.id}
-                            href={`/tools/${encodeURIComponent(tool.qualified_name)}`}
+                            href={`/tools/${encodeURIComponent(tool.server_slug)}`}
                             className="block"
                           >
                             <div className="flex items-center justify-between p-4 border border-border rounded-xl hover:border-amber-500/50 hover:bg-gradient-to-br hover:from-amber-500/5 hover:to-orange-500/5 transition-all duration-200 group cursor-pointer">
                               <div className="flex items-center gap-3">
                                 <div className="p-2 bg-gradient-to-br from-amber-500/20 to-orange-500/20 rounded-xl border border-amber-500/30 backdrop-blur-sm">
-                                  {(toolLogos[tool.qualified_name] || officialLogoForQualifiedName(tool.qualified_name)) ? (
+                                  {(toolLogos[tool.server_slug] || officialLogoForServerName(tool.server_slug)) ? (
                                     <Image
-                                      src={toolLogos[tool.qualified_name] || officialLogoForQualifiedName(tool.qualified_name) as string}
-                                      alt={tool.qualified_name}
+                                      src={toolLogos[tool.server_slug] || officialLogoForServerName(tool.server_slug) as string}
+                                      alt={tool.server_slug}
                                       width={20}
                                       height={20}
                                       className="object-contain"
                                       style={{ objectFit: "contain" }}
                                     />
                                   ) : (
-                                    <span className="text-base" title={tool.qualified_name}>
-                                      {getToolIcon(tool.qualified_name)}
+                                    <span className="text-base" title={tool.server_slug}>
+                                      {getToolIcon(tool.server_slug)}
                                     </span>
                                   )}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <div className="font-medium truncate group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
-                                    {formatToolName(tool.qualified_name)}
+                                    {formatToolName(tool.server_slug)}
                                   </div>
                                   <div className="text-xs text-muted-foreground truncate">
-                                    {tool.qualified_name}
+                                    {tool.server_slug}
                                   </div>
                                 </div>
                               </div>

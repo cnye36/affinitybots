@@ -109,6 +109,7 @@ export async function PUT(
           : null,
         integration: taskData.integration,
         assistant_id: taskData.assignedAssistant?.id,
+        metadata: taskData.metadata || existingTask.metadata || {},
         updated_at: new Date().toISOString(),
       })
       .eq("workflow_task_id", taskId)

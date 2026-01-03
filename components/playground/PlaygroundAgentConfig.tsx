@@ -67,12 +67,12 @@ export function PlaygroundAgentConfig({ assistant, onConfigChange }: PlaygroundA
 		if (!config?.enabled_mcp_servers) return
 		
 		const logos: Record<string, string> = {}
-		config.enabled_mcp_servers.forEach((qualifiedName) => {
+		config.enabled_mcp_servers.forEach((serverName) => {
 			const server = OFFICIAL_MCP_SERVERS.find(
-				(s) => s.qualifiedName === qualifiedName || qualifiedName.includes(s.qualifiedName)
+				(s) => s.serverName === serverName || serverName.includes(s.serverName)
 			)
 			if (server?.logoUrl) {
-				logos[qualifiedName] = server.logoUrl
+				logos[serverName] = server.logoUrl
 			}
 		})
 		setToolLogos(logos)
@@ -350,16 +350,16 @@ export function PlaygroundAgentConfig({ assistant, onConfigChange }: PlaygroundA
 								</div>
 								{enabledTools.length > 0 ? (
 									<div className="flex items-center gap-1.5">
-										{enabledTools.slice(0, 3).map((qualifiedName) => {
-											const logoUrl = toolLogos[qualifiedName]
+										{enabledTools.slice(0, 3).map((serverName) => {
+											const logoUrl = toolLogos[serverName]
 											return logoUrl ? (
 												<div
-													key={qualifiedName}
+													key={serverName}
 													className="w-5 h-5 rounded border border-orange-200/50 dark:border-orange-800/50 bg-background overflow-hidden flex items-center justify-center"
 												>
 													<Image
 														src={logoUrl}
-														alt={qualifiedName}
+														alt={serverName}
 														width={16}
 														height={16}
 														className="object-contain"

@@ -126,6 +126,13 @@ export function PreviousNodeOutputPanel({
                     <ReactMarkdown>{formatOutput(data, outputFormat)}</ReactMarkdown>
                   </div>
                 </div>
+              ) : outputFormat === "json" ? (
+                <Textarea
+                  value={formatOutput(data, outputFormat)}
+                  readOnly
+                  className="font-mono text-xs bg-background resize-none border-0 p-0 h-auto min-h-[400px] overflow-auto"
+                  style={{ height: "auto" }}
+                />
               ) : (
                 <Textarea
                   value={formatOutput(data, outputFormat)}

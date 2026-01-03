@@ -23,7 +23,7 @@ export async function getUserMcpServers(userId: string) {
   console.log(`📊 Total servers for user ${userId}: ${allUserServers?.length || 0}`);
   if (allUserServers && allUserServers.length > 0) {
     allUserServers.forEach(server => {
-      console.log(`  - ${server.qualified_name} (enabled: ${server.is_enabled}, url: ${server.url ? 'has URL' : 'no URL'}, oauth: ${server.oauth_token ? 'has token' : 'no token'})`);
+      console.log(`  - ${server.server_slug} (enabled: ${server.is_enabled}, url: ${server.url ? 'has URL' : 'no URL'}, oauth: ${server.oauth_token ? 'has token' : 'no token'})`);
     });
   }
   
@@ -40,14 +40,14 @@ export async function getUserMcpServers(userId: string) {
   }
 
   console.log(`✅ getUserMcpServers: Found ${data?.length || 0} enabled servers for user ${userId}`);
-  console.log(`Enabled server names:`, data?.map(s => s.qualified_name) || []);
+  console.log(`Enabled server names:`, data?.map(s => s.server_slug) || []);
 
   // Transform to mcpServers object with OAuth session URLs or fallback to API key URLs
   const mcpServers: Record<string, any> = {};
   
   for (const server of data) {
     try {
-      console.log(`🔧 Processing server: ${server.qualified_name}`);
+      console.log(`🔧 Processing server: ${server.server_slug}`);
       console.log(`   Database URL: ${server.url || 'not set'}`);
       console.log(`   OAuth Token: ${server.oauth_token ? 'present' : 'not set'}`);
       console.log(`   Session ID: ${server.session_id || 'not set'}`);
@@ -64,7 +64,7 @@ export async function getUserMcpServers(userId: string) {
         if (server.expires_at) {
           const expiryDate = new Date(server.expires_at);
           if (expiryDate < new Date()) {
-            console.warn(`⚠️  OAuth token expired for ${server.qualified_name}, connection may fail`);
+            console.warn(`⚠️  OAuth token expired for ${server.server_slug}, connection may fail`);
           }
         }
       } 
@@ -74,19 +74,19 @@ export async function getUserMcpServers(userId: string) {
       }
       // Skip servers without URLs
       else {
-        console.warn(`❌ Server ${server.qualified_name} has no URL configured and cannot connect`);
+        console.warn(`❌ Server ${server.server_slug} has no URL configured and cannot connect`);
         continue;
       }
       
-      mcpServers[server.qualified_name] = {
+      mcpServers[server.server_slug] = {
         url: serverUrl,
         // Don't specify transport - let MultiServerMCPClient auto-detect
         automaticSSEFallback: false
       };
       
-      console.log(`✅ Added server ${server.qualified_name} to mcpServers`);
+      console.log(`✅ Added server ${server.server_slug} to mcpServers`);
     } catch (err) {
-      console.error(`❌ Failed to create connection config for ${server.qualified_name}:`, err);
+      console.error(`❌ Failed to create connection config for ${server.server_slug}:`, err);
       // Skip this server if there's an error
     }
   }

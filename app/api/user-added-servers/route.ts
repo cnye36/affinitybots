@@ -40,9 +40,9 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { qualified_name, display_name, description, url, auth_type = 'none', config = {} } = body;
+    const { server_slug, display_name, description, url, auth_type = 'none', config = {} } = body;
 
-    if (!qualified_name || !url) {
+    if (!server_slug || !url) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
@@ -50,9 +50,9 @@ export async function POST(request: NextRequest) {
       .from('user_added_servers')
       .insert({
         user_id: user.id,
-        qualified_name,
-        display_name: display_name || qualified_name,
-        description: description || `Custom MCP server: ${qualified_name}`,
+        server_slug,
+        display_name: display_name || server_slug,
+        description: description || `Custom MCP server: ${server_slug}`,
         url,
         auth_type,
         config,

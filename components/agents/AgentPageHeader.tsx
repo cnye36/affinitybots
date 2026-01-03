@@ -53,7 +53,7 @@ export function AgentPageHeader({ assistant }: AgentPageHeaderProps) {
   const hasKnowledge = currentAssistant.config.configurable.knowledge_base?.isEnabled;
 
   // Compute enabled MCP servers and display their names as pills
-  const enabledQualifiedNames: string[] = Array.isArray(currentAssistant.config.configurable.enabled_mcp_servers)
+  const enabledServerNames: string[] = Array.isArray(currentAssistant.config.configurable.enabled_mcp_servers)
     ? currentAssistant.config.configurable.enabled_mcp_servers
     : currentAssistant.config.configurable.enabled_mcp_servers && typeof currentAssistant.config.configurable.enabled_mcp_servers === "object"
     ? Object.entries(currentAssistant.config.configurable.enabled_mcp_servers)
@@ -73,8 +73,8 @@ export function AgentPageHeader({ assistant }: AgentPageHeaderProps) {
     async function loadLogos() {
       const initial: Record<string, string> = {};
       OFFICIAL_MCP_SERVERS.forEach((s) => {
-        if (enabledQualifiedNames.includes(s.qualifiedName) && s.logoUrl) {
-          initial[s.qualifiedName] = s.logoUrl as string;
+        if (enabledServerNames.includes(s.serverName) && s.logoUrl) {
+          initial[s.serverName] = s.logoUrl as string;
         }
       });
       if (!cancelled && Object.keys(initial).length > 0) {
@@ -88,9 +88,9 @@ export function AgentPageHeader({ assistant }: AgentPageHeaderProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentAssistant.assistant_id]);
 
-  const formatToolLabel = (qualified: string) => {
+  const formatToolLabel = (serverName: string) => {
     // e.g. "@exa/exa" -> "Exa"; "@supabase-community/supabase-mcp" -> "Supabase-mcp"
-    const base = qualified.split('/').pop() || qualified;
+    const base = serverName.split('/').pop() || serverName;
     return base.charAt(0).toUpperCase() + base.slice(1);
   };
 
@@ -178,15 +178,15 @@ export function AgentPageHeader({ assistant }: AgentPageHeaderProps) {
           </div>
 
           {/* Enabled tool pills */}
-          {enabledQualifiedNames.length > 0 && (
+          {enabledServerNames.length > 0 && (
             <div className="flex flex-wrap gap-2 mr-4">
-              {enabledQualifiedNames.map((q) => (
-                <Badge key={q} variant="secondary" className="gap-1 bg-purple-100 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border-purple-200/50 dark:border-purple-800/50">
-                  {toolLogos[q] ? (
+              {enabledServerNames.map((serverName) => (
+                <Badge key={serverName} variant="secondary" className="gap-1 bg-purple-100 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border-purple-200/50 dark:border-purple-800/50">
+                  {toolLogos[serverName] ? (
                     <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-sm overflow-hidden bg-background">
                       <Image
-                        src={toolLogos[q]}
-                        alt={q}
+                        src={toolLogos[serverName]}
+                        alt={serverName}
                         width={14}
                         height={14}
                         className="object-contain"
@@ -195,7 +195,7 @@ export function AgentPageHeader({ assistant }: AgentPageHeaderProps) {
                   ) : (
                     <Wrench className="h-3 w-3" />
                   )}
-                  {formatToolLabel(q)}
+                  {formatToolLabel(serverName)}
                 </Badge>
               ))}
             </div>

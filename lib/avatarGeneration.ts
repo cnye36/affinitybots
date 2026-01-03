@@ -202,7 +202,8 @@ export async function generateImage(
             Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
           },
           body: JSON.stringify({
-            model: "dall-e-3",
+            model: "gpt-image-1.5",
+            quality: "medium",
             prompt,
             n: 1,
             size: `${finalConfig.width}x${finalConfig.height}`,

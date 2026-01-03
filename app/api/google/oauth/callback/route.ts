@@ -47,10 +47,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL("/tools?error=invalid_session", url.origin))
     }
 
-    const qualifiedName = serverConfig.qualified_name
-    const provider = serverConfig.config?.provider || qualifiedName
+    const serverSlug = serverConfig.server_slug
+    const provider = serverConfig.config?.provider || serverSlug
     
-    console.log(`🔍 Google OAuth Callback - Processing ${qualifiedName} for user ${user.id}, session ${state}`);
+    console.log(`🔍 Google OAuth Callback - Processing ${serverSlug} for user ${user.id}, session ${state}`);
 
     // Exchange the authorization code for tokens
     let tokens
@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
       : null
 
     // Update the server configuration with tokens
-    console.log(`🔍 Google OAuth Callback - Storing tokens for ${qualifiedName}`);
+    console.log(`🔍 Google OAuth Callback - Storing tokens for ${serverSlug}`);
     console.log(`🔍 Google OAuth Callback - Access token length: ${tokens.access_token?.length || 0}`);
     console.log(`🔍 Google OAuth Callback - Scopes: ${tokens.scope}`);
     
@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
         updated_at: new Date().toISOString(),
       })
       .eq("user_id", user.id)
-      .eq("qualified_name", qualifiedName)
+      .eq("server_slug", serverSlug)
       .eq("session_id", state)
 
     if (updateError) {
@@ -98,10 +98,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL("/tools?error=storage_failed", url.origin))
     }
 
-    console.log(`🔍 Google OAuth Callback - Successfully stored tokens for ${qualifiedName}`);
+    console.log(`🔍 Google OAuth Callback - Successfully stored tokens for ${serverSlug}`);
 
     // Success! Redirect to tools page with service-specific message
-    const successMessage = qualifiedName === "gmail" ? "gmail=connected" : "google=connected"
+    const successMessage = serverSlug === "gmail" ? "gmail=connected" : "google=connected"
     return NextResponse.redirect(new URL(`/tools?${successMessage}`, url.origin))
   } catch (error: unknown) {
     console.error("Error in Google OAuth callback:", error)

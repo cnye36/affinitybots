@@ -11,6 +11,7 @@ import { Edge } from "reactflow"
 import { WorkflowCanvas } from "./WorkflowCanvas"
 import { WorkflowHeader } from "../WorkflowHeader"
 import { WorkflowModals } from "../WorkflowModals"
+import { WorkflowExecutions } from "../WorkflowExecutions"
 import { useWorkflowState } from "./hooks/useWorkflowState"
 import { useModalControls } from "./hooks/useModalFlow"
 import { useAutoLayout } from "./hooks/useAutoLayout"
@@ -53,6 +54,7 @@ export function WorkflowBuilder() {
 
   const [isWorkflowActive, setIsWorkflowActive] = useState(false)
   const [triggers, setTriggers] = useState<any[]>([])
+  const [viewMode, setViewMode] = useState<"editor" | "executions">("editor")
 
   const {
     openWorkflowTypeSelect,
@@ -88,6 +90,101 @@ export function WorkflowBuilder() {
     window.addEventListener("resize", updateIsMobile)
     return () => window.removeEventListener("resize", updateIsMobile)
   }, [])
+
+  // Listen for task test completions and persist outputs
+  useEffect(() => {
+    const handleTaskTestCompleted = async (e: Event) => {
+      const evt = e as CustomEvent<{ 
+        workflowTaskId: string
+        output: { result: unknown; metadata?: Record<string, unknown> }
+      }>
+      
+      if (!evt.detail?.workflowTaskId || !workflowId) return
+      
+      const { workflowTaskId, output } = evt.detail
+      
+      try {
+        // Update the task's metadata with test output
+        const { data: task } = await supabase
+          .from("workflow_tasks")
+          .select("*")
+          .eq("workflow_task_id", workflowTaskId)
+          .single()
+        
+        if (task) {
+          const updatedMetadata = {
+            ...(task.metadata || {}),
+            testOutput: {
+              type: "messages/complete",
+              result: output.result,
+              content: typeof output.result === "string" ? output.result : JSON.stringify(output.result),
+            },
+            lastTestAt: new Date().toISOString(),
+          }
+          
+          await supabase
+            .from("workflow_tasks")
+            .update({ metadata: updatedMetadata })
+            .eq("workflow_task_id", workflowTaskId)
+          
+          // Update nodes to propagate previousNodeOutput to downstream nodes
+          setNodes((currentNodes) => {
+            const sourceNode = currentNodes.find(
+              (n) => n.type === "task" && (n.data as any).workflow_task_id === workflowTaskId
+            )
+            
+            if (!sourceNode) return currentNodes
+            
+            // Get current edges
+            const currentEdges = useWorkflowState.getState().edges
+            
+            // Find all nodes connected downstream from this node
+            const downstreamNodeIds = new Set<string>()
+            const findDownstream = (nodeId: string) => {
+              currentEdges.forEach((edge) => {
+                if (edge.source === nodeId && !downstreamNodeIds.has(edge.target)) {
+                  downstreamNodeIds.add(edge.target)
+                  findDownstream(edge.target)
+                }
+              })
+            }
+            findDownstream(sourceNode.id)
+            
+            // Update downstream nodes with previousNodeOutput
+            return currentNodes.map((node) => {
+              if (downstreamNodeIds.has(node.id) && node.type === "task") {
+                const previousOutput = {
+                  result: output.result,
+                  metadata: output.metadata,
+                }
+                return {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    previousNodeOutput: previousOutput,
+                    previousNodeThreadId: output.metadata?.thread_id as string | undefined,
+                    // Also update metadata in node data for persistence
+                    metadata: {
+                      ...((node.data as any).metadata || {}),
+                      previousNodeOutput: previousOutput,
+                    },
+                  },
+                }
+              }
+              return node
+            })
+          })
+        }
+      } catch (error) {
+        console.error("Error persisting task test output:", error)
+      }
+    }
+    
+    window.addEventListener("taskTestCompleted", handleTaskTestCompleted as EventListener)
+    return () => {
+      window.removeEventListener("taskTestCompleted", handleTaskTestCompleted as EventListener)
+    }
+  }, [workflowId, supabase, setNodes])
 
   // Update task nodes when config modal state changes
   useEffect(() => {
@@ -238,23 +335,71 @@ export function WorkflowBuilder() {
           },
         }))
 
+        // Load tasks from database to get latest metadata (including test outputs)
+        const { data: tasksData } = await supabase
+          .from("workflow_tasks")
+          .select("*")
+          .eq("workflow_id", urlWorkflowId)
+          .order("position")
+        
+        // Create a map of task_id to task data for quick lookup
+        const tasksById = new Map(
+          (tasksData || []).map((t) => [t.workflow_task_id, t])
+        )
+        
         const storedNodes = (workflow.nodes || []) as any[]
         const taskNodes: WorkflowNode[] = storedNodes
           .filter((n) => n.type === "task")
-          .map((node) => ({
-            ...node,
-            type: "task" as const,
-            data: {
-              ...node.data,
-              workflow_id: workflow.workflow_id,
-              onAssignAssistant: handleAssignAgent,
-              onConfigureTask: (taskId: string) => setConfigOpenTaskId(taskId),
-              onConfigClose: () => setConfigOpenTaskId(null),
-              isConfigOpen: configOpenTaskId === node.data.workflow_task_id,
-              status: "idle",
-              workflowType: workflowTypeValue,
-            },
-          }))
+          .map((node) => {
+            const taskData = tasksById.get(node.data.workflow_task_id)
+            // Determine previousNodeOutput from edges and upstream task metadata
+            let previousNodeOutput = node.data.previousNodeOutput
+            const currentEdges = workflow.edges || []
+            const incomingEdge = currentEdges.find((e: any) => e.target === node.id)
+            if (incomingEdge) {
+              const sourceNode = storedNodes.find((n: any) => n.id === incomingEdge.source)
+              if (sourceNode && sourceNode.type === "task") {
+                const sourceTask = tasksById.get(sourceNode.data.workflow_task_id)
+                if (sourceTask?.metadata?.testOutput) {
+                  previousNodeOutput = {
+                    result: sourceTask.metadata.testOutput.result,
+                    metadata: sourceTask.metadata.testOutput.metadata,
+                  }
+                }
+              }
+            }
+            
+            // Extract assignedAssistant from config if not already in node.data
+            const assignedAssistant = node.data.assignedAssistant || 
+              (taskData?.config?.assigned_assistant
+                ? {
+                    id: taskData.config.assigned_assistant.id,
+                    name: taskData.config.assigned_assistant.name,
+                    avatar: taskData.config.assigned_assistant.avatar,
+                  }
+                : undefined);
+            
+            return {
+              ...node,
+              type: "task" as const,
+              data: {
+                ...node.data,
+                workflow_id: workflow.workflow_id,
+                onAssignAssistant: handleAssignAgent,
+                onConfigureTask: (taskId: string) => setConfigOpenTaskId(taskId),
+                onConfigClose: () => setConfigOpenTaskId(null),
+                isConfigOpen: configOpenTaskId === node.data.workflow_task_id,
+                status: "idle",
+                workflowType: workflowTypeValue,
+                previousNodeOutput,
+                assignedAssistant,
+                // Store task metadata in node data so TaskConfigModal can access it
+                metadata: taskData?.metadata || {},
+                // Ensure config is properly set
+                config: taskData?.config || node.data.config,
+              },
+            }
+          })
 
         let allNodes = [...triggerNodes, ...taskNodes]
 
@@ -363,7 +508,7 @@ export function WorkflowBuilder() {
             workflow_id: workflowId,
             position,
             name: `${assistant.name} Task`,
-            description: assistant.metadata?.description || "",
+            description: "",
             task_type: "ai_task" as TaskType,
             config: {
               assigned_assistant: {
@@ -379,6 +524,50 @@ export function WorkflowBuilder() {
           .single()
 
         if (error) throw error
+
+        // Get current state for calculations
+        const currentNodes = useWorkflowState.getState().nodes
+        const currentEdges = useWorkflowState.getState().edges
+
+        // Check if source node has test output to pass to new node
+        let previousNodeOutput: any = undefined
+        let previousNodeThreadId: string | undefined = undefined
+        
+        if (sourceNodeId) {
+          const sourceNode = currentNodes.find((n) => n.id === sourceNodeId)
+          if (sourceNode && sourceNode.type === "task") {
+            // Check if source node has test output in its metadata
+            const sourceTaskId = (sourceNode.data as any).workflow_task_id
+            if (sourceTaskId) {
+              try {
+                const { data: sourceTask } = await supabase
+                  .from("workflow_tasks")
+                  .select("*")
+                  .eq("workflow_task_id", sourceTaskId)
+                  .single()
+                
+                if (sourceTask?.metadata?.testOutput) {
+                  previousNodeOutput = {
+                    result: sourceTask.metadata.testOutput.result,
+                    metadata: sourceTask.metadata.testOutput.metadata,
+                  }
+                  previousNodeThreadId = sourceTask.metadata.testOutput.metadata?.thread_id
+                } else if ((sourceNode.data as any).previousNodeOutput) {
+                  // Fallback to node data if metadata not yet persisted
+                  previousNodeOutput = (sourceNode.data as any).previousNodeOutput
+                  previousNodeThreadId = (sourceNode.data as any).previousNodeThreadId
+                }
+              } catch (error) {
+                console.error("Error loading source task output:", error)
+                // Fallback to node data
+                if ((sourceNode.data as any).previousNodeOutput) {
+                  previousNodeOutput = (sourceNode.data as any).previousNodeOutput
+                  previousNodeThreadId = (sourceNode.data as any).previousNodeThreadId
+                }
+              }
+            }
+          }
+        }
 
         // Create node
         const nodeData: TaskNodeData = {
@@ -400,11 +589,9 @@ export function WorkflowBuilder() {
           isConfigOpen: false,
           owner_id: "",
           workflowType: workflowType || "sequential",
+          previousNodeOutput,
+          previousNodeThreadId,
         }
-
-        // Get current state for calculations
-        const currentNodes = useWorkflowState.getState().nodes
-        const currentEdges = useWorkflowState.getState().edges
 
         // Calculate position based on current nodes count
         const newNode: WorkflowNode = {
@@ -757,6 +944,97 @@ export function WorkflowBuilder() {
     ]
   )
 
+  const handleExecute = useCallback(async () => {
+    if (!workflowId) return
+
+    // Validate workflow has triggers
+    if (!triggers || triggers.length === 0) {
+      toast({
+        title: "Cannot execute workflow",
+        description: "Please add at least one trigger before executing",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsExecuting(true)
+
+    try {
+      const response = await fetch(`/api/workflows/${workflowId}/execute`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          initialPayload: null,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(errorText || "Failed to execute workflow")
+      }
+
+      // Handle SSE stream
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+
+      if (!reader) {
+        throw new Error("No response body")
+      }
+
+      let buffer = ""
+
+      while (true) {
+        const { done, value } = await reader.read()
+
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split("\n")
+
+        // Keep the last incomplete line in the buffer
+        buffer = lines.pop() || ""
+
+        for (const line of lines) {
+          if (line.startsWith("event: done")) {
+            toast({
+              title: "Workflow executed successfully!",
+            })
+            // Switch to executions view to see results
+            setViewMode("executions")
+            return
+          }
+
+          if (line.startsWith("event: error")) {
+            // Find the next data line
+            const dataLineIndex = lines.indexOf(line) + 1
+            if (dataLineIndex < lines.length) {
+              const dataLine = lines[dataLineIndex]
+              if (dataLine?.startsWith("data: ")) {
+                try {
+                  const errorData = JSON.parse(dataLine.substring(6))
+                  throw new Error(errorData.error || "Execution failed")
+                } catch (parseError) {
+                  throw new Error("Execution failed")
+                }
+              }
+            }
+            throw new Error("Execution failed")
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Execution error:", error)
+      const message = error instanceof Error ? error.message : "Unknown error occurred"
+      toast({
+        title: "Execution failed",
+        description: message,
+        variant: "destructive",
+      })
+    } finally {
+      setIsExecuting(false)
+    }
+  }, [workflowId, triggers, setViewMode])
+
   return (
     <div className="flex flex-col h-screen">
       {loading && !isTriggerSelectOpen && !isWorkflowTypeSelectOpen ? (
@@ -767,19 +1045,25 @@ export function WorkflowBuilder() {
             workflowName={workflowName}
             setWorkflowName={setWorkflowName}
             onNameBlur={handleNameBlur}
-            onExecute={() => {}}
+            onExecute={handleExecute}
             onBack={() => router.push("/workflows")}
             executing={isExecuting}
             workflowId={workflowId || undefined}
+            mode={viewMode}
+            onModeChange={setViewMode}
             workflowType={workflowType || undefined}
             isActive={isWorkflowActive}
             onActiveToggle={(isActive) => setIsWorkflowActive(isActive)}
           />
 
           <div className="flex-1 relative">
-            <ReactFlowProvider>
-              <WorkflowCanvas onAddTask={handleAddTask} />
-            </ReactFlowProvider>
+            {viewMode === "editor" ? (
+              <ReactFlowProvider>
+                <WorkflowCanvas onAddTask={handleAddTask} />
+              </ReactFlowProvider>
+            ) : (
+              workflowId && <WorkflowExecutions workflowId={workflowId} />
+            )}
           </div>
         </>
       )}

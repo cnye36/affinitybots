@@ -26,22 +26,22 @@ export const appNavigation: AppNavItem[] = [
     section: "agents",
   },
   {
-    title: "Tools",
+    title: "Integrations",
     url: "/tools",
     icon: Hammer,
     section: "tools",
-  },
-  {
-    title: "Workflows",
-    url: "/workflows",
-    icon: Sliders,
-    section: "workflows",
   },
   {
     title: "Playground",
     url: "/playground",
     icon: TestTubeDiagonal,
     section: "playground",
+  },
+  {
+    title: "Workflows",
+    url: "/workflows",
+    icon: Sliders,
+    section: "workflows",
   },
   {
 		title: "Analytics",

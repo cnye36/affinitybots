@@ -6,7 +6,7 @@ import { createClient } from '@supabase/supabase-js';
  * - Global servers (`global_mcp_servers` where `is_enabled = true`), if table exists
  * - Optional environment-configured servers from GLOBAL_MCP_SERVERS_JSON
  *
- * If a user has a server with the same `qualified_name` as a global server,
+ * If a user has a server with the same `server_slug` as a global server,
  * the user's configuration takes precedence.
  */
 export async function getAvailableMcpServers(userId: string) {
@@ -33,7 +33,7 @@ export async function getAvailableMcpServers(userId: string) {
     // Allow bearer-token injection for servers like HubSpot MCP that expect standard OAuth tokens
     const bearer = server.config?.bearer_token;
     
-    console.log(`🔍 Server ${server.qualified_name}:`, {
+    console.log(`🔍 Server ${server.server_slug}:`, {
       url: serverUrl,
       hasBearerToken: !!bearer,
       bearerTokenLength: bearer?.length || 0,
@@ -47,12 +47,12 @@ export async function getAvailableMcpServers(userId: string) {
       serverUrl = server.url;
     } else if (!serverUrl) {
       // Skip servers without URLs
-      console.warn(`Skipping server ${server.qualified_name} for user ${userId}: missing URL`);
+      console.warn(`Skipping server ${server.server_slug} for user ${userId}: missing URL`);
       continue;
     }
     
     // Preserve the full server configuration including OAuth tokens and session IDs
-    result[server.qualified_name] = {
+    result[server.server_slug] = {
       url: serverUrl,
       automaticSSEFallback: true,
       oauth_token: server.oauth_token,
@@ -74,9 +74,9 @@ export async function getAvailableMcpServers(userId: string) {
     if (!globalError) {
       for (const server of globalServers || []) {
         // Skip if user already has an override
-        if (result[server.qualified_name]) continue;
+        if (result[server.server_slug]) continue;
         if (!server.url) continue;
-        result[server.qualified_name] = {
+        result[server.server_slug] = {
           url: server.url,
           automaticSSEFallback: false,
           config: server.config
@@ -91,13 +91,13 @@ export async function getAvailableMcpServers(userId: string) {
   try {
     const envJson = process.env.GLOBAL_MCP_SERVERS_JSON;
     if (envJson) {
-      const envServers: Array<{ qualified_name: string; url: string; is_enabled?: boolean }>
+      const envServers: Array<{ server_slug: string; url: string; is_enabled?: boolean }>
         = JSON.parse(envJson);
       for (const server of envServers) {
         if (server.is_enabled === false) continue;
-        if (!server.qualified_name || !server.url) continue;
-        if (result[server.qualified_name]) continue; // user/DB global override
-        result[server.qualified_name] = {
+        if (!server.server_slug || !server.url) continue;
+        if (result[server.server_slug]) continue; // user/DB global override
+        result[server.server_slug] = {
           url: server.url,
           automaticSSEFallback: false
         };

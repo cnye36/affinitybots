@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/supabase/server";
+import { Client } from "@langchain/langgraph-sdk";
 
 const MAX_TOOL_CALL_DEPTH = 6;
 
@@ -223,9 +224,148 @@ export async function GET(
         ? Math.max(0, new Date(run.completed_at).getTime() - new Date(run.started_at).getTime())
         : null;
 
+    // Check if detailed thread data is requested
+    const url = new URL(request.url);
+    const includeThreadData = url.searchParams.get("includeThreadData") === "true";
+
+    let enhancedTaskRuns = taskRunsWithAnalytics;
+
+    if (includeThreadData) {
+      // Initialize LangGraph client
+      const client = new Client({
+        apiUrl: process.env.LANGGRAPH_API_URL,
+        apiKey: process.env.LANGSMITH_API_KEY,
+      });
+
+      // Fetch thread data for each task run
+      enhancedTaskRuns = await Promise.all(
+        taskRunsWithAnalytics.map(async (taskRun) => {
+          const threadId = taskRun.analytics?.thread_id;
+
+          if (!threadId) {
+            return { ...taskRun, threadData: null };
+          }
+
+          try {
+            // Get thread state from LangGraph
+            const state = await client.threads.getState(threadId);
+            // Type assertion: LangGraph state.values can contain messages array
+            const messages = ((state?.values as any)?.messages as any[]) || [];
+
+            // Parse messages to extract different components
+            const inputMessages: Array<{ content: string; timestamp: string }> = [];
+            const aiResponses: Array<{
+              content: string;
+              reasoning_content: string | null;
+              hasReasoning: boolean;
+              tool_calls: any[];
+              timestamp: string;
+            }> = [];
+            const toolResults: Array<{
+              tool_call_id: string;
+              name: string;
+              content: any;
+              timestamp: string;
+            }> = [];
+
+            for (const msg of messages) {
+              const timestamp = msg.timestamp || taskRun.started_at || new Date().toISOString();
+
+              if (msg.type === "human" || msg.type === "user") {
+                inputMessages.push({
+                  content: msg.content || "",
+                  timestamp,
+                });
+              } else if (msg.type === "ai" || msg.type === "assistant") {
+                const reasoningContent =
+                  msg.reasoning_content ||
+                  msg.response_metadata?.reasoning_content ||
+                  msg.response_metadata?.reasoning ||
+                  null;
+
+                const toolCalls = msg.tool_calls || msg.additional_kwargs?.tool_calls || [];
+
+                aiResponses.push({
+                  content: msg.content || "",
+                  reasoning_content: reasoningContent,
+                  hasReasoning: !!reasoningContent,
+                  tool_calls: toolCalls,
+                  timestamp,
+                });
+              } else if (msg.type === "tool") {
+                toolResults.push({
+                  tool_call_id: msg.tool_call_id || "",
+                  name: msg.name || "",
+                  content: msg.content,
+                  timestamp,
+                });
+              }
+            }
+
+            // Extract and enrich tool calls from AI responses
+            const toolCalls: Array<{
+              id: string;
+              name: string;
+              arguments: any;
+              result: any;
+              timestamp: string;
+            }> = [];
+
+            for (const response of aiResponses) {
+              if (response.tool_calls && Array.isArray(response.tool_calls)) {
+                for (const call of response.tool_calls) {
+                  const callId = call.id || "";
+                  const callName = call.name || call.function?.name || "";
+                  const callArgs = call.args || call.arguments || call.function?.arguments || {};
+
+                  // Find matching result
+                  const result = toolResults.find(
+                    (r) => r.tool_call_id === callId || r.name === callName
+                  );
+
+                  toolCalls.push({
+                    id: callId,
+                    name: callName,
+                    arguments: callArgs,
+                    result: result?.content || null,
+                    timestamp: response.timestamp,
+                  });
+                }
+              }
+            }
+
+            return {
+              ...taskRun,
+              threadData: {
+                inputMessages,
+                aiResponses,
+                toolCalls,
+              },
+            };
+          } catch (error) {
+            console.error(`Failed to fetch thread data for ${threadId}:`, error);
+            return { ...taskRun, threadData: null };
+          }
+        })
+      );
+    }
+
+    // Get trigger data if available
+    let triggerData = null;
+    if (run.workflow_snapshot?.triggers?.[0]) {
+      const trigger = run.workflow_snapshot.triggers[0];
+      triggerData = {
+        trigger_id: trigger.trigger_id,
+        name: trigger.name,
+        type: trigger.trigger_type,
+        config: trigger.config,
+        initialPayload: run.metadata?.initialPayload || null,
+      };
+    }
+
     return NextResponse.json({
-      run: { ...run, duration_ms: runDurationMs },
-      taskRuns: taskRunsWithAnalytics,
+      run: { ...run, duration_ms: runDurationMs, triggerData },
+      taskRuns: enhancedTaskRuns,
     });
   } catch (err) {
     console.error("Error getting execution:", err);

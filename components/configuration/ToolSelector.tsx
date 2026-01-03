@@ -15,7 +15,7 @@ import { OFFICIAL_MCP_SERVERS } from "@/lib/mcp/officialMcpServers";
 
 interface UserMCPServer {
   id: string;
-  qualified_name: string;
+  server_slug: string;
   config: any;
   is_enabled: boolean;
   created_at: string;
@@ -24,7 +24,7 @@ interface UserMCPServer {
 
 interface UserAddedServer {
   id: string;
-  qualified_name: string;
+  server_slug: string;
   display_name: string;
   description: string;
   url: string;
@@ -84,25 +84,25 @@ export function ToolSelector({
     }
   };
 
-  const handleToggleTool = (qualifiedName: string) => {
-    const isEnabledForAgent = enabledMCPServers.includes(qualifiedName);
-    
+  const handleToggleTool = (serverName: string) => {
+    const isEnabledForAgent = enabledMCPServers.includes(serverName);
+
     // Allow toggling regardless of configuration status
     const updatedServers = isEnabledForAgent
-      ? enabledMCPServers.filter(name => name !== qualifiedName)
-      : [...enabledMCPServers, qualifiedName];
+      ? enabledMCPServers.filter(name => name !== serverName)
+      : [...enabledMCPServers, serverName];
 
     onMCPServersChange(updatedServers);
   };
 
-  const isConfigured = (qualifiedName: string) => {
-    const userServer = userServers.find(s => s.qualified_name === qualifiedName);
-    const userAddedServer = userAddedServers.find(s => s.qualified_name === qualifiedName);
+  const isConfigured = (serverName: string) => {
+    const userServer = userServers.find(s => s.server_slug === serverName);
+    const userAddedServer = userAddedServers.find(s => s.server_slug === serverName);
     return userServer?.is_enabled || userAddedServer?.is_enabled || false;
   };
 
-  const isEnabledForAgent = (qualifiedName: string) => {
-    return enabledMCPServers.includes(qualifiedName);
+  const isEnabledForAgent = (serverName: string) => {
+    return enabledMCPServers.includes(serverName);
   };
 
   if (loading) {
@@ -133,13 +133,13 @@ export function ToolSelector({
     );
   }
 
-  // Combine all server types (deduplicated by qualifiedName).
+  // Combine all server types (deduplicated by serverName).
   // Priority: custom > official
   const allServersMap: Record<string, any> = {};
   userAddedServers.forEach(server => {
-    allServersMap[server.qualified_name] = {
+    allServersMap[server.server_slug] = {
       ...server,
-      qualifiedName: server.qualified_name,
+      serverName: server.server_slug,
       displayName: server.display_name,
       description: server.description,
       serverType: 'custom' as const,
@@ -147,8 +147,8 @@ export function ToolSelector({
     };
   });
   OFFICIAL_MCP_SERVERS.forEach(server => {
-    if (!allServersMap[server.qualifiedName]) {
-      allServersMap[server.qualifiedName] = {
+    if (!allServersMap[server.serverName]) {
+      allServersMap[server.serverName] = {
         ...server,
         serverType: 'official' as const,
         isLocal: false
@@ -158,12 +158,12 @@ export function ToolSelector({
   const allServers = Object.values(allServersMap);
 
   // Separate configured and unconfigured servers
-  const configuredServers = allServers.filter(server => isConfigured(server.qualifiedName));
-  const unconfiguredServers = allServers.filter(server => !isConfigured(server.qualifiedName));
+  const configuredServers = allServers.filter(server => isConfigured(server.serverName));
+  const unconfiguredServers = allServers.filter(server => !isConfigured(server.serverName));
 
   const ServerCard = ({ server, isConfiguredSection }: { server: any; isConfiguredSection: boolean }) => {
-    const configured = isConfigured(server.qualifiedName);
-    const enabled = isEnabledForAgent(server.qualifiedName);
+    const configured = isConfigured(server.serverName);
+    const enabled = isEnabledForAgent(server.serverName);
     
     const getServerTypeBadge = () => {
       const variants = {
@@ -193,7 +193,7 @@ export function ToolSelector({
               {server.logoUrl ? (
                 <Image
                   src={server.logoUrl}
-                  alt={server.displayName || server.qualifiedName}
+                  alt={server.displayName || server.serverName}
                   width={32}
                   height={32}
                   className="rounded bg-white border p-0.5 object-contain"
@@ -201,8 +201,8 @@ export function ToolSelector({
                 />
               ) : (
                 <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-lg">
-                  {server.qualifiedName === 'github' ? '🐙' : 
-                   server.qualifiedName === 'notion' ? '📝' : '🛠️'}
+                  {server.serverName === 'github' ? '🐙' :
+                   server.serverName === 'notion' ? '📝' : '🛠️'}
                 </div>
               )}
             </div>
@@ -212,19 +212,19 @@ export function ToolSelector({
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1">
                 <h3 className="font-medium text-sm">
-                  {server.displayName || server.qualifiedName}
+                  {server.displayName || server.serverName}
                 </h3>
                 <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                   {server.description || "No description available"}
                 </p>
               </div>
-              
+
               {/* Toggle Switch - only show for configured tools */}
               {configured && (
                 <div className="flex items-center gap-2">
                   <Switch
                     checked={enabled}
-                    onCheckedChange={() => handleToggleTool(server.qualifiedName)}
+                    onCheckedChange={() => handleToggleTool(server.serverName)}
                   />
                 </div>
               )}
@@ -269,13 +269,13 @@ export function ToolSelector({
             {/* Configure button for unconfigured servers */}
             {!configured && (
               <div className="mt-3">
-                <Button 
-                  size="sm" 
-                  variant="default" 
+                <Button
+                  size="sm"
+                  variant="default"
                   className="text-xs"
                   asChild
                 >
-                  <Link href={`/tools/${encodeURIComponent(server.qualifiedName)}`}>
+                  <Link href={`/tools/${encodeURIComponent(server.serverName)}`}>
                     <Settings className="w-3 h-3 mr-1" />
                     Connect
                   </Link>
@@ -300,9 +300,9 @@ export function ToolSelector({
             </div>
             <div className="grid grid-cols-1 gap-3">
               {configuredServers.map((server) => (
-                <ServerCard 
-                  key={server.qualifiedName} 
-                  server={server} 
+                <ServerCard
+                  key={server.serverName}
+                  server={server}
                   isConfiguredSection={true}
                 />
               ))}
@@ -324,9 +324,9 @@ export function ToolSelector({
             </div>
             <div className="grid grid-cols-1 gap-3">
               {unconfiguredServers.map((server) => (
-                <ServerCard 
-                  key={server.qualifiedName} 
-                  server={server} 
+                <ServerCard
+                  key={server.serverName}
+                  server={server}
                   isConfiguredSection={false}
                 />
               ))}

@@ -10,12 +10,12 @@ import { sessionStore } from "@/lib/oauth/sessionStore"
  * Default URLs use Docker service names for container-to-container communication
  * These work from inside the LangGraph container
  */
-const GOOGLE_SERVICE_CONFIG: Record<string, { qualifiedName: string; urlEnvVar: string; defaultUrl: string; port: number }> = {
-  drive: { qualifiedName: "google-drive", urlEnvVar: "GOOGLE_DRIVE_MCP_URL", defaultUrl: "http://localhost:3002", port: 3002 },
-  gmail: { qualifiedName: "gmail", urlEnvVar: "GMAIL_MCP_URL", defaultUrl: "http://localhost:3003", port: 3003 },
-  calendar: { qualifiedName: "google-calendar", urlEnvVar: "GOOGLE_CALENDAR_MCP_URL", defaultUrl: "http://localhost:3004", port: 3004 },
-  docs: { qualifiedName: "google-docs", urlEnvVar: "GOOGLE_DOCS_MCP_URL", defaultUrl: "http://localhost:3005", port: 3005 },
-  sheets: { qualifiedName: "google-sheets", urlEnvVar: "GOOGLE_SHEETS_MCP_URL", defaultUrl: "http://localhost:3006", port: 3006 },
+const GOOGLE_SERVICE_CONFIG: Record<string, { serverName: string; urlEnvVar: string; defaultUrl: string; port: number }> = {
+  drive: { serverName: "google-drive", urlEnvVar: "GOOGLE_DRIVE_MCP_URL", defaultUrl: "http://localhost:3002", port: 3002 },
+  gmail: { serverName: "gmail", urlEnvVar: "GMAIL_MCP_URL", defaultUrl: "http://localhost:3003", port: 3003 },
+  calendar: { serverName: "google-calendar", urlEnvVar: "GOOGLE_CALENDAR_MCP_URL", defaultUrl: "http://localhost:3004", port: 3004 },
+  docs: { serverName: "google-docs", urlEnvVar: "GOOGLE_DOCS_MCP_URL", defaultUrl: "http://localhost:3005", port: 3005 },
+  sheets: { serverName: "google-sheets", urlEnvVar: "GOOGLE_SHEETS_MCP_URL", defaultUrl: "http://localhost:3006", port: 3006 },
 }
 
 /**
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
     }
 
     const config = GOOGLE_SERVICE_CONFIG[service]
-    const qualifiedName = config.qualifiedName
+    const serverName = config.serverName
     const serverUrl = process.env[config.urlEnvVar] || config.defaultUrl
 
     // Generate a cryptographically secure session ID to track this OAuth flow
@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
       .from("user_mcp_servers")
       .upsert({
         user_id: user.id,
-        qualified_name: qualifiedName,
+        server_slug: serverName,
         url: serverUrl,
         session_id: sessionId,
         config: {
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       }, {
-        onConflict: "user_id,qualified_name",
+        onConflict: "user_id,server_slug",
       })
 
     if (insertError) {

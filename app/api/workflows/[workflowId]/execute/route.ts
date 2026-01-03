@@ -540,15 +540,17 @@ export async function POST(
 
             // Build input messages based on inputSource
             const inputSource: "prompt" | "previous_output" | "prompt_and_previous_output" =
-              (task.config as any)?.context?.inputSource || "prompt";
+              (task.config as any)?.context?.inputSource || "prompt_and_previous_output";
             const promptText = task.config?.input?.prompt || "";
             const messages: Array<{ role: string; content: string }> = [];
-            // Always include this node's prompt as instruction if present
-            if (promptText) {
+
+            // Include this node's prompt if inputSource includes prompt mode
+            if ((inputSource === "prompt" || inputSource === "prompt_and_previous_output") && promptText) {
               messages.push({ role: "user", content: promptText });
             }
-            // Optionally include previous node output as additional context
-            if (inputSource === "previous_output" && (previousOutput !== null && previousOutput !== undefined)) {
+
+            // Include previous node output if inputSource includes previous_output mode
+            if ((inputSource === "previous_output" || inputSource === "prompt_and_previous_output") && (previousOutput !== null && previousOutput !== undefined)) {
               messages.push({ role: "user", content: typeof previousOutput === 'string' ? previousOutput : JSON.stringify(previousOutput) });
             }
             // For the very first node, include initialPayload when provided
