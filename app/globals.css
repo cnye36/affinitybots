@@ -124,6 +124,15 @@
   pointer-events: none;
 }
 
+/* ReactFlow Minimap dark theme styling */
+.dark .react-flow__minimap svg {
+  background-color: rgb(15 23 42) !important; /* slate-900 */
+}
+
+.dark .react-flow__minimap svg rect {
+  fill: rgb(77, 77, 79) !important; 
+}
+
 .dark .gradient-border::before {
   background: linear-gradient(
     45deg,

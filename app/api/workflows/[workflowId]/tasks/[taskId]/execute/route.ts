@@ -63,11 +63,13 @@ export async function POST(
             let hasInsertedRun = false;
 
             try {
-              // 1. Determine thread strategy from task config; default to workflow thread
+              // 1. Determine thread strategy from task config; default to new thread
               const threadMode: "workflow" | "new" | "from_node" = (
                 ((overrideConfig as any)?.context?.thread?.mode as any) ??
                 ((task.config as any)?.context?.thread?.mode as any)
-              ) || "workflow";
+              ) || "new";
+
+              // Create new thread if mode is "new"
               if (threadMode === "new") {
                 const thread = await client.threads.create();
                 incomingThreadId = thread.thread_id;
@@ -84,31 +86,35 @@ export async function POST(
                 )
               );
 
-              // 2. Build messages according to inputSource
-              const inputSource: "prompt" | "previous_output" | "prompt_and_previous_output" =
-                ((overrideConfig as any)?.context?.inputSource as any) ||
-                (task.config as any)?.context?.inputSource ||
-                "prompt_and_previous_output";
-              const messages: Array<{ role: string; content: string }> = [];
+              // 2. Build messages with auto-injection of previous output
+              const autoInjectPreviousOutput = ((overrideConfig as any)?.context?.autoInjectPreviousOutput ??
+                                                (task.config as any)?.context?.autoInjectPreviousOutput ??
+                                                true);
+
               const promptText = task.config?.input?.prompt || input?.prompt || "";
+
+              // Extract previous output text
               const previousText = previousOutputFromClient
                 ? (typeof previousOutputFromClient === "string"
                     ? previousOutputFromClient
-                    : JSON.stringify(previousOutputFromClient))
+                    : JSON.stringify(previousOutputFromClient, null, 2))
                 : (typeof (input as any)?.previous_output === "string"
                     ? (input as any).previous_output
                     : ((input as any)?.previous_output
-                        ? JSON.stringify((input as any).previous_output)
+                        ? JSON.stringify((input as any).previous_output, null, 2)
                         : ""));
 
-              // Include this node's prompt if inputSource includes prompt mode
-              if ((inputSource === "prompt" || inputSource === "prompt_and_previous_output") && promptText) {
-                messages.push({ role: "user", content: promptText });
+              // Build final prompt with optional auto-injection
+              let finalPrompt = promptText;
+
+              if (previousText && previousText.trim() && autoInjectPreviousOutput) {
+                finalPrompt = `--- Previous Agent Output ---\n${previousText}\n\n--- Your Task ---\n${promptText}`;
               }
 
-              // Include previous node output if inputSource includes previous_output mode
-              if ((inputSource === "previous_output" || inputSource === "prompt_and_previous_output") && previousText) {
-                messages.push({ role: "user", content: previousText });
+              // Build messages
+              const messages: Array<{ role: string; content: string }> = [];
+              if (finalPrompt) {
+                messages.push({ role: "user", content: finalPrompt });
               }
 
               // 3. Stream the execution on the selected thread

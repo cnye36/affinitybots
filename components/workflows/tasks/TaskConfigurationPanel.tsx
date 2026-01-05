@@ -57,8 +57,8 @@ export function TaskConfigurationPanel({
 
       <div className="relative">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-violet-200/50 dark:border-violet-800/30 bg-gradient-to-r from-violet-500/5 to-purple-500/5">
-          <h3 className="font-semibold text-base bg-gradient-to-r from-violet-600 to-purple-600 dark:from-violet-400 dark:to-purple-400 bg-clip-text text-transparent">
+        <div className="px-3 md:px-4 lg:px-6 py-3 md:py-4 border-b border-violet-200/50 dark:border-violet-800/30 bg-gradient-to-r from-violet-500/5 to-purple-500/5">
+          <h3 className="font-semibold text-sm md:text-base bg-gradient-to-r from-violet-600 to-purple-600 dark:from-violet-400 dark:to-purple-400 bg-clip-text text-transparent">
             Task Configuration
           </h3>
           <p className="text-xs text-muted-foreground mt-1">
@@ -66,8 +66,8 @@ export function TaskConfigurationPanel({
           </p>
         </div>
 
-        <ScrollArea className="h-[600px]">
-          <div className="space-y-6 p-6">
+        <ScrollArea className="h-[400px] md:h-[500px] lg:h-[600px]">
+          <div className="space-y-4 md:space-y-6 p-3 md:p-4 lg:p-6">
           {/* Basic Info Section - Collapsible */}
           <Accordion type="single" collapsible className="rounded-lg border border-violet-200/30 dark:border-violet-800/30 bg-background/50">
             <AccordionItem value="basic-info" className="border-none">
@@ -125,42 +125,34 @@ export function TaskConfigurationPanel({
             {/* Context Options - Hidden in orchestrator mode */}
             {!isOrchestratorMode && (
               <div className="space-y-2">
-                <Label className="text-sm font-medium">Input Source</Label>
-                <Select
-                  value={
-                    ((currentTask as any)?.config?.context?.inputSource === "previous_output")
-                      ? "previous_output"
-                      : "prompt"
-                  }
-                  onValueChange={(value) => {
-                    const inputSource = (value as "prompt" | "previous_output");
-                    const thread = (inputSource === "previous_output")
-                      ? { mode: "workflow" as const }
-                      : { mode: "new" as const };
-                    setCurrentTask({
-                      ...currentTask,
-                      config: {
-                        ...currentTask.config,
-                        context: {
-                          ...(currentTask as any).config?.context,
-                          inputSource,
-                          thread,
-                        },
-                      },
-                    });
-                  }}
-                >
-                  <SelectTrigger onClick={(e) => e.stopPropagation()} className="bg-background">
-                    <SelectValue placeholder="Select source" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="previous_output">Previous Node Output</SelectItem>
-                    <SelectItem value="prompt">Custom Prompt</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  Choose whether to use output from the previous task or define a custom prompt
-                </p>
+                <div className="rounded-lg border border-violet-200/50 dark:border-violet-800/50 bg-gradient-to-br from-violet-50/50 to-purple-50/50 dark:from-violet-950/30 dark:to-purple-950/30 p-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-sm text-foreground">Auto-inject previous output</p>
+                        <Switch
+                          checked={((currentTask as any)?.config?.context?.autoInjectPreviousOutput ?? true)}
+                          onCheckedChange={(checked) => {
+                            setCurrentTask({
+                              ...currentTask,
+                              config: {
+                                ...currentTask.config,
+                                context: {
+                                  ...(currentTask as any).config?.context,
+                                  autoInjectPreviousOutput: checked,
+                                },
+                              },
+                            })
+                          }}
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        When enabled (default), the previous agent's output is automatically prepended to this task's prompt.
+                        For the first task, trigger data is injected if available. Disable only if you want complete manual control over context.
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 

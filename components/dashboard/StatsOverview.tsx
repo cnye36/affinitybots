@@ -8,9 +8,10 @@ import Link from "next/link"
 interface StatsOverviewProps {
 	stats: {
 		totalWorkflows: number
+		activeWorkflows: number
 		totalAgents: number
-		successRate: string
-		averageResponseTime: string
+		totalRuns: number
+		averageDuration: number | null
 	}
 }
 
@@ -26,6 +27,7 @@ const statCards = [
 		description: "Active AI agents",
 		trend: "+12%",
 		href: "/agents",
+		subtitle: null,
 	},
 	{
 		title: "Total Workflows",
@@ -38,30 +40,40 @@ const statCards = [
 		description: "Automation workflows",
 		trend: "+8%",
 		href: "/workflows",
+		subtitle: (stats: StatsOverviewProps["stats"]) => `${stats.activeWorkflows} Active`,
 	},
 	{
-		title: "Success Rate",
-		value: (stats: StatsOverviewProps["stats"]) => stats.successRate,
+		title: "Total Runs",
+		value: (stats: StatsOverviewProps["stats"]) => stats.totalRuns.toString(),
 		icon: CheckCircle2,
 		gradient: "from-emerald-500 via-green-500 to-lime-500",
 		glowColor: "rgba(34, 197, 94, 0.4)",
 		iconBg: "bg-gradient-to-br from-emerald-400/20 to-lime-400/20",
 		iconColor: "text-emerald-600 dark:text-emerald-100",
-		description: "Task completion rate",
+		description: "Workflow executions",
 		trend: "+2%",
-		href: null,
+		href: "/analytics",
+		subtitle: null,
 	},
 	{
-		title: "Avg Response Time",
-		value: (stats: StatsOverviewProps["stats"]) => stats.averageResponseTime,
+		title: "Avg Duration",
+		value: (stats: StatsOverviewProps["stats"]) => {
+			if (stats.averageDuration === null) return "N/A";
+			const seconds = Math.floor(stats.averageDuration / 1000);
+			if (seconds < 60) return `${seconds}s`;
+			const minutes = Math.floor(seconds / 60);
+			const remainingSeconds = seconds % 60;
+			return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
+		},
 		icon: Activity,
 		gradient: "from-orange-500 via-amber-500 to-yellow-500",
 		glowColor: "rgba(249, 115, 22, 0.4)",
 		iconBg: "bg-gradient-to-br from-orange-400/20 to-yellow-400/20",
 		iconColor: "text-orange-600 dark:text-orange-100",
-		description: "System performance",
+		description: "Average run time",
 		trend: "-15%",
-		href: null,
+		href: "/analytics",
+		subtitle: null,
 	},
 ] as const
 
@@ -113,6 +125,11 @@ export function StatsOverview({ stats }: StatsOverviewProps) {
 									>
 										{card.value(stats)}
 									</motion.h3>
+									{card.subtitle && typeof card.subtitle === "function" && (
+										<p className="text-sm font-medium text-green-600 dark:text-green-400 mt-1">
+											{card.subtitle(stats)}
+										</p>
+									)}
 								</div>
 								<motion.div
 									className={`p-3 rounded-2xl ${card.iconBg} backdrop-blur-sm border border-white/10 dark:border-white/10 border-border/50 shadow-lg`}

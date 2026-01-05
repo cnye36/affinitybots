@@ -55,6 +55,18 @@ export function WorkflowBuilder() {
   const [isWorkflowActive, setIsWorkflowActive] = useState(false)
   const [triggers, setTriggers] = useState<any[]>([])
   const [viewMode, setViewMode] = useState<"editor" | "executions">("editor")
+  const [executionRunId, setExecutionRunId] = useState<string | null>(null)
+  
+  // Handle execution parameter from URL
+  useEffect(() => {
+    const execution = searchParams.get("execution")
+    if (execution && workflowId) {
+      setExecutionRunId(execution)
+      setViewMode("executions")
+    } else {
+      setExecutionRunId(null)
+    }
+  }, [searchParams, workflowId])
 
   const {
     openWorkflowTypeSelect,
@@ -94,7 +106,7 @@ export function WorkflowBuilder() {
   // Listen for task test completions and persist outputs
   useEffect(() => {
     const handleTaskTestCompleted = async (e: Event) => {
-      const evt = e as CustomEvent<{ 
+      const evt = e as CustomEvent<{
         workflowTaskId: string
         output: { result: unknown; metadata?: Record<string, unknown> }
       }>
@@ -186,6 +198,80 @@ export function WorkflowBuilder() {
     }
   }, [workflowId, supabase, setNodes])
 
+  useEffect(() => {
+    const handleAgentChanged = async (e: Event) => {
+      const evt = e as CustomEvent<{ workflowId: string; taskId: string }>
+      if (!evt.detail || evt.detail.workflowId !== workflowId) return
+
+      const startNodeId = `task-${evt.detail.taskId}`
+      const downstreamNodeIds = new Set<string>()
+      const queue: string[] = [startNodeId]
+      downstreamNodeIds.add(startNodeId)
+
+      while (queue.length > 0) {
+        const nodeId = queue.shift()
+        if (!nodeId) continue
+        edges.forEach((edge) => {
+          if (edge.source === nodeId && !downstreamNodeIds.has(edge.target)) {
+            downstreamNodeIds.add(edge.target)
+            queue.push(edge.target)
+          }
+        })
+      }
+
+      const nodesSnapshot = useWorkflowState.getState().nodes
+      const taskUpdates = nodesSnapshot
+        .filter((node) => node.type === "task" && downstreamNodeIds.has(node.id))
+        .map((node) => {
+          const metadata = ((node.data as any).metadata || {}) as Record<string, unknown>
+          const { testOutput: _testOutput, lastTestAt: _lastTestAt, ...rest } = metadata
+          return {
+            taskId: (node.data as any).workflow_task_id as string,
+            metadata: rest,
+          }
+        })
+
+      setNodes((currentNodes) =>
+        currentNodes.map((node) => {
+          if (node.type !== "task" || !downstreamNodeIds.has(node.id)) return node
+          const metadata = ((node.data as any).metadata || {}) as Record<string, unknown>
+          const { testOutput: _testOutput, lastTestAt: _lastTestAt, ...rest } = metadata
+          const nextData: any = {
+            ...node.data,
+            metadata: rest,
+          }
+          if (node.id !== startNodeId) {
+            nextData.previousNodeOutput = undefined
+            nextData.previousNodeThreadId = undefined
+          }
+          return {
+            ...node,
+            data: nextData,
+          }
+        })
+      )
+
+      if (taskUpdates.length === 0) return
+      try {
+        await Promise.all(
+          taskUpdates.map((update) =>
+            supabase
+              .from("workflow_tasks")
+              .update({ metadata: update.metadata })
+              .eq("workflow_task_id", update.taskId)
+          )
+        )
+      } catch (error) {
+        console.error("Error clearing downstream task outputs:", error)
+      }
+    }
+
+    window.addEventListener("taskAgentChanged", handleAgentChanged as EventListener)
+    return () => {
+      window.removeEventListener("taskAgentChanged", handleAgentChanged as EventListener)
+    }
+  }, [edges, workflowId, supabase, setNodes])
+
   // Update task nodes when config modal state changes
   useEffect(() => {
     setNodes((currentNodes) =>
@@ -205,6 +291,68 @@ export function WorkflowBuilder() {
       })
     )
   }, [configOpenTaskId, setNodes])
+
+  // Propagate previous node output when edges change
+  useEffect(() => {
+    setNodes((currentNodes) => {
+      let didChange = false
+      const taskTestOutputs: Record<string, { result: unknown; metadata?: Record<string, unknown> }> = {}
+      currentNodes.forEach((node) => {
+        if (node.type !== "task") return
+        const metadata = (node.data as any)?.metadata
+        if (metadata?.testOutput?.result != null) {
+          taskTestOutputs[node.data.workflow_task_id] = {
+            result: metadata.testOutput.result,
+            metadata: metadata.testOutput.metadata,
+          }
+        }
+      })
+
+      const nextNodes = currentNodes.map((node) => {
+        if (node.type !== "task") return node
+        const incomingEdge = edges.find((edge) => edge.target === node.id)
+        if (!incomingEdge) {
+          const hadOutput = (node.data as any)?.previousNodeOutput != null
+          const hadThread = (node.data as any)?.previousNodeThreadId != null
+          if (!hadOutput && !hadThread) return node
+          didChange = true
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              previousNodeOutput: undefined,
+              previousNodeThreadId: undefined,
+            },
+          }
+        }
+
+        const sourceNode = currentNodes.find((n) => n.id === incomingEdge.source)
+        if (!sourceNode || sourceNode.type !== "task") return node
+
+        const sourceTaskId = sourceNode.data.workflow_task_id
+        const output = taskTestOutputs[sourceTaskId] || (sourceNode.data as any)?.previousNodeOutput
+        const threadId = output?.metadata?.thread_id || (sourceNode.data as any)?.previousNodeThreadId
+
+        const currentOutput = (node.data as any)?.previousNodeOutput
+        const currentThreadId = (node.data as any)?.previousNodeThreadId
+        const isSameOutput = currentOutput === output
+        const isSameThread = currentThreadId === threadId
+        if (isSameOutput && isSameThread) return node
+
+        didChange = true
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            previousNodeOutput: output,
+            previousNodeThreadId: threadId,
+          },
+        }
+      })
+
+      return didChange ? nextNodes : currentNodes
+    })
+  }, [edges, setNodes])
 
   // Load assistants
   useEffect(() => {
@@ -490,6 +638,68 @@ export function WorkflowBuilder() {
         // Get source node ID if adding from a specific node
         const sourceNodeId = selectedTaskForAgent
 
+        // If the selection came from an existing task, update that task instead of creating a new node
+        const currentNodes = useWorkflowState.getState().nodes
+        const existingTaskNode = currentNodes.find(
+          (node) => node.type === "task" && (node.data as any).workflow_task_id === sourceNodeId
+        )
+
+        if (existingTaskNode && existingTaskNode.type === "task") {
+          const existingConfig = (existingTaskNode.data as any).config || {}
+          const updatedConfig = {
+            ...existingConfig,
+            assigned_assistant: {
+              id: assistant.assistant_id,
+              name: assistant.name,
+              avatar: assistant.metadata?.agent_avatar,
+            },
+          }
+
+          const { error } = await supabase
+            .from("workflow_tasks")
+            .update({
+              assistant_id: assistant.assistant_id,
+              config: updatedConfig,
+            })
+            .eq("workflow_task_id", existingTaskNode.data.workflow_task_id)
+
+          if (error) throw error
+
+          setNodes((nodes) =>
+            nodes.map((node) => {
+              if (node.id !== existingTaskNode.id || node.type !== "task") return node
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  assignedAssistant: {
+                    id: assistant.assistant_id,
+                    name: assistant.name,
+                    avatar: assistant.metadata?.agent_avatar,
+                  },
+                  config: updatedConfig,
+                },
+              }
+            })
+          )
+
+          if (workflowType === "sequential") {
+            window.dispatchEvent(
+              new CustomEvent("taskAgentChanged", {
+                detail: {
+                  workflowId,
+                  taskId: existingTaskNode.data.workflow_task_id,
+                },
+              })
+            )
+          }
+
+          setSelectedTaskForAgent(null)
+          closeModals()
+          toast({ title: "Agent updated" })
+          return
+        }
+
         // Get the next position number
         const { data: lastTask } = await supabase
           .from("workflow_tasks")
@@ -526,7 +736,6 @@ export function WorkflowBuilder() {
         if (error) throw error
 
         // Get current state for calculations
-        const currentNodes = useWorkflowState.getState().nodes
         const currentEdges = useWorkflowState.getState().edges
 
         // Check if source node has test output to pass to new node
@@ -958,6 +1167,36 @@ export function WorkflowBuilder() {
     }
 
     setIsExecuting(true)
+    setNodes((nodes) =>
+      nodes.map((node) => {
+        if (node.type === "task") {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              status: "pending" as const,
+            },
+          } as WorkflowNode
+        } else if (node.type === "trigger") {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              status: "idle" as const,
+            },
+          } as WorkflowNode
+        } else if (node.type === "orchestrator") {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              status: "idle" as const,
+            },
+          } as WorkflowNode
+        }
+        return node
+      })
+    )
 
     try {
       const response = await fetch(`/api/workflows/${workflowId}/execute`, {
@@ -989,36 +1228,74 @@ export function WorkflowBuilder() {
         if (done) break
 
         buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split("\n")
+        const events = buffer.split("\n\n")
+        buffer = events.pop() || ""
 
-        // Keep the last incomplete line in the buffer
-        buffer = lines.pop() || ""
+        for (const evt of events) {
+          const lines = evt.split("\n")
+          let eventType: string | null = null
+          const dataLines: string[] = []
+          for (const line of lines) {
+            if (line.startsWith("event:")) eventType = line.slice(6).trim()
+            else if (line.startsWith("data:")) dataLines.push(line.slice(5).trimStart())
+          }
+          const dataStr = dataLines.join("\n")
+          let payload: any = null
+          try {
+            payload = dataStr ? JSON.parse(dataStr) : null
+          } catch {}
 
-        for (const line of lines) {
-          if (line.startsWith("event: done")) {
+          if (eventType === "task-start" && payload?.workflow_task_id) {
+            setNodes((nodes) =>
+              nodes.map((n) =>
+                n.type === "task" && (n.data as any).workflow_task_id === payload.workflow_task_id
+                  ? ({
+                      ...n,
+                      data: {
+                        ...n.data,
+                        status: "running",
+                      },
+                    } as WorkflowNode)
+                  : n
+              )
+            )
+          }
+
+          if (eventType === "task-complete" && payload?.workflow_task_id) {
+            setNodes((nodes) =>
+              nodes.map((n) =>
+                n.type === "task" && (n.data as any).workflow_task_id === payload.workflow_task_id
+                  ? ({
+                      ...n,
+                      data: {
+                        ...n.data,
+                        status: "completed",
+                      },
+                    } as WorkflowNode)
+                  : n
+              )
+            )
+            try {
+              const event = new CustomEvent("taskTestCompleted", {
+                detail: {
+                  workflowTaskId: payload.workflow_task_id,
+                  output: { result: payload.result, metadata: { thread_id: payload.thread_id } },
+                },
+              })
+              window.dispatchEvent(event)
+            } catch {}
+          }
+
+          if (eventType === "done") {
             toast({
               title: "Workflow executed successfully!",
             })
-            // Switch to executions view to see results
             setViewMode("executions")
             return
           }
 
-          if (line.startsWith("event: error")) {
-            // Find the next data line
-            const dataLineIndex = lines.indexOf(line) + 1
-            if (dataLineIndex < lines.length) {
-              const dataLine = lines[dataLineIndex]
-              if (dataLine?.startsWith("data: ")) {
-                try {
-                  const errorData = JSON.parse(dataLine.substring(6))
-                  throw new Error(errorData.error || "Execution failed")
-                } catch (parseError) {
-                  throw new Error("Execution failed")
-                }
-              }
-            }
-            throw new Error("Execution failed")
+          if (eventType === "error") {
+            throw new Error(payload?.error || "Execution failed")
           }
         }
       }
@@ -1033,7 +1310,7 @@ export function WorkflowBuilder() {
     } finally {
       setIsExecuting(false)
     }
-  }, [workflowId, triggers, setViewMode])
+  }, [workflowId, triggers, setViewMode, setNodes])
 
   return (
     <div className="flex flex-col h-screen">
@@ -1062,7 +1339,7 @@ export function WorkflowBuilder() {
                 <WorkflowCanvas onAddTask={handleAddTask} />
               </ReactFlowProvider>
             ) : (
-              workflowId && <WorkflowExecutions workflowId={workflowId} />
+              workflowId && <WorkflowExecutions workflowId={workflowId} initialRunId={executionRunId} />
             )}
           </div>
         </>

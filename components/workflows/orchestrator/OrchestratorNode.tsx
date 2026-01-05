@@ -50,14 +50,17 @@ interface OrchestratorNodeProps {
 
 export function OrchestratorNode({ data, selected }: OrchestratorNodeProps) {
 	const [testStatus, setTestStatus] = useState<"idle" | "testing" | "testSuccess" | "testError">("idle")
+	const isReadOnly = data.isReadOnly === true
 
 	const handlePlayClick = (e: React.MouseEvent) => {
 		e.stopPropagation()
+		if (isReadOnly) return
 		data.onConfigure()
 	}
 
 	const handleDeleteClick = (e: React.MouseEvent) => {
 		e.stopPropagation()
+		if (isReadOnly) return
 		if (data.onDelete) {
 			data.onDelete()
 		}
@@ -72,35 +75,37 @@ export function OrchestratorNode({ data, selected }: OrchestratorNodeProps) {
       className="relative group"
       onDoubleClick={(e) => {
         e.stopPropagation()
-        data.onConfigure()
+        if (!isReadOnly) data.onConfigure()
       }}
     >
 			{/* Status indicator and action buttons - positioned outside top-right */}
-			<div className="absolute -top-8 right-0 flex items-center gap-2 z-20">
+			<div className="absolute -top-8 right-0 flex items-center gap-1.5 md:gap-2 z-20">
 				{/* Play button for executing orchestrator */}
-				<TooltipProvider>
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<button
-								onClick={handlePlayClick}
-								className={cn(
-									"p-1.5 rounded-lg",
-									"bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm",
-									"hover:bg-white dark:hover:bg-gray-700",
-									"transition-all duration-200 hover:scale-110",
-									"shadow-md border border-gray-200 dark:border-gray-700",
-									testStatus === "testing" && "opacity-50 cursor-not-allowed",
-								)}
-								disabled={testStatus === "testing"}
-							>
-								<Play className="h-3 w-3 text-gray-700 dark:text-gray-300 fill-current" />
-							</button>
-						</TooltipTrigger>
-						<TooltipContent>
-							<p>Execute Orchestrator</p>
-						</TooltipContent>
-					</Tooltip>
-				</TooltipProvider>
+				{!isReadOnly && (
+					<TooltipProvider>
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<button
+									onClick={handlePlayClick}
+									className={cn(
+										"p-1.5 rounded-lg",
+										"bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm",
+										"hover:bg-white dark:hover:bg-gray-700",
+										"transition-all duration-200 hover:scale-110",
+										"shadow-md border border-gray-200 dark:border-gray-700",
+										testStatus === "testing" && "opacity-50 cursor-not-allowed",
+									)}
+									disabled={testStatus === "testing"}
+								>
+									<Play className="h-3 w-3 text-gray-700 dark:text-gray-300 fill-current" />
+								</button>
+							</TooltipTrigger>
+							<TooltipContent>
+								<p>Execute Orchestrator</p>
+							</TooltipContent>
+						</Tooltip>
+					</TooltipProvider>
+				)}
 
 				{/* Status indicator dot - positioned next to play button */}
 				<TooltipProvider>
@@ -121,7 +126,7 @@ export function OrchestratorNode({ data, selected }: OrchestratorNodeProps) {
 				</TooltipProvider>
 
 				{/* Delete button */}
-				{data.onDelete && (
+				{data.onDelete && !isReadOnly && (
 					<TooltipProvider>
 						<Tooltip>
 							<TooltipTrigger asChild>
@@ -202,36 +207,38 @@ export function OrchestratorNode({ data, selected }: OrchestratorNodeProps) {
               </div>
 
               {/* Configure button - small icon overlay */}
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        data.onConfigure();
-                      }}
-                      className={cn(
-                        "absolute -bottom-2 right-1/2 translate-x-1/2",
-                        "opacity-0 group-hover:opacity-100 transition-opacity duration-200",
-                        "p-1.5 rounded-full bg-emerald-500 hover:bg-emerald-600",
-                        "shadow-lg text-white"
-                      )}
-                    >
-                      <Settings className="w-3 h-3" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Configure Orchestrator</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              {!isReadOnly && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          data.onConfigure();
+                        }}
+                        className={cn(
+                          "absolute -bottom-2 right-1/2 translate-x-1/2",
+                          "opacity-0 group-hover:opacity-100 transition-opacity duration-200",
+                          "p-1.5 rounded-full bg-emerald-500 hover:bg-emerald-600",
+                          "shadow-lg text-white"
+                        )}
+                      >
+                        <Settings className="w-3 h-3" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Configure Orchestrator</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
             </div>
           </div>
         </div>
       </div>
 
       {/* Add Agent Button - appears below on hover */}
-      {data.onAddTask && (
+      {data.onAddTask && !isReadOnly && (
         <button
           onClick={(e) => {
             e.stopPropagation();

@@ -25,6 +25,7 @@ export interface TriggerNodeData {
 	onAddTask?: () => void,
 	hasConnectedTask?: boolean,
 	isActive?: boolean,
+	isReadOnly?: boolean,
 	workflowType?: "sequential" | "orchestrator",
 	onDelete?: () => void,
 }
@@ -100,9 +101,11 @@ const triggerTypeConfig = {
 
 export const TriggerNode = memo(({ data }: { data: TriggerNodeData }) => {
 	const [testStatus, setTestStatus] = useState<"idle" | "testing" | "testSuccess" | "testError">("idle")
+	const isReadOnly = data.isReadOnly === true
 
 	const handleSettingsClick = (e: React.MouseEvent) => {
 		e.stopPropagation()
+		if (isReadOnly) return
 		if (data.onConfigureTrigger) {
 			data.onConfigureTrigger(data.trigger_id)
 		}
@@ -110,6 +113,7 @@ export const TriggerNode = memo(({ data }: { data: TriggerNodeData }) => {
 
 	const handleDoubleClick = (e: React.MouseEvent) => {
 		e.stopPropagation()
+		if (isReadOnly) return
 		if (data.onConfigureTrigger) {
 			data.onConfigureTrigger(data.trigger_id)
 		}
@@ -117,6 +121,7 @@ export const TriggerNode = memo(({ data }: { data: TriggerNodeData }) => {
 
 	const handleAddTask = (e: React.MouseEvent) => {
 		e.stopPropagation()
+		if (isReadOnly) return
 		// Prefer onAddTask to set active node before opening the sidebar
 		if (data.onAddTask) data.onAddTask()
 		if (data.onOpenTaskSidebar) data.onOpenTaskSidebar()
@@ -124,6 +129,7 @@ export const TriggerNode = memo(({ data }: { data: TriggerNodeData }) => {
 
 	const handlePlayClick = async (e: React.MouseEvent) => {
 		e.stopPropagation()
+		if (isReadOnly) return
 		setTestStatus("testing")
 		try {
 			const response = await fetch(`/api/workflows/${data.workflow_id}/execute`, {
@@ -177,29 +183,31 @@ export const TriggerNode = memo(({ data }: { data: TriggerNodeData }) => {
 			{/* Status indicator and action buttons - positioned outside top-right */}
 			<div className="absolute -top-8 right-0 flex items-center gap-2 z-20">
 				{/* Play button for testing */}
-				<TooltipProvider>
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<button
-								onClick={handlePlayClick}
-								className={cn(
-									"p-1.5 rounded-lg",
-									"bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm",
-									"hover:bg-white dark:hover:bg-gray-700",
-									"transition-all duration-200 hover:scale-110",
-									"shadow-md border border-gray-200 dark:border-gray-700",
-									testStatus === "testing" && "opacity-50 cursor-not-allowed",
-								)}
-								disabled={testStatus === "testing"}
-							>
-								<Play className="h-3 w-3 text-gray-700 dark:text-gray-300 fill-current" />
-							</button>
-						</TooltipTrigger>
-						<TooltipContent>
-							<p>Test Trigger</p>
-						</TooltipContent>
-					</Tooltip>
-				</TooltipProvider>
+				{!isReadOnly && (
+					<TooltipProvider>
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<button
+									onClick={handlePlayClick}
+									className={cn(
+										"p-1.5 rounded-lg",
+										"bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm",
+										"hover:bg-white dark:hover:bg-gray-700",
+										"transition-all duration-200 hover:scale-110",
+										"shadow-md border border-gray-200 dark:border-gray-700",
+										testStatus === "testing" && "opacity-50 cursor-not-allowed",
+									)}
+									disabled={testStatus === "testing"}
+								>
+									<Play className="h-3 w-3 text-gray-700 dark:text-gray-300 fill-current" />
+								</button>
+							</TooltipTrigger>
+							<TooltipContent>
+								<p>Test Trigger</p>
+							</TooltipContent>
+						</Tooltip>
+					</TooltipProvider>
+				)}
 
 				{/* Status indicator dot - positioned next to play button */}
 				<TooltipProvider>
@@ -220,7 +228,7 @@ export const TriggerNode = memo(({ data }: { data: TriggerNodeData }) => {
 				</TooltipProvider>
 
 				{/* Delete button */}
-				{data.onDelete && (
+				{data.onDelete && !isReadOnly && (
 					<TooltipProvider>
 						<Tooltip>
 							<TooltipTrigger asChild>
@@ -258,7 +266,7 @@ export const TriggerNode = memo(({ data }: { data: TriggerNodeData }) => {
 
 			<Card
 				className={cn(
-					"relative min-w-[240px] max-w-[280px] cursor-pointer overflow-hidden",
+					"relative min-w-[200px] max-w-[240px] cursor-pointer overflow-hidden",
 					"border-2 transition-all duration-300",
 					"hover:shadow-xl hover:-translate-y-0.5",
 					data.isActive
@@ -299,55 +307,54 @@ export const TriggerNode = memo(({ data }: { data: TriggerNodeData }) => {
 							</div>
 
 							{/* Start Here badge with gradient */}
-							<div className="flex flex-col">
-								<Badge
-									className={cn(
-										"px-2 py-0.5 text-xs font-bold border-0 shadow-md",
-										"bg-gradient-to-r",
-										config.gradient,
-										"text-white",
-									)}
-								>
-									Start Here
-								</Badge>
-								<span className="text-[10px] text-muted-foreground mt-1">Workflow Entry</span>
-							</div>
+							<Badge
+								className={cn(
+									"px-1.5 py-0 text-[10px] font-medium border-0 shadow-sm",
+									"bg-gradient-to-r",
+									config.gradient,
+									"text-white",
+								)}
+							>
+								Start Here
+							</Badge>
 						</div>
 
 						<div className="flex items-center gap-2">
 							{/* Settings button - appears on hover */}
-							<TooltipProvider>
-								<Tooltip>
-									<TooltipTrigger asChild>
-										<button
-											onClick={handleSettingsClick}
-											className={cn(
-												"p-1.5 rounded-lg opacity-0 group-hover:opacity-100",
-												"bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm",
-												"hover:bg-white dark:hover:bg-gray-700",
-												"transition-all duration-200 hover:scale-110",
-												"shadow-md",
-											)}
-										>
-											<Settings className="h-4 w-4 text-gray-600 dark:text-gray-300" />
-										</button>
-									</TooltipTrigger>
-									<TooltipContent>
-										<p>Configure Trigger</p>
-									</TooltipContent>
-								</Tooltip>
-							</TooltipProvider>
+							{!isReadOnly && (
+								<TooltipProvider>
+									<Tooltip>
+										<TooltipTrigger asChild>
+											<button
+												onClick={handleSettingsClick}
+												className={cn(
+													"p-1.5 rounded-lg opacity-0 group-hover:opacity-100",
+													"bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm",
+													"hover:bg-white dark:hover:bg-gray-700",
+													"transition-all duration-200 hover:scale-110",
+													"shadow-md",
+												)}
+											>
+												<Settings className="h-4 w-4 text-gray-600 dark:text-gray-300" />
+											</button>
+										</TooltipTrigger>
+										<TooltipContent>
+											<p>Configure Trigger</p>
+										</TooltipContent>
+									</Tooltip>
+								</TooltipProvider>
+							)}
 						</div>
 					</div>
 				</CardHeader>
 
 				<CardContent className="p-3 pt-2">
 					{/* Trigger type badge */}
-					<div className="flex flex-wrap gap-2 mb-3">
+					<div className="flex flex-wrap gap-1.5 mb-2.5">
 						<Badge
 							variant="outline"
 							className={cn(
-								"text-xs font-medium border-2",
+								"text-[10px] font-medium border px-1.5 py-0",
 								"bg-gradient-to-r shadow-sm",
 								config.badgeGradient,
 								"border-transparent",
@@ -381,7 +388,7 @@ export const TriggerNode = memo(({ data }: { data: TriggerNodeData }) => {
 			</Card>
 
 			{/* Add Agent Button - appears on hover when no outgoing connection */}
-			{data.onAddTask && (
+			{data.onAddTask && !isReadOnly && (
 				<button
 					onClick={handleAddTask}
 					className={cn(

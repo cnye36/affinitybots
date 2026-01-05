@@ -131,6 +131,17 @@ export default async function Dashboard() {
         if (workflowCountError) {
           console.error("Error fetching total workflows:", workflowCountError);
         }
+
+        // Active workflows count
+        const { count: activeWorkflows, error: activeWorkflowsError } = await supabase
+          .from("workflows")
+          .select("*", { count: "exact", head: true })
+          .eq("owner_id", user!.id)
+          .eq("is_active", true);
+        if (activeWorkflowsError) {
+          console.error("Error fetching active workflows:", activeWorkflowsError);
+        }
+
         const { count: totalAgents, error: agentCountError } = await supabase
           .from("user_assistants")
           .select("*", { count: "exact", head: true })
@@ -139,15 +150,56 @@ export default async function Dashboard() {
           console.error("Error fetching total agents:", agentCountError);
         }
 
-        // Build the stats object for StatsOverview component.  The
-        // successRate and averageResponseTime values are placeholders;
-        // calculations should be updated when corresponding metrics are
-        // available in your schema.
+        // Get workflow IDs for the user to query runs
+        const { data: userWorkflows, error: userWorkflowsError } = await supabase
+          .from("workflows")
+          .select("workflow_id")
+          .eq("owner_id", user!.id);
+        if (userWorkflowsError) {
+          console.error("Error fetching user workflows:", userWorkflowsError);
+        }
+
+        const workflowIds = (userWorkflows || []).map((w: any) => w.workflow_id);
+
+        // Fetch workflow runs to calculate total runs and average duration
+        let totalRuns = 0;
+        let averageDuration = null;
+        
+        if (workflowIds.length > 0) {
+          const { data: workflowRuns, error: runsError } = await supabase
+            .from("workflow_runs")
+            .select("started_at, completed_at")
+            .in("workflow_id", workflowIds);
+          
+          if (runsError) {
+            console.error("Error fetching workflow runs:", runsError);
+          } else {
+            totalRuns = (workflowRuns || []).length;
+            
+            // Calculate average duration from completed runs
+            const durations = (workflowRuns || [])
+              .filter((run: any) => run.started_at && run.completed_at)
+              .map((run: any) => {
+                const started = new Date(run.started_at).getTime();
+                const completed = new Date(run.completed_at).getTime();
+                return Math.max(0, completed - started);
+              });
+            
+            if (durations.length > 0) {
+              const totalMs = durations.reduce((sum: number, d: number) => sum + d, 0);
+              const avgMs = Math.round(totalMs / durations.length);
+              averageDuration = avgMs;
+            }
+          }
+        }
+
+        // Build the stats object for StatsOverview component
         const stats = {
           totalWorkflows: totalWorkflows || 0,
+          activeWorkflows: activeWorkflows || 0,
           totalAgents: totalAgents || 0,
-          successRate: "98%",
-          averageResponseTime: "1.2s",
+          totalRuns: totalRuns,
+          averageDuration: averageDuration,
         };
 
         // --------------------------------------------------------------------
@@ -191,6 +243,7 @@ export default async function Dashboard() {
             id: assistant.assistant_id,
             name: assistant.name || "Unnamed Agent",
             description: metadata.description || "No description provided",
+            avatar: metadata.agent_avatar,
             enabledTools: enabledTools,
             toolsCount: enabledTools.length,
           };
@@ -358,7 +411,23 @@ export default async function Dashboard() {
                             className="block group"
                           >
                             <div className="p-4 border border-border rounded-xl hover:border-indigo-500/50 hover:bg-gradient-to-br hover:from-indigo-500/5 hover:to-purple-500/5 transition-all duration-200">
-                              <div className="flex items-start justify-between gap-4">
+                              <div className="flex items-start gap-3">
+                                {/* Agent Avatar */}
+                                <div className="flex-shrink-0">
+                                  <div
+                                    className="h-10 w-10 rounded-full ring-2 ring-border group-hover:ring-indigo-500/30 flex items-center justify-center text-xs font-semibold text-white shadow-sm transition-all duration-200"
+                                    style={{
+                                      backgroundImage: agent.avatar ? `url(${agent.avatar})` : undefined,
+                                      backgroundSize: "cover",
+                                      backgroundPosition: "center",
+                                      backgroundColor: !agent.avatar
+                                        ? `hsl(${(agent.name.length * 30) % 360}, 70%, 50%)`
+                                        : undefined,
+                                    }}
+                                  >
+                                    {!agent.avatar && agent.name.slice(0, 2).toUpperCase()}
+                                  </div>
+                                </div>
                                 <div className="min-w-0 flex-1">
                                   <div className="flex items-center gap-2 mb-2">
                                     <p className="font-medium truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">

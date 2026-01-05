@@ -67,15 +67,15 @@ export function TaskModalHeader({
           Configure the settings and prompt for this task
         </DialogDescription>
 
-        <div className="space-y-4">
+        <div className="space-y-3 md:space-y-4">
           {/* Agent Info and Task Name */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-6">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 md:gap-4">
+            <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4 lg:gap-6 min-w-0">
               {assistant ? (
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm text-muted-foreground">Agent:</span>
-                  <div className="flex items-center space-x-2">
-                    <Avatar className="h-6 w-6">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-xs md:text-sm text-muted-foreground flex-shrink-0">Agent:</span>
+                  <div className="flex items-center gap-1.5 md:gap-2 min-w-0 flex-1">
+                    <Avatar className="h-5 w-5 md:h-6 md:w-6 flex-shrink-0">
                       <AvatarImage
                         src={assistant?.metadata.agent_avatar}
                         alt={assistant?.name}
@@ -90,17 +90,17 @@ export function TaskModalHeader({
                         {assistant?.name.slice(0, 2).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="font-medium">{assistant?.name}</span>
+                    <span className="font-medium text-sm md:text-base truncate">{assistant?.name}</span>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-6 w-6"
+                            className="h-5 w-5 md:h-6 md:w-6 flex-shrink-0"
                             onClick={() => setIsAgentConfigOpen(true)}
                           >
-                            <Settings2 className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                            <Settings2 className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground hover:text-foreground" />
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
@@ -108,33 +108,34 @@ export function TaskModalHeader({
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
-                    <Button variant="ghost" size="sm" onClick={onChangeAssistant}>
+                    <Button variant="ghost" size="sm" onClick={onChangeAssistant} className="flex-shrink-0 text-xs md:text-sm">
                       Change
                     </Button>
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm text-muted-foreground">Agent:</span>
-                  <Button variant="outline" size="sm" onClick={onChangeAssistant}>
-                    <UserPlus className="h-4 w-4 mr-2" />
+                <div className="flex items-center gap-2">
+                  <span className="text-xs md:text-sm text-muted-foreground">Agent:</span>
+                  <Button variant="outline" size="sm" onClick={onChangeAssistant} className="text-xs md:text-sm">
+                    <UserPlus className="h-3 w-3 md:h-4 md:w-4 mr-1.5 md:mr-2" />
                     Assign Agent
                   </Button>
                 </div>
               )}
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-muted-foreground">Task:</span>
-                <span className="font-medium">{task.name}</span>
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-xs md:text-sm text-muted-foreground flex-shrink-0">Task:</span>
+                <span className="font-medium text-sm md:text-base truncate">{task.name}</span>
               </div>
             </div>
-            <div className="flex space-x-3">
+            <div className="flex gap-2 md:gap-3 flex-shrink-0">
               <Button
                 onClick={onTest}
                 disabled={isLoading || !assistant}
                 variant="secondary"
-                className="gap-2"
+                className="gap-1.5 md:gap-2 text-xs md:text-sm"
+                size="sm"
               >
-                <Play className="h-4 w-4" />
+                <Play className="h-3 w-3 md:h-4 md:w-4" />
                 Test
               </Button>
             </div>
@@ -142,11 +143,11 @@ export function TaskModalHeader({
 
           {/* Agent Capabilities */}
           {assistant && (
-            <div className="flex flex-wrap items-center gap-3 rounded-md border bg-muted/50 p-2">
+            <div className="flex flex-wrap items-center gap-2 md:gap-3 rounded-md border bg-muted/50 p-2">
               {(assistant?.config?.configurable?.llm || assistant?.config?.configurable?.model) && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 md:gap-2">
                   <span className="text-xs font-medium text-muted-foreground">Model:</span>
-                  <Badge variant="secondary" className="text-xs">
+                  <Badge variant="secondary" className="text-[10px] md:text-xs">
                     {getLlmLabel(
                       assistant.config.configurable.llm,
                       assistant.config.configurable.model
@@ -155,12 +156,12 @@ export function TaskModalHeader({
                 </div>
               )}
               {enabledServerNames.length > 0 && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 md:gap-2">
                   <span className="text-xs font-medium text-muted-foreground">Tools:</span>
                   <div className="flex flex-wrap gap-1">
                     {enabledServerNames.map((serverName) => (
-                      <Badge key={serverName} variant="secondary" className="gap-1 text-xs">
-                        <Wrench className="h-3 w-3" />
+                      <Badge key={serverName} variant="secondary" className="gap-1 text-[10px] md:text-xs">
+                        <Wrench className="h-2.5 w-2.5 md:h-3 md:w-3" />
                         {formatToolLabel(serverName)}
                       </Badge>
                     ))}
@@ -168,9 +169,9 @@ export function TaskModalHeader({
                 </div>
               )}
               {assistant.config?.configurable?.memory?.enabled && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 md:gap-2">
                   <span className="text-xs font-medium text-muted-foreground">Memory:</span>
-                  <Badge variant="secondary" className="text-xs">
+                  <Badge variant="secondary" className="text-[10px] md:text-xs">
                     {assistant.config.configurable.memory.enabled ? "Enabled" : "Disabled"}
                   </Badge>
                 </div>

@@ -121,6 +121,17 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     requiresSetup: true,
   },
   {
+    serverName: "context7",
+    displayName: "Context7",
+    description:
+      "Connects to Context7.com's documentation database to provide up-to-date library and framework documentation with intelligent project ranking and customizable token limits.",
+    logoUrl: "/integration-icons/context7-icon-green.png",
+    url: "https://mcp.context7.com/mcp",
+    docsUrl: "https://context7.com/docs/overview",
+    authType: "api_key",
+    requiresSetup: true,
+  },
+  {
     serverName: "sentry",
     displayName: "Sentry",
     description:

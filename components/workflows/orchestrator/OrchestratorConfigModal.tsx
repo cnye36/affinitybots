@@ -4,7 +4,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -19,9 +18,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState, useEffect } from "react";
-import { Brain, Play, Loader2, CheckCircle2, XCircle, Bot, ArrowRight } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Brain, Play, Loader2, CheckCircle2, XCircle, Bot, ArrowRight, X } from "lucide-react";
 import { LLM_OPTIONS, legacyModelToLlmId } from "@/lib/llm/catalog";
 import ReactMarkdown from "react-markdown";
 
@@ -108,6 +107,18 @@ Remember: Delegate ONE agent at a time, not a plan with multiple agents.`;
   const [steps, setSteps] = useState<OrchestratorStep[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [outputFormat, setOutputFormat] = useState<"json" | "formatted">("formatted");
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile/tablet
+  useEffect(() => {
+    const updateIsMobile = () => {
+      if (typeof window === "undefined") return;
+      setIsMobile(window.innerWidth < 1024); // Below lg breakpoint
+    };
+    updateIsMobile();
+    window.addEventListener("resize", updateIsMobile);
+    return () => window.removeEventListener("resize", updateIsMobile);
+  }, []);
 
   // Update state when initialConfig changes
   useEffect(() => {
@@ -292,194 +303,379 @@ Remember: Delegate ONE agent at a time, not a plan with multiple agents.`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] h-[90vh] p-0 flex flex-col overflow-hidden">
+      <DialogContent className="max-w-[95vw] h-[90vh] p-0 flex flex-col overflow-hidden w-[calc(100%-2rem)] md:w-[calc(100%-4rem)]">
+        {/* Close button */}
+        <button
+          onClick={() => onOpenChange(false)}
+          className="absolute right-4 top-4 z-50 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"
+        >
+          <X className="h-4 w-4" />
+          <span className="sr-only">Close</span>
+        </button>
+
         {/* Header */}
-        <div className="px-6 py-4 border-b border-emerald-200/30 dark:border-emerald-800/30 bg-gradient-to-r from-emerald-50/50 to-green-50/50 dark:from-emerald-950/20 dark:to-green-950/20">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-green-500 flex items-center justify-center shadow-lg">
-              <Brain className="w-5 h-5 text-white" />
+        <div className="px-4 md:px-6 py-3 md:py-4 border-b border-emerald-200/30 dark:border-emerald-800/30 bg-gradient-to-r from-emerald-50/50 to-green-50/50 dark:from-emerald-950/20 dark:to-green-950/20">
+          <div className="flex items-center gap-2 md:gap-3">
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-emerald-500 to-green-500 flex items-center justify-center shadow-lg">
+              <Brain className="w-4 h-4 md:w-5 md:h-5 text-white" />
             </div>
             <div>
-              <DialogTitle className="text-xl font-bold bg-gradient-to-r from-emerald-600 to-green-600 dark:from-emerald-400 dark:to-green-400 bg-clip-text text-transparent">
+              <DialogTitle className="text-base md:text-xl font-bold bg-gradient-to-r from-emerald-600 to-green-600 dark:from-emerald-400 dark:to-green-400 bg-clip-text text-transparent">
                 Orchestrator Configuration & Test
               </DialogTitle>
-              <DialogDescription>
+              <DialogDescription className="text-xs md:text-sm">
                 Configure the manager agent and test orchestration
               </DialogDescription>
             </div>
           </div>
         </div>
 
-        {/* Split View Content */}
-        <div className="flex-1 flex min-h-0 overflow-hidden">
-          {/* Left Panel - Configuration */}
-          <div className="w-1/2 border-r flex flex-col min-w-0">
-            <ScrollArea className="flex-1">
-              <div className="p-6 space-y-6">
-                {/* Model Selection */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Model</Label>
-                  <p className="text-xs text-muted-foreground mb-2">
-                    Choose the AI model for the orchestrator agent
-                  </p>
-                  <Select value={model} onValueChange={handleModelChange}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent position="popper" className="z-[1000]">
-                      {LLM_OPTIONS.map((opt) => (
-                        <SelectItem key={opt.id} value={opt.id}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+        {/* Content: Tabs for mobile/tablet, Split view for desktop */}
+        {isMobile ? (
+          <Tabs defaultValue="config" className="flex-1 flex flex-col min-h-0">
+            <TabsList className="grid w-full grid-cols-2 mx-4 mt-4">
+              <TabsTrigger value="config">Configuration</TabsTrigger>
+              <TabsTrigger value="test">Test Execution</TabsTrigger>
+            </TabsList>
 
-                {/* System Prompt */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">System Prompt</Label>
-                  <p className="text-xs text-muted-foreground mb-2">
-                    Instructions for how the orchestrator should coordinate agents
-                  </p>
-                  <Textarea
-                    value={systemPrompt}
-                    onChange={(e) => setSystemPrompt(e.target.value)}
-                    onBlur={handleSystemPromptBlur}
-                    rows={12}
-                    placeholder="You are a manager agent..."
-                    className="font-mono text-sm resize-y"
-                  />
-                </div>
+            <TabsContent value="config" className="flex-1 min-h-0 mt-0">
+              <ScrollArea className="h-full">
+                <div className="p-4 space-y-4">
+                  {/* Model Selection */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Model</Label>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Choose the AI model for the orchestrator agent
+                    </p>
+                    <Select value={model} onValueChange={handleModelChange}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent position="popper" className="z-[1000]">
+                        {LLM_OPTIONS.map((opt) => (
+                          <SelectItem key={opt.id} value={opt.id}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                {/* User Prompt / Goal */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Workflow Goal</Label>
-                  <p className="text-xs text-muted-foreground mb-2">
-                    The overall task or goal you want to accomplish
-                  </p>
-                  <Textarea
-                    value={userPrompt}
-                    onChange={(e) => setUserPrompt(e.target.value)}
-                    onBlur={handleUserPromptBlur}
-                    rows={6}
-                    placeholder="Research market trends and write a comprehensive report..."
-                    className="text-sm resize-y"
-                  />
-                </div>
-              </div>
-            </ScrollArea>
-          </div>
+                  {/* System Prompt */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">System Prompt</Label>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Instructions for how the orchestrator should coordinate agents
+                    </p>
+                    <Textarea
+                      value={systemPrompt}
+                      onChange={(e) => setSystemPrompt(e.target.value)}
+                      onBlur={handleSystemPromptBlur}
+                      rows={8}
+                      placeholder="You are a manager agent..."
+                      className="font-mono text-sm resize-y"
+                    />
+                  </div>
 
-          {/* Right Panel - Test Output */}
-          <div className="w-1/2 flex flex-col bg-muted/20 min-w-0">
-            {/* Test Header */}
-            <div className="px-6 py-4 border-b bg-background flex items-center justify-between shrink-0">
-              <div>
-                <h3 className="font-semibold text-foreground">Test Execution</h3>
-                <p className="text-xs text-muted-foreground">Watch the orchestrator in action</p>
-              </div>
-              <div className="flex items-center gap-2">
-                {steps.length > 0 && (
-                  <Select value={outputFormat} onValueChange={(value: "json" | "formatted") => setOutputFormat(value)}>
-                    <SelectTrigger className="w-[120px] bg-background h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="formatted">Formatted</SelectItem>
-                      <SelectItem value="json">JSON</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )}
-                {executionStatus === "running" && (
-                  <Badge variant="secondary" className="bg-blue-100 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300">
-                    <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                    Running
-                  </Badge>
-                )}
-                {executionStatus === "completed" && (
-                  <Badge variant="secondary" className="bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300">
-                    <CheckCircle2 className="w-3 h-3 mr-1" />
-                    Completed
-                  </Badge>
-                )}
-                {executionStatus === "error" && (
-                  <Badge variant="secondary" className="bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-300">
-                    <XCircle className="w-3 h-3 mr-1" />
-                    Error
-                  </Badge>
-                )}
-                <Button
-                  onClick={handleExecute}
-                  disabled={isExecuting}
-                  size="sm"
-                  className="bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white"
-                >
-                  {isExecuting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Executing...
-                    </>
-                  ) : (
-                    <>
-                      <Play className="w-4 h-4 mr-2" />
-                      Execute
-                    </>
+                  {/* User Prompt / Goal */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Workflow Goal</Label>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      The overall task or goal you want to accomplish
+                    </p>
+                    <Textarea
+                      value={userPrompt}
+                      onChange={(e) => setUserPrompt(e.target.value)}
+                      onBlur={handleUserPromptBlur}
+                      rows={4}
+                      placeholder="Research market trends and write a comprehensive report..."
+                      className="text-sm resize-y"
+                    />
+                  </div>
+                </div>
+              </ScrollArea>
+            </TabsContent>
+
+            <TabsContent value="test" className="flex-1 min-h-0 mt-0 flex flex-col">
+              {/* Test Header */}
+              <div className="px-4 py-3 border-b bg-background flex items-center justify-between shrink-0">
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground">Test Execution</h3>
+                  <p className="text-xs text-muted-foreground">Watch the orchestrator in action</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {steps.length > 0 && (
+                    <Select value={outputFormat} onValueChange={(value: "json" | "formatted") => setOutputFormat(value)}>
+                      <SelectTrigger className="w-[100px] bg-background h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="formatted">Formatted</SelectItem>
+                        <SelectItem value="json">JSON</SelectItem>
+                      </SelectContent>
+                    </Select>
                   )}
-                </Button>
+                  {executionStatus === "running" && (
+                    <Badge variant="secondary" className="bg-blue-100 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 text-xs">
+                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                      Running
+                    </Badge>
+                  )}
+                  {executionStatus === "completed" && (
+                    <Badge variant="secondary" className="bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 text-xs">
+                      <CheckCircle2 className="w-3 h-3 mr-1" />
+                      Done
+                    </Badge>
+                  )}
+                  {executionStatus === "error" && (
+                    <Badge variant="secondary" className="bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-300 text-xs">
+                      <XCircle className="w-3 h-3 mr-1" />
+                      Error
+                    </Badge>
+                  )}
+                  <Button
+                    onClick={handleExecute}
+                    disabled={isExecuting}
+                    size="sm"
+                    className="bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white"
+                  >
+                    {isExecuting ? (
+                      <>
+                        <Loader2 className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2 animate-spin" />
+                        <span className="hidden sm:inline">Executing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
+                        <span className="hidden sm:inline">Execute</span>
+                        <span className="inline sm:hidden">Run</span>
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
+
+              {/* Timeline */}
+              <ScrollArea className="flex-1 min-h-0">
+                <div className="p-4">
+                  {error && (
+                    <div className="mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800">
+                      <div className="flex items-center gap-2">
+                        <XCircle className="w-4 h-4 text-red-600 dark:text-red-400" />
+                        <p className="text-sm text-red-600 dark:text-red-400 font-medium">{error}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {steps.length === 0 && !isExecuting && !error && (
+                    <div className="flex flex-col items-center justify-center min-h-[300px] text-center p-6">
+                      <Brain className="w-12 h-12 text-muted-foreground/30 mb-3" />
+                      <p className="text-base font-medium text-muted-foreground mb-1">
+                        Ready to test
+                      </p>
+                      <p className="text-xs text-muted-foreground max-w-xs">
+                        Click Execute to watch the orchestrator break down the goal and delegate to agents
+                      </p>
+                    </div>
+                  )}
+
+                  {steps.length > 0 && (
+                    <div className="space-y-3">
+                      {steps.map((step, index) => (
+                        <TimelineStep
+                          key={index}
+                          step={step}
+                          index={index}
+                          totalSteps={steps.length}
+                          outputFormat={outputFormat}
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  {isExecuting && steps.length === 0 && (
+                    <div className="flex items-center justify-center min-h-[300px]">
+                      <div className="text-center">
+                        <Loader2 className="w-10 h-10 animate-spin text-emerald-500 mx-auto mb-3" />
+                        <p className="text-sm text-muted-foreground">Starting orchestrator...</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+            </TabsContent>
+          </Tabs>
+        ) : (
+          <div className="flex-1 flex min-h-0 overflow-hidden">
+            {/* Left Panel - Configuration (Desktop) */}
+            <div className="w-1/2 border-r flex flex-col min-w-0">
+              <ScrollArea className="flex-1">
+                <div className="p-6 space-y-6">
+                  {/* Model Selection */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Model</Label>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Choose the AI model for the orchestrator agent
+                    </p>
+                    <Select value={model} onValueChange={handleModelChange}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent position="popper" className="z-[1000]">
+                        {LLM_OPTIONS.map((opt) => (
+                          <SelectItem key={opt.id} value={opt.id}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* System Prompt */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">System Prompt</Label>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Instructions for how the orchestrator should coordinate agents
+                    </p>
+                    <Textarea
+                      value={systemPrompt}
+                      onChange={(e) => setSystemPrompt(e.target.value)}
+                      onBlur={handleSystemPromptBlur}
+                      rows={12}
+                      placeholder="You are a manager agent..."
+                      className="font-mono text-sm resize-y"
+                    />
+                  </div>
+
+                  {/* User Prompt / Goal */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Workflow Goal</Label>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      The overall task or goal you want to accomplish
+                    </p>
+                    <Textarea
+                      value={userPrompt}
+                      onChange={(e) => setUserPrompt(e.target.value)}
+                      onBlur={handleUserPromptBlur}
+                      rows={6}
+                      placeholder="Research market trends and write a comprehensive report..."
+                      className="text-sm resize-y"
+                    />
+                  </div>
+                </div>
+              </ScrollArea>
             </div>
 
-            {/* Timeline */}
-            <ScrollArea className="flex-1 min-h-0">
-              <div className="p-6">
-                {error && (
-                  <div className="mb-4 p-4 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800">
-                    <div className="flex items-center gap-2">
-                      <XCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
-                      <p className="text-sm text-red-600 dark:text-red-400 font-medium">{error}</p>
-                    </div>
-                  </div>
-                )}
-
-                {steps.length === 0 && !isExecuting && !error && (
-                  <div className="flex flex-col items-center justify-center min-h-[400px] text-center p-8">
-                    <Brain className="w-16 h-16 text-muted-foreground/30 mb-4" />
-                    <p className="text-lg font-medium text-muted-foreground mb-2">
-                      Ready to test
-                    </p>
-                    <p className="text-sm text-muted-foreground max-w-md">
-                      Click Execute to watch the orchestrator break down the goal and delegate to agents
-                    </p>
-                  </div>
-                )}
-
-                {steps.length > 0 && (
-                  <div className="space-y-4">
-                    {steps.map((step, index) => (
-                      <TimelineStep 
-                        key={index} 
-                        step={step} 
-                        index={index} 
-                        totalSteps={steps.length}
-                        outputFormat={outputFormat}
-                      />
-                    ))}
-                  </div>
-                )}
-
-                {isExecuting && steps.length === 0 && (
-                  <div className="flex items-center justify-center min-h-[400px]">
-                    <div className="text-center">
-                      <Loader2 className="w-12 h-12 animate-spin text-emerald-500 mx-auto mb-4" />
-                      <p className="text-sm text-muted-foreground">Starting orchestrator...</p>
-                    </div>
-                  </div>
-                )}
+            {/* Right Panel - Test Output (Desktop) */}
+            <div className="w-1/2 flex flex-col bg-muted/20 min-w-0">
+              {/* Test Header */}
+              <div className="px-6 py-4 border-b bg-background flex items-center justify-between shrink-0">
+                <div>
+                  <h3 className="font-semibold text-foreground">Test Execution</h3>
+                  <p className="text-xs text-muted-foreground">Watch the orchestrator in action</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {steps.length > 0 && (
+                    <Select value={outputFormat} onValueChange={(value: "json" | "formatted") => setOutputFormat(value)}>
+                      <SelectTrigger className="w-[120px] bg-background h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="formatted">Formatted</SelectItem>
+                        <SelectItem value="json">JSON</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                  {executionStatus === "running" && (
+                    <Badge variant="secondary" className="bg-blue-100 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300">
+                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                      Running
+                    </Badge>
+                  )}
+                  {executionStatus === "completed" && (
+                    <Badge variant="secondary" className="bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300">
+                      <CheckCircle2 className="w-3 h-3 mr-1" />
+                      Completed
+                    </Badge>
+                  )}
+                  {executionStatus === "error" && (
+                    <Badge variant="secondary" className="bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-300">
+                      <XCircle className="w-3 h-3 mr-1" />
+                      Error
+                    </Badge>
+                  )}
+                  <Button
+                    onClick={handleExecute}
+                    disabled={isExecuting}
+                    size="sm"
+                    className="bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white"
+                  >
+                    {isExecuting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Executing...
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-4 h-4 mr-2" />
+                        Execute
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
-            </ScrollArea>
+
+              {/* Timeline */}
+              <ScrollArea className="flex-1 min-h-0">
+                <div className="p-6">
+                  {error && (
+                    <div className="mb-4 p-4 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800">
+                      <div className="flex items-center gap-2">
+                        <XCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+                        <p className="text-sm text-red-600 dark:text-red-400 font-medium">{error}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {steps.length === 0 && !isExecuting && !error && (
+                    <div className="flex flex-col items-center justify-center min-h-[400px] text-center p-8">
+                      <Brain className="w-16 h-16 text-muted-foreground/30 mb-4" />
+                      <p className="text-lg font-medium text-muted-foreground mb-2">
+                        Ready to test
+                      </p>
+                      <p className="text-sm text-muted-foreground max-w-md">
+                        Click Execute to watch the orchestrator break down the goal and delegate to agents
+                      </p>
+                    </div>
+                  )}
+
+                  {steps.length > 0 && (
+                    <div className="space-y-4">
+                      {steps.map((step, index) => (
+                        <TimelineStep
+                          key={index}
+                          step={step}
+                          index={index}
+                          totalSteps={steps.length}
+                          outputFormat={outputFormat}
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  {isExecuting && steps.length === 0 && (
+                    <div className="flex items-center justify-center min-h-[400px]">
+                      <div className="text-center">
+                        <Loader2 className="w-12 h-12 animate-spin text-emerald-500 mx-auto mb-4" />
+                        <p className="text-sm text-muted-foreground">Starting orchestrator...</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+            </div>
           </div>
-        </div>
+        )}
       </DialogContent>
     </Dialog>
   );

@@ -29,6 +29,7 @@ export interface TaskNodeData {
   hasConnectedTask?: boolean;
   workflowType?: "sequential" | "orchestrator";
   integration?: IntegrationConfig;
+  isReadOnly?: boolean;
 }
 
 export interface TriggerNodeData {
@@ -46,6 +47,7 @@ export interface TriggerNodeData {
   hasConnectedTask?: boolean;
   workflowType?: "sequential" | "orchestrator";
   onDelete?: () => void;
+  isReadOnly?: boolean;
 }
 
 export interface OrchestratorNodeData {
@@ -62,6 +64,7 @@ export interface OrchestratorNodeData {
   status?: "idle" | "running" | "completed" | "error";
   onDelete?: () => void;
   orchestratorConfig?: OrchestratorConfig;
+  isReadOnly?: boolean;
 }
 
 export type WorkflowNode = {
@@ -113,11 +116,15 @@ export interface TaskConfig {
       | { mode: "workflow" }
       | { mode: "new" }
       | { mode: "from_node"; nodeId: string };
-    // What to send as input to the assistant
-    // - prompt: use this node's prompt only
-    // - previous_output: use previous node's output only
-    // - prompt_and_previous_output: send both
-    inputSource?: "prompt" | "previous_output" | "prompt_and_previous_output";
+    // Whether to use context from previous agents (handoff pattern)
+    // - true (default): Agent receives full conversation history from previous agents
+    // - false: Agent starts with isolated context (only its own prompt)
+    useContext?: boolean;
+    // Whether to automatically inject previous agent's output into this task's prompt
+    // - true (default): Previous output is prepended before task prompt
+    // - false: Task receives only its configured prompt
+    // For first task: trigger data is injected if available
+    autoInjectPreviousOutput?: boolean;
   };
   toolApproval?: {
     mode?: "auto" | "manual";

@@ -405,11 +405,17 @@ export async function generateAgentConfiguration(
     }
 
     // Generate avatar if ownerId is provided, with timeout protection
+    // Use the AI-generated description for context, fall back to user description, then domain
     let avatarUrl = "/images/default-avatar.png";
     if (ownerId) {
       try {
+        const avatarDescription = parsedData.description || description || parsedData.domain || undefined;
         avatarUrl = await Promise.race([
-          generateAgentAvatar(finalName || parsedData.name, parsedData.domain || "assistant"),
+          generateAgentAvatar(
+            finalName || parsedData.name,
+            avatarDescription || "",
+            parsedData.domain
+          ),
           createTimeoutPromise(60000) // 60 second timeout for avatar generation
         ]);
       } catch (error) {
@@ -450,7 +456,7 @@ export async function generateAgentConfiguration(
     if (ownerId) {
       try {
         avatarUrl = await Promise.race([
-          generateAgentAvatar(`Assistant`, "assistant"),
+          generateAgentAvatar(`Assistant`, description || "A helpful assistant"),
           createTimeoutPromise(60000) // 60 second timeout for avatar generation
         ]);
       } catch (avatarError) {

@@ -21,6 +21,13 @@ function createTimeoutPromise(timeoutMs: number): Promise<never> {
   });
 }
 
+// Convert base64 string to Uint8Array
+function base64ToUint8Array(base64: string): Uint8Array {
+  const normalized = base64.replace(/\s/g, "");
+  const buffer = Buffer.from(normalized, "base64");
+  return new Uint8Array(buffer);
+}
+
 async function uploadImageToSupabase(
   imageUrl: string,
   fileName: string,
@@ -150,33 +157,58 @@ async function uploadWithoutUser(
   }
 }
 
-// Retry wrapper for uploadImageToSupabase
-async function uploadImageToSupabaseWithRetry(
-  imageUrl: string,
+// Upload PNG bytes directly to Supabase Storage
+async function uploadPngBytesToSupabase(
+  pngBytes: Uint8Array,
   fileName: string,
-  bucketName: string,
-  maxRetries = 3,
-  delayMs = 1000
+  bucketName: string
 ): Promise<string> {
-  let lastError: any;
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      return await uploadImageToSupabase(imageUrl, fileName, bucketName);
-    } catch (error: any) {
-      lastError = error;
-      // Only retry on network errors (ECONNRESET, fetch failed, etc.)
-      const isNetworkError =
-        error?.code === 'ECONNRESET' ||
-        error?.name === 'TypeError' ||
-        (error?.message && error.message.includes('fetch failed'));
-      if (!isNetworkError || attempt === maxRetries) {
-        throw error;
-      }
-      console.warn(`Upload attempt ${attempt} failed, retrying in ${delayMs}ms...`, error);
-      await new Promise(res => setTimeout(res, delayMs));
+  const supabase = await createClient();
+
+  try {
+    // Get the current user
+    const { data } = await supabase.auth.getUser();
+
+    if (!data || !data.user || !data.user.id) {
+      console.warn("No authenticated user found, using default path");
+      // Fall back to a default path if no user is found
+      const defaultPath = `public/${fileName}.png`;
+      const { error } = await supabase.storage
+        .from(bucketName)
+        .upload(defaultPath, pngBytes, {
+          contentType: "image/png",
+          upsert: true,
+        });
+
+      if (error) throw error;
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from(bucketName).getPublicUrl(defaultPath);
+      return publicUrl;
     }
+
+    const user = data.user;
+    const filePath = `${user.id}/${fileName}.png`;
+
+    const { error } = await supabase.storage
+      .from(bucketName)
+      .upload(filePath, pngBytes, {
+        contentType: "image/png",
+        upsert: true,
+      });
+
+    if (error) throw error;
+
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from(bucketName).getPublicUrl(filePath);
+
+    return publicUrl;
+  } catch (error) {
+    console.error("Failed to upload PNG bytes to Supabase:", error);
+    throw error;
   }
-  throw lastError;
 }
 
 export async function generateImage(
@@ -188,10 +220,11 @@ export async function generateImage(
 
   try {
     console.log(
-      `Generating image with DALL-E 3: ${prompt.substring(0, 50)}...`
+      `Generating image with gpt-image-1.5: ${prompt.substring(0, 50)}...`
     );
 
     // Make a direct call to OpenAI's image generation API with timeout
+    // gpt-image-1.5 always returns base64 format (doesn't support response_format parameter)
     const response = await Promise.race([
       fetch(
         "https://api.openai.com/v1/images/generations",
@@ -203,11 +236,10 @@ export async function generateImage(
           },
           body: JSON.stringify({
             model: "gpt-image-1.5",
-            quality: "medium",
+            quality: "low",
             prompt,
             n: 1,
             size: `${finalConfig.width}x${finalConfig.height}`,
-            response_format: "url",
           }),
         }
       ),
@@ -225,21 +257,22 @@ export async function generateImage(
     const data = await response.json();
     console.log("OpenAI image generation successful");
 
-    // Check if the data has the expected structure
-    if (!data || !data.data || !data.data[0] || !data.data[0].url) {
+    // gpt-image-1.5 returns base64 in b64_json field
+    const first = data?.data?.[0];
+    const b64: string | undefined = first?.b64_json;
+
+    if (!b64) {
       console.error("Unexpected API response structure:", data);
-      throw new Error("Invalid response format from OpenAI API");
+      throw new Error("Invalid response format from OpenAI API (expected b64_json)");
     }
 
-    const imageUrl = data.data[0].url;
-    console.log(
-      `Successfully retrieved image URL: ${imageUrl.substring(0, 50)}...`
-    );
+    console.log("Successfully retrieved base64 image data");
 
-    // Upload to Supabase and get public URL with timeout
+    // Convert base64 to bytes and upload to Supabase
+    const pngBytes = base64ToUint8Array(b64);
     const publicUrl = await Promise.race([
-      uploadImageToSupabaseWithRetry(
-        imageUrl,
+      uploadPngBytesToSupabase(
+        pngBytes,
         fileName,
         finalConfig.bucketName!
       ),
@@ -261,16 +294,33 @@ export async function generateImage(
 
 export async function generateAgentAvatar(
   name: string,
-  agentType: string
+  description: string,
+  agentType?: string
 ): Promise<string> {
-  // Create a unique filename using name and type
+  // Create a unique filename using name
   const fileName = `${name.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`;
 
   try {
-    return await generateImage(
-      `A professional, stylized avatar icon for a ${agentType} named ${name}. Create a minimalist design with soft, adaptive gradients that transition beautifully between light and dark themes. Use clean geometric shapes and a color palette that reflects the agent's purpose, with subtle depth and a modern, elegant aesthetic. The icon should be simple yet distinctive, capturing the essence of ${name}'s role as a ${agentType}.`,
-      fileName
-    );
+    // Create a contextual prompt based on the agent's description
+    // The description provides the real context about what the agent does
+    const contextPrompt = description
+      ? `Create a professional, stylized avatar icon for "${name}", an AI agent described as: "${description}".`
+      : agentType
+      ? `Create a professional, stylized avatar icon for "${name}", a ${agentType} agent.`
+      : `Create a professional, stylized avatar icon for "${name}".`;
+
+    const fullPrompt = `${contextPrompt} 
+
+Design a minimalist, modern icon that visually represents the agent's purpose and domain. Use:
+- Clean geometric shapes or abstract symbols that relate to the agent's function
+- A cohesive color palette that reflects the agent's purpose and personality
+- Soft gradients that work well in both light and dark themes
+- Subtle depth and modern aesthetics
+- Simple yet distinctive design that captures the essence of what this agent does
+
+The icon should be professional, recognizable, and suitable for use as a small avatar in UI contexts.`;
+
+    return await generateImage(fullPrompt, fileName);
   } catch (error) {
     console.error("Error generating agent avatar:", error);
     return "/images/default-avatar.png";

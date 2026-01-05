@@ -118,7 +118,7 @@ export function createImageGenerationTool(options?: { ownerId?: string }): Dynam
 		name: "generate_image",
 		description: `Generate an image based on a text prompt.
 
-This tool is provider-backed (OpenAI or Gemini) and returns a public URL.
+This tool is provider-backed (OpenAI) and returns a public URL.
 Use this tool when the user asks you to create, generate, or make an image, picture, illustration, or visual content.
 The tool will create a high-quality image and return a public URL that can be shared or embedded.`,
 		schema: z.object({

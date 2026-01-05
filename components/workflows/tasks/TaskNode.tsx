@@ -103,10 +103,11 @@ const statusConfig: Record<string, { color: string, glow: string, icon: any }> =
 	},
 }
 
-export const MemoizedTaskNode = memo(
-	(props: NodeProps<TaskNodeProps["data"]>) => {
-		const [testStatus, setTestStatus] = useState<"idle" | "testing" | "testSuccess" | "testError">("idle")
-		const [toolLogos, setToolLogos] = useState<Record<string, string>>({})
+	export const MemoizedTaskNode = memo(
+		(props: NodeProps<TaskNodeProps["data"]>) => {
+			const [testStatus, setTestStatus] = useState<"idle" | "testing" | "testSuccess" | "testError">("idle")
+			const [toolLogos, setToolLogos] = useState<Record<string, string>>({})
+			const isReadOnly = props.data.isReadOnly === true
 
 		// Fetch assistant data to get enabled tools
 		const { assistant } = useAgent(
@@ -144,6 +145,7 @@ export const MemoizedTaskNode = memo(
 
 		const handleSettingsClick = (e: React.MouseEvent) => {
 			e.stopPropagation()
+			if (isReadOnly) return
 			if (props.data.onConfigureTask && props.data.workflow_task_id) {
 				props.data.onConfigureTask(props.data.workflow_task_id)
 			}
@@ -151,6 +153,7 @@ export const MemoizedTaskNode = memo(
 
 		const handleAssignAssistant = (e: React.MouseEvent) => {
 			e.stopPropagation()
+			if (isReadOnly) return
 			if (props.data.onAssignAssistant && props.data.workflow_task_id) {
 				props.data.onAssignAssistant(props.data.workflow_task_id)
 			}
@@ -210,9 +213,9 @@ export const MemoizedTaskNode = memo(
 								const incomingContext = (baseOverride.context || {}) as Record<string, unknown>
 								const resolvedContext = {
 									...incomingContext,
-									inputSource: props.data.previousNodeThreadId
-										? "previous_output"
-										: (incomingContext.inputSource as string) || (props.data as any)?.config?.context?.inputSource,
+									useContext: props.data.previousNodeThreadId
+										? true
+										: (incomingContext.useContext as boolean | undefined) ?? (props.data as any)?.config?.context?.useContext ?? true,
 									thread: props.data.previousNodeThreadId
 										? { mode: "workflow" as const }
 										: (incomingContext.thread as Record<string, unknown>) || (props.data as any)?.config?.context?.thread,
@@ -315,7 +318,6 @@ export const MemoizedTaskNode = memo(
 				let accumulatedText = ""
 				let finalPayload: any = null
 				let finalEventType: string | null = null
-				let hasStartedStreaming = false
 
 				while (true) {
 					const { done, value } = await reader.read()
@@ -361,18 +363,6 @@ export const MemoizedTaskNode = memo(
 								if (textDelta && textDelta.trim()) {
 									// Only accumulate if we have actual AI content (not user prompt)
 									accumulatedText += textDelta
-									hasStartedStreaming = true
-									
-									try {
-										window.dispatchEvent(
-											new CustomEvent("taskTestStream", {
-												detail: {
-													workflowTaskId: props.data.workflow_task_id,
-													partial: accumulatedText,
-												},
-											}),
-										)
-									} catch {}
 								}
 							}
 
@@ -384,20 +374,6 @@ export const MemoizedTaskNode = memo(
 								}
 								finalEventType = resolvedEventType
 								finalPayload = { event: resolvedEventType, data: payload }
-								
-								// Only dispatch if we have actual content
-								if (accumulatedText.trim()) {
-									try {
-										window.dispatchEvent(
-											new CustomEvent("taskTestStream", {
-												detail: {
-													workflowTaskId: props.data.workflow_task_id,
-													partial: accumulatedText,
-												},
-											}),
-										)
-									} catch {}
-								}
 							}
 
 							if (resolvedEventType === "error" && payload?.error) {
@@ -447,17 +423,20 @@ export const MemoizedTaskNode = memo(
 
 		const handlePlayClick = async (e: React.MouseEvent) => {
 			e.stopPropagation()
+			if (isReadOnly) return
 			await handleTestTask()
 		}
 
 		const handleDeleteClick = (e: React.MouseEvent) => {
 			e.stopPropagation()
+			if (isReadOnly) return
 			if (props.data.onDelete) {
 				props.data.onDelete()
 			}
 		}
 
 		const handleCardDoubleClick = () => {
+			if (isReadOnly) return
 			if (props.data.onConfigureTask && props.data.workflow_task_id) {
 				props.data.onConfigureTask(props.data.workflow_task_id)
 			}
@@ -474,29 +453,31 @@ export const MemoizedTaskNode = memo(
 					{/* Status indicator and action buttons - positioned outside top-right */}
 					<div className="absolute -top-8 right-0 flex items-center gap-2 z-20">
 						{/* Play button for testing */}
-						<TooltipProvider>
-							<Tooltip>
-								<TooltipTrigger asChild>
-									<button
-										onClick={handlePlayClick}
-										className={cn(
-											"p-1.5 rounded-lg",
-											"bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm",
-											"hover:bg-white dark:hover:bg-gray-700",
-											"transition-all duration-200 hover:scale-110",
-											"shadow-md border border-gray-200 dark:border-gray-700",
-											testStatus === "testing" && "opacity-50 cursor-not-allowed",
-										)}
-										disabled={testStatus === "testing"}
-									>
-										<Play className="h-3 w-3 text-gray-700 dark:text-gray-300 fill-current" />
-									</button>
-								</TooltipTrigger>
-								<TooltipContent>
-									<p>Test Task</p>
-								</TooltipContent>
-							</Tooltip>
-						</TooltipProvider>
+						{!isReadOnly && (
+							<TooltipProvider>
+								<Tooltip>
+									<TooltipTrigger asChild>
+										<button
+											onClick={handlePlayClick}
+											className={cn(
+												"p-1.5 rounded-lg",
+												"bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm",
+												"hover:bg-white dark:hover:bg-gray-700",
+												"transition-all duration-200 hover:scale-110",
+												"shadow-md border border-gray-200 dark:border-gray-700",
+												testStatus === "testing" && "opacity-50 cursor-not-allowed",
+											)}
+											disabled={testStatus === "testing"}
+										>
+											<Play className="h-3 w-3 text-gray-700 dark:text-gray-300 fill-current" />
+										</button>
+									</TooltipTrigger>
+									<TooltipContent>
+										<p>Test Task</p>
+									</TooltipContent>
+								</Tooltip>
+							</TooltipProvider>
+						)}
 
 						{/* Status indicator dot - positioned next to play button */}
 						<TooltipProvider>
@@ -517,7 +498,7 @@ export const MemoizedTaskNode = memo(
 						</TooltipProvider>
 
 						{/* Delete button */}
-						{props.data.onDelete && (
+						{props.data.onDelete && !isReadOnly && (
 							<TooltipProvider>
 								<Tooltip>
 									<TooltipTrigger asChild>
@@ -606,27 +587,29 @@ export const MemoizedTaskNode = memo(
 
 								<div className="flex items-center gap-2 shrink-0">
 									{/* Settings button - appears on hover */}
-									<TooltipProvider>
-										<Tooltip>
-											<TooltipTrigger asChild>
-												<button
-													onClick={handleSettingsClick}
-													className={cn(
-														"p-1.5 rounded-lg opacity-0 group-hover:opacity-100",
-														"bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm",
-														"hover:bg-white dark:hover:bg-gray-700",
-														"transition-all duration-200 hover:scale-110",
-														"shadow-md",
-													)}
-												>
-													<Settings className="h-4 w-4 text-gray-600 dark:text-gray-300" />
-												</button>
-											</TooltipTrigger>
-											<TooltipContent>
-												<p>Configure Task</p>
-											</TooltipContent>
-										</Tooltip>
-									</TooltipProvider>
+									{!isReadOnly && (
+										<TooltipProvider>
+											<Tooltip>
+												<TooltipTrigger asChild>
+													<button
+														onClick={handleSettingsClick}
+														className={cn(
+															"p-1.5 rounded-lg opacity-0 group-hover:opacity-100",
+															"bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm",
+															"hover:bg-white dark:hover:bg-gray-700",
+															"transition-all duration-200 hover:scale-110",
+															"shadow-md",
+														)}
+													>
+														<Settings className="h-4 w-4 text-gray-600 dark:text-gray-300" />
+													</button>
+												</TooltipTrigger>
+												<TooltipContent>
+													<p>Configure Task</p>
+												</TooltipContent>
+											</Tooltip>
+										</TooltipProvider>
+									)}
 								</div>
 							</div>
 						</CardHeader>
@@ -726,6 +709,7 @@ export const MemoizedTaskNode = memo(
 											size="sm"
 											className="ml-auto h-6 px-1.5 text-[10px] hover:bg-violet-500/10 dark:hover:bg-violet-400/10"
 											onClick={handleAssignAssistant}
+											disabled={isReadOnly}
 										>
 											Change
 										</Button>
@@ -742,6 +726,7 @@ export const MemoizedTaskNode = memo(
 											"transition-all duration-200 hover:scale-[1.02]",
 										)}
 										onClick={handleAssignAssistant}
+										disabled={isReadOnly}
 									>
 										<UserPlus className="h-3 w-3" />
 										<span className="font-medium text-[10px]">Assign Agent</span>
@@ -752,7 +737,7 @@ export const MemoizedTaskNode = memo(
 					</Card>
 
 					{/* Add Agent Button - appears on hover when no outgoing connection */}
-					{props.data.onAddTask && (
+					{props.data.onAddTask && !isReadOnly && (
 						<button
 							onClick={(e) => {
 								e.stopPropagation();

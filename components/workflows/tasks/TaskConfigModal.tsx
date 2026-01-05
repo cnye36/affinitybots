@@ -7,11 +7,17 @@ import { PreviousNodeOutputPanel } from "./PreviousNodeOutputPanel";
 import { TaskConfigurationPanel } from "./TaskConfigurationPanel";
 import { TestOutputPanel } from "./TestOutputPanel";
 import { Button } from "@/components/ui/button";
-import { UserPlus } from "lucide-react";
+import { UserPlus, X } from "lucide-react";
 import { AgentSelectModal } from "../AgentSelectModal";
 import { Assistant } from "@/types/assistant";
 import { useAgent } from "@/hooks/useAgent";
 import { createClient } from "@/supabase/client";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 interface TaskOutput {
   result: unknown;
@@ -76,23 +82,22 @@ export function TaskConfigModal({
 }: TaskConfigModalProps) {
   const [currentTask, setCurrentTask] = useState<Task>(task);
   const [prevOutputFormat, setPrevOutputFormat] = useState<OutputFormat>(() => 
-    loadFormatPreference(STORAGE_KEY_PREV_FORMAT, "formatted")
+    loadFormatPreference(STORAGE_KEY_PREV_FORMAT, "json")
   );
   const [testOutputFormat, setTestOutputFormat] = useState<OutputFormat>(() => 
-    loadFormatPreference(STORAGE_KEY_TEST_FORMAT, "formatted")
+    loadFormatPreference(STORAGE_KEY_TEST_FORMAT, "json")
   );
   const [isLoading, setIsLoading] = useState(false);
 
   // Reload format preferences when modal opens
   useEffect(() => {
     if (isOpen) {
-      setPrevOutputFormat(loadFormatPreference(STORAGE_KEY_PREV_FORMAT, "formatted"));
-      setTestOutputFormat(loadFormatPreference(STORAGE_KEY_TEST_FORMAT, "formatted"));
+      setPrevOutputFormat(loadFormatPreference(STORAGE_KEY_PREV_FORMAT, "json"));
+      setTestOutputFormat(loadFormatPreference(STORAGE_KEY_TEST_FORMAT, "json"));
     }
   }, [isOpen]);
   const [testOutput, setTestOutput] = useState<TestOutput | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [streamingFormat, setStreamingFormat] = useState<OutputFormat>("json");
   const [loadedPreviousNodeOutput, setLoadedPreviousNodeOutput] = useState<TaskOutput | null>(previousNodeOutput || null);
   const { assistant, isLoading: isAssistantLoading } = useAgent(
     currentTask.assignedAssistant?.id,
@@ -101,61 +106,18 @@ export function TaskConfigModal({
   const [isAssistantSelectOpen, setIsAssistantSelectOpen] = useState(false);
   const [assistants, setAssistants] = useState<Assistant[]>([]);
   const [loadingAssistants, setLoadingAssistants] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
 
+  // Detect mobile/tablet
   useEffect(() => {
-    // Live-stream partial output into the TestOutputPanel
-    const onStream = (e: Event) => {
-      const evt = e as CustomEvent<{ workflowTaskId: string; partial: string }>;
-      if (evt.detail?.workflowTaskId !== currentTask.workflow_task_id) return;
-      
-      // Only set output if we have actual content (not empty or just the prompt)
-      const partialContent = evt.detail.partial?.trim() || "";
-      if (partialContent && partialContent !== currentTask.config?.input?.prompt) {
-        // During streaming, show as JSON format for better readability
-        setStreamingFormat("json");
-        setTestOutput({ type: "messages/partial", content: partialContent });
-      }
+    const updateIsMobile = () => {
+      if (typeof window === "undefined") return;
+      setIsMobile(window.innerWidth < 1024); // Below lg breakpoint
     };
-    // Mark stream end on completion and persist the result
-    const onComplete = async (e: Event) => {
-      const evt = e as CustomEvent<{ workflowTaskId: string; output: { result: unknown; metadata?: Record<string, unknown> } }>;
-      if (evt.detail?.workflowTaskId !== currentTask.workflow_task_id) return;
-      setIsStreaming(false);
-      
-      // Switch to formatted view when streaming completes
-      setStreamingFormat("formatted");
-      setTestOutputFormat("formatted");
-      
-      // Persist the test output in task metadata
-      const testOutputData: TestOutput = {
-        type: "messages/complete",
-        result: evt.detail.output.result,
-        content: typeof evt.detail.output.result === "string" ? evt.detail.output.result : JSON.stringify(evt.detail.output.result),
-      };
-      setTestOutput(testOutputData);
-      
-      const updatedTask = {
-        ...currentTask,
-        metadata: {
-          ...(currentTask.metadata || {}),
-          testOutput: testOutputData,
-          lastTestAt: new Date().toISOString(),
-        },
-      };
-      setCurrentTask(updatedTask);
-      try {
-        await saveTask(updatedTask);
-      } catch (error) {
-        console.error("Error persisting test output:", error);
-      }
-    };
-    window.addEventListener("taskTestStream", onStream as EventListener);
-    window.addEventListener("taskTestCompleted", onComplete as EventListener);
-    return () => {
-      window.removeEventListener("taskTestStream", onStream as EventListener);
-      window.removeEventListener("taskTestCompleted", onComplete as EventListener);
-    };
-  }, [currentTask.workflow_task_id]);
+    updateIsMobile();
+    window.addEventListener("resize", updateIsMobile);
+    return () => window.removeEventListener("resize", updateIsMobile);
+  }, []);
 
   useEffect(() => {
     // Only sync from props when opening or switching to a different task id
@@ -366,9 +328,8 @@ export function TaskConfigModal({
 
       setIsLoading(true);
       setIsStreaming(true);
-      // Clear test output when starting a new test and reset to JSON format for streaming
+      // Clear test output when starting a new test
       setTestOutput(null);
-      setStreamingFormat("json");
 
       if (!currentTask.config?.input?.prompt) {
         throw new Error("Please provide a prompt before testing");
@@ -437,6 +398,12 @@ export function TaskConfigModal({
 
   const handleAssistantSelect = async (selectedAssistant: Assistant) => {
     try {
+      const isAgentChange = currentTask.assignedAssistant?.id !== selectedAssistant.assistant_id;
+      const shouldClearDownstream = workflowType === "sequential" && isAgentChange;
+      const { testOutput: _testOutput, lastTestAt: _lastTestAt, ...remainingMetadata } =
+        (currentTask.metadata || {}) as Record<string, unknown>;
+      const cleanedMetadata = shouldClearDownstream ? remainingMetadata : currentTask.metadata;
+
       const response = await fetch(
         `/api/workflows/${currentTask.workflow_id}/tasks/${currentTask.workflow_task_id}`,
         {
@@ -446,6 +413,7 @@ export function TaskConfigModal({
           },
           body: JSON.stringify({
             ...currentTask,
+            metadata: cleanedMetadata,
             assignedAssistant: {
               id: selectedAssistant.assistant_id,
               name: selectedAssistant.name,
@@ -466,8 +434,20 @@ export function TaskConfigModal({
           name: selectedAssistant.name,
           avatar: selectedAssistant.metadata.agent_avatar,
         },
+        metadata: cleanedMetadata,
       } as Task;
       setCurrentTask(updatedTask);
+      if (shouldClearDownstream) {
+        setTestOutput(null);
+        window.dispatchEvent(
+          new CustomEvent("taskAgentChanged", {
+            detail: {
+              workflowId: currentTask.workflow_id,
+              taskId: currentTask.workflow_task_id,
+            },
+          })
+        );
+      }
       setAssistants([selectedAssistant]);
       setIsAssistantSelectOpen(false);
       onUpdate(updatedTask, selectedAssistant);
@@ -487,7 +467,16 @@ export function TaskConfigModal({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-7xl">
+        <DialogContent className="max-w-7xl max-h-[90vh] lg:max-h-[90vh] w-[calc(100%-2rem)] md:w-[calc(100%-4rem)]">
+          {/* Close button - visible on all screens */}
+          <button
+            onClick={onClose}
+            className="absolute right-4 top-4 z-50 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
+          >
+            <X className="h-4 w-4" />
+            <span className="sr-only">Close</span>
+          </button>
+
           <TaskModalHeader
             task={currentTask}
             assistant={assistant ?? null}
@@ -496,93 +485,219 @@ export function TaskConfigModal({
             onChangeAssistant={() => setIsAssistantSelectOpen(true)}
           />
 
-          <div className="grid grid-cols-3 gap-4 mt-4">
-            <PreviousNodeOutputPanel
-              data={loadedPreviousNodeOutput || previousNodeOutput || null}
-              outputFormat={prevOutputFormat}
-              setOutputFormat={(format) => {
-                setPrevOutputFormat(format);
-                saveFormatPreference(STORAGE_KEY_PREV_FORMAT, format);
-              }}
-            />
+          {/* Desktop: Grid layout, Mobile/Tablet: Accordion layout */}
+          {isMobile ? (
+            <div className="overflow-y-auto max-h-[calc(90vh-200px)] mt-4">
+              <Accordion type="multiple" className="space-y-3">
+                {/* Previous Node Output Accordion */}
+                <AccordionItem value="previous-output" className="border-2 border-emerald-200/50 dark:border-emerald-800/50 rounded-xl bg-gradient-to-br from-emerald-50/30 to-green-50/30 dark:from-emerald-950/20 dark:to-green-950/20">
+                  <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                      <h3 className="font-semibold text-sm bg-gradient-to-r from-emerald-600 to-green-600 dark:from-emerald-400 dark:to-green-400 bg-clip-text text-transparent">
+                        Previous Node Output
+                      </h3>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-2 pb-2">
+                    <PreviousNodeOutputPanel
+                      data={loadedPreviousNodeOutput || previousNodeOutput || null}
+                      outputFormat={prevOutputFormat}
+                      setOutputFormat={(format) => {
+                        setPrevOutputFormat(format);
+                        saveFormatPreference(STORAGE_KEY_PREV_FORMAT, format);
+                      }}
+                    />
+                  </AccordionContent>
+                </AccordionItem>
 
-            {loadingAssistants ? (
-              <div className="relative overflow-hidden rounded-xl border-2 border-violet-200/50 dark:border-violet-800/50 bg-gradient-to-br from-violet-50/30 to-purple-50/30 dark:from-violet-950/20 dark:to-purple-950/20">
-                <div className="flex flex-col items-center justify-center p-12 min-h-[600px]">
-                  <div className="animate-spin rounded-full h-12 w-12 border-4 border-violet-200 dark:border-violet-800 border-t-violet-600 dark:border-t-violet-400 mb-4"></div>
-                  <p className="text-sm text-muted-foreground">Loading agent information...</p>
-                </div>
-              </div>
-            ) : !assistant ? (
-              <div className="relative overflow-hidden rounded-xl border-2 border-violet-200/50 dark:border-violet-800/50 bg-gradient-to-br from-violet-50/30 to-purple-50/30 dark:from-violet-950/20 dark:to-purple-950/20">
-                <div className="flex flex-col items-center justify-center p-12 min-h-[600px]">
-                  <div className="p-6 rounded-2xl bg-gradient-to-br from-violet-500/10 to-purple-500/10 mb-6">
-                    <UserPlus className="h-12 w-12 text-violet-600 dark:text-violet-400" />
-                  </div>
-                  <h3 className="text-lg font-semibold bg-gradient-to-r from-violet-600 to-purple-600 dark:from-violet-400 dark:to-purple-400 bg-clip-text text-transparent mb-2">
-                    No Agent Assigned
-                  </h3>
-                  <p className="text-sm text-muted-foreground text-center max-w-[280px] mb-6">
-                    Assign an AI agent to this task to configure its behavior and execute workflows
-                  </p>
-                  <Button
-                    onClick={() => setIsAssistantSelectOpen(true)}
-                    className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white shadow-lg shadow-violet-500/25"
-                  >
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Assign Agent
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <TaskConfigurationPanel
-                currentTask={currentTask}
-                setCurrentTask={setCurrentTask}
-                assistant={assistant}
-                workflowType={workflowType}
-                onSave={async () => {
-                  // Preserve assignedAssistant before saving
-                  const taskToSave = {
-                    ...currentTask,
-                    assignedAssistant: currentTask.assignedAssistant || (currentTask.config?.assigned_assistant
-                      ? {
-                          id: currentTask.config.assigned_assistant.id,
-                          name: currentTask.config.assigned_assistant.name,
-                          avatar: currentTask.config.assigned_assistant.avatar,
+                {/* Task Configuration Accordion */}
+                <AccordionItem value="task-config" className="border-2 border-violet-200/50 dark:border-violet-800/50 rounded-xl bg-gradient-to-br from-violet-50/30 to-purple-50/30 dark:from-violet-950/20 dark:to-purple-950/20">
+                  <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 w-2 rounded-full bg-violet-500" />
+                      <h3 className="font-semibold text-sm bg-gradient-to-r from-violet-600 to-purple-600 dark:from-violet-400 dark:to-purple-400 bg-clip-text text-transparent">
+                        Task Configuration
+                      </h3>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-2 pb-2">
+                    {loadingAssistants ? (
+                      <div className="relative overflow-hidden rounded-xl border-2 border-violet-200/50 dark:border-violet-800/50 bg-gradient-to-br from-violet-50/30 to-purple-50/30 dark:from-violet-950/20 dark:to-purple-950/20">
+                        <div className="flex flex-col items-center justify-center p-12 min-h-[300px]">
+                          <div className="animate-spin rounded-full h-12 w-12 border-4 border-violet-200 dark:border-violet-800 border-t-violet-600 dark:border-t-violet-400 mb-4"></div>
+                          <p className="text-sm text-muted-foreground">Loading agent information...</p>
+                        </div>
+                      </div>
+                    ) : !assistant ? (
+                      <div className="relative overflow-hidden rounded-xl border-2 border-violet-200/50 dark:border-violet-800/50 bg-gradient-to-br from-violet-50/30 to-purple-50/30 dark:from-violet-950/20 dark:to-purple-950/20">
+                        <div className="flex flex-col items-center justify-center p-12 min-h-[300px]">
+                          <div className="p-6 rounded-2xl bg-gradient-to-br from-violet-500/10 to-purple-500/10 mb-6">
+                            <UserPlus className="h-12 w-12 text-violet-600 dark:text-violet-400" />
+                          </div>
+                          <h3 className="text-lg font-semibold bg-gradient-to-r from-violet-600 to-purple-600 dark:from-violet-400 dark:to-purple-400 bg-clip-text text-transparent mb-2">
+                            No Agent Assigned
+                          </h3>
+                          <p className="text-sm text-muted-foreground text-center max-w-[280px] mb-6">
+                            Assign an AI agent to this task to configure its behavior and execute workflows
+                          </p>
+                          <Button
+                            onClick={() => setIsAssistantSelectOpen(true)}
+                            className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white shadow-lg shadow-violet-500/25"
+                          >
+                            <UserPlus className="h-4 w-4 mr-2" />
+                            Assign Agent
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <TaskConfigurationPanel
+                        currentTask={currentTask}
+                        setCurrentTask={setCurrentTask}
+                        assistant={assistant}
+                        workflowType={workflowType}
+                        onSave={async () => {
+                          const taskToSave = {
+                            ...currentTask,
+                            assignedAssistant: currentTask.assignedAssistant || (currentTask.config?.assigned_assistant
+                              ? {
+                                  id: currentTask.config.assigned_assistant.id,
+                                  name: currentTask.config.assigned_assistant.name,
+                                  avatar: currentTask.config.assigned_assistant.avatar,
+                                }
+                              : undefined),
+                          };
+
+                          const updatedTask = await saveTask(taskToSave);
+                          if (updatedTask) {
+                            setCurrentTask(updatedTask);
+                            const assistantToPass = assistant || (updatedTask.assignedAssistant ? {
+                              assistant_id: updatedTask.assignedAssistant.id,
+                              name: updatedTask.assignedAssistant.name,
+                              metadata: {
+                                agent_avatar: updatedTask.assignedAssistant.avatar,
+                              },
+                            } as Assistant : null);
+                            onUpdate(updatedTask, assistantToPass);
+                          }
+                        }}
+                      />
+                    )}
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* Test Output Accordion */}
+                <AccordionItem value="test-output" className="border-2 border-blue-200/50 dark:border-blue-800/50 rounded-xl bg-gradient-to-br from-blue-50/30 to-cyan-50/30 dark:from-blue-950/20 dark:to-cyan-950/20">
+                  <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 w-2 rounded-full bg-blue-500" />
+                      <h3 className="font-semibold text-sm bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent">
+                        Test Output
+                      </h3>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-2 pb-2">
+                    <TestOutputPanel
+                      testOutput={testOutput}
+                      outputFormat={testOutputFormat}
+                      setOutputFormat={(format) => {
+                        if (!isStreaming) {
+                          setTestOutputFormat(format);
+                          saveFormatPreference(STORAGE_KEY_TEST_FORMAT, format);
                         }
-                      : undefined),
-                  };
-                  
-                  const updatedTask = await saveTask(taskToSave);
-                  if (updatedTask) {
-                    setCurrentTask(updatedTask);
-                    // Notify parent to update the task in the workflow
-                    // Make sure we pass the assistant if it exists
-                    const assistantToPass = assistant || (updatedTask.assignedAssistant ? {
-                      assistant_id: updatedTask.assignedAssistant.id,
-                      name: updatedTask.assignedAssistant.name,
-                      metadata: {
-                        agent_avatar: updatedTask.assignedAssistant.avatar,
-                      },
-                    } as Assistant : null);
-                    onUpdate(updatedTask, assistantToPass);
-                  }
+                      }}
+                      isStreaming={isStreaming}
+                    />
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3 md:gap-4 mt-4 overflow-y-auto max-h-[calc(90vh-200px)]">
+              <PreviousNodeOutputPanel
+                data={loadedPreviousNodeOutput || previousNodeOutput || null}
+                outputFormat={prevOutputFormat}
+                setOutputFormat={(format) => {
+                  setPrevOutputFormat(format);
+                  saveFormatPreference(STORAGE_KEY_PREV_FORMAT, format);
                 }}
               />
-            )}
 
-            <TestOutputPanel
-              testOutput={testOutput}
-              outputFormat={isStreaming ? streamingFormat : testOutputFormat}
-              setOutputFormat={(format) => {
-                if (!isStreaming) {
-                  setTestOutputFormat(format);
-                  saveFormatPreference(STORAGE_KEY_TEST_FORMAT, format);
-                }
-              }}
-              isStreaming={isStreaming}
-            />
-          </div>
+              {loadingAssistants ? (
+                <div className="relative overflow-hidden rounded-xl border-2 border-violet-200/50 dark:border-violet-800/50 bg-gradient-to-br from-violet-50/30 to-purple-50/30 dark:from-violet-950/20 dark:to-purple-950/20">
+                  <div className="flex flex-col items-center justify-center p-12 min-h-[600px]">
+                    <div className="animate-spin rounded-full h-12 w-12 border-4 border-violet-200 dark:border-violet-800 border-t-violet-600 dark:border-t-violet-400 mb-4"></div>
+                    <p className="text-sm text-muted-foreground">Loading agent information...</p>
+                  </div>
+                </div>
+              ) : !assistant ? (
+                <div className="relative overflow-hidden rounded-xl border-2 border-violet-200/50 dark:border-violet-800/50 bg-gradient-to-br from-violet-50/30 to-purple-50/30 dark:from-violet-950/20 dark:to-purple-950/20">
+                  <div className="flex flex-col items-center justify-center p-12 min-h-[600px]">
+                    <div className="p-6 rounded-2xl bg-gradient-to-br from-violet-500/10 to-purple-500/10 mb-6">
+                      <UserPlus className="h-12 w-12 text-violet-600 dark:text-violet-400" />
+                    </div>
+                    <h3 className="text-lg font-semibold bg-gradient-to-r from-violet-600 to-purple-600 dark:from-violet-400 dark:to-purple-400 bg-clip-text text-transparent mb-2">
+                      No Agent Assigned
+                    </h3>
+                    <p className="text-sm text-muted-foreground text-center max-w-[280px] mb-6">
+                      Assign an AI agent to this task to configure its behavior and execute workflows
+                    </p>
+                    <Button
+                      onClick={() => setIsAssistantSelectOpen(true)}
+                      className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white shadow-lg shadow-violet-500/25"
+                    >
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Assign Agent
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <TaskConfigurationPanel
+                  currentTask={currentTask}
+                  setCurrentTask={setCurrentTask}
+                  assistant={assistant}
+                  workflowType={workflowType}
+                  onSave={async () => {
+                    const taskToSave = {
+                      ...currentTask,
+                      assignedAssistant: currentTask.assignedAssistant || (currentTask.config?.assigned_assistant
+                        ? {
+                            id: currentTask.config.assigned_assistant.id,
+                            name: currentTask.config.assigned_assistant.name,
+                            avatar: currentTask.config.assigned_assistant.avatar,
+                          }
+                        : undefined),
+                    };
+
+                    const updatedTask = await saveTask(taskToSave);
+                    if (updatedTask) {
+                      setCurrentTask(updatedTask);
+                      const assistantToPass = assistant || (updatedTask.assignedAssistant ? {
+                        assistant_id: updatedTask.assignedAssistant.id,
+                        name: updatedTask.assignedAssistant.name,
+                        metadata: {
+                          agent_avatar: updatedTask.assignedAssistant.avatar,
+                        },
+                      } as Assistant : null);
+                      onUpdate(updatedTask, assistantToPass);
+                    }
+                  }}
+                />
+              )}
+
+              <TestOutputPanel
+                testOutput={testOutput}
+                outputFormat={testOutputFormat}
+                setOutputFormat={(format) => {
+                  if (!isStreaming) {
+                    setTestOutputFormat(format);
+                    saveFormatPreference(STORAGE_KEY_TEST_FORMAT, format);
+                  }
+                }}
+                isStreaming={isStreaming}
+              />
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

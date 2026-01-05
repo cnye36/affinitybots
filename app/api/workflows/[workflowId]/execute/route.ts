@@ -499,6 +499,44 @@ export async function POST(
 						];
 						return candidates.find((value) => typeof value === "string" && value.length > 0) || null;
 					};
+					const extractContentText = (content: unknown): string => {
+						if (typeof content === "string") return content;
+						if (Array.isArray(content)) {
+							return content
+								.map((part) => {
+									if (typeof part === "string") return part;
+									if (typeof part?.text === "string") return part.text;
+									return "";
+								})
+								.join("");
+						}
+						if (content && typeof content === "object") {
+							const maybeText = (content as any).text ?? (content as any).delta ?? (content as any).content;
+							if (typeof maybeText === "string") return maybeText;
+						}
+						return "";
+					};
+					const extractLatestAssistantText = (messages: any[]): string => {
+						for (let i = messages.length - 1; i >= 0; i -= 1) {
+							const msg = messages[i];
+							if (msg?.type === "ai" || msg?.role === "assistant") {
+								const text = extractContentText(msg?.content ?? msg);
+								if (text) return text;
+							}
+						}
+						return "";
+					};
+					const fetchLatestAssistantText = async (threadId: string): Promise<string | null> => {
+						try {
+							const state = await client.threads.getState(threadId);
+							const messages = ((state?.values as any)?.messages as any[]) || [];
+							const text = extractLatestAssistantText(messages);
+							return text || null;
+						} catch (e) {
+							console.error("Failed to fetch thread state for previous output:", e);
+							return null;
+						}
+					};
 					// Default workflow-level thread (used when nodes choose workflow mode)
 					const wfThread = await client.threads.create();
 					const workflowThreadId = wfThread.thread_id;
@@ -525,9 +563,22 @@ export async function POST(
             // Mark run row running
             const taskRun = taskRuns.find((tr) => tr?.workflow_task_id === task.workflow_task_id);
 
-            // Determine thread for this node
-            const mode: "workflow" | "new" | "from_node" = (task.config as any)?.context?.thread?.mode || "workflow";
+            // Determine thread strategy and auto-injection settings for this node
+            const mode: "workflow" | "new" | "from_node" = (task.config as any)?.context?.thread?.mode || "new";
+            const autoInjectPreviousOutput = (task.config as any)?.context?.autoInjectPreviousOutput ?? true;
+            const isFirstTask = tasks.indexOf(task) === 0;
             let threadIdForNode = workflowThreadId;
+
+            // Debug logging for auto-injection
+            console.log(`[Workflow ${workflowId}] Task ${task.workflow_task_id}:`, {
+              isFirstTask,
+              hasPreviousOutput: !!previousOutput,
+              hasInitialPayload: !!initialPayload,
+              autoInjectPreviousOutput,
+              threadMode: mode,
+            });
+
+            // Handle thread mode (create new thread or reference existing)
             if (mode === "new") {
               const t = await client.threads.create();
               threadIdForNode = t.thread_id;
@@ -538,26 +589,37 @@ export async function POST(
               }
             }
 
-            // Build input messages based on inputSource
-            const inputSource: "prompt" | "previous_output" | "prompt_and_previous_output" =
-              (task.config as any)?.context?.inputSource || "prompt_and_previous_output";
-            const promptText = task.config?.input?.prompt || "";
+            // Build the final prompt by conditionally prepending context
+            let finalPrompt = task.config?.input?.prompt || "";
+
+            // 1. First task: Inject trigger payload if available
+            if (isFirstTask && initialPayload != null && autoInjectPreviousOutput) {
+              const triggerData = typeof initialPayload === 'string'
+                ? initialPayload
+                : JSON.stringify(initialPayload, null, 2);
+
+              if (triggerData.trim()) {
+                finalPrompt = `--- Trigger Data ---\n${triggerData}\n\n--- Your Task ---\n${finalPrompt}`;
+              }
+            }
+
+            // 2. Subsequent tasks: Inject previous agent's output
+            if (!isFirstTask && previousOutput != null && autoInjectPreviousOutput) {
+              const prevOutputText = typeof previousOutput === 'string'
+                ? previousOutput
+                : JSON.stringify(previousOutput, null, 2);
+
+              if (prevOutputText.trim()) {
+                finalPrompt = `--- Previous Agent Output ---\n${prevOutputText}\n\n--- Your Task ---\n${finalPrompt}`;
+              }
+            }
+
+            console.log(`[Workflow ${workflowId}] Task ${task.workflow_task_id} final prompt length:`, finalPrompt.length);
+
+            // 3. Build messages
             const messages: Array<{ role: string; content: string }> = [];
-
-            // Include this node's prompt if inputSource includes prompt mode
-            if ((inputSource === "prompt" || inputSource === "prompt_and_previous_output") && promptText) {
-              messages.push({ role: "user", content: promptText });
-            }
-
-            // Include previous node output if inputSource includes previous_output mode
-            if ((inputSource === "previous_output" || inputSource === "prompt_and_previous_output") && (previousOutput !== null && previousOutput !== undefined)) {
-              messages.push({ role: "user", content: typeof previousOutput === 'string' ? previousOutput : JSON.stringify(previousOutput) });
-            }
-            // For the very first node, include initialPayload when provided
-            if (!previousOutput && initialPayload != null) {
-              try {
-                messages.push({ role: "user", content: typeof initialPayload === 'string' ? initialPayload : JSON.stringify(initialPayload) });
-              } catch {}
+            if (finalPrompt) {
+              messages.push({ role: "user", content: finalPrompt });
             }
 
             const assistantId = task.assistant_id || task.config?.assigned_assistant?.id;
@@ -646,7 +708,15 @@ export async function POST(
               }
             }
 
-            previousOutput = finalEvent?.data ?? null;
+            const rawOutput = finalEvent?.data ?? null;
+            let resolvedOutput: unknown = rawOutput;
+            if (threadIdForNode) {
+              const latestText = await fetchLatestAssistantText(threadIdForNode);
+              if (latestText && latestText.trim()) {
+                resolvedOutput = latestText;
+              }
+            }
+            previousOutput = resolvedOutput;
             nodeIdToThreadId[task.workflow_task_id] = threadIdForNode;
 
             // Persist completion

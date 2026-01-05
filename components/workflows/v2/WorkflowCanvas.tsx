@@ -47,25 +47,34 @@ interface WorkflowCanvasProps {
   onAddTask?: (sourceNodeId?: string) => void
   onNodeDelete?: (nodeId: string, workflowTaskId?: string) => Promise<void>
   isExecutionsView?: boolean
+  overrideNodes?: WorkflowNode[]
+  overrideEdges?: any[]
+  overrideActiveNodeId?: string | null
+  onNodeClick?: (nodeId: string) => void
 }
 
 export function WorkflowCanvas({
   onAddTask,
   onNodeDelete,
   isExecutionsView = false,
+  overrideNodes,
+  overrideEdges,
+  overrideActiveNodeId,
+  onNodeClick,
 }: WorkflowCanvasProps) {
-  const {
-    nodes,
-    edges,
-    setNodes,
-    setEdges,
-    activeNodeId,
-    setActiveNodeId,
-    workflowType,
-    workflowId,
-    removeEdge,
-    removeNode,
-  } = useWorkflowState()
+  const workflowState = useWorkflowState()
+
+  // Use override props in executions view, otherwise use global state
+  const nodes = overrideNodes ?? workflowState.nodes
+  const edges = overrideEdges ?? workflowState.edges
+  const setNodes = workflowState.setNodes
+  const setEdges = workflowState.setEdges
+  const activeNodeId = overrideActiveNodeId ?? workflowState.activeNodeId
+  const setActiveNodeId = workflowState.setActiveNodeId
+  const workflowType = workflowState.workflowType
+  const workflowId = workflowState.workflowId
+  const removeEdge = workflowState.removeEdge
+  const removeNode = workflowState.removeNode
 
   const { snapPosition } = useSnapToGrid(GRID_SIZE)
   const { isValidConnection, canAddOutgoingEdge } = useWorkflowValidation(
@@ -87,17 +96,19 @@ export function WorkflowCanvas({
 
   const onNodesDelete = useCallback(
     async (nodesToDelete: Parameters<OnNodesDelete>[0]) => {
+      if (isExecutionsView) return
       for (const node of nodesToDelete as WorkflowNode[]) {
         if (onNodeDelete && node.type === "task" && node.data.workflow_task_id) {
           await onNodeDelete(node.id, node.data.workflow_task_id)
         }
       }
     },
-    [onNodeDelete]
+    [onNodeDelete, isExecutionsView]
   )
 
   const onConnect: OnConnect = useCallback(
     (connection: Connection) => {
+      if (isExecutionsView) return
       const validation = isValidConnection(connection)
       if (!validation.valid) {
         toast({
@@ -110,11 +121,12 @@ export function WorkflowCanvas({
 
       setEdges((eds) => addEdge(connection, eds))
     },
-    [isValidConnection, setEdges]
+    [isValidConnection, setEdges, isExecutionsView]
   )
 
   const onNodesChange: OnNodesChange = useCallback(
     (changes) => {
+      if (isExecutionsView) return
       // Handle selection changes - ensure active node is updated correctly
       changes.forEach((change) => {
         if (change.type === "select" && setActiveNodeId) {
@@ -132,18 +144,20 @@ export function WorkflowCanvas({
         applyNodeChanges(changes, nds as Parameters<typeof applyNodeChanges>[1]) as WorkflowNode[]
       )
     },
-    [setNodes, setActiveNodeId, activeNodeId]
+    [setNodes, setActiveNodeId, activeNodeId, isExecutionsView]
   )
 
   const onEdgesChange: OnEdgesChange = useCallback(
     (changes) => {
+      if (isExecutionsView) return
       setEdges((eds) => applyEdgeChanges(changes, eds))
     },
-    [setEdges]
+    [setEdges, isExecutionsView]
   )
 
   const onNodeDragStop: NodeDragHandler = useCallback(
     (_event, node) => {
+      if (isExecutionsView) return
       const snappedPosition = snapPosition(node.position)
       setNodes((nds) =>
         nds.map((n) =>
@@ -151,30 +165,33 @@ export function WorkflowCanvas({
         )
       )
     },
-    [snapPosition, setNodes]
+    [snapPosition, setNodes, isExecutionsView]
   )
 
   const handleEdgeDelete = useCallback(
     (edgeId: string) => {
+      if (isExecutionsView) return
       removeEdge(edgeId)
     },
-    [removeEdge]
+    [removeEdge, isExecutionsView]
   )
 
   // Handle node deletion from delete button
   const handleNodeDelete = useCallback(
     async (nodeId: string, workflowTaskId?: string) => {
+      if (isExecutionsView) return
       if (onNodeDelete && workflowTaskId) {
         await onNodeDelete(nodeId, workflowTaskId)
       }
       removeNode(nodeId)
     },
-    [onNodeDelete, removeNode]
+    [onNodeDelete, removeNode, isExecutionsView]
   )
 
   // Handle trigger deletion
   const handleTriggerDelete = useCallback(
     async (nodeId: string, triggerId: string) => {
+      if (isExecutionsView) return
       if (!workflowId) {
         toast({
           title: "Error",
@@ -203,12 +220,13 @@ export function WorkflowCanvas({
         })
       }
     },
-    [removeNode, toast, workflowId]
+    [removeNode, toast, workflowId, isExecutionsView]
   )
 
   // Handle orchestrator deletion (clears orchestrator config)
   const handleOrchestratorDelete = useCallback(
     async (nodeId: string) => {
+      if (isExecutionsView) return
       if (!workflowId) {
         toast({
           title: "Error",
@@ -244,7 +262,7 @@ export function WorkflowCanvas({
         })
       }
     },
-    [removeNode, toast, workflowId]
+    [removeNode, toast, workflowId, isExecutionsView]
   )
 
   // Prepare nodes with active state and onAddTask handler
@@ -261,12 +279,14 @@ export function WorkflowCanvas({
 
       let onDeleteHandler: (() => void) | undefined = undefined
 
-      if (node.type === "task" && node.data.workflow_task_id) {
-        onDeleteHandler = () => handleNodeDelete(node.id, node.data.workflow_task_id)
-      } else if (node.type === "trigger" && node.data.trigger_id) {
-        onDeleteHandler = () => handleTriggerDelete(node.id, node.data.trigger_id)
-      } else if (node.type === "orchestrator") {
-        onDeleteHandler = () => handleOrchestratorDelete(node.id)
+      if (!isExecutionsView) {
+        if (node.type === "task" && node.data.workflow_task_id) {
+          onDeleteHandler = () => handleNodeDelete(node.id, node.data.workflow_task_id)
+        } else if (node.type === "trigger" && node.data.trigger_id) {
+          onDeleteHandler = () => handleTriggerDelete(node.id, node.data.trigger_id)
+        } else if (node.type === "orchestrator") {
+          onDeleteHandler = () => handleOrchestratorDelete(node.id)
+        }
       }
 
       return {
@@ -274,16 +294,17 @@ export function WorkflowCanvas({
         data: {
           ...node.data,
           isActive: node.id === activeNodeId,
-          onAddTask: canAdd ? () => onAddTask?.(node.id) : undefined,
+          onAddTask: !isExecutionsView && canAdd ? () => onAddTask?.(node.id) : undefined,
           workflowType: workflowType || undefined,
           onDelete: onDeleteHandler,
         },
       }
     })
-  }, [nodes, edges, activeNodeId, onAddTask, workflowType, handleNodeDelete, handleTriggerDelete, handleOrchestratorDelete])
+  }, [nodes, edges, activeNodeId, onAddTask, workflowType, handleNodeDelete, handleTriggerDelete, handleOrchestratorDelete, isExecutionsView])
 
   // Prepare edges with delete handler
   const edgesWithData = useMemo(() => {
+    if (isExecutionsView) return edges
     return edges.map((edge) => ({
       ...edge,
       type: "deletable",
@@ -292,22 +313,38 @@ export function WorkflowCanvas({
         onDelete: handleEdgeDelete,
       },
     }))
-  }, [edges, handleEdgeDelete])
+  }, [edges, handleEdgeDelete, isExecutionsView])
+
+  // Handle node clicks - use custom handler in executions view
+  const handleNodeClick = useCallback(
+    (_event: React.MouseEvent, node: any) => {
+      if (isExecutionsView && onNodeClick) {
+        onNodeClick(node.id)
+      } else if (!isExecutionsView) {
+        setActiveNodeId(node.id)
+      }
+    },
+    [isExecutionsView, onNodeClick, setActiveNodeId]
+  )
 
   return (
     <div className="absolute inset-0">
       <ReactFlow
         nodes={nodesWithData}
         edges={edgesWithData}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onNodesDelete={onNodesDelete}
-        onConnect={onConnect}
-        onNodeDragStop={onNodeDragStop}
+        onNodesChange={isExecutionsView ? undefined : onNodesChange}
+        onEdgesChange={isExecutionsView ? undefined : onEdgesChange}
+        onNodesDelete={isExecutionsView ? undefined : onNodesDelete}
+        onConnect={isExecutionsView ? undefined : onConnect}
+        onNodeDragStop={isExecutionsView ? undefined : onNodeDragStop}
+        onNodeClick={handleNodeClick}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         snapToGrid={true}
         snapGrid={[GRID_SIZE, GRID_SIZE]}
+        nodesDraggable={!isExecutionsView}
+        nodesConnectable={!isExecutionsView}
+        elementsSelectable={!isExecutionsView}
         defaultEdgeOptions={{
           animated: true,
           style: { strokeWidth: 2 },
@@ -319,7 +356,7 @@ export function WorkflowCanvas({
         }}
         minZoom={0.1}
         maxZoom={2}
-        deleteKeyCode={["Backspace", "Delete"]}
+        deleteKeyCode={isExecutionsView ? null : ["Backspace", "Delete"]}
         fitView
         fitViewOptions={{
           padding: 0.5,
@@ -389,28 +426,30 @@ export function WorkflowCanvas({
         )}
 
         {/* Add Agent Button */}
-        <Panel position="top-right" className="p-2">
-          <button
-            onClick={() => onAddTask?.(undefined as any)}
-            className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-500 hover:bg-blue-600 text-white shadow-lg transition-transform hover:scale-105"
-            title="Add Agent"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+        {!isExecutionsView && (
+          <Panel position="top-right" className="p-2">
+            <button
+              onClick={() => onAddTask?.(undefined as any)}
+              className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-500 hover:bg-blue-600 text-white shadow-lg transition-transform hover:scale-105"
+              title="Add Agent"
             >
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-          </button>
-        </Panel>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+            </button>
+          </Panel>
+        )}
       </ReactFlow>
     </div>
   )

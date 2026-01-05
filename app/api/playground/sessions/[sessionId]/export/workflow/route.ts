@@ -91,7 +91,7 @@ export async function POST(
 					},
 					context: {
 						thread: { mode: "workflow" },
-						inputSource: "prompt_and_previous_output",
+						useContext: true,
 					},
 					toolApproval: {
 						mode: step.tool_approval_mode || "auto",

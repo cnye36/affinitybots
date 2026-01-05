@@ -6,7 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { RefreshCcw, X, Trash2 } from "lucide-react"
+import { RefreshCcw, X, Trash2, ChevronDown, ChevronRight, AlertCircle, ExternalLink, Wrench, Search, Clock } from "lucide-react"
+import Link from "next/link"
 import { useToast } from "@/hooks/useToast"
 import { useSectionTheme } from "@/hooks/useSectionTheme"
 
@@ -15,6 +16,8 @@ type ActivityItem = {
 	id: string
 	workflow_id: string | null
 	workflow_name: string | null
+	workflow_type?: string | null
+	orchestrator_goal?: string | null
 	task_id?: string | null
 	task_name?: string | null
 	assistant_id?: string | null
@@ -24,6 +27,18 @@ type ActivityItem = {
 	completed_at: string | null
 	duration_ms: number | null
 	error?: string | null
+	taskRuns?: ActivityItem[] // Nested task runs for workflow items
+	agents_used?: string[] // Agents used in workflow
+	tool_calls?: string[]
+	tool_call_count?: number
+	web_search?: { searched: boolean; sources?: string[] }
+}
+
+const truncateGoal = (goal: string | null | undefined, maxWords: number = 12): string => {
+	if (!goal) return ""
+	const words = goal.trim().split(/\s+/)
+	if (words.length <= maxWords) return goal
+	return words.slice(0, maxWords).join(" ") + "..."
 }
 
 type FilterOption = {
@@ -63,7 +78,20 @@ export function AnalyticsDashboard() {
 	const [loading, setLoading] = useState(false)
 	const [cancellingIds, setCancellingIds] = useState<Set<string>>(new Set())
 	const [cleaningUp, setCleaningUp] = useState(false)
+	const [expandedWorkflows, setExpandedWorkflows] = useState<Set<string>>(new Set())
 	const { toast } = useToast()
+	
+	const toggleWorkflowExpansion = (workflowId: string) => {
+		setExpandedWorkflows((prev) => {
+			const next = new Set(prev)
+			if (next.has(workflowId)) {
+				next.delete(workflowId)
+			} else {
+				next.add(workflowId)
+			}
+			return next
+		})
+	}
 
 	const fetchAnalytics = async () => {
 		setLoading(true)
@@ -91,14 +119,29 @@ export function AnalyticsDashboard() {
 	}, [typeFilter, statusFilter, workflowFilter, agentFilter, startDate, endDate])
 
 	const stats = useMemo(() => {
-		const total = items.length
+		// Flatten items to get all workflow and task runs
+		const allItems: ActivityItem[] = []
+		for (const item of items) {
+			if (item.type === "workflow" && item.taskRuns) {
+				allItems.push(item, ...item.taskRuns)
+			} else {
+				allItems.push(item)
+			}
+		}
+		
+		const total = allItems.length
 		const workflowCount = items.filter((item) => item.type === "workflow").length
-		const taskCount = items.filter((item) => item.type === "task").length
-		const failed = items.filter((item) => item.status === "failed" || item.status === "error").length
-		const running = items.filter((item) => item.status === "running").length
-		const durations = items.map((item) => item.duration_ms).filter((value) => typeof value === "number") as number[]
-		const averageDuration = durations.length
-			? Math.round(durations.reduce((sum, value) => sum + value, 0) / durations.length)
+		const taskCount = allItems.filter((item) => item.type === "task").length
+		const failed = allItems.filter((item) => item.status === "failed" || item.status === "error").length
+		const running = allItems.filter((item) => item.status === "running").length
+		
+		// Calculate average duration from workflow runs only (not task runs)
+		const workflowDurations = items
+			.filter((item) => item.type === "workflow")
+			.map((item) => item.duration_ms)
+			.filter((value) => typeof value === "number") as number[]
+		const averageDuration = workflowDurations.length
+			? Math.round(workflowDurations.reduce((sum, value) => sum + value, 0) / workflowDurations.length)
 			: null
 		return { total, workflowCount, taskCount, failed, running, averageDuration }
 	}, [items])
@@ -324,54 +367,276 @@ export function AnalyticsDashboard() {
 					{!loading && items.length === 0 && (
 						<div className="text-sm text-muted-foreground">No activity found for these filters.</div>
 					)}
-					{items.map((item) => (
-						<div
-							key={item.id}
-							className={`flex flex-col gap-2 rounded-lg border p-3 text-sm md:flex-row md:items-center md:justify-between ${theme.borderColor}`}
-						>
-							<div className="space-y-1">
-								<div className="flex items-center gap-2">
-									<Badge
-										variant={item.type === "workflow" ? "default" : "secondary"}
-										className={
-											item.type === "workflow"
-												? `${theme.accentBg} text-white border-0`
-												: ""
-										}
+					{items.map((item) => {
+						// Handle workflow runs with nested task runs
+						if (item.type === "workflow" && item.taskRuns !== undefined) {
+							const isExpanded = expandedWorkflows.has(item.id)
+							const taskRuns = item.taskRuns || []
+							const isFailed = item.status === "failed" || item.status === "error"
+							const hasTaskRuns = taskRuns.length > 0
+							
+							return (
+								<div
+									key={item.id}
+									className={`rounded-lg border ${theme.borderColor} ${isFailed ? "border-red-500/50 bg-red-500/5" : ""}`}
+								>
+									{/* Workflow Run Header */}
+									<div
+										className={`flex flex-col gap-2 p-3 text-sm md:flex-row md:items-center md:justify-between ${hasTaskRuns ? "cursor-pointer hover:bg-accent/50" : ""}`}
+										onClick={hasTaskRuns ? () => toggleWorkflowExpansion(item.id) : undefined}
 									>
-										{item.type === "workflow" ? "Workflow" : "Task"}
+										<div className="space-y-1 flex-1">
+											<div className="flex items-center gap-2 flex-wrap">
+												{hasTaskRuns && (
+													<button
+														onClick={(e) => {
+															e.stopPropagation()
+															toggleWorkflowExpansion(item.id)
+														}}
+														className="p-0.5 hover:bg-accent rounded"
+													>
+														{isExpanded ? (
+															<ChevronDown className="h-4 w-4" />
+														) : (
+															<ChevronRight className="h-4 w-4" />
+														)}
+													</button>
+												)}
+												<Badge
+													variant={isFailed ? "destructive" : item.status === "completed" ? "default" : "secondary"}
+													className={
+														!isFailed && item.status === "completed"
+															? `${theme.accentBg} text-white border-0`
+															: ""
+													}
+												>
+													{item.workflow_type === "orchestrator" ? "Orchestrator" : "Workflow"}
+												</Badge>
+												<span className="font-medium">{item.workflow_name || "Untitled Workflow"}</span>
+												{isFailed && (
+													<Badge variant="destructive" className="gap-1">
+														<AlertCircle className="h-3 w-3" />
+														Failed
+													</Badge>
+												)}
+												{item.status === "completed" && (
+													<Badge variant="default" className="bg-green-600 hover:bg-green-700">
+														Success
+													</Badge>
+												)}
+												{item.workflow_id && (
+													<Link
+														href={`/workflows/builder?id=${item.workflow_id}&execution=${item.id}`}
+														onClick={(e) => e.stopPropagation()}
+														className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+													>
+														<ExternalLink className="h-3 w-3" />
+														View Execution
+													</Link>
+												)}
+											</div>
+											{item.error && (
+												<div className="text-xs text-red-600 dark:text-red-400 font-medium">
+													Error: {item.error}
+												</div>
+											)}
+											{item.agents_used && item.agents_used.length > 0 && (
+												<div className="text-xs text-muted-foreground">
+													Agents: {item.agents_used.join(", ")}
+												</div>
+											)}
+											{item.workflow_type === "orchestrator" && item.orchestrator_goal && (
+												<div className="text-xs text-muted-foreground">
+													Goal: {truncateGoal(item.orchestrator_goal)}
+												</div>
+											)}
+											{hasTaskRuns && item.workflow_type !== "orchestrator" && (
+												<div className="text-xs text-muted-foreground">
+													{taskRuns.length} task{taskRuns.length !== 1 ? "s" : ""} • Click to {isExpanded ? "collapse" : "expand"}
+												</div>
+											)}
+											{item.workflow_type === "orchestrator" && hasTaskRuns && (
+												<div className="text-xs text-muted-foreground">
+													{taskRuns.length} execution{taskRuns.length !== 1 ? "s" : ""} • Click to {isExpanded ? "collapse" : "expand"}
+												</div>
+											)}
+										</div>
+										<div className="flex flex-wrap items-center gap-2">
+											<Badge variant="outline" className={theme.borderColor}>
+												{item.status || "unknown"}
+											</Badge>
+											<span className="text-xs text-muted-foreground">
+												{item.started_at ? new Date(item.started_at).toLocaleString() : "—"}
+											</span>
+											<span className="text-xs text-muted-foreground">
+												Duration {formatDuration(item.duration_ms)}
+											</span>
+											{item.status === "running" && item.workflow_id && (
+												<Button
+													variant="ghost"
+													size="sm"
+													className={`h-7 px-2 ${theme.sidebarText}`}
+													onClick={(e) => {
+														e.stopPropagation()
+														handleCancelRun(item)
+													}}
+													disabled={cancellingIds.has(item.id)}
+												>
+													<X className="h-3 w-3" />
+												</Button>
+											)}
+										</div>
+									</div>
+									
+									{/* Nested Task Runs */}
+									{isExpanded && hasTaskRuns && (
+										<div className="border-t bg-muted/30">
+											{taskRuns.map((taskRun) => (
+												<div
+													key={taskRun.id}
+													className="flex flex-col gap-3 p-3 pl-8 text-sm border-b last:border-b-0"
+												>
+													<div className="flex items-start justify-between gap-4">
+														<div className="space-y-1.5 flex-1">
+															<div className="flex items-center gap-2 flex-wrap">
+																<Badge variant="secondary" className="text-xs">
+																	Task
+																</Badge>
+																<span className="font-medium">{taskRun.task_name || "Unnamed Task"}</span>
+																{(taskRun.status === "failed" || taskRun.status === "error") && (
+																	<Badge variant="destructive" className="text-xs gap-1">
+																		<AlertCircle className="h-3 w-3" />
+																		Failed
+																	</Badge>
+																)}
+															</div>
+															<div className="text-xs text-muted-foreground">
+																{taskRun.assistant_name ? `Agent: ${taskRun.assistant_name}` : "Agent: —"}
+															</div>
+															{taskRun.error && (
+																<div className="text-xs text-red-600 dark:text-red-400">
+																	Error: {taskRun.error}
+																</div>
+															)}
+														</div>
+														<div className="flex flex-wrap items-center gap-2">
+															<Badge variant="outline" className={theme.borderColor}>
+																{taskRun.status || "unknown"}
+															</Badge>
+															<span className="text-xs text-muted-foreground">
+																{taskRun.started_at ? new Date(taskRun.started_at).toLocaleString() : "—"}
+															</span>
+															<span className="text-xs text-muted-foreground flex items-center gap-1">
+																<Clock className="h-3 w-3" />
+																{formatDuration(taskRun.duration_ms)}
+															</span>
+														</div>
+													</div>
+													
+													{/* Task Details */}
+													{(taskRun.tool_calls && taskRun.tool_calls.length > 0) || taskRun.web_search?.searched ? (
+														<div className="space-y-2 pl-4 border-l-2 border-border/50">
+															{taskRun.tool_calls && taskRun.tool_calls.length > 0 && (
+																<div className="flex items-start gap-2">
+																	<Wrench className="h-3.5 w-3.5 mt-0.5 text-muted-foreground flex-shrink-0" />
+																	<div className="flex-1">
+																		<div className="text-xs font-medium text-muted-foreground mb-1">
+																			Tool Calls ({taskRun.tool_call_count || taskRun.tool_calls.length})
+																		</div>
+																		<div className="flex flex-wrap gap-1">
+																			{Array.from(new Set(taskRun.tool_calls)).slice(0, 10).map((tool, idx) => (
+																				<Badge key={idx} variant="outline" className="text-xs">
+																					{tool}
+																				</Badge>
+																			))}
+																			{taskRun.tool_calls.length > 10 && (
+																				<Badge variant="outline" className="text-xs">
+																					+{taskRun.tool_calls.length - 10} more
+																				</Badge>
+																			)}
+																		</div>
+																	</div>
+																</div>
+															)}
+															{taskRun.web_search?.searched && (
+																<div className="flex items-start gap-2">
+																	<Search className="h-3.5 w-3.5 mt-0.5 text-muted-foreground flex-shrink-0" />
+																	<div className="flex-1">
+																		<div className="text-xs font-medium text-muted-foreground mb-1">
+																			Web Search
+																		</div>
+																		{taskRun.web_search.sources && taskRun.web_search.sources.length > 0 ? (
+																			<div className="space-y-1">
+																				<div className="text-xs text-muted-foreground">
+																					Found {taskRun.web_search.sources.length} source{taskRun.web_search.sources.length !== 1 ? "s" : ""}
+																				</div>
+																				<div className="space-y-0.5">
+																					{taskRun.web_search.sources.slice(0, 3).map((source, idx) => (
+																						<a
+																							key={idx}
+																							href={source}
+																							target="_blank"
+																							rel="noopener noreferrer"
+																							className="block text-xs text-primary hover:underline truncate"
+																						>
+																							{source}
+																						</a>
+																					))}
+																					{taskRun.web_search.sources.length > 3 && (
+																						<div className="text-xs text-muted-foreground">
+																							+{taskRun.web_search.sources.length - 3} more sources
+																						</div>
+																					)}
+																				</div>
+																			</div>
+																		) : (
+																			<div className="text-xs text-muted-foreground">
+																				Web search performed
+																			</div>
+																		)}
+																	</div>
+																</div>
+															)}
+														</div>
+													) : null}
+												</div>
+											))}
+										</div>
+									)}
+								</div>
+							)
+						}
+						
+						// Handle standalone task runs (when type filter is "task")
+						return (
+							<div
+								key={item.id}
+								className={`flex flex-col gap-2 rounded-lg border p-3 text-sm md:flex-row md:items-center md:justify-between ${theme.borderColor}`}
+							>
+								<div className="space-y-1">
+									<div className="flex items-center gap-2">
+										<Badge variant="secondary">Task</Badge>
+										<span className="font-medium">{item.workflow_name || "Untitled Workflow"}</span>
+										{item.task_name && <span className="text-muted-foreground">/ {item.task_name}</span>}
+									</div>
+									<div className="text-xs text-muted-foreground">
+										{item.assistant_name ? `Agent: ${item.assistant_name}` : "Agent: —"}
+									</div>
+								</div>
+								<div className="flex flex-wrap items-center gap-2">
+									<Badge variant="outline" className={theme.borderColor}>
+										{item.status || "unknown"}
 									</Badge>
-									<span className="font-medium">{item.workflow_name || "Untitled Workflow"}</span>
-									{item.task_name && <span className="text-muted-foreground">/ {item.task_name}</span>}
-								</div>
-								<div className="text-xs text-muted-foreground">
-									{item.assistant_name ? `Agent: ${item.assistant_name}` : "Agent: —"}
+									<span className="text-xs text-muted-foreground">
+										{item.started_at ? new Date(item.started_at).toLocaleString() : "—"}
+									</span>
+									<span className="text-xs text-muted-foreground">
+										Duration {formatDuration(item.duration_ms)}
+									</span>
 								</div>
 							</div>
-							<div className="flex flex-wrap items-center gap-2">
-								<Badge variant="outline" className={theme.borderColor}>
-									{item.status || "unknown"}
-								</Badge>
-								<span className="text-xs text-muted-foreground">
-									{item.started_at ? new Date(item.started_at).toLocaleString() : "—"}
-								</span>
-								<span className="text-xs text-muted-foreground">
-									Duration {formatDuration(item.duration_ms)}
-								</span>
-								{item.type === "workflow" && item.status === "running" && item.workflow_id && (
-									<Button
-										variant="ghost"
-										size="sm"
-										className={`h-7 px-2 ${theme.sidebarText}`}
-										onClick={() => handleCancelRun(item)}
-										disabled={cancellingIds.has(item.id)}
-									>
-										<X className="h-3 w-3" />
-									</Button>
-								)}
-							</div>
-						</div>
-					))}
+						)
+					})}
 				</CardContent>
 			</Card>
 		</div>
