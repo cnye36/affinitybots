@@ -573,6 +573,8 @@ export async function POST(
             console.log(`[Workflow ${workflowId}] Task ${task.workflow_task_id}:`, {
               isFirstTask,
               hasPreviousOutput: !!previousOutput,
+              previousOutputType: typeof previousOutput,
+              previousOutputValue: previousOutput,
               hasInitialPayload: !!initialPayload,
               autoInjectPreviousOutput,
               threadMode: mode,
@@ -615,12 +617,15 @@ export async function POST(
             }
 
             console.log(`[Workflow ${workflowId}] Task ${task.workflow_task_id} final prompt length:`, finalPrompt.length);
+            console.log(`[Workflow ${workflowId}] Task ${task.workflow_task_id} final prompt:`, finalPrompt);
 
             // 3. Build messages
             const messages: Array<{ role: string; content: string }> = [];
             if (finalPrompt) {
               messages.push({ role: "user", content: finalPrompt });
             }
+
+            console.log(`[Workflow ${workflowId}] Task ${task.workflow_task_id} messages being sent:`, JSON.stringify(messages, null, 2));
 
             const assistantId = task.assistant_id || task.config?.assigned_assistant?.id;
 
@@ -710,13 +715,20 @@ export async function POST(
 
             const rawOutput = finalEvent?.data ?? null;
             let resolvedOutput: unknown = rawOutput;
+
+            console.log(`[Workflow ${workflowId}] Task ${task.workflow_task_id} rawOutput:`, rawOutput);
+
             if (threadIdForNode) {
               const latestText = await fetchLatestAssistantText(threadIdForNode);
+              console.log(`[Workflow ${workflowId}] Task ${task.workflow_task_id} latestText from thread:`, latestText);
               if (latestText && latestText.trim()) {
                 resolvedOutput = latestText;
               }
             }
+
             previousOutput = resolvedOutput;
+            console.log(`[Workflow ${workflowId}] Task ${task.workflow_task_id} setting previousOutput to:`, previousOutput);
+
             nodeIdToThreadId[task.workflow_task_id] = threadIdForNode;
 
             // Persist completion

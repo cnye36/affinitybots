@@ -155,6 +155,17 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     requiresSetup: true,
   },
   {
+    serverName: "figma",
+    displayName: "Figma",
+    description:
+      "Official Figma MCP server. Connect to Figma to retrieve design files and components. Requires Figma Dev account.",
+    logoUrl: "https://upload.wikimedia.org/wikipedia/commons/3/33/Figma-logo.svg",
+    url: "https://mcp.figma.com/mcp",
+    docsUrl: "https://developers.figma.com/docs/figma-mcp-server/",
+    authType: "oauth",
+    requiresSetup: true,
+  },
+  {
     serverName: "firecrawl",
     displayName: "FireCrawl",
     description:
@@ -162,6 +173,17 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     logoUrl: "https://www.firecrawl.dev/favicon.ico",
     url: process.env.FIRECRAWL_MCP_URL || "https://mcp.firecrawl.dev",
     docsUrl: "https://docs.firecrawl.dev/mcp-server",
+    authType: "api_key",
+    requiresSetup: true,
+  },
+  {
+    serverName: "exa",
+    displayName: "Exa",
+    description:
+      "Exa is a search engine built for AI. Connect to Exa' MCP server to retrieve structured search results from the web.",
+    logoUrl: "/integration-icons/exa-color.png",
+    url: "https://mcp.exa.ai/mcp",
+    docsUrl: "https://docs.exa.ai/reference/getting-started",
     authType: "api_key",
     requiresSetup: true,
   },

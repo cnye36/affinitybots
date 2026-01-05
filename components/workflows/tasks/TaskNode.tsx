@@ -198,43 +198,13 @@ const statusConfig: Record<string, { color: string, glow: string, icon: any }> =
 							"Content-Type": "application/json",
 						},
 						body: JSON.stringify({
-							// Prefer reusing previous node's thread during test if available
-							thread_id: props.data.previousNodeThreadId || undefined,
+							// Pass previous node's output for auto-injection
+							previousOutput: props.data.previousNodeOutput?.result || null,
+							// Pass the input (backend will build the prompt with auto-injection)
 							input: {
-								messages: [
-									{
-										role: "user",
-										content: props.data.config.input.prompt,
-									},
-								],
+								prompt: props.data.config.input.prompt,
 							},
-							overrideConfig: (() => {
-								const baseOverride = { ...(overrideConfig || {}) } as Record<string, unknown>
-								const incomingContext = (baseOverride.context || {}) as Record<string, unknown>
-								const resolvedContext = {
-									...incomingContext,
-									useContext: props.data.previousNodeThreadId
-										? true
-										: (incomingContext.useContext as boolean | undefined) ?? (props.data as any)?.config?.context?.useContext ?? true,
-									thread: props.data.previousNodeThreadId
-										? { mode: "workflow" as const }
-										: (incomingContext.thread as Record<string, unknown>) || (props.data as any)?.config?.context?.thread,
-								}
-
-								const overridePayload: Record<string, unknown> = {
-									...baseOverride,
-									context: resolvedContext,
-								}
-
-								const toolApprovalPreference =
-									(baseOverride.toolApproval as Record<string, unknown> | undefined) ||
-									((props.data as any)?.config?.toolApproval as Record<string, unknown> | undefined)
-								if (toolApprovalPreference) {
-									overridePayload.toolApproval = toolApprovalPreference
-								}
-
-								return overridePayload
-							})(),
+							overrideConfig: overrideConfig || {},
 						}),
 					},
 				)

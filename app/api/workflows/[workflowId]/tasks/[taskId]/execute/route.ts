@@ -107,9 +107,19 @@ export async function POST(
               // Build final prompt with optional auto-injection
               let finalPrompt = promptText;
 
+              console.log(`[Task Test ${taskId}] Auto-injection settings:`, {
+                autoInjectPreviousOutput,
+                hasPreviousOutput: !!previousText,
+                previousOutputLength: previousText?.length || 0,
+                promptLength: promptText.length,
+              });
+
               if (previousText && previousText.trim() && autoInjectPreviousOutput) {
                 finalPrompt = `--- Previous Agent Output ---\n${previousText}\n\n--- Your Task ---\n${promptText}`;
+                console.log(`[Task Test ${taskId}] Injected previous output into prompt`);
               }
+
+              console.log(`[Task Test ${taskId}] Final prompt:`, finalPrompt);
 
               // Build messages
               const messages: Array<{ role: string; content: string }> = [];
