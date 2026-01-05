@@ -3,7 +3,7 @@
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
-import { ReactNode, useState } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { useTheme } from "next-themes";
 
@@ -39,10 +39,21 @@ export function BaseServerCard({
   compact = false
 }: BaseServerCardProps) {
   const [imageError, setImageError] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const { theme, resolvedTheme } = useTheme();
+  
+  // Prevent hydration mismatch by only using theme after mount
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   
   // Determine which logo URL to use based on theme
   const getLogoUrl = () => {
+    // During SSR or before mount, use fallback to avoid hydration mismatch
+    if (!mounted) {
+      return logoUrl || logoUrlLight || logoUrlDark;
+    }
+    
     const currentTheme = resolvedTheme || theme || "light";
     if (currentTheme === "dark" && logoUrlDark) {
       return logoUrlDark;
@@ -51,7 +62,7 @@ export function BaseServerCard({
       return logoUrlLight;
     }
     // Fallback to logoUrl for backward compatibility
-    return logoUrl;
+    return logoUrl || logoUrlLight || logoUrlDark;
   };
   
   const effectiveLogoUrl = getLogoUrl();

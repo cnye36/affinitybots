@@ -89,11 +89,30 @@ export async function GET(
     const { data: taskRuns, error: trErr } = await supabase
       .from("workflow_task_runs")
       .select("run_id, workflow_task_id, status, started_at, completed_at, error, result, metadata")
-      .eq("workflow_run_id", runId)
-      .order("started_at", { ascending: true });
+      .eq("workflow_run_id", runId);
     if (trErr) throw trErr;
+    
+    // Fetch positions from workflow_tasks to sort by execution order
+    const taskIds = (taskRuns || []).map(tr => tr.workflow_task_id);
+    const { data: tasksWithPositions } = await supabase
+      .from("workflow_tasks")
+      .select("workflow_task_id, position")
+      .in("workflow_task_id", taskIds);
+    
+    // Create position map
+    const positionMap = new Map<string, number>();
+    (tasksWithPositions || []).forEach((task: any) => {
+      positionMap.set(task.workflow_task_id, task.position ?? 999);
+    });
+    
+    // Sort task runs by position
+    const sortedTaskRuns = (taskRuns || []).sort((a, b) => {
+      const posA = positionMap.get(a.workflow_task_id) ?? 999;
+      const posB = positionMap.get(b.workflow_task_id) ?? 999;
+      return posA - posB;
+    });
 
-    const taskRunRows = taskRuns || [];
+    const taskRunRows = sortedTaskRuns;
     const threadIds = taskRunRows
       .map((taskRun) => (taskRun as any)?.metadata?.thread_id)
       .filter((value) => typeof value === "string" && value.length > 0);

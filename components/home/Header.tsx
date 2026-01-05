@@ -74,6 +74,12 @@ export function Header() {
             Features
           </Link>
           <Link
+            href="/use-cases"
+            className="text-md font-medium hover:text-primary"
+          >
+            Use Cases
+          </Link>
+          <Link
             href="/pricing"
             className="text-md font-medium hover:text-primary"
           >
@@ -151,6 +157,13 @@ export function Header() {
                 onClick={handleNavClick}
               >
                 Features
+              </Link>
+              <Link
+                href="/use-cases"
+                className="text-md font-medium hover:text-primary py-2"
+                onClick={handleNavClick}
+              >
+                Use Cases
               </Link>
               <Link
                 href="/pricing"

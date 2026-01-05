@@ -331,14 +331,34 @@ export class MCPClientManager {
         
         // Only add to mcpServers if it's not an OAuth server (since we handle OAuth servers separately)
         if (!this.isOAuthServer(serverConfig)) {
+          // Build headers for API key servers with custom header names
+          let headers: Record<string, string> | undefined = (serverConfig as any).headers;
+          
+          // If we have an API key and a custom header name, build the header
+          const apiKey = (serverConfig as any).config?.apiKey || (serverConfig as any).config?.api_key;
+          const apiKeyHeaderName = (serverConfig as any).config?.apiKeyHeaderName;
+          
+          if (apiKey && apiKeyHeaderName) {
+            headers = headers || {};
+            headers[apiKeyHeaderName] = apiKey;
+            // Also include Authorization header for compatibility
+            headers.Authorization = `Bearer ${apiKey}`;
+          } else if (apiKey && !headers) {
+            // Default behavior: use X-API-Key if no custom header name specified
+            headers = {
+              "X-API-Key": apiKey,
+              Authorization: `Bearer ${apiKey}`
+            };
+          }
+          
           mcpServers[serverName] = {
             url: finalUrl,
             // Allow adapter to fall back to SSE on intermediary/network glitches (eg. CF 5xx)
             automaticSSEFallback: true,
-            // pass through optional headers (e.g., Authorization Bearer)
-            headers: (serverConfig as any).headers
+            // pass through optional headers (e.g., Authorization Bearer or custom API key headers)
+            headers
           };
-          console.log(`✅ Added server ${serverName} to mcpServers with headers:`, (serverConfig as any).headers);
+          console.log(`✅ Added server ${serverName} to mcpServers with headers:`, headers);
         }
       }
 

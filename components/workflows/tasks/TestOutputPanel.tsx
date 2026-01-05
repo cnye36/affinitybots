@@ -238,11 +238,14 @@ export function TestOutputPanel({
                   />
                 </div>
               ) : (
-                <Textarea
-                  value={formatOutput(testOutput, outputFormat)}
-                  readOnly
-                  className="font-mono text-xs bg-background resize-none min-h-[200px] md:min-h-[300px] lg:min-h-[400px]"
-                />
+                <div className="relative rounded-lg border border-blue-200/50 dark:border-blue-800/50 bg-background p-3 md:p-4 overflow-auto min-h-[200px] md:min-h-[300px] lg:min-h-[400px] max-h-[300px] md:max-h-[400px] lg:max-h-[450px]">
+                  <Textarea
+                    value={formatOutput(testOutput, outputFormat)}
+                    readOnly
+                    className="font-mono text-xs bg-transparent resize-none border-0 p-0 h-auto min-h-[180px] md:min-h-[280px] lg:min-h-[360px] w-full"
+                    style={{ height: "auto" }}
+                  />
+                </div>
               )}
 
               <div className="flex justify-end">

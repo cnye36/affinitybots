@@ -124,13 +124,21 @@ export function WorkflowBuilder() {
           .single()
         
         if (task) {
+          const testOutputData = {
+            type: output.metadata?.event || "messages/complete",
+            result: output.result,
+            content: output.metadata?.content || (typeof output.result === "string" ? output.result : JSON.stringify(output.result)),
+          }
+          
+          console.log("[WorkflowBuilder] Saving test output to DB:", {
+            workflowTaskId,
+            testOutput: testOutputData,
+            outputMetadata: output.metadata,
+          })
+          
           const updatedMetadata = {
             ...(task.metadata || {}),
-            testOutput: {
-              type: "messages/complete",
-              result: output.result,
-              content: typeof output.result === "string" ? output.result : JSON.stringify(output.result),
-            },
+            testOutput: testOutputData,
             lastTestAt: new Date().toISOString(),
           }
           
@@ -1182,7 +1190,7 @@ export function WorkflowBuilder() {
             ...node,
             data: {
               ...node.data,
-              status: "idle" as const,
+              status: "running" as const,
             },
           } as WorkflowNode
         } else if (node.type === "orchestrator") {
@@ -1287,14 +1295,41 @@ export function WorkflowBuilder() {
           }
 
           if (eventType === "done") {
+            // Set all trigger nodes to completed status
+            setNodes((nodes) =>
+              nodes.map((node) =>
+                node.type === "trigger"
+                  ? ({
+                      ...node,
+                      data: {
+                        ...node.data,
+                        status: "completed",
+                      },
+                    } as WorkflowNode)
+                  : node
+              )
+            )
             toast({
               title: "Workflow executed successfully!",
             })
-            setViewMode("executions")
             return
           }
 
           if (eventType === "error") {
+            // Set all trigger nodes to error status
+            setNodes((nodes) =>
+              nodes.map((node) =>
+                node.type === "trigger"
+                  ? ({
+                      ...node,
+                      data: {
+                        ...node.data,
+                        status: "error",
+                      },
+                    } as WorkflowNode)
+                  : node
+              )
+            )
             throw new Error(payload?.error || "Execution failed")
           }
         }
@@ -1302,6 +1337,20 @@ export function WorkflowBuilder() {
     } catch (error) {
       console.error("Execution error:", error)
       const message = error instanceof Error ? error.message : "Unknown error occurred"
+      // Set all trigger nodes to error status
+      setNodes((nodes) =>
+        nodes.map((node) =>
+          node.type === "trigger"
+            ? ({
+                ...node,
+                data: {
+                  ...node.data,
+                  status: "error",
+                },
+              } as WorkflowNode)
+            : node
+        )
+      )
       toast({
         title: "Execution failed",
         description: message,

@@ -360,25 +360,28 @@ const statusConfig: Record<string, { color: string, glow: string, icon: any }> =
 					}
 				}
 
-				const testResult: StreamTestResult = {
-					type: finalEventType || "messages/complete",
-					content: accumulatedText,
-					result: finalPayload?.data ?? finalPayload ?? null,
-				}
+			const testResult: StreamTestResult = {
+				type: finalEventType || "messages/complete",
+				content: accumulatedText,
+				result: finalPayload?.data ?? finalPayload ?? null,
+			}
 
-				// Broadcast completion so the next node can display it as previous output
-				try {
-					const event = new CustomEvent("taskTestCompleted", {
-						detail: {
-							workflowTaskId: props.data.workflow_task_id,
-							output: {
-								result: testResult?.result ?? accumulatedText ?? null,
-								metadata: { event: testResult?.type },
+			// Broadcast completion so the next node can display it as previous output
+			try {
+				const event = new CustomEvent("taskTestCompleted", {
+					detail: {
+						workflowTaskId: props.data.workflow_task_id,
+						output: {
+							result: testResult?.result ?? accumulatedText ?? null,
+							metadata: { 
+								event: testResult?.type,
+								content: testResult?.content ?? accumulatedText,
 							},
 						},
-				})
-				window.dispatchEvent(event)
-			} catch {}
+					},
+			})
+			window.dispatchEvent(event)
+		} catch {}
 
 			setTestStatus("testSuccess")
 			setTimeout(() => setTestStatus("idle"), 3000) // Reset after 3 seconds

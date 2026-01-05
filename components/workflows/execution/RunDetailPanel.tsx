@@ -88,6 +88,9 @@ export function RunDetailPanel({ run, taskRuns, nodes, isLoading }: RunDetailPan
     return entries
   }, [nodes])
 
+  // Task runs are already sorted by position from the backend
+  const sortedTaskRuns = taskRuns
+
   const isOrchestratorRun = run?.metadata?.execution_type === "orchestrator"
 
   const formatTimestamp = (value?: string | null) => {
@@ -102,35 +105,90 @@ export function RunDetailPanel({ run, taskRuns, nodes, isLoading }: RunDetailPan
     return `${(durationMs / 1000).toFixed(2)}s`
   }
 
-  const buildInteractions = (threadData?: TaskRunWithThreadData["threadData"]) => {
-    if (!threadData) return []
-    const items: InteractionItem[] = []
-    threadData.inputMessages.forEach((msg) => {
-      items.push({ type: "input", content: msg.content, timestamp: msg.timestamp })
-    })
-    threadData.aiResponses.forEach((response) => {
-      items.push({
-        type: "response",
-        content: response.content,
-        timestamp: response.timestamp,
-        reasoning: response.reasoning_content,
-      })
-    })
-    threadData.toolCalls.forEach((call) => {
-      items.push({
-        type: "tool",
-        name: call.name,
-        arguments: call.arguments,
-        result: call.result,
-        timestamp: call.timestamp,
-      })
-    })
-    return items.sort((a, b) => {
-      const aTime = new Date(a.timestamp).getTime()
-      const bTime = new Date(b.timestamp).getTime()
-      if (Number.isNaN(aTime) || Number.isNaN(bTime)) return 0
-      return aTime - bTime
-    })
+  // Build structured interaction data for a task
+  const buildTaskInteractionData = (
+    taskRun: TaskRunWithThreadData,
+    taskIndex: number,
+    previousTaskRun?: TaskRunWithThreadData
+  ) => {
+    const threadData = taskRun.threadData
+    if (!threadData) {
+      return {
+        handoffContext: null,
+        userPrompt: null,
+        agentResponse: null,
+        toolCalls: [],
+        reasoning: null,
+      }
+    }
+
+    const isFirstTask = taskIndex === 0
+    
+    // Get the most recent (last) input message
+    const rawInputMessage = threadData.inputMessages.length > 0 
+      ? threadData.inputMessages[threadData.inputMessages.length - 1].content
+      : null
+
+    // Parse the input message to separate prepended context from actual prompt
+    let handoffContext: string | null = null
+    let userPrompt: string | null = null
+
+    if (rawInputMessage) {
+      // Check for "--- Previous Agent Output ---" or "--- Trigger Data ---" markers
+      const previousAgentMarker = "--- Previous Agent Output ---"
+      const triggerDataMarker = "--- Trigger Data ---"
+      const yourTaskMarker = "--- Your Task ---"
+
+      if (rawInputMessage.includes(yourTaskMarker)) {
+        // Split by "--- Your Task ---"
+        const parts = rawInputMessage.split(yourTaskMarker)
+        
+        if (parts.length >= 2) {
+          // The part before "Your Task" contains the context
+          const contextPart = parts[0].trim()
+          
+          // Extract the actual context (remove the marker line)
+          if (contextPart.includes(previousAgentMarker)) {
+            handoffContext = contextPart.replace(previousAgentMarker, "").trim()
+          } else if (contextPart.includes(triggerDataMarker)) {
+            handoffContext = contextPart.replace(triggerDataMarker, "").trim()
+          }
+          
+          // The part after "Your Task" is the actual user prompt
+          userPrompt = parts.slice(1).join(yourTaskMarker).trim()
+        } else {
+          // No proper split, use the whole message as prompt
+          userPrompt = rawInputMessage
+        }
+      } else {
+        // No markers found, use the entire message as prompt
+        userPrompt = rawInputMessage
+      }
+    }
+
+    // Get the most recent (last) AI response
+    const agentResponse = threadData.aiResponses.length > 0
+      ? threadData.aiResponses[threadData.aiResponses.length - 1].content
+      : null
+
+    const reasoning = threadData.aiResponses.length > 0
+      ? threadData.aiResponses[threadData.aiResponses.length - 1].reasoning_content
+      : null
+
+    // If we didn't extract hand-off context from the message but this isn't the first task,
+    // fall back to getting it from the previous task's response
+    if (!handoffContext && !isFirstTask && previousTaskRun?.threadData?.aiResponses?.length) {
+      const prevResponses = previousTaskRun.threadData.aiResponses
+      handoffContext = prevResponses[prevResponses.length - 1].content
+    }
+
+    return {
+      handoffContext,
+      userPrompt,
+      agentResponse,
+      toolCalls: threadData.toolCalls,
+      reasoning,
+    }
   }
 
   if (!run) {
@@ -233,13 +291,13 @@ export function RunDetailPanel({ run, taskRuns, nodes, isLoading }: RunDetailPan
               <CardTitle className="text-sm font-medium">Task Timeline</CardTitle>
             </CardHeader>
             <CardContent>
-              {taskRuns.length === 0 ? (
+              {sortedTaskRuns.length === 0 ? (
                 <div className="text-xs text-muted-foreground">
                   No task runs recorded for this execution.
                 </div>
               ) : (
                 <Accordion type="multiple" className="space-y-3">
-                  {taskRuns.map((taskRun, index) => {
+                  {sortedTaskRuns.map((taskRun, index) => {
                     const taskNode = taskNodeById.get(taskRun.workflow_task_id)
                     const assignedAssistant =
                       taskNode?.type === "task"
@@ -247,7 +305,9 @@ export function RunDetailPanel({ run, taskRuns, nodes, isLoading }: RunDetailPan
                           (taskNode.data as any).config?.assigned_assistant
                         : null
                     const agentLabel = assignedAssistant?.name || "Unknown Agent"
-                    const interactions = buildInteractions(taskRun.threadData)
+                    const previousTaskRun = index > 0 ? sortedTaskRuns[index - 1] : undefined
+                    const interactionData = buildTaskInteractionData(taskRun, index, previousTaskRun)
+                    const isFirstTask = index === 0
 
                     return (
                       <AccordionItem
@@ -259,7 +319,7 @@ export function RunDetailPanel({ run, taskRuns, nodes, isLoading }: RunDetailPan
                           <div className="flex flex-1 items-center justify-between text-left">
                             <div>
                               <div className="text-xs font-medium">
-                                {taskNode?.type === "task" ? taskNode.data.name : "Task"}
+                                {index + 1}. {taskNode?.type === "task" ? taskNode.data.name : "Task"}
                               </div>
                               <div className="text-[10px] text-muted-foreground">{agentLabel}</div>
                             </div>
@@ -277,53 +337,116 @@ export function RunDetailPanel({ run, taskRuns, nodes, isLoading }: RunDetailPan
                           </div>
                         </AccordionTrigger>
                         <AccordionContent className="px-3 pb-3">
-                          <div className="space-y-3 text-xs">
-                            {interactions.length === 0 ? (
+                          <div className="space-y-2 text-xs">
+                            {!interactionData.userPrompt && !interactionData.agentResponse ? (
                               <div className="text-muted-foreground">No interaction data captured.</div>
                             ) : (
-                              interactions.map((item, idx) => (
-                                <div
-                                  key={`${taskRun.run_id}-${idx}`}
-                                  className="border rounded-md p-2 bg-muted/30"
-                                >
-                                  {item.type === "input" && (
-                                    <div>
-                                      <div className="text-[10px] font-semibold uppercase text-violet-600">
-                                        Input
-                                      </div>
-                                      <div className="whitespace-pre-wrap break-words">{item.content}</div>
-                                    </div>
-                                  )}
-                                  {item.type === "response" && (
-                                    <div>
-                                      <div className="text-[10px] font-semibold uppercase text-blue-600">
-                                        Response
-                                      </div>
-                                      <div className="whitespace-pre-wrap break-words">{item.content}</div>
-                                      {item.reasoning && (
-                                        <div className="mt-2 text-[10px] text-muted-foreground whitespace-pre-wrap">
-                                          {item.reasoning}
+                              <Accordion type="multiple" className="space-y-2">
+                                {/* Hand-off Context or Trigger Data */}
+                                {interactionData.handoffContext && (
+                                  <AccordionItem value="handoff" className="border rounded-md">
+                                    <AccordionTrigger className="px-2 py-1.5 text-[11px] font-medium hover:no-underline">
+                                      <span className="text-emerald-600 dark:text-emerald-400">
+                                        {isFirstTask ? "Trigger Data" : "Hand-off Context (from previous agent)"}
+                                      </span>
+                                    </AccordionTrigger>
+                                    <AccordionContent className="px-2 pb-2">
+                                      <div className="text-xs bg-emerald-50/50 dark:bg-emerald-950/20 p-2 rounded border border-emerald-200/50 dark:border-emerald-800/50">
+                                        <div className="whitespace-pre-wrap break-words">
+                                          {interactionData.handoffContext}
                                         </div>
-                                      )}
-                                    </div>
-                                  )}
-                                  {item.type === "tool" && (
-                                    <div>
-                                      <div className="text-[10px] font-semibold uppercase text-amber-600">
-                                        Tool: {item.name || "Unknown"}
                                       </div>
-                                      <pre className="text-[10px] bg-muted p-2 rounded-md overflow-auto max-h-[160px]">
-                                        {JSON.stringify(item.arguments ?? null, null, 2)}
-                                      </pre>
-                                      {item.result != null && (
-                                        <pre className="text-[10px] bg-muted p-2 rounded-md overflow-auto max-h-[160px] mt-2">
-                                          {JSON.stringify(item.result ?? null, null, 2)}
-                                        </pre>
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
-                              ))
+                                    </AccordionContent>
+                                  </AccordionItem>
+                                )}
+
+                                {/* Task Instruction / Prompt */}
+                                {interactionData.userPrompt && (
+                                  <AccordionItem value="prompt" className="border rounded-md">
+                                    <AccordionTrigger className="px-2 py-1.5 text-[11px] font-medium hover:no-underline">
+                                      <span className="text-violet-600 dark:text-violet-400">
+                                        Task Instruction
+                                      </span>
+                                    </AccordionTrigger>
+                                    <AccordionContent className="px-2 pb-2">
+                                      <div className="text-xs bg-violet-50/50 dark:bg-violet-950/20 p-2 rounded border border-violet-200/50 dark:border-violet-800/50">
+                                        <div className="whitespace-pre-wrap break-words">
+                                          {interactionData.userPrompt}
+                                        </div>
+                                      </div>
+                                    </AccordionContent>
+                                  </AccordionItem>
+                                )}
+
+                                {/* Agent Response */}
+                                {interactionData.agentResponse && (
+                                  <AccordionItem value="response" className="border rounded-md">
+                                    <AccordionTrigger className="px-2 py-1.5 text-[11px] font-medium hover:no-underline">
+                                      <span className="text-blue-600 dark:text-blue-400">
+                                        Agent Response
+                                      </span>
+                                    </AccordionTrigger>
+                                    <AccordionContent className="px-2 pb-2">
+                                      <div className="text-xs bg-blue-50/50 dark:bg-blue-950/20 p-2 rounded border border-blue-200/50 dark:border-blue-800/50">
+                                        <div className="whitespace-pre-wrap break-words">
+                                          {interactionData.agentResponse}
+                                        </div>
+                                        {interactionData.reasoning && (
+                                          <div className="mt-2 pt-2 border-t border-blue-200/50 dark:border-blue-800/50">
+                                            <div className="text-[10px] font-semibold uppercase text-blue-600/70 dark:text-blue-400/70 mb-1">
+                                              Reasoning
+                                            </div>
+                                            <div className="text-[10px] text-muted-foreground whitespace-pre-wrap">
+                                              {interactionData.reasoning}
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </AccordionContent>
+                                  </AccordionItem>
+                                )}
+
+                                {/* Tool Calls */}
+                                {interactionData.toolCalls.length > 0 && (
+                                  <AccordionItem value="tools" className="border rounded-md">
+                                    <AccordionTrigger className="px-2 py-1.5 text-[11px] font-medium hover:no-underline">
+                                      <span className="text-amber-600 dark:text-amber-400">
+                                        Tool Calls ({interactionData.toolCalls.length})
+                                      </span>
+                                    </AccordionTrigger>
+                                    <AccordionContent className="px-2 pb-2">
+                                      <div className="space-y-2">
+                                        {interactionData.toolCalls.map((call, toolIdx) => (
+                                          <div
+                                            key={toolIdx}
+                                            className="text-xs bg-amber-50/50 dark:bg-amber-950/20 p-2 rounded border border-amber-200/50 dark:border-amber-800/50"
+                                          >
+                                            <div className="font-semibold mb-1 text-amber-700 dark:text-amber-300">
+                                              {call.name || "Unknown Tool"}
+                                            </div>
+                                            <div className="text-[10px] space-y-1">
+                                              <div>
+                                                <span className="font-medium">Arguments:</span>
+                                                <pre className="mt-0.5 bg-muted/50 p-1.5 rounded overflow-auto max-h-[120px]">
+                                                  {JSON.stringify(call.arguments ?? null, null, 2)}
+                                                </pre>
+                                              </div>
+                                              {call.result != null && (
+                                                <div>
+                                                  <span className="font-medium">Result:</span>
+                                                  <pre className="mt-0.5 bg-muted/50 p-1.5 rounded overflow-auto max-h-[120px]">
+                                                    {JSON.stringify(call.result ?? null, null, 2)}
+                                                  </pre>
+                                                </div>
+                                              )}
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </AccordionContent>
+                                  </AccordionItem>
+                                )}
+                              </Accordion>
                             )}
                           </div>
                         </AccordionContent>

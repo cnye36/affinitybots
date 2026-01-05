@@ -52,8 +52,8 @@ export function Integrations() {
           </h2>
           <p className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-6 px-2">
             AffinityBots is built for flexibility. Choose from leading AI models and switch anytime for optimal performance. 
-            Connect your agents to 70+ tools and services via <b>MCP servers</b>—from <b>Google</b> and <b>Slack</b> to <b>Supabase</b>, 
-            <b>Redis</b>, and more. Never get locked into one provider or platform.
+            Connect your agents to 40+ tools and services via <b>MCP servers</b> from official sources like <b>Google</b> and <b>Slack</b> to <b>Supabase</b>, 
+            <b> Redis</b>, and more. Never get locked into one provider or platform.
           </p>
           
           

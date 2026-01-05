@@ -127,22 +127,38 @@ export default function FeaturesPage() {
     {
       title: "Customer Support",
       description: "24/7 intelligent support agents that can handle complex queries and escalate when needed.",
-      metrics: "90% query resolution rate"
+      metrics: "90% query resolution rate",
+      link: "/use-cases/customer-support"
     },
     {
       title: "Sales Automation",
       description: "AI sales assistants that qualify leads, schedule meetings, and close deals.",
-      metrics: "3x faster lead qualification"
+      metrics: "3x faster lead qualification",
+      link: "/use-cases/sales-automation"
     },
     {
       title: "HR & Recruitment",
       description: "Automated screening, scheduling, and initial candidate interactions.",
-      metrics: "75% reduction in screening time"
+      metrics: "75% reduction in screening time",
+      link: "/use-cases/hr-recruitment"
     },
     {
       title: "Content Creation",
       description: "AI writers that create marketing copy, documentation, and social media content.",
-      metrics: "10x faster content production"
+      metrics: "10x faster content production",
+      link: "/use-cases/content-creation"
+    },
+    {
+      title: "Lead Collection",
+      description: "Automated lead capture, scoring, and enrichment from multiple sources.",
+      metrics: "5x increase in qualified leads",
+      link: "/use-cases/lead-collection"
+    },
+    {
+      title: "Data Analysis",
+      description: "Automated data collection, analysis, and reporting for business intelligence.",
+      metrics: "80% time saved on reporting",
+      link: "/use-cases/data-analysis"
     }
   ];
 
@@ -395,22 +411,24 @@ export default function FeaturesPage() {
             </p>
           </div>
           
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {useCases.map((useCase, index) => (
-              <Card key={index} className="bg-card border-border hover:border-primary transition-all duration-300 hover:shadow-lg">
-                <CardHeader>
-                  <CardTitle className="text-card-foreground text-lg">{useCase.title}</CardTitle>
-                  <CardDescription className="text-muted-foreground">
-                    {useCase.description}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center text-primary font-semibold text-sm">
-                  <BarChart3 className="h-4 w-4 mr-2" />
-                  {useCase.metrics}
-                </div>
-                </CardContent>
-              </Card>
+              <Link key={index} href={useCase.link}>
+                <Card className="bg-card border-border hover:border-primary transition-all duration-300 hover:shadow-lg h-full cursor-pointer">
+                  <CardHeader>
+                    <CardTitle className="text-card-foreground text-lg">{useCase.title}</CardTitle>
+                    <CardDescription className="text-muted-foreground">
+                      {useCase.description}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center text-primary font-semibold text-sm">
+                      <BarChart3 className="h-4 w-4 mr-2" />
+                      {useCase.metrics}
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
             ))}
           </div>
         </div>

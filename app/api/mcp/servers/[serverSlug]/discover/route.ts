@@ -60,6 +60,7 @@ export async function POST(
 				sessionId: config.session_id || undefined,
 				apiKey: config.config?.apiKey || config.config?.api_key || undefined,
 				bearerToken: config.oauth_token || config.config?.bearer_token || undefined,
+				apiKeyHeaderName: config.config?.apiKeyHeaderName || undefined,
 			}
 		)
 

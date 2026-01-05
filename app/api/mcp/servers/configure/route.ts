@@ -4,17 +4,18 @@ import { findOfficialServer } from "@/lib/mcp/officialMcpServers"
 
 interface ConfigureRequestBody {
 	serverSlug: string
-	apiKey: string
+	apiKey?: string // Optional - only required for api_key authType
+	config?: Record<string, string> // Additional configuration fields (e.g., domain, projectId)
 }
 
 export async function POST(request: NextRequest) {
 	try {
 		const body: ConfigureRequestBody = await request.json()
-		const { serverSlug, apiKey } = body
+		const { serverSlug, apiKey, config = {} } = body
 
-		if (!serverSlug || !apiKey) {
+		if (!serverSlug) {
 			return NextResponse.json(
-				{ error: "Server slug and API key are required" },
+				{ error: "Server slug is required" },
 				{ status: 400 }
 			)
 		}
@@ -33,24 +34,72 @@ export async function POST(request: NextRequest) {
 			)
 		}
 
-		if (officialServer.authType !== "api_key") {
+		if (officialServer.authType !== "api_key" && officialServer.authType !== "none") {
 			return NextResponse.json(
-				{ error: "This server does not use API key authentication" },
+				{ error: "This server does not use API key or config-only authentication" },
 				{ status: 400 }
 			)
 		}
 
-		// Store API key in user_mcp_servers table
+		// API key is required for api_key authType
+		if (officialServer.authType === "api_key" && (!apiKey || !apiKey.trim())) {
+			return NextResponse.json(
+				{ error: "API key is required for this server" },
+				{ status: 400 }
+			)
+		}
+
+		// Validate required config fields
+		if (officialServer.configFields) {
+			for (const field of officialServer.configFields) {
+				if (field.required && !config[field.key]?.trim()) {
+					return NextResponse.json(
+						{ error: `${field.label} is required` },
+						{ status: 400 }
+					)
+				}
+			}
+		}
+
+		// Build the final URL by replacing placeholders with config values and API key
+		let finalUrl = officialServer.url
+		
+		// Replace API key placeholder if present in URL (for servers like Tavily that need it in query string)
+		if (apiKey && finalUrl.includes("{apiKey}")) {
+			finalUrl = finalUrl.replace(/\{apiKey\}/gi, encodeURIComponent(apiKey))
+		}
+		
+		// Replace other config field placeholders
+		if (config && Object.keys(config).length > 0) {
+			for (const [key, value] of Object.entries(config)) {
+				// Replace {key} or {KEY} placeholders in URL
+				finalUrl = finalUrl.replace(new RegExp(`\\{${key}\\}`, "gi"), encodeURIComponent(value))
+			}
+		}
+
+		// Store config in user_mcp_servers table
+		const configToStore: Record<string, any> = {
+			authType: officialServer.authType,
+			...config, // Include additional config fields
+		}
+		
+		// Only include API key if it was provided
+		if (apiKey) {
+			configToStore.apiKey = apiKey
+		}
+		
+		// Store custom API key header name if specified
+		if (officialServer.apiKeyHeaderName) {
+			configToStore.apiKeyHeaderName = officialServer.apiKeyHeaderName
+		}
+
 		const { error: upsertError } = await supabase
 			.from("user_mcp_servers")
 			.upsert({
 				user_id: user.id,
 				server_slug: serverSlug,
-				url: officialServer.url,
-				config: {
-					apiKey,
-					authType: "api_key",
-				},
+				url: finalUrl,
+				config: configToStore,
 				is_enabled: true,
 				updated_at: new Date().toISOString(),
 			}, {

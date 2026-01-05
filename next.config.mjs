@@ -111,6 +111,18 @@ const nextConfig = {
       },
       {
         protocol: "https",
+        hostname: "huggingface.co",
+        port: "",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "asana.com",
+        port: "",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
         hostname: "legal.hubspot.com",
         port: "",
         pathname: "/**",
@@ -127,12 +139,7 @@ const nextConfig = {
         port: "",
         pathname: "/**",
       },
-      {
-        protocol: "https",
-        hostname: "sentry-brand.storage.googleapis.com",
-        port: "",
-        pathname: "/**",
-      },
+      
       {
         protocol: "https",
         hostname: "cdn.zapier.com",
@@ -163,12 +170,7 @@ const nextConfig = {
         port: "",
         pathname: "/**",
       },
-      {
-        protocol: "https",
-        hostname: "www.getdbt.com",
-        port: "",
-        pathname: "/**",
-      },
+      
       {
         protocol: "https",
         hostname: "dt-cdn.net",

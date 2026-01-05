@@ -63,6 +63,7 @@ export async function discoverServerCapabilities(
 		sessionId?: string
 		apiKey?: string
 		bearerToken?: string
+		apiKeyHeaderName?: string
 	} = {}
 ): Promise<MCPServerCapabilities> {
 	console.log(`🔍 Discovering capabilities for ${serverName} at ${serverUrl}`)
@@ -214,7 +215,7 @@ async function discoverPromptsFromOAuthClient(
  */
 async function discoverToolsViaHttp(
 	serverUrl: string,
-	options: { apiKey?: string; bearerToken?: string }
+	options: { apiKey?: string; bearerToken?: string; apiKeyHeaderName?: string }
 ): Promise<MCPTool[]> {
 	try {
 		const response = await makeMcpRequest(serverUrl, "tools/list", {}, options)
@@ -245,7 +246,7 @@ async function discoverToolsViaHttp(
  */
 async function discoverResourcesViaHttp(
 	serverUrl: string,
-	options: { apiKey?: string; bearerToken?: string }
+	options: { apiKey?: string; bearerToken?: string; apiKeyHeaderName?: string }
 ): Promise<MCPResource[]> {
 	try {
 		const response = await makeMcpRequest(serverUrl, "resources/list", {}, options)
@@ -276,7 +277,7 @@ async function discoverResourcesViaHttp(
  */
 async function discoverPromptsViaHttp(
 	serverUrl: string,
-	options: { apiKey?: string; bearerToken?: string }
+	options: { apiKey?: string; bearerToken?: string; apiKeyHeaderName?: string }
 ): Promise<MCPPrompt[]> {
 	try {
 		const response = await makeMcpRequest(serverUrl, "prompts/list", {}, options)
@@ -309,7 +310,7 @@ async function makeMcpRequest(
 	serverUrl: string,
 	method: string,
 	params: Record<string, unknown>,
-	options: { apiKey?: string; bearerToken?: string }
+	options: { apiKey?: string; bearerToken?: string; apiKeyHeaderName?: string }
 ): Promise<any> {
 	const headers: Record<string, string> = {
 		"Content-Type": "application/json",
@@ -320,7 +321,9 @@ async function makeMcpRequest(
 	if (options.bearerToken) {
 		headers.Authorization = `Bearer ${options.bearerToken}`
 	} else if (options.apiKey) {
-		headers["X-API-Key"] = options.apiKey
+		// Use custom header name if specified (e.g., "X-Goog-Api-Key" for Google Maps)
+		const headerName = options.apiKeyHeaderName || "X-API-Key"
+		headers[headerName] = options.apiKey
 		// Some servers also accept API key in Authorization header
 		headers.Authorization = `Bearer ${options.apiKey}`
 	}

@@ -144,6 +144,69 @@ export default function ToolsPage() {
 		return allServers.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 	}, [allServers, currentPage]);
 
+	// Pagination component
+	const PaginationControls = () => {
+		if (totalPages <= 1) return null;
+
+		return (
+			<div className="flex items-center justify-center gap-2">
+				<Button
+					variant="outline"
+					size="sm"
+					onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+					disabled={currentPage === 1}
+					className="border-2 hover:border-teal-500/50 hover:bg-teal-500/5"
+				>
+					<ChevronLeft className="h-4 w-4" />
+					Previous
+				</Button>
+
+				<div className="flex items-center gap-2">
+					{Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+						// Show first page, last page, current page, and pages around current
+						const showPage = page === 1 ||
+							page === totalPages ||
+							Math.abs(page - currentPage) <= 1;
+
+						if (!showPage) {
+							// Show ellipsis
+							if (page === 2 && currentPage > 3) {
+								return <span key={page} className="text-muted-foreground">...</span>;
+							}
+							if (page === totalPages - 1 && currentPage < totalPages - 2) {
+								return <span key={page} className="text-muted-foreground">...</span>;
+							}
+							return null;
+						}
+
+						return (
+							<Button
+								key={page}
+								variant={currentPage === page ? "default" : "outline"}
+								size="sm"
+								onClick={() => setCurrentPage(page)}
+								className={currentPage === page ? "bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white border-0" : "border-2 hover:border-teal-500/50 hover:bg-teal-500/5"}
+							>
+								{page}
+							</Button>
+						);
+					})}
+				</div>
+
+				<Button
+					variant="outline"
+					size="sm"
+					onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+					disabled={currentPage === totalPages}
+					className="border-2 hover:border-teal-500/50 hover:bg-teal-500/5"
+				>
+					Next
+					<ChevronRight className="h-4 w-4" />
+				</Button>
+			</div>
+		);
+	};
+
 	const refreshData = useCallback(async () => {
 		const [userRes, userAddedRes] = await Promise.all([
 			fetch("/api/user-mcp-servers").then((r) => r.json()),
@@ -270,6 +333,13 @@ export default function ToolsPage() {
 					</div>
 				</div>
 
+				{/* Top Pagination */}
+				{totalPages > 1 && (
+					<div className="mb-6">
+						<PaginationControls />
+					</div>
+				)}
+
 				{/* Tools Display */}
 				{allServers.length === 0 ? (
 					<Card className="relative overflow-hidden border-0 shadow-lg">
@@ -360,62 +430,10 @@ export default function ToolsPage() {
 							</div>
 						)}
 
-						{/* Pagination */}
+						{/* Bottom Pagination */}
 						{totalPages > 1 && (
-							<div className="mt-8 flex items-center justify-center gap-2">
-								<Button
-									variant="outline"
-									size="sm"
-									onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-									disabled={currentPage === 1}
-									className="border-2 hover:border-teal-500/50 hover:bg-teal-500/5"
-								>
-									<ChevronLeft className="h-4 w-4" />
-									Previous
-								</Button>
-
-								<div className="flex items-center gap-2">
-									{Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-										// Show first page, last page, current page, and pages around current
-										const showPage = page === 1 ||
-											page === totalPages ||
-											Math.abs(page - currentPage) <= 1;
-
-										if (!showPage) {
-											// Show ellipsis
-											if (page === 2 && currentPage > 3) {
-												return <span key={page} className="text-muted-foreground">...</span>;
-											}
-											if (page === totalPages - 1 && currentPage < totalPages - 2) {
-												return <span key={page} className="text-muted-foreground">...</span>;
-											}
-											return null;
-										}
-
-										return (
-											<Button
-												key={page}
-												variant={currentPage === page ? "default" : "outline"}
-												size="sm"
-												onClick={() => setCurrentPage(page)}
-												className={currentPage === page ? "bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white border-0" : "border-2 hover:border-teal-500/50 hover:bg-teal-500/5"}
-											>
-												{page}
-											</Button>
-										);
-									})}
-								</div>
-
-								<Button
-									variant="outline"
-									size="sm"
-									onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-									disabled={currentPage === totalPages}
-									className="border-2 hover:border-teal-500/50 hover:bg-teal-500/5"
-								>
-									Next
-									<ChevronRight className="h-4 w-4" />
-								</Button>
+							<div className="mt-8">
+								<PaginationControls />
 							</div>
 						)}
 					</>

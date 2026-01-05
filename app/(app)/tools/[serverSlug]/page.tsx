@@ -256,8 +256,8 @@ export default function ServerDetailPage() {
 				// Standard MCP OAuth flow for other servers
 				window.location.href = `/api/mcp/auth/connect?server=${serverSlug}`;
 			}
-		} else if (officialServer?.authType === "api_key") {
-			// For API key servers, show the API key modal
+		} else if (officialServer?.authType === "api_key" || officialServer?.authType === "none") {
+			// For API key servers or servers with no auth (config only), show the configuration modal
 			setApiKeyModalOpen(true);
 		}
 	}

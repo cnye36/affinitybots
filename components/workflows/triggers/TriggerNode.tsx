@@ -252,7 +252,7 @@ export const TriggerNode = memo(({ data }: { data: TriggerNodeData }) => {
 					</TooltipProvider>
 				)}
 			</div>
-			{/* Glowing border effect on hover/active */}
+			{/* Glowing border effect on hover/active/status */}
 			<div
 				className={cn(
 					"absolute -inset-[2px] rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300",
@@ -260,7 +260,9 @@ export const TriggerNode = memo(({ data }: { data: TriggerNodeData }) => {
 					"pointer-events-none",
 					config.borderGradient,
 					data.isActive && "opacity-100 animate-pulse",
-					data.status === "running" && "opacity-100",
+					data.status === "running" && "opacity-100 from-blue-500/50 to-cyan-500/50",
+					data.status === "completed" && "opacity-100 from-emerald-500/50 to-green-500/50",
+					data.status === "error" && "opacity-100 from-red-500/50 to-rose-500/50",
 				)}
 			/>
 
