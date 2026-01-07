@@ -66,7 +66,7 @@ export function LatestWorkflows({ workflows }: LatestWorkflowsProps) {
 										href={`/workflows/${workflow.workflow_id}`}
 										className="block group"
 									>
-										<div className="flex items-center justify-between p-4 border border-border rounded-xl hover:border-blue-500/50 hover:bg-gradient-to-br hover:from-blue-500/5 hover:to-cyan-500/5 transition-all duration-200">
+										<div className="flex items-center justify-between p-4 border border-border rounded-xl hover:border-blue-500/50 hover:bg-gradient-to-br hover:from-blue-500/10 hover:to-cyan-500/10 dark:hover:from-blue-500/5 dark:hover:to-cyan-500/5 transition-all duration-200">
 											<div className="flex items-center space-x-4 flex-1 min-w-0">
 												<motion.div
 													className="p-2.5 bg-gradient-to-br from-blue-500/20 to-cyan-500/20 rounded-xl border border-blue-500/30 backdrop-blur-sm shadow-lg shadow-blue-500/10"

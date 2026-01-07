@@ -1,7 +1,7 @@
 "use client";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Clock, Network, GitBranch, GitMerge, Calendar } from "lucide-react";
+import { Clock, Network, GitBranch, GitMerge, Calendar, MousePointerClick, Webhook, AlarmClock, Plug, FormInput } from "lucide-react";
 
 interface WorkflowCardProps {
   workflow: any;
@@ -18,12 +18,50 @@ function formatDateTime(dt?: string | null): string {
   }
 }
 
+function getTriggerIcon(type: string) {
+  switch (type) {
+    case "manual":
+      return MousePointerClick;
+    case "webhook":
+      return Webhook;
+    case "schedule":
+      return AlarmClock;
+    case "integration":
+      return Plug;
+    case "form":
+      return FormInput;
+    default:
+      return MousePointerClick;
+  }
+}
+
+function getTriggerLabel(type: string): string {
+  switch (type) {
+    case "manual":
+      return "Manual";
+    case "webhook":
+      return "Webhook";
+    case "schedule":
+      return "Schedule";
+    case "integration":
+      return "Integration";
+    case "form":
+      return "Form";
+    default:
+      return type.charAt(0).toUpperCase() + type.slice(1);
+  }
+}
+
 export function WorkflowCard({ workflow }: WorkflowCardProps) {
   const nodes: any[] = Array.isArray(workflow?.nodes) ? (workflow.nodes as any[]) : [];
 
   // Count task nodes (fallback to total nodes if type not present)
   const taskNodes = nodes.filter((n) => (n?.type ?? "task") === "task");
   const nodeCount = (taskNodes.length || nodes.length || 0) as number;
+
+  // Get triggers
+  const triggers: any[] = Array.isArray(workflow?.workflow_triggers) ? workflow.workflow_triggers : [];
+  const primaryTrigger = triggers.length > 0 ? triggers[0] : null;
 
   // Collect unique assistants from node data
   const assistants: { id?: string; name?: string; avatar?: string }[] = [];
@@ -47,6 +85,9 @@ export function WorkflowCard({ workflow }: WorkflowCardProps) {
   const isRecentlyRun = workflow?.last_run_at &&
     new Date().getTime() - new Date(workflow.last_run_at).getTime() < 24 * 60 * 60 * 1000;
 
+  // Check if workflow is active
+  const isActive = workflow?.is_active === true;
+
   // Determine workflow type (defaults to sequential)
   const workflowType = workflow?.workflow_type || "sequential";
   const isOrchestrator = workflowType === "orchestrator";
@@ -56,9 +97,18 @@ export function WorkflowCard({ workflow }: WorkflowCardProps) {
       {/* Workflow name with gradient on hover */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent group-hover:from-blue-700 group-hover:to-cyan-700 dark:group-hover:from-blue-300 dark:group-hover:to-cyan-300 transition-all duration-200">
-            {workflow?.name || "Untitled Workflow"}
-          </h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent group-hover:from-blue-700 group-hover:to-cyan-700 dark:group-hover:from-blue-300 dark:group-hover:to-cyan-300 transition-all duration-200">
+              {workflow?.name || "Untitled Workflow"}
+            </h2>
+            {/* Active indicator */}
+            {isActive && (
+              <div className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+              </div>
+            )}
+          </div>
           {/* Workflow type badge */}
           <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold ${
             isOrchestrator
@@ -81,6 +131,16 @@ export function WorkflowCard({ workflow }: WorkflowCardProps) {
 
         {/* Metadata with icons */}
         <div className="flex flex-col gap-2.5">
+          {/* Active status */}
+          {isActive && (
+            <div className="flex items-center gap-2 text-sm">
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20">
+                <div className="h-2 w-2 rounded-full bg-emerald-500"></div>
+                <span className="font-semibold text-emerald-700 dark:text-emerald-400">Active</span>
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Calendar className="h-4 w-4 text-purple-600/70" />
             <span className="font-medium">Created:</span>
@@ -98,9 +158,27 @@ export function WorkflowCard({ workflow }: WorkflowCardProps) {
             )}
           </div>
 
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Network className="h-4 w-4 text-cyan-600/70" />
-            <span className="font-medium">{nodeCount} {nodeCount === 1 ? "node" : "nodes"}</span>
+          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            {/* Trigger info */}
+            {primaryTrigger && (() => {
+              const TriggerIcon = getTriggerIcon(primaryTrigger.trigger_type);
+              const triggerLabel = getTriggerLabel(primaryTrigger.trigger_type);
+              return (
+                <div className="flex items-center gap-2">
+                  <TriggerIcon className="h-4 w-4 text-amber-600/70" />
+                  <span className="font-medium">{triggerLabel}</span>
+                  {triggers.length > 1 && (
+                    <span className="text-xs text-muted-foreground/70">+{triggers.length - 1}</span>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Agent count */}
+            <div className="flex items-center gap-2">
+              <Network className="h-4 w-4 text-cyan-600/70" />
+              <span className="font-medium">{nodeCount} {nodeCount === 1 ? "agent" : "agents"}</span>
+            </div>
           </div>
         </div>
       </div>

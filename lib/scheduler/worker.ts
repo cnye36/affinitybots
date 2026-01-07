@@ -259,12 +259,16 @@ export function startSchedulerWorker(): Worker<ScheduleJob> {
     return workerInstance;
   }
 
-  // Create Redis connection using ioredis URL parsing (handles Upstash TLS & auth)
-  const redisConnection = new Redis(getRedisUrl(), {
-    maxRetriesPerRequest: null, // Required by BullMQ
-    enableReadyCheck: false,
-    enableOfflineQueue: false,
-  });
+	// Create Redis connection using ioredis URL parsing (handles Self-hosted TLS & auth)
+	const redisConnection = new Redis(getRedisUrl(), {
+		maxRetriesPerRequest: null, // Required by BullMQ
+		enableReadyCheck: false,
+		enableOfflineQueue: true, // Allow recovery from Redis hiccups
+		retryStrategy(times) {
+			const delay = Math.min(times * 100, 3000);
+			return delay;
+		},
+	});
 
   const workerOptions: WorkerOptions = {
     connection: redisConnection,

@@ -220,7 +220,7 @@ export function PlaygroundAgentConfig({ assistant, onConfigChange }: PlaygroundA
 	const memoryEnabled = config.memory?.enabled || false
 
 	return (
-		<div className="flex flex-col">
+		<div className="flex flex-col w-full overflow-hidden">
 			{/* Header */}
 			
 				<div className="flex items-center justify-between">
@@ -241,8 +241,8 @@ export function PlaygroundAgentConfig({ assistant, onConfigChange }: PlaygroundA
 			)}
 
 			{/* Configuration Sections */}
-			<div className="p-4 space-y-3">
-				<Accordion type="multiple" defaultValue={["prompt"]} className="space-y-3">
+			<div className="p-4 space-y-3 w-full overflow-hidden">
+				<Accordion type="multiple" defaultValue={["prompt"]} className="space-y-3 w-full">
 					{/* Previous Agent Context - Only show if context exists */}
 					{currentContext && (
 						<AccordionItem value="context" className="border border-indigo-200/30 dark:border-indigo-800/30 rounded-lg px-4 bg-gradient-to-br from-indigo-50/30 to-blue-50/30 dark:from-indigo-950/20 dark:to-blue-950/20">
@@ -257,8 +257,8 @@ export function PlaygroundAgentConfig({ assistant, onConfigChange }: PlaygroundA
 									</Badge>
 								</div>
 							</AccordionTrigger>
-							<AccordionContent>
-								<div className="pt-2 pb-1">
+							<AccordionContent className="overflow-hidden">
+								<div className="pt-2 pb-1 w-full overflow-hidden">
 									<ContextViewer context={currentContext} />
 								</div>
 							</AccordionContent>
@@ -272,9 +272,9 @@ export function PlaygroundAgentConfig({ assistant, onConfigChange }: PlaygroundA
 								<span className="font-medium">System Prompt</span>
 							</div>
 						</AccordionTrigger>
-						<AccordionContent>
+						<AccordionContent className="overflow-hidden">
 							<div 
-								className="pt-2 pb-1"
+								className="pt-2 pb-1 w-full overflow-hidden"
 								onFocusCapture={handlePromptFocus}
 								onBlurCapture={() => {
 									// Small delay to let PromptsConfig's onBlur fire first
@@ -299,13 +299,13 @@ export function PlaygroundAgentConfig({ assistant, onConfigChange }: PlaygroundA
 									<Cpu className="h-4 w-4 text-blue-600 dark:text-blue-400" />
 									<span className="font-medium text-sm">Model</span>
 								</div>
-								<Badge variant="secondary" className="text-xs font-normal bg-blue-100 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border-blue-200/50 dark:border-blue-800/50">
+								<Badge variant="secondary" className="text-xs font-normal bg-blue-100 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border-blue-200/50 dark:border-blue-800/50 truncate max-w-[200px]">
 									{modelLabel}
 								</Badge>
 							</div>
 						</AccordionTrigger>
-						<AccordionContent>
-							<div className="pt-2 pb-1">
+						<AccordionContent className="overflow-hidden">
+							<div className="pt-2 pb-1 w-full overflow-hidden">
 								<ModelConfig
 									config={config}
 									onConfigurableChange={handleConfigurableChange}
@@ -339,7 +339,7 @@ export function PlaygroundAgentConfig({ assistant, onConfigChange }: PlaygroundA
 					</div>
 				</div>
 
-				<Accordion type="multiple" className="space-y-3">
+				<Accordion type="multiple" className="space-y-3 w-full">
 					{/* Tools Section */}
 					<AccordionItem value="tools" className="border border-orange-200/30 dark:border-orange-800/30 rounded-lg px-4 bg-gradient-to-br from-orange-50/30 to-amber-50/30 dark:from-orange-950/20 dark:to-amber-950/20">
 						<AccordionTrigger className="hover:no-underline py-2.5">
@@ -378,8 +378,8 @@ export function PlaygroundAgentConfig({ assistant, onConfigChange }: PlaygroundA
 								)}
 							</div>
 						</AccordionTrigger>
-						<AccordionContent>
-							<div className="pt-2 pb-1">
+						<AccordionContent className="overflow-hidden">
+							<div className="pt-2 pb-1 w-full overflow-hidden">
 								<ToolSelector
 									enabledMCPServers={enabledTools}
 									onMCPServersChange={(servers) =>
@@ -407,8 +407,8 @@ export function PlaygroundAgentConfig({ assistant, onConfigChange }: PlaygroundA
 								)}
 							</div>
 						</AccordionTrigger>
-						<AccordionContent>
-							<div className="pt-2 pb-1">
+						<AccordionContent className="overflow-hidden">
+							<div className="pt-2 pb-1 w-full overflow-hidden">
 								<KnowledgeConfig
 									config={config}
 									onChange={handleConfigurableChange}
@@ -438,8 +438,8 @@ export function PlaygroundAgentConfig({ assistant, onConfigChange }: PlaygroundA
 								</Badge>
 							</div>
 						</AccordionTrigger>
-						<AccordionContent>
-							<div className="pt-2 pb-1">
+						<AccordionContent className="overflow-hidden">
+							<div className="pt-2 pb-1 w-full overflow-hidden">
 								<MemoryConfig
 									config={config}
 									onChange={handleConfigurableChange}

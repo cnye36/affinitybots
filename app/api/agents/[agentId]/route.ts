@@ -4,6 +4,52 @@ import { Client } from "@langchain/langgraph-sdk";
 import { Assistant } from "@/types/assistant";
 import { SupabaseClient } from "@supabase/supabase-js";
 
+// Helper function to clean up conversations and threads for an assistant
+async function cleanupAssistantConversations(supabase: SupabaseClient, assistantId: string) {
+  try {
+    // Get all conversations for this assistant
+    const { data: conversations } = await supabase
+      .from("conversations")
+      .select("id, thread_id")
+      .eq("assistant_id", assistantId);
+
+    if (conversations && conversations.length > 0) {
+      console.log(`Deleting ${conversations.length} conversation(s) for assistant ${assistantId}`);
+
+      // Delete threads from LangGraph
+      const langgraphClient = new Client({
+        apiUrl: process.env.LANGGRAPH_API_URL!,
+        apiKey: process.env.LANGSMITH_API_KEY!,
+      });
+
+      for (const conv of conversations) {
+        if (conv.thread_id) {
+          try {
+            await langgraphClient.threads.delete(conv.thread_id);
+          } catch (error) {
+            // Ignore errors - thread may already be deleted
+            console.error(`Error deleting thread ${conv.thread_id}:`, error);
+          }
+        }
+      }
+
+      // Delete conversations from database
+      const { error: deleteError } = await supabase
+        .from("conversations")
+        .delete()
+        .eq("assistant_id", assistantId);
+
+      if (deleteError) {
+        console.error("Error deleting conversations:", deleteError);
+      } else {
+        console.log(`Deleted conversations for assistant ${assistantId}`);
+      }
+    }
+  } catch (error) {
+    console.error("Error in cleanupAssistantConversations:", error);
+  }
+}
+
 // Helper function to clean up all memories for an assistant
 async function cleanupAssistantMemories(supabase: SupabaseClient, assistantId: string) {
   try {
@@ -30,6 +76,133 @@ async function cleanupAssistantMemories(supabase: SupabaseClient, assistantId: s
     }
   } catch (error) {
     console.error("Error in cleanupAssistantMemories:", error);
+  }
+}
+
+// Helper function to clear workflow task assignments when an agent is deleted
+async function clearWorkflowTaskAssignments(supabase: SupabaseClient, assistantId: string) {
+  try {
+    // Find all workflow tasks that use this assistant
+    const { data: affectedTasks, error: fetchError } = await supabase
+      .from("workflow_tasks")
+      .select("workflow_task_id, workflow_id, config")
+      .eq("assistant_id", assistantId);
+
+    if (fetchError) {
+      console.error("Error fetching affected workflow tasks:", fetchError);
+      return;
+    }
+
+    if (!affectedTasks || affectedTasks.length === 0) {
+      console.log(`No workflow tasks found using assistant ${assistantId}`);
+      return;
+    }
+
+    console.log(`Clearing ${affectedTasks.length} workflow task(s) that use assistant ${assistantId}`);
+
+    // Track affected workflows
+    const affectedWorkflowIds = new Set<string>();
+
+    // Clear each task's configuration
+    for (const task of affectedTasks) {
+      affectedWorkflowIds.add(task.workflow_id);
+
+      // Create a fresh config with default values, removing agent-specific data
+      const clearedConfig = {
+        input: {
+          source: "previous_node",
+          parameters: {},
+          prompt: "", // Clear any agent-specific prompt
+        },
+        output: {
+          destination: "next_node",
+          format: "json",
+        },
+        context: {
+          thread: { mode: "workflow" },
+          useContext: true,
+          autoInjectPreviousOutput: true,
+        },
+        toolApproval: {
+          mode: "auto",
+          rememberedTools: [],
+        },
+        // Remove assigned_assistant
+        assigned_assistant: null,
+      };
+
+      // Update the task with cleared config and null assistant_id
+      const { error: updateError } = await supabase
+        .from("workflow_tasks")
+        .update({
+          assistant_id: null,
+          config: clearedConfig,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("workflow_task_id", task.workflow_task_id);
+
+      if (updateError) {
+        console.error(`Error clearing task ${task.workflow_task_id}:`, updateError);
+      }
+    }
+
+    // Update workflows.nodes cache to match cleared tasks
+    for (const workflowId of affectedWorkflowIds) {
+      const { data: workflow } = await supabase
+        .from("workflows")
+        .select("nodes")
+        .eq("workflow_id", workflowId)
+        .single();
+
+      if (workflow && workflow.nodes) {
+        const nodes = workflow.nodes as any[];
+        const cleanedNodes = nodes.map((node) => {
+          if (node.type === "task") {
+            const assignedAssistantId =
+              node.data?.assignedAssistant?.id ||
+              node.data?.config?.assigned_assistant?.id;
+
+            // If node references this deleted agent, clear it
+            if (assignedAssistantId === assistantId) {
+              console.log(`Clearing agent from workflow node: ${node.data.name}`);
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  assignedAssistant: undefined,
+                  config: {
+                    ...node.data.config,
+                    assigned_assistant: null,
+                    input: {
+                      source: "previous_node",
+                      parameters: {},
+                      prompt: "",
+                    },
+                    output: {
+                      destination: "next_node",
+                      format: "json",
+                    },
+                  },
+                },
+              };
+            }
+          }
+          return node;
+        });
+
+        await supabase
+          .from("workflows")
+          .update({
+            nodes: cleanedNodes,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("workflow_id", workflowId);
+      }
+    }
+
+    console.log(`Successfully cleared workflow task assignments for assistant ${assistantId}`);
+  } catch (error) {
+    console.error("Error in clearWorkflowTaskAssignments:", error);
   }
 }
 
@@ -223,6 +396,10 @@ export async function DELETE(
     if (fetchError || !assistant) {
       return NextResponse.json({ error: "Assistant not found" }, { status: 404 });
     }
+
+    // Before deleting, clear workflow task configurations
+    // This ensures tasks remain but lose their agent assignment
+    await clearWorkflowTaskAssignments(supabase, assistantId);
 
     // Try LangGraph deletion first
     const langgraphClient = new Client({

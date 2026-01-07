@@ -228,6 +228,279 @@ export default function PricingPage() {
         </div>
       </section>
 
+      {/* Feature Comparison Table */}
+      <section className="py-16 px-4 bg-muted/30">
+        <div className="container mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+              Compare Plans
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Choose the plan that fits your needs
+            </p>
+          </div>
+
+          <div className="max-w-6xl mx-auto">
+            {/* Desktop Table */}
+            <div className="hidden lg:block overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="border-b-2 border-border">
+                    <th className="text-left py-4 px-6 text-lg font-semibold text-foreground">Feature</th>
+                    <th className="text-center py-4 px-6 text-lg font-semibold text-foreground">Starter</th>
+                    <th className="text-center py-4 px-6 text-lg font-semibold text-foreground bg-primary/5">
+                      <div className="flex flex-col items-center">
+                        <span>Pro</span>
+                        <Badge className="mt-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white text-xs px-2 py-0">
+                          Most Popular
+                        </Badge>
+                      </div>
+                    </th>
+                    <th className="text-center py-4 px-6 text-lg font-semibold text-foreground">Enterprise</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b border-border">
+                    <td colSpan={4} className="py-3 px-6 text-sm font-semibold text-muted-foreground bg-muted/50">
+                      CORE FEATURES
+                    </td>
+                  </tr>
+                  <tr className="border-b border-border hover:bg-muted/30 transition-colors">
+                    <td className="py-4 px-6 text-foreground">AI Agents</td>
+                    <td className="py-4 px-6 text-center text-muted-foreground">Up to 10</td>
+                    <td className="py-4 px-6 text-center text-foreground bg-primary/5">Up to 50</td>
+                    <td className="py-4 px-6 text-center text-foreground">Unlimited</td>
+                  </tr>
+                  <tr className="border-b border-border hover:bg-muted/30 transition-colors">
+                    <td className="py-4 px-6 text-foreground">Active Workflows</td>
+                    <td className="py-4 px-6 text-center text-muted-foreground">3</td>
+                    <td className="py-4 px-6 text-center text-foreground bg-primary/5">25</td>
+                    <td className="py-4 px-6 text-center text-foreground">Unlimited</td>
+                  </tr>
+                  <tr className="border-b border-border hover:bg-muted/30 transition-colors">
+                    <td className="py-4 px-6 text-foreground">Monthly AI Credits</td>
+                    <td className="py-4 px-6 text-center text-muted-foreground">5,000</td>
+                    <td className="py-4 px-6 text-center text-foreground bg-primary/5">25,000</td>
+                    <td className="py-4 px-6 text-center text-foreground">Unlimited</td>
+                  </tr>
+                  <tr className="border-b border-border hover:bg-muted/30 transition-colors">
+                    <td className="py-4 px-6 text-foreground">Draft Workflows</td>
+                    <td className="py-4 px-6 text-center text-muted-foreground">
+                      <Check className="h-5 w-5 text-green-500 inline" />
+                    </td>
+                    <td className="py-4 px-6 text-center bg-primary/5">
+                      <Check className="h-5 w-5 text-green-500 inline" />
+                    </td>
+                    <td className="py-4 px-6 text-center">
+                      <Check className="h-5 w-5 text-green-500 inline" />
+                    </td>
+                  </tr>
+                  <tr className="border-b border-border hover:bg-muted/30 transition-colors">
+                    <td className="py-4 px-6 text-foreground">Integrations</td>
+                    <td className="py-4 px-6 text-center text-muted-foreground">
+                      <Check className="h-5 w-5 text-green-500 inline" />
+                    </td>
+                    <td className="py-4 px-6 text-center bg-primary/5">
+                      <Check className="h-5 w-5 text-green-500 inline" />
+                    </td>
+                    <td className="py-4 px-6 text-center">
+                      <Check className="h-5 w-5 text-green-500 inline" />
+                    </td>
+                  </tr>
+
+                  <tr className="border-b border-border">
+                    <td colSpan={4} className="py-3 px-6 text-sm font-semibold text-muted-foreground bg-muted/50">
+                      FEATURES & SUPPORT
+                    </td>
+                  </tr>
+                  <tr className="border-b border-border hover:bg-muted/30 transition-colors">
+                    <td className="py-4 px-6 text-foreground">Templates</td>
+                    <td className="py-4 px-6 text-center text-muted-foreground">Basic</td>
+                    <td className="py-4 px-6 text-center text-foreground bg-primary/5">Advanced</td>
+                    <td className="py-4 px-6 text-center text-foreground">Custom</td>
+                  </tr>
+                  <tr className="border-b border-border hover:bg-muted/30 transition-colors">
+                    <td className="py-4 px-6 text-foreground">Email Support</td>
+                    <td className="py-4 px-6 text-center text-muted-foreground">
+                      <Check className="h-5 w-5 text-green-500 inline" />
+                    </td>
+                    <td className="py-4 px-6 text-center bg-primary/5">
+                      <Check className="h-5 w-5 text-green-500 inline" />
+                    </td>
+                    <td className="py-4 px-6 text-center">
+                      <Check className="h-5 w-5 text-green-500 inline" />
+                    </td>
+                  </tr>
+                  <tr className="border-b border-border hover:bg-muted/30 transition-colors">
+                    <td className="py-4 px-6 text-foreground">Priority Support</td>
+                    <td className="py-4 px-6 text-center text-muted-foreground">-</td>
+                    <td className="py-4 px-6 text-center bg-primary/5">
+                      <Check className="h-5 w-5 text-green-500 inline" />
+                    </td>
+                    <td className="py-4 px-6 text-center">
+                      <Check className="h-5 w-5 text-green-500 inline" />
+                    </td>
+                  </tr>
+                  <tr className="border-b border-border hover:bg-muted/30 transition-colors">
+                    <td className="py-4 px-6 text-foreground">Dedicated Support</td>
+                    <td className="py-4 px-6 text-center text-muted-foreground">-</td>
+                    <td className="py-4 px-6 text-center text-muted-foreground bg-primary/5">-</td>
+                    <td className="py-4 px-6 text-center">
+                      <Check className="h-5 w-5 text-green-500 inline" />
+                    </td>
+                  </tr>
+                  <tr className="border-b border-border hover:bg-muted/30 transition-colors">
+                    <td className="py-4 px-6 text-foreground">Analytics</td>
+                    <td className="py-4 px-6 text-center text-muted-foreground">Basic</td>
+                    <td className="py-4 px-6 text-center text-foreground bg-primary/5">Advanced</td>
+                    <td className="py-4 px-6 text-center text-foreground">Advanced</td>
+                  </tr>
+                  <tr className="border-b border-border hover:bg-muted/30 transition-colors">
+                    <td className="py-4 px-6 text-foreground">API Access</td>
+                    <td className="py-4 px-6 text-center text-muted-foreground">
+                      <Check className="h-5 w-5 text-green-500 inline" />
+                    </td>
+                    <td className="py-4 px-6 text-center bg-primary/5">
+                      <Check className="h-5 w-5 text-green-500 inline" />
+                    </td>
+                    <td className="py-4 px-6 text-center">
+                      <Check className="h-5 w-5 text-green-500 inline" />
+                    </td>
+                  </tr>
+
+                  <tr className="border-b border-border">
+                    <td colSpan={4} className="py-3 px-6 text-sm font-semibold text-muted-foreground bg-muted/50">
+                      ADVANCED FEATURES
+                    </td>
+                  </tr>
+                  <tr className="border-b border-border hover:bg-muted/30 transition-colors">
+                    <td className="py-4 px-6 text-foreground">Custom Branding</td>
+                    <td className="py-4 px-6 text-center text-muted-foreground">-</td>
+                    <td className="py-4 px-6 text-center bg-primary/5">
+                      <Check className="h-5 w-5 text-green-500 inline" />
+                    </td>
+                    <td className="py-4 px-6 text-center">
+                      <Check className="h-5 w-5 text-green-500 inline" />
+                    </td>
+                  </tr>
+                  <tr className="border-b border-border hover:bg-muted/30 transition-colors">
+                    <td className="py-4 px-6 text-foreground">Team Collaboration</td>
+                    <td className="py-4 px-6 text-center text-muted-foreground">-</td>
+                    <td className="py-4 px-6 text-center bg-primary/5">
+                      <Check className="h-5 w-5 text-green-500 inline" />
+                    </td>
+                    <td className="py-4 px-6 text-center">
+                      <Check className="h-5 w-5 text-green-500 inline" />
+                    </td>
+                  </tr>
+                  <tr className="border-b border-border hover:bg-muted/30 transition-colors">
+                    <td className="py-4 px-6 text-foreground">White-label Solution</td>
+                    <td className="py-4 px-6 text-center text-muted-foreground">-</td>
+                    <td className="py-4 px-6 text-center text-muted-foreground bg-primary/5">-</td>
+                    <td className="py-4 px-6 text-center">
+                      <Check className="h-5 w-5 text-green-500 inline" />
+                    </td>
+                  </tr>
+                  <tr className="border-b border-border hover:bg-muted/30 transition-colors">
+                    <td className="py-4 px-6 text-foreground">Custom Model Training</td>
+                    <td className="py-4 px-6 text-center text-muted-foreground">-</td>
+                    <td className="py-4 px-6 text-center text-muted-foreground bg-primary/5">-</td>
+                    <td className="py-4 px-6 text-center">
+                      <Check className="h-5 w-5 text-green-500 inline" />
+                    </td>
+                  </tr>
+                  <tr className="border-b border-border hover:bg-muted/30 transition-colors">
+                    <td className="py-4 px-6 text-foreground">SLA Guarantee</td>
+                    <td className="py-4 px-6 text-center text-muted-foreground">-</td>
+                    <td className="py-4 px-6 text-center text-muted-foreground bg-primary/5">-</td>
+                    <td className="py-4 px-6 text-center">
+                      <Check className="h-5 w-5 text-green-500 inline" />
+                    </td>
+                  </tr>
+                  <tr className="border-b border-border hover:bg-muted/30 transition-colors">
+                    <td className="py-4 px-6 text-foreground">Advanced Security</td>
+                    <td className="py-4 px-6 text-center text-muted-foreground">-</td>
+                    <td className="py-4 px-6 text-center text-muted-foreground bg-primary/5">-</td>
+                    <td className="py-4 px-6 text-center">
+                      <Check className="h-5 w-5 text-green-500 inline" />
+                    </td>
+                  </tr>
+                  <tr className="border-b border-border hover:bg-muted/30 transition-colors">
+                    <td className="py-4 px-6 text-foreground">On-premise Deployment</td>
+                    <td className="py-4 px-6 text-center text-muted-foreground">-</td>
+                    <td className="py-4 px-6 text-center text-muted-foreground bg-primary/5">-</td>
+                    <td className="py-4 px-6 text-center">
+                      <Check className="h-5 w-5 text-green-500 inline" />
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Accordion */}
+            <div className="lg:hidden space-y-4">
+              {["starter", "pro", "enterprise"].map((plan) => (
+                <Card key={plan} className={`bg-card border-border ${plan === "pro" ? "ring-2 ring-primary" : ""}`}>
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      <span className="capitalize">{plan}</span>
+                      {plan === "pro" && (
+                        <Badge className="bg-gradient-to-r from-purple-600 to-blue-600 text-white">
+                          Most Popular
+                        </Badge>
+                      )}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-sm">
+                    <div className="flex justify-between py-2 border-b border-border">
+                      <span className="text-muted-foreground">AI Agents</span>
+                      <span className="font-medium">
+                        {plan === "starter" ? "Up to 10" : plan === "pro" ? "Up to 50" : "Unlimited"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between py-2 border-b border-border">
+                      <span className="text-muted-foreground">Active Workflows</span>
+                      <span className="font-medium">
+                        {plan === "starter" ? "3" : plan === "pro" ? "25" : "Unlimited"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between py-2 border-b border-border">
+                      <span className="text-muted-foreground">Monthly AI Credits</span>
+                      <span className="font-medium">
+                        {plan === "starter" ? "5,000" : plan === "pro" ? "25,000" : "Unlimited"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between py-2 border-b border-border">
+                      <span className="text-muted-foreground">Custom Branding</span>
+                      <span className="font-medium">
+                        {plan === "starter" ? "-" : <Check className="h-4 w-4 text-green-500" />}
+                      </span>
+                    </div>
+                    <div className="flex justify-between py-2 border-b border-border">
+                      <span className="text-muted-foreground">Team Collaboration</span>
+                      <span className="font-medium">
+                        {plan === "starter" ? "-" : <Check className="h-4 w-4 text-green-500" />}
+                      </span>
+                    </div>
+                    <div className="flex justify-between py-2 border-b border-border">
+                      <span className="text-muted-foreground">White-label</span>
+                      <span className="font-medium">
+                        {plan === "enterprise" ? <Check className="h-4 w-4 text-green-500" /> : "-"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between py-2">
+                      <span className="text-muted-foreground">On-premise</span>
+                      <span className="font-medium">
+                        {plan === "enterprise" ? <Check className="h-4 w-4 text-green-500" /> : "-"}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* FAQ Section */}
       <section className="py-16 px-4">

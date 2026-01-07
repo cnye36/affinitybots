@@ -81,7 +81,7 @@ export function PlaygroundContainer({ sessionId, assistants }: PlaygroundContain
 	return (
 		<div className="flex h-screen bg-background">
 			{/* Left Panel - Configuration */}
-			<div className="w-98 border-r border-border flex flex-col bg-card">
+			<div className="w-[480px] min-w-[480px] max-w-[480px] border-r border-border flex flex-col bg-card overflow-hidden">
 				<div className={`p-4 border-b ${theme.borderColor}`}>
 					<div className="flex items-center justify-between">
 						<div>
@@ -109,7 +109,7 @@ export function PlaygroundContainer({ sessionId, assistants }: PlaygroundContain
 					</div>
 				</div>
 
-				<div className="flex-1 overflow-y-auto p-4 space-y-4">
+				<div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4 w-full">
 					{/* Configuration Panel (Mode Toggle) */}
 					<ConfigurationPanel
 						mode={mode}

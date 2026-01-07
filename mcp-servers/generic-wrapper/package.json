@@ -1,0 +1,13 @@
+{
+	"name": "mcp-generic-stdio-wrapper",
+	"version": "1.0.0",
+	"description": "Generic HTTP-to-stdio wrapper for MCP servers",
+	"type": "module",
+	"scripts": {
+		"start": "node server.js",
+		"dev": "node --watch server.js"
+	},
+	"dependencies": {
+		"express": "^4.18.2"
+	}
+}

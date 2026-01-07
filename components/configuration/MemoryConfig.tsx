@@ -31,7 +31,7 @@ export function MemoryConfig({ config, onChange, assistantId }: MemoryConfigProp
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 w-full overflow-hidden">
       {/* Toggle Section */}
       <div className="flex items-start justify-between gap-4 rounded-lg border border-purple-200/50 dark:border-purple-800/50 bg-gradient-to-br from-purple-50/50 to-pink-50/50 dark:from-purple-950/30 dark:to-pink-950/30 p-4">
         <div className="flex-1 space-y-1">

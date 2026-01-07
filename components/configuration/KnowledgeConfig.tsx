@@ -196,8 +196,8 @@ export function KnowledgeConfig({ config, onChange, assistant_id }: KnowledgeCon
   const sources = (config.knowledge_base?.config?.sources as string[]) || [];
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-4">
+    <div className="space-y-6 w-full overflow-hidden">
+      <div className="space-y-4 w-full overflow-hidden">
         <div>
           <Label>Knowledge Sources</Label>
           <p className="text-sm text-muted-foreground">
@@ -246,17 +246,18 @@ export function KnowledgeConfig({ config, onChange, assistant_id }: KnowledgeCon
           <p className="text-sm text-destructive">{uploadError}</p>
         )}
 
-        <div className="space-y-2">
+        <div className="space-y-2 w-full overflow-hidden">
           {sources.map((source: string, index: number) => (
             <div
               key={index}
-              className="flex items-center justify-between p-2 bg-muted rounded-md"
+              className="flex items-center justify-between gap-2 p-2 bg-muted rounded-md w-full overflow-hidden"
             >
-              <span className="text-sm truncate flex-1">{source}</span>
+              <span className="text-sm truncate flex-1 min-w-0">{source}</span>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
+                className="flex-shrink-0"
                 onClick={() => handleRemoveSource(index)}
               >
                 <X className="h-4 w-4" />

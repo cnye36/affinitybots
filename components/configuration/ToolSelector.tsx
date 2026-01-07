@@ -186,21 +186,21 @@ export function ToolSelector({
     };
     
           return (
-        <Card className="p-4">
-          <div className="flex items-start gap-3">
+      <Card className="p-3 w-full overflow-hidden">
+        <div className="flex items-start gap-2 w-full"></div>
             {/* Icon */}
-            <div className="flex-shrink-0 mt-1">
+            <div className="flex-shrink-0">
               {server.logoUrl ? (
                 <Image
                   src={server.logoUrl}
                   alt={server.displayName || server.serverName}
-                  width={32}
-                  height={32}
+                  width={28}
+                  height={28}
                   className="rounded bg-white border p-0.5 object-contain"
                   style={{ objectFit: 'contain' }}
                 />
               ) : (
-                <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-lg">
+                <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-base">
                   {server.serverName === 'github' ? '🐙' :
                    server.serverName === 'notion' ? '📝' : '🛠️'}
                 </div>
@@ -208,13 +208,13 @@ export function ToolSelector({
             </div>
 
           {/* Content */}
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 overflow-hidden">
             <div className="flex items-start justify-between gap-2">
-              <div className="flex-1">
-                <h3 className="font-medium text-sm">
+              <div className="flex-1 min-w-0 overflow-hidden">
+                <h3 className="font-medium text-sm truncate">
                   {server.displayName || server.serverName}
                 </h3>
-                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                <p className="text-xs text-muted-foreground mt-1 line-clamp-2 break-words">
                   {server.description || "No description available"}
                 </p>
               </div>
@@ -231,35 +231,35 @@ export function ToolSelector({
             </div>
 
             {/* Status badges */}
-            <div className="flex flex-wrap gap-1 mt-2">
+            <div className="flex flex-wrap gap-1 mt-1.5">
               {getServerTypeBadge()}
               
               {configured ? (
-                <Badge variant="default" className="text-xs">
-                  <CheckCircle className="w-3 h-3 mr-1" />
+                <Badge variant="default" className="text-[10px] h-5 px-1.5">
+                  <CheckCircle className="w-2.5 h-2.5 mr-0.5" />
                   Configured
                 </Badge>
               ) : (
-                <Badge variant="outline" className="text-xs">
+                <Badge variant="outline" className="text-[10px] h-5 px-1.5">
                   Not Configured
                 </Badge>
               )}
               
               {server.security?.scanPassed && (
-                <Badge variant="secondary" className="text-xs">
-                  Security Verified
+                <Badge variant="secondary" className="text-[10px] h-5 px-1.5">
+                  Security
                 </Badge>
               )}
               
-              <Badge variant="outline" className="text-xs">
+              <Badge variant="outline" className="text-[10px] h-5 px-1.5">
                 {server.isLocal ? (
                   <>
-                    <Server className="w-3 h-3 mr-1" />
+                    <Server className="w-2.5 h-2.5 mr-0.5" />
                     Local
                   </>
                 ) : (
                   <>
-                    <Globe className="w-3 h-3 mr-1" />
+                    <Globe className="w-2.5 h-2.5 mr-0.5" />
                     Remote
                   </>
                 )}
@@ -268,11 +268,11 @@ export function ToolSelector({
 
             {/* Configure button for unconfigured servers */}
             {!configured && (
-              <div className="mt-3">
+              <div className="mt-2">
                 <Button
                   size="sm"
                   variant="default"
-                  className="text-xs"
+                  className="text-[11px] h-7 px-2"
                   asChild
                 >
                   <Link href={`/tools/${encodeURIComponent(server.serverName)}`}>
@@ -283,22 +283,22 @@ export function ToolSelector({
               </div>
             )}
           </div>
-        </div>
+        
       </Card>
     );
   };
 
   return (
-    <div className="space-y-6">
-      <div className="max-h-[520px] overflow-y-auto pr-1">
+    <div className="space-y-4 w-full overflow-hidden">
+      <div className="max-h-[400px] overflow-y-auto overflow-x-hidden pr-2 w-full">
         {/* Configured Tools Section */}
         {configuredServers.length > 0 && (
           <div>
-            <div className="flex items-center gap-2 mb-4">
-              <h3 className="text-lg font-semibold">Configured Tools</h3>
-              <Badge variant="secondary">{configuredServers.length}</Badge>
+            <div className="flex items-center gap-2 mb-3">
+              <h3 className="text-sm font-semibold">Configured Tools</h3>
+              <Badge variant="secondary" className="text-[10px] h-5">{configuredServers.length}</Badge>
             </div>
-            <div className="grid grid-cols-1 gap-3">
+            <div className="grid grid-cols-1 gap-2 w-full">
               {configuredServers.map((server) => (
                 <ServerCard
                   key={server.serverName}
@@ -312,17 +312,17 @@ export function ToolSelector({
 
         {/* Separator */}
         {configuredServers.length > 0 && unconfiguredServers.length > 0 && (
-          <Separator />
+          <Separator className="my-4" />
         )}
 
         {/* Available Tools Section */}
         {unconfiguredServers.length > 0 && (
           <div>
-            <div className="flex items-center gap-2 mb-4">
-              <h3 className="text-lg font-semibold">Available Tools</h3>
-              <Badge variant="outline">{unconfiguredServers.length}</Badge>
+            <div className="flex items-center gap-2 mb-3">
+              <h3 className="text-sm font-semibold">Available Tools</h3>
+              <Badge variant="outline" className="text-[10px] h-5">{unconfiguredServers.length}</Badge>
             </div>
-            <div className="grid grid-cols-1 gap-3">
+            <div className="grid grid-cols-1 gap-2 w-full">
               {unconfiguredServers.map((server) => (
                 <ServerCard
                   key={server.serverName}

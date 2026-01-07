@@ -96,7 +96,6 @@ export function UseCaseComponentsDemo() {
 								"Automatically qualifies leads, updates CRM records, and sends personalized follow-up emails based on lead behavior and profile data.",
 							color: "purple",
 						}}
-						enableModal={true}
 					/>
 
 					<AgentCard
@@ -122,7 +121,6 @@ export function UseCaseComponentsDemo() {
 								"Analyzes business data, generates reports, and provides actionable insights. Connects to multiple data sources and automates reporting workflows.",
 							color: "blue",
 						}}
-						enableModal={true}
 					/>
 
 					<AgentCard
@@ -148,7 +146,6 @@ export function UseCaseComponentsDemo() {
 								"Creates, edits, and manages content across multiple platforms. Drafts blog posts, social media content, and marketing materials with brand consistency.",
 							color: "green",
 						}}
-						enableModal={true}
 					/>
 				</div>
 			</section>

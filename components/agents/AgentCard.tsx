@@ -133,10 +133,10 @@ export function AgentCard({ assistant, onDelete }: AgentCardProps) {
         onClick={handleClick}
       >
         {/* Gradient border glow on hover */}
-        <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-600 to-purple-600 rounded-xl opacity-0 group-hover:opacity-20 blur transition duration-300" />
+        <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-600 to-purple-600 rounded-xl opacity-0 group-hover:opacity-50 dark:group-hover:opacity-20 blur transition duration-300" />
 
         {/* Subtle shine effect on hover */}
-        <div className="absolute top-0 -right-4 w-8 h-full bg-gradient-to-r from-transparent via-white/5 to-transparent transform rotate-12 group-hover:right-full transition-all duration-700 ease-out" />
+        <div className="absolute top-0 -right-4 w-8 h-full bg-gradient-to-r from-transparent via-white/10 dark:via-white/5 to-transparent transform rotate-12 group-hover:right-full transition-all duration-700 ease-out" />
 
         <div className="relative p-6">
           {/* Avatar and content section */}

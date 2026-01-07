@@ -61,8 +61,8 @@ export function PromptsConfig({ config, onChange }: PromptsConfigProps) {
 
   return (
     <>
-      <div className="space-y-3">
-        <div className="space-y-2">
+      <div className="space-y-3 w-full overflow-hidden">
+        <div className="space-y-2 w-full overflow-hidden">
           <div className="flex items-center justify-between">
             <Label htmlFor="prompt_template" className="text-sm font-medium">
               Instructions

@@ -32,8 +32,10 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     description:
       "Official GitHub MCP server. Connect to browse repos, issues, pull requests, and more using your GitHub account via OAuth.",
     // Public GitHub mark (light bg recommended) - using a more reliable URL
-    logoUrl:
-      "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
+    logoUrlLight:
+      "/integration-icons/github-mark.png",
+    logoUrlDark:
+      "/integration-icons/github-mark-white.png",
     // GitHub remote MCP endpoint (per GitHub docs)
     url: "https://api.githubcopilot.com/mcp/",
     docsUrl: "https://github.com/github/github-mcp-server",
@@ -46,19 +48,18 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     description:
       "Official HubSpot MCP server. Connect your HubSpot account via OAuth to access CRM data and actions.",
     logoUrl:
-      "https://legal.hubspot.com/hubfs/guidelines_the-sprocket.svg",
-    // URL can be overridden at runtime using NEXT_PUBLIC_HUBSPOT_MCP_URL
+      "/integration-icons/hubspot-icon.png",
     url: "https://mcp.hubspot.com",
     docsUrl: "https://developers.hubspot.com/docs",
-    authType: "oauth",
-    requiresSetup: true,
+    authType: "none",
+    requiresSetup: false,
   },
   {
     serverName: "notion",
     displayName: "Notion",
     description:
       "Official Notion MCP server. Connect to access your Notion workspaces, pages, databases, and more using your Notion account via OAuth.",
-    logoUrl: "https://www.notion.so/images/favicon.ico",
+    logoUrl: "/integration-icons/notion-logo-no-background.png",
     // Confirmed endpoint for Notion MCP
     url: "https://mcp.notion.com/mcp",
     docsUrl: "https://developers.notion.com/docs",
@@ -87,39 +88,39 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     authType: "oauth",
     requiresSetup: true,
   },
-  {
-    serverName: "google-calendar",
-    displayName: "Google Calendar",
-    description:
-      "Access and manage your Google Calendar events, schedules, and permissions. Create events, check availability, update meetings, and organize your calendar using your Google account via OAuth.",
-    logoUrl: "/integration-icons/google-calendar-logo.png",
-    url: process.env.GOOGLE_CALENDAR_MCP_URL || "http://google-calendar-mcp:3004",
-    docsUrl: "https://developers.google.com/calendar",
-    authType: "oauth",
-    requiresSetup: true,
-  },
-  {
-    serverName: "google-docs",
-    displayName: "Google Docs",
-    description:
-      "Access and manage your Google Docs documents. Create, read, edit documents, and organize your Docs using your Google account via OAuth.",
-    logoUrl: "/integration-icons/google-docs-logo.png",
-    url: process.env.GOOGLE_DOCS_MCP_URL || "http://google-docs-mcp:3005",
-    docsUrl: "https://developers.google.com/docs",
-    authType: "oauth",
-    requiresSetup: true,
-  },
-  {
-    serverName: "google-sheets",
-    displayName: "Google Sheets",
-    description:
-      "Access and manage your Google Sheets spreadsheets. Create, read, edit spreadsheets, manipulate data, and organize your Sheets using your Google account via OAuth.",
-    logoUrl: "/integration-icons/google-sheets.png",
-    url: process.env.GOOGLE_SHEETS_MCP_URL || "http://google-sheets-mcp:3006",
-    docsUrl: "https://developers.google.com/sheets",
-    authType: "oauth",
-    requiresSetup: true,
-  },
+  // {
+  //   serverName: "google-calendar",
+  //   displayName: "Google Calendar",
+  //   description:
+  //     "Access and manage your Google Calendar events, schedules, and permissions. Create events, check availability, update meetings, and organize your calendar using your Google account via OAuth.",
+  //   logoUrl: "/integration-icons/google-calendar-logo.png",
+  //   url: process.env.GOOGLE_CALENDAR_MCP_URL || "http://google-calendar-mcp:3004",
+  //   docsUrl: "https://developers.google.com/calendar",
+  //   authType: "oauth",
+  //   requiresSetup: true,
+  // },
+  // {
+  //   serverName: "google-docs",
+  //   displayName: "Google Docs",
+  //   description:
+  //     "Access and manage your Google Docs documents. Create, read, edit documents, and organize your Docs using your Google account via OAuth.",
+  //   logoUrl: "/integration-icons/google-docs-logo.png",
+  //   url: process.env.GOOGLE_DOCS_MCP_URL || "http://google-docs-mcp:3005",
+  //   docsUrl: "https://developers.google.com/docs",
+  //   authType: "oauth",
+  //   requiresSetup: true,
+  // },
+  // {
+  //   serverName: "google-sheets",
+  //   displayName: "Google Sheets",
+  //   description:
+  //     "Access and manage your Google Sheets spreadsheets. Create, read, edit spreadsheets, manipulate data, and organize your Sheets using your Google account via OAuth.",
+  //   logoUrl: "/integration-icons/google-sheets.png",
+  //   url: process.env.GOOGLE_SHEETS_MCP_URL || "http://google-sheets-mcp:3006",
+  //   docsUrl: "https://developers.google.com/sheets",
+  //   authType: "oauth",
+  //   requiresSetup: true,
+  // },
   {
     serverName: "google-maps",
     displayName: "Google Maps",
@@ -151,6 +152,17 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     logoUrl: "/integration-icons/supabase-icon-dark.png",
     url: "https://mcp.supabase.com/mcp",
     docsUrl: "https://supabase.com/docs/guides/getting-started/mcp",
+    authType: "oauth",
+    requiresSetup: true,
+  },
+  {
+    serverName: "canva",
+    displayName: "Canva",
+    description:
+      "Official Canva MCP server. Connect to Canva to create and manage designs, templates, and assets.",
+    logoUrl: "/integration-icons/canva-logo.png",
+    url: "https://mcp.canva.com/mcp",
+    docsUrl: "https://www.canva.com/help/mcp-agent-setup/",
     authType: "oauth",
     requiresSetup: true,
   },
@@ -254,6 +266,17 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     logoUrl: "/integration-icons/apify-symbol-colors.png",
     url: "https://actors-mcp-server.apify.actor/sse?token={apiKey}&actors={actorNames}",
     docsUrl: "https://docs.apify.com/platform/integrations/mcp",
+    authType: "oauth",
+    requiresSetup: true,
+  },
+  {
+    serverName: "todoist",
+    displayName: "Todoist",
+    description:
+      "Official Todoist MCP server. Connect to Todoist to manage your tasks and projects.",
+    logoUrl: "/integration-icons/todoist-icon.png",
+    url: "https://ai.todoist.net/mcp",
+    docsUrl: "https://developer.todoist.com/api/v1/#tag/Todoist-MCP",
     authType: "oauth",
     requiresSetup: true,
   },
@@ -413,6 +436,28 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     requiresSetup: true,
   },
   {
+    serverName: "pipeboard",
+    displayName: "Pipeboard Meta Ads",
+    description:
+      "Official Pipeboard MCP server. Connect to Pipeboard to manage Facebook and Instagram ad campaigns performance analysis and optimization.",
+    logoUrl: "/integration-icons/pipeboard-icon.png",
+    url: "https://mcp.pipeboard.co/meta-ads-mcp",
+    docsUrl: "https://pipeboard.co/guides/meta-ads-mcp-server",
+    authType: "api_key",
+    requiresSetup: true,
+  },
+  {
+    serverName: "lunarcrush",
+    displayName: "Lunarcrush",
+    description:
+      "Official Lunarcrush MCP server. Connect to Lunarcrush to manage your crypto market data and analysis.",
+    logoUrl: "/integration-icons/lunarcrush-icon.png",
+    url: "https://lunarcrush.ai/mcp?key={apiKey}",
+    docsUrl: "https://lunarcrush.com/mcpserver",
+    authType: "api_key",
+    requiresSetup: true,
+  },
+  {
     serverName: "shopify-storefront",
     displayName: "Shopify Storefront",
     description:
@@ -456,28 +501,7 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     authType: "api_key",
     requiresSetup: true,
   },
-  {
-    serverName: "pipeboard",
-    displayName: "Pipeboard Meta Ads",
-    description:
-      "Official Pipeboard MCP server. Connect to Pipeboard to manage Facebook and Instagram ad campaigns performance analysis and optimization.",
-    logoUrl: "/integration-icons/pipeboard-icon.png",
-    url: "https://mcp.pipeboard.co/meta-ads-mcp",
-    docsUrl: "https://pipeboard.co/guides/meta-ads-mcp-server",
-    authType: "api_key",
-    requiresSetup: true,
-  },
-  {
-    serverName: "lunarcrush",
-    displayName: "Lunarcrush",
-    description:
-      "Official Lunarcrush MCP server. Connect to Lunarcrush to manage your crypto market data and analysis.",
-    logoUrl: "/integration-icons/lunarcrush-icon.png",
-    url: "https://lunarcrush.ai/mcp?key={apiKey}",
-    docsUrl: "https://lunarcrush.com/mcpserver",
-    authType: "api_key",
-    requiresSetup: true,
-  },
+  
   {
     serverName: "coinapi-realtime-exchange",
     displayName: "CoinAPI Real-Time Exchange Rates",
@@ -532,6 +556,51 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     docsUrl: "https://mcp.alphavantage.co/",
     authType: "api_key",
     requiresSetup: true,
+  },
+  {
+    serverName: "playwright",
+    displayName: "Playwright",
+    description:
+      "Official Microsoft Playwright MCP server. Browser automation and testing with Chromium, Firefox, and WebKit. Navigate pages, take screenshots, fill forms, execute JavaScript, and interact with web content programmatically.",
+    logoUrl: "/integration-icons/playwright-icon-1.png",
+    url: process.env.PLAYWRIGHT_MCP_URL || "http://localhost:3004",
+    docsUrl: "https://playwright.dev/",
+    authType: "none",
+    requiresSetup: false,
+  },
+  {
+    serverName: "fetch",
+    displayName: "Fetch (Web Requests)",
+    description:
+      "Official MCP fetch server. Make HTTP requests to external APIs and websites. Fetch JSON data, HTML content, download files, and integrate with REST APIs. Supports GET, POST, PUT, DELETE methods with custom headers and authentication.",
+    logoUrl: "/integration-icons/fetch-icon.svg",
+    url: process.env.FETCH_MCP_URL || "http://localhost:3006",
+    docsUrl: "https://github.com/modelcontextprotocol/servers/tree/main/src/fetch",
+    authType: "none",
+    requiresSetup: false,
+  },
+  {
+    serverName: "slack",
+    displayName: "Slack",
+    description:
+      "Official MCP Slack server. Send messages, manage channels, search conversations, upload files, and interact with your Slack workspace. Requires Slack bot token for authentication.",
+    logoUrl: "/integration-icons/slack-icon.png",
+    url: process.env.SLACK_MCP_URL || "http://localhost:3007",
+    docsUrl: "https://github.com/modelcontextprotocol/servers/tree/main/src/slack",
+    authType: "api_key",
+    apiKeyHeaderName: "SLACK_BOT_TOKEN",
+    requiresSetup: true,
+  },
+  {
+    serverName: "puppeteer",
+    displayName: "Puppeteer",
+    description:
+      "Official MCP Puppeteer server. Headless browser automation powered by Puppeteer. Take screenshots, generate PDFs, scrape web content, fill forms, and automate browser interactions. Alternative to Playwright with different browser control capabilities.",
+    logoUrl: "/integration-icons/puppeteer-icon.svg",
+    url: process.env.PUPPETEER_MCP_URL || "http://localhost:3008",
+    docsUrl: "https://github.com/modelcontextprotocol/servers/tree/main/src/puppeteer",
+    authType: "none",
+    requiresSetup: false,
   }
 
 ];

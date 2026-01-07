@@ -410,7 +410,7 @@ export default async function Dashboard() {
                             href={`/agents/${encodeURIComponent(agent.id)}`}
                             className="block group"
                           >
-                            <div className="p-4 border border-border rounded-xl hover:border-indigo-500/50 hover:bg-gradient-to-br hover:from-indigo-500/5 hover:to-purple-500/5 transition-all duration-200">
+                            <div className="p-4 border border-border rounded-xl hover:border-indigo-500/50 hover:bg-gradient-to-br hover:from-indigo-500/10 hover:to-purple-500/10 dark:hover:from-indigo-500/5 dark:hover:to-purple-500/5 transition-all duration-200">
                               <div className="flex items-start gap-3">
                                 {/* Agent Avatar */}
                                 <div className="flex-shrink-0">
@@ -540,7 +540,7 @@ export default async function Dashboard() {
                             href={`/tools/${encodeURIComponent(tool.server_slug)}`}
                             className="block"
                           >
-                            <div className="flex items-center justify-between p-4 border border-border rounded-xl hover:border-amber-500/50 hover:bg-gradient-to-br hover:from-amber-500/5 hover:to-orange-500/5 transition-all duration-200 group cursor-pointer">
+                            <div className="flex items-center justify-between p-4 border border-border rounded-xl hover:border-amber-500/50 hover:bg-gradient-to-br hover:from-amber-500/10 hover:to-orange-500/10 dark:hover:from-amber-500/5 dark:hover:to-orange-500/5 transition-all duration-200 group cursor-pointer">
                               <div className="flex items-center gap-3">
                                 <div className="p-2 bg-gradient-to-br from-amber-500/20 to-orange-500/20 rounded-xl border border-amber-500/30 backdrop-blur-sm">
                                   {(toolLogos[tool.server_slug] || officialLogoForServerName(tool.server_slug)) ? (

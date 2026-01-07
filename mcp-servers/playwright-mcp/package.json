@@ -1,0 +1,12 @@
+{
+	"name": "playwright-mcp-server",
+	"version": "1.0.0",
+	"description": "Playwright MCP server with HTTP support",
+	"type": "module",
+	"scripts": {
+		"start": "npx @playwright/mcp@latest --port ${PORT:-3004}"
+	},
+	"dependencies": {
+		"@playwright/mcp": "latest"
+	}
+}

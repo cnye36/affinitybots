@@ -179,8 +179,8 @@ export function BaseServerCard({
       onClick={onClick}
     >
       {/* Gradient border effect */}
-      <div className="absolute inset-0 bg-gradient-to-br from-teal-500/20 via-emerald-500/20 to-teal-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg" />
-      <div className="absolute inset-0 bg-gradient-to-br from-teal-500/0 via-emerald-500/10 to-teal-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" />
+      <div className="absolute inset-0 bg-gradient-to-br from-teal-500/30 via-emerald-500/30 to-teal-500/30 dark:from-teal-500/20 dark:via-emerald-500/20 dark:to-teal-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg" />
+      <div className="absolute inset-0 bg-gradient-to-br from-teal-500/0 via-emerald-500/20 to-teal-500/0 dark:via-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" />
 
       {/* Card content */}
       <div className="relative bg-blue-50/50 dark:bg-card border border-border rounded-lg h-full flex flex-col">

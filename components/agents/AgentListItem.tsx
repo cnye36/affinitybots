@@ -110,7 +110,7 @@ export function AgentListItem({ assistant, onDelete }: AgentListItemProps) {
 				className="group relative flex items-center gap-5 px-5 py-4 rounded-lg border border-border bg-card hover:bg-accent/50 hover:border-violet-500/40 transition-all duration-200 cursor-pointer"
 			>
 				{/* Gradient glow on hover */}
-				<div className="absolute inset-0 bg-gradient-to-r from-violet-600/5 to-purple-600/5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+				<div className="absolute inset-0 bg-gradient-to-r from-violet-600/15 to-purple-600/15 dark:from-violet-600/5 dark:to-purple-600/5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
 
 				{/* Avatar */}
 				<div className="relative flex-shrink-0">

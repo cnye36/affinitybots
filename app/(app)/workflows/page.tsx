@@ -76,7 +76,7 @@ export default function WorkflowsPage() {
 
         const { data: workflowsData, error: fetchError } = await supabase
           .from("workflows")
-          .select("*")
+          .select("*, workflow_triggers(*)")
           .eq("owner_id", session.user.id)
           .order("created_at", { ascending: false });
 
@@ -310,8 +310,8 @@ export default function WorkflowsPage() {
                   onClick={() => router.push(`/workflows/${workflow.workflow_id}`)}
                   className="group relative rounded-xl border border-border bg-card shadow-sm hover:shadow-2xl hover:border-blue-500/50 transition-all duration-300 cursor-pointer hover:scale-[1.02] overflow-hidden"
                 >
-                  <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-xl opacity-0 group-hover:opacity-20 blur transition-all duration-300" />
-                  <div className="absolute top-0 -right-4 w-8 h-full bg-gradient-to-r from-transparent via-white/5 to-transparent transform rotate-12 group-hover:right-full transition-all duration-700 ease-out" />
+                  <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-xl opacity-0 group-hover:opacity-50 dark:group-hover:opacity-20 blur transition-all duration-300" />
+                  <div className="absolute top-0 -right-4 w-8 h-full bg-gradient-to-r from-transparent via-white/10 dark:via-white/5 to-transparent transform rotate-12 group-hover:right-full transition-all duration-700 ease-out" />
                   <div className="absolute bottom-4 right-4 z-10 opacity-0 group-hover:opacity-100 transition-all duration-200">
                     <button
                       type="button"

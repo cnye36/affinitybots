@@ -185,7 +185,7 @@ export default function ToolsPage() {
 								variant={currentPage === page ? "default" : "outline"}
 								size="sm"
 								onClick={() => setCurrentPage(page)}
-								className={currentPage === page ? "bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white border-0" : "border-2 hover:border-teal-500/50 hover:bg-teal-500/5"}
+								className={currentPage === page ? "bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white border-0" : "border-2 hover:border-teal-500/50 hover:bg-teal-500/10 dark:hover:bg-teal-500/5"}
 							>
 								{page}
 							</Button>

@@ -356,7 +356,7 @@ export default function NewAgentPage() {
 							<div className="relative bg-background border border-amber-500/20 rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
 								<Accordion type="single" collapsible>
 									<AccordionItem value="tools" className="border-0">
-										<AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-gradient-to-r hover:from-amber-500/5 hover:to-orange-500/5 transition-all duration-200 group/trigger">
+										<AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-gradient-to-r hover:from-amber-500/10 hover:to-orange-500/10 dark:hover:from-amber-500/5 dark:hover:to-orange-500/5 transition-all duration-200 group/trigger">
 											<div className="flex items-center gap-3 w-full">
 												<div className="p-2.5 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 backdrop-blur-sm border border-amber-500/30 group-hover/trigger:scale-110 transition-transform duration-200">
 													<Plus className="h-5 w-5 text-amber-600 dark:text-amber-400" />
@@ -393,7 +393,7 @@ export default function NewAgentPage() {
 							<div className="relative bg-background border border-emerald-500/20 rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
 								<Accordion type="single" collapsible>
 									<AccordionItem value="knowledge" className="border-0">
-										<AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-gradient-to-r hover:from-emerald-500/5 hover:to-green-500/5 transition-all duration-200 group/trigger">
+										<AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-gradient-to-r hover:from-emerald-500/10 hover:to-green-500/10 dark:hover:from-emerald-500/5 dark:hover:to-green-500/5 transition-all duration-200 group/trigger">
 											<div className="flex items-center gap-3 w-full">
 												<div className="p-2.5 rounded-xl bg-gradient-to-br from-emerald-500/20 to-green-500/20 backdrop-blur-sm border border-emerald-500/30 group-hover/trigger:scale-110 transition-transform duration-200">
 													<Upload className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />

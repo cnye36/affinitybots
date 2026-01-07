@@ -288,7 +288,7 @@ Key environment variables:
 
 **Redis**:
 - `REDIS_URL` / `REDIS_URI` - Local Redis for BullMQ scheduler (uses Docker langgraph-redis service)
-- `RATE_LIMIT_REDIS_URL` - Separate cloud Redis for rate limiting (Upstash or similar)
+- `RATE_LIMIT_REDIS_URL` - Separate Self-hosted Redis for rate limiting (Self-hosted or similar)
 
 **AI & LLMs**:
 - `LANGSMITH_API_KEY`, `LANGSMITH_PROJECT` - Langgraph tracing
@@ -308,7 +308,7 @@ Key environment variables:
 
 **Redis Architecture:**
 - **LangGraph Platform**: Uses built-in `langgraph-redis` Docker service (configured in docker-compose.yml)
-- **Rate Limiting**: Uses separate cloud Redis via `RATE_LIMIT_REDIS_URL` (recommended: Upstash free tier)
+- **Rate Limiting**: Uses separate Self-hosted Redis via `RATE_LIMIT_REDIS_URL` (recommended: Self-hosted or similar)
 - **BullMQ Scheduler**: Uses local Docker Redis via `REDIS_URL` (same as general Redis connection)
 - **OAuth Sessions**: Currently in-memory (sessionStore, not using Redis)
 
@@ -332,7 +332,7 @@ Key environment variables:
 - **Schedule Worker**: Separate process/container (Railway/Render/Fly.io or local)
 - **Redis**:
   - Local: Docker langgraph-redis for development
-  - Production: Upstash or similar cloud Redis for rate limiting
+  - Production: Self-hostedRedis for rate limiting
 - **Database**: Supabase hosted PostgreSQL
 
 ### Common Patterns

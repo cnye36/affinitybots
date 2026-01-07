@@ -41,7 +41,7 @@ export function ModelConfig({ config, onConfigurableChange }: ModelConfigProps) 
 	const selectedLlm = config.llm || legacyModelToLlmId(config.model) || ""
 
 	return (
-		<div className="space-y-4">
+		<div className="space-y-4 w-full overflow-hidden">
 			<div className="space-y-2">
 				<Label htmlFor="model">Model</Label>
 				<Select

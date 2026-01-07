@@ -5,7 +5,13 @@ import Link from "next/link";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
-import { Menu, X } from "lucide-react";
+import { Menu, X, ChevronDown } from "lucide-react";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 
 export function Header() {
@@ -73,18 +79,46 @@ export function Header() {
           >
             Features
           </Link>
-          <Link
-            href="/use-cases"
-            className="text-md font-medium hover:text-primary"
-          >
-            Use Cases
-          </Link>
-          <Link
-            href="/pricing"
-            className="text-md font-medium hover:text-primary"
-          >
-            Pricing
-          </Link>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger className="flex items-center gap-1 text-md font-medium hover:text-primary outline-none">
+              Use Cases
+              <ChevronDown className="h-4 w-4" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56">
+              <DropdownMenuItem asChild>
+                <Link href="/use-cases/sales-automation" className="cursor-pointer">
+                  Sales Automation
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/use-cases/customer-support" className="cursor-pointer">
+                  Customer Support
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/use-cases/content-creation" className="cursor-pointer">
+                  Content Creation
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/use-cases/hr-recruitment" className="cursor-pointer">
+                  HR & Recruitment
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/use-cases/lead-collection" className="cursor-pointer">
+                  Lead Collection
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/use-cases/data-analysis" className="cursor-pointer">
+                  Data Analysis
+                </Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           <Link
             href="/docs"
             className="text-md font-medium hover:text-primary"
@@ -96,6 +130,12 @@ export function Header() {
             className="text-md font-medium hover:text-primary"
           >
             Blog
+          </Link>
+          <Link
+            href="/pricing"
+            className="text-md font-medium hover:text-primary"
+          >
+            Pricing
           </Link>
           <Link
             href="/contact"
@@ -158,13 +198,57 @@ export function Header() {
               >
                 Features
               </Link>
-              <Link
-                href="/use-cases"
-                className="text-md font-medium hover:text-primary py-2"
-                onClick={handleNavClick}
-              >
-                Use Cases
-              </Link>
+
+              <div className="py-2">
+                <div className="text-md font-medium text-gray-900 dark:text-gray-100 mb-2">
+                  Use Cases
+                </div>
+                <div className="pl-4 space-y-2">
+                  <Link
+                    href="/use-cases/sales-automation"
+                    className="block text-sm text-gray-600 dark:text-gray-400 hover:text-primary py-1"
+                    onClick={handleNavClick}
+                  >
+                    Sales Automation
+                  </Link>
+                  <Link
+                    href="/use-cases/customer-support"
+                    className="block text-sm text-gray-600 dark:text-gray-400 hover:text-primary py-1"
+                    onClick={handleNavClick}
+                  >
+                    Customer Support
+                  </Link>
+                  <Link
+                    href="/use-cases/content-creation"
+                    className="block text-sm text-gray-600 dark:text-gray-400 hover:text-primary py-1"
+                    onClick={handleNavClick}
+                  >
+                    Content Creation
+                  </Link>
+                  <Link
+                    href="/use-cases/hr-recruitment"
+                    className="block text-sm text-gray-600 dark:text-gray-400 hover:text-primary py-1"
+                    onClick={handleNavClick}
+                  >
+                    HR & Recruitment
+                  </Link>
+                  <Link
+                    href="/use-cases/lead-collection"
+                    className="block text-sm text-gray-600 dark:text-gray-400 hover:text-primary py-1"
+                    onClick={handleNavClick}
+                  >
+                    Lead Collection
+                  </Link>
+                  <Link
+                    href="/use-cases/data-analysis"
+                    className="block text-sm text-gray-600 dark:text-gray-400 hover:text-primary py-1"
+                    onClick={handleNavClick}
+                  >
+                    Data Analysis
+                  </Link>
+                </div>
+              </div>
+
               <Link
                 href="/pricing"
                 className="text-md font-medium hover:text-primary py-2"

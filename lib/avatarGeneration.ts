@@ -309,16 +309,26 @@ export async function generateAgentAvatar(
       ? `Create a professional, stylized avatar icon for "${name}", a ${agentType} agent.`
       : `Create a professional, stylized avatar icon for "${name}".`;
 
-    const fullPrompt = `${contextPrompt} 
+    const fullPrompt = `${contextPrompt}
 
-Design a minimalist, modern icon that visually represents the agent's purpose and domain. Use:
+MANDATORY BACKGROUND REQUIREMENT - THIS IS CRITICAL:
+The background MUST be a very subtle, soft gradient using extremely light pastel colors. 
+- ABSOLUTELY NO solid white backgrounds - this is forbidden
+- ABSOLUTELY NO pure white (#FFFFFF) - this is forbidden  
+- Use a very light gradient with colors like: pale mint green, soft peach, light lavender, cream, very light gray-blue, or soft powder blue
+- The gradient should be so light it's barely perceptible but still visible against white UI backgrounds
+- Examples of acceptable gradients: cream-to-very-light-gray, pale-mint-to-soft-blue, light-lavender-to-soft-pink
+- The entire background must be a gradient, not solid color
+- Think: a whisper of color that provides subtle contrast
+
+Design a minimalist, modern icon that visually represents the agent's purpose and domain:
 - Clean geometric shapes or abstract symbols that relate to the agent's function
 - A cohesive color palette that reflects the agent's purpose and personality
-- Soft gradients that work well in both light and dark themes
 - Subtle depth and modern aesthetics
 - Simple yet distinctive design that captures the essence of what this agent does
+- The icon should be professional, recognizable, and suitable for use as a small avatar in UI contexts
 
-The icon should be professional, recognizable, and suitable for use as a small avatar in UI contexts.`;
+Remember: The background is a very subtle gradient - never white, never solid color.`;
 
     return await generateImage(fullPrompt, fileName);
   } catch (error) {
