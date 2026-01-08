@@ -152,6 +152,7 @@ export function PlaygroundContainer({ sessionId, assistants }: PlaygroundContain
 							{currentAgentId && currentAgent && (
 								<div className="border-t border-border pt-4 mt-4">
 									<PlaygroundAgentConfig
+										key={currentAgentId} // Force re-render when agent changes
 										assistant={currentAgent}
 										onConfigChange={() => {
 											// Refresh tools when config changes

@@ -6,8 +6,43 @@ import Image from "next/image";
 import { ReactNode, useState, useEffect } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { useTheme } from "next-themes";
+import type { ServerCategory } from "@/lib/mcp/officialMcpServers";
 
 export type ServerType = "official" | "custom";
+
+// Category labels for display
+const CATEGORY_LABELS: Record<ServerCategory, string> = {
+  "development": "Development",
+  "productivity": "Productivity",
+  "project-management": "Project Management",
+  "database": "Database",
+  "design": "Design",
+  "automation": "Automation",
+  "web-scraping": "Web Scraping",
+  "search": "Search",
+  "monitoring": "Monitoring",
+  "ecommerce": "E-commerce",
+  "seo": "SEO",
+  "finance": "Finance",
+  "communication": "Communication",
+};
+
+// Category color gradients - each category gets its own unique color
+const CATEGORY_COLORS: Record<ServerCategory, string> = {
+  "development": "from-blue-500 to-indigo-600",
+  "productivity": "from-orange-500 to-amber-600",
+  "project-management": "from-violet-500 to-purple-600",
+  "database": "from-cyan-500 to-blue-600",
+  "design": "from-pink-500 to-rose-600",
+  "automation": "from-slate-500 to-gray-600",
+  "web-scraping": "from-lime-500 to-green-600",
+  "search": "from-sky-400 to-blue-500",
+  "monitoring": "from-red-500 to-orange-600",
+  "ecommerce": "from-fuchsia-500 to-pink-600",
+  "seo": "from-amber-500 to-yellow-600",
+  "finance": "from-teal-600 to-cyan-600",
+  "communication": "from-indigo-500 to-blue-600",
+};
 
 export interface BaseServerCardProps {
   serverName: string;
@@ -17,6 +52,7 @@ export interface BaseServerCardProps {
   logoUrlLight?: string; // Icon for light theme
   logoUrlDark?: string; // Icon for dark theme
   serverType: ServerType;
+  category?: ServerCategory; // Category for official servers
   isConfigured?: boolean;
   children?: ReactNode;
   onClick?: () => void;
@@ -32,6 +68,7 @@ export function BaseServerCard({
   logoUrlLight,
   logoUrlDark,
   serverType,
+  category,
   isConfigured = false,
   children,
   onClick,
@@ -74,16 +111,16 @@ export function BaseServerCard({
     return words.slice(0, maxWords).join(' ') + '...';
   };
   const getServerTypeBadge = () => {
-    if (serverType === "official") {
+    if (serverType === "official" && category) {
       return (
         <Badge
           variant="secondary"
-          className="absolute top-3 right-3 text-xs bg-gradient-to-r from-blue-500/90 to-cyan-500/90 text-white border-0 shadow-sm"
+          className={`absolute top-3 right-3 text-xs bg-gradient-to-r ${CATEGORY_COLORS[category]} text-white border-0 shadow-sm`}
         >
-          Official
+          {CATEGORY_LABELS[category]}
         </Badge>
       );
-    } else {
+    } else if (serverType === "custom") {
       return (
         <Badge
           variant="secondary"
@@ -93,6 +130,7 @@ export function BaseServerCard({
         </Badge>
       );
     }
+    return null;
   };
 
   const getFallbackEmoji = () => {
@@ -141,16 +179,21 @@ export function BaseServerCard({
                 <h3 className="font-semibold text-sm truncate bg-gradient-to-r from-teal-600 to-emerald-600 dark:from-teal-400 dark:to-emerald-400 bg-clip-text text-transparent">
                   {displayName}
                 </h3>
-                <Badge
-                  variant="secondary"
-                  className={`text-xs px-1.5 py-0 h-5 ${
-                    serverType === "official"
-                      ? "bg-gradient-to-r from-blue-500/90 to-cyan-500/90 text-white border-0"
-                      : "bg-gradient-to-r from-purple-500/90 to-violet-500/90 text-white border-0"
-                  }`}
-                >
-                  {serverType === "official" ? "Official" : "Custom"}
-                </Badge>
+                {serverType === "official" && category ? (
+                  <Badge
+                    variant="secondary"
+                    className={`text-xs px-1.5 py-0 h-5 bg-gradient-to-r ${CATEGORY_COLORS[category]} text-white border-0`}
+                  >
+                    {CATEGORY_LABELS[category]}
+                  </Badge>
+                ) : serverType === "custom" ? (
+                  <Badge
+                    variant="secondary"
+                    className="text-xs px-1.5 py-0 h-5 bg-gradient-to-r from-purple-500/90 to-violet-500/90 text-white border-0"
+                  >
+                    Custom
+                  </Badge>
+                ) : null}
                 {isConfigured && (
                   <Badge
                     variant="secondary"

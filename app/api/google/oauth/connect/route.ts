@@ -11,11 +11,11 @@ import { sessionStore } from "@/lib/oauth/sessionStore"
  * These work from inside the LangGraph container
  */
 const GOOGLE_SERVICE_CONFIG: Record<string, { serverName: string; urlEnvVar: string; defaultUrl: string; port: number }> = {
-  drive: { serverName: "google-drive", urlEnvVar: "GOOGLE_DRIVE_MCP_URL", defaultUrl: "http://localhost:3002", port: 3002 },
-  gmail: { serverName: "gmail", urlEnvVar: "GMAIL_MCP_URL", defaultUrl: "http://localhost:3003", port: 3003 },
-  calendar: { serverName: "google-calendar", urlEnvVar: "GOOGLE_CALENDAR_MCP_URL", defaultUrl: "http://localhost:3004", port: 3004 },
-  docs: { serverName: "google-docs", urlEnvVar: "GOOGLE_DOCS_MCP_URL", defaultUrl: "http://localhost:3005", port: 3005 },
-  sheets: { serverName: "google-sheets", urlEnvVar: "GOOGLE_SHEETS_MCP_URL", defaultUrl: "http://localhost:3006", port: 3006 },
+  drive: { serverName: "google-drive", urlEnvVar: "GOOGLE_DRIVE_MCP_URL", defaultUrl: "http://localhost:3002/mcp", port: 3002 },
+  gmail: { serverName: "gmail", urlEnvVar: "GMAIL_MCP_URL", defaultUrl: "http://localhost:3003/mcp", port: 3003 },
+  calendar: { serverName: "google-calendar", urlEnvVar: "GOOGLE_CALENDAR_MCP_URL", defaultUrl: "http://localhost:3004/mcp", port: 3004 },
+  docs: { serverName: "google-docs", urlEnvVar: "GOOGLE_DOCS_MCP_URL", defaultUrl: "http://localhost:3005/mcp", port: 3005 },
+  sheets: { serverName: "google-sheets", urlEnvVar: "GOOGLE_SHEETS_MCP_URL", defaultUrl: "http://localhost:3006/mcp", port: 3006 },
 }
 
 /**
@@ -47,12 +47,30 @@ export async function GET(request: NextRequest) {
 
     const config = GOOGLE_SERVICE_CONFIG[service]
     const serverName = config.serverName
-    const serverUrl = process.env[config.urlEnvVar] || config.defaultUrl
+    let serverUrl = process.env[config.urlEnvVar] || config.defaultUrl
+    
+    // Normalize URL: Convert Docker service names to localhost for Next.js access
+    // Docker service names only work inside Docker network, Next.js runs on host
+    if (serverUrl.includes('google-drive-mcp:') || serverUrl.includes('gmail-mcp-server:')) {
+      const originalUrl = serverUrl
+      serverUrl = serverUrl.replace(/google-drive-mcp:|gmail-mcp-server:/g, 'localhost:')
+      console.log(`[${serverName}] Normalized URL from ${originalUrl} to ${serverUrl} (Docker service names don't resolve from Next.js)`)
+    }
+    
+    // Ensure URL has /mcp base path
+    if (serverUrl.includes('localhost:300') && !serverUrl.includes('/mcp')) {
+      serverUrl = `${serverUrl.replace(/\/$/, '')}/mcp`
+      console.log(`[${serverName}] Added /mcp base path: ${serverUrl}`)
+    }
 
     // Generate a cryptographically secure session ID to track this OAuth flow
     const sessionId = sessionStore.generateSessionId()
     
-    console.log(`🔍 Google OAuth Connect - Starting ${service} OAuth flow for user ${user.id} with session ${sessionId}`);
+    console.log(`[${serverName}] 🔍 Google OAuth Connect - Starting ${service} OAuth flow for user ${user.id}`)
+    console.log(`[${serverName}] Session ID: ${sessionId}`)
+    console.log(`[${serverName}] Server URL: ${serverUrl}`)
+    console.log(`[${serverName}] IMPORTANT: Each Google service (drive, gmail, etc.) requires separate OAuth authorization`)
+    console.log(`[${serverName}] IMPORTANT: This OAuth flow is ONLY for ${serverName} - will NOT authorize other Google servers`)
     
     // Get the authorization URL with state parameter and appropriate scopes
     const authUrl = getGoogleAuthorizationUrl(service, sessionId)

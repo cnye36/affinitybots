@@ -38,13 +38,16 @@ interface UserAddedServer {
 interface ToolSelectorProps {
   enabledMCPServers: string[];
   onMCPServersChange: (servers: string[]) => void;
+  showUnconfigured?: boolean;
+  hideHeaders?: boolean; // Hide section headers when used in playground
 }
 
 export function ToolSelector({
   enabledMCPServers = [],
   onMCPServersChange,
+  showUnconfigured = true,
+  hideHeaders = false,
 }: ToolSelectorProps) {
-  console.log('ToolSelector received enabledMCPServers:', enabledMCPServers);
   const [userServers, setUserServers] = useState<UserMCPServer[]>([]);
   const [userAddedServers, setUserAddedServers] = useState<UserAddedServer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -294,10 +297,12 @@ export function ToolSelector({
         {/* Configured Tools Section */}
         {configuredServers.length > 0 && (
           <div>
-            <div className="flex items-center gap-2 mb-3">
-              <h3 className="text-sm font-semibold">Configured Tools</h3>
-              <Badge variant="secondary" className="text-[10px] h-5">{configuredServers.length}</Badge>
-            </div>
+            {!hideHeaders && (
+              <div className="flex items-center gap-2 mb-3">
+                <h3 className="text-sm font-semibold">Configured Integrations</h3>
+                <Badge variant="secondary" className="text-[10px] h-5">{configuredServers.length}</Badge>
+              </div>
+            )}
             <div className="grid grid-cols-1 gap-2 w-full">
               {configuredServers.map((server) => (
                 <ServerCard
@@ -311,15 +316,15 @@ export function ToolSelector({
         )}
 
         {/* Separator */}
-        {configuredServers.length > 0 && unconfiguredServers.length > 0 && (
+        {showUnconfigured && configuredServers.length > 0 && unconfiguredServers.length > 0 && (
           <Separator className="my-4" />
         )}
 
         {/* Available Tools Section */}
-        {unconfiguredServers.length > 0 && (
+        {showUnconfigured && unconfiguredServers.length > 0 && (
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <h3 className="text-sm font-semibold">Available Tools</h3>
+              <h3 className="text-sm font-semibold">Available Integrations</h3>
               <Badge variant="outline" className="text-[10px] h-5">{unconfiguredServers.length}</Badge>
             </div>
             <div className="grid grid-cols-1 gap-2 w-full">
@@ -337,7 +342,7 @@ export function ToolSelector({
         {/* Empty state */}
         {allServers.length === 0 && (
           <div className="text-center py-8 text-muted-foreground">
-            <p>No tools available at the moment.</p>
+            <p>No integrations available at the moment.</p>
             <Button 
               variant="outline" 
               size="sm" 

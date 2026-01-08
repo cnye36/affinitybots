@@ -160,7 +160,8 @@ function unwrapToolCallResult(result: unknown): unknown {
 
 function createDynamicToolInstance(
 	normalized: NormalizedTool,
-	executor: (args: Record<string, unknown>) => Promise<unknown>
+	executor: (args: Record<string, unknown>) => Promise<unknown>,
+	serverName?: string
 ): DynamicStructuredTool<any, any, any, string> {
 	const schema = normalizeToolSchema(normalized.schema);
 	const tool = new DynamicStructuredTool<any, any, any, string>({
@@ -187,6 +188,9 @@ function createDynamicToolInstance(
 	});
 
 	(tool as any).__remoteName = normalized.remoteName;
+	if (serverName) {
+		(tool as any).__serverName = serverName;
+	}
 	return tool;
 }
 
@@ -383,6 +387,53 @@ export class MCPClientManager {
             // Get all tools from non-OAuth servers
             console.log(`Getting tools from MCP client (attempt ${attempt}/${maxAttempts})...`);
             mcpTools = await client.getTools();
+            
+            // Tag tools from MultiServerMCPClient with their server names
+            // If there's only one non-OAuth server, we can safely tag all tools with that server
+            // If there are multiple, we need to query them individually (which is slower)
+            const nonOAuthServerNames = Object.keys(mcpServers)
+            
+            if (nonOAuthServerNames.length === 1) {
+              // Single server - tag all tools with that server name
+              const serverName = nonOAuthServerNames[0]
+              console.log(`Tagging ${mcpTools.length} tools from MultiServerMCPClient with server name: ${serverName}`)
+              for (const tool of mcpTools) {
+                if (!tool.__serverName) {
+                  (tool as any).__serverName = serverName
+                }
+              }
+            } else if (nonOAuthServerNames.length > 1) {
+              // Multiple servers - we need to query each individually to tag tools properly
+              // This is slower but necessary for accurate tool attribution
+              console.log(`Multiple non-OAuth servers detected, querying individually to tag tools...`)
+              const serverToolMap = new Map<string, any[]>()
+              
+              for (const serverName of nonOAuthServerNames) {
+                try {
+                  const singleServerClient = new MultiServerMCPClient({
+                    mcpServers: { [serverName]: mcpServers[serverName] },
+                    useStandardContentBlocks: true,
+                    throwOnLoadError: false,
+                    prefixToolNameWithServerName: false,
+                    additionalToolNamePrefix: "",
+                  })
+                  
+                  const serverTools = await singleServerClient.getTools()
+                  for (const tool of serverTools) {
+                    if (!(tool as any).__serverName) {
+                      (tool as any).__serverName = serverName
+                    }
+                  }
+                  serverToolMap.set(serverName, serverTools)
+                  console.log(`Tagged ${serverTools.length} tools for server ${serverName}`)
+                } catch (err) {
+                  console.warn(`Failed to query tools for server ${serverName}:`, err)
+                }
+              }
+              
+              // Replace mcpTools with properly tagged tools from individual queries
+              mcpTools = Array.from(serverToolMap.values()).flat()
+            }
             break;
           } catch (err: any) {
             const msg = String(err?.message || err);
@@ -509,7 +560,9 @@ export class MCPClientManager {
       }
 
       // Only use token if it's not expired OR if we have a refresh token to get new one
-      const tokens: OAuthTokens | null = hasStoredToken && !isTokenExpired
+      // The MCP SDK will automatically refresh expired tokens if a refresh_token is present
+      const hasRefreshToken = serverConfig.refresh_token && typeof serverConfig.refresh_token === 'string' && serverConfig.refresh_token !== '';
+      const tokens: OAuthTokens | null = hasStoredToken && (!isTokenExpired || hasRefreshToken)
         ? {
             access_token: serverConfig.oauth_token,
             token_type: storedTokenType,
@@ -518,11 +571,14 @@ export class MCPClientManager {
           }
         : null;
 
-      console.log(`🔍 Google Drive Debug - serverName: ${serverName}, isGoogleDriveServer: ${isGoogleDriveServer}, hasStoredToken: ${hasStoredToken}`);
-      console.log(`🔍 Google Drive Debug - serverConfig.oauth_token: ${serverConfig.oauth_token ? 'PRESENT' : 'MISSING'}`);
+      if (isTokenExpired && hasRefreshToken && tokens) {
+        console.log(`OAuth token for ${serverName} is expired but refresh token available - MCP SDK will handle refresh automatically`);
+      }
 
       // Handle Google Drive servers with custom client FIRST
       if (isGoogleDriveServer) {
+        console.log(`🔍 Google Drive Debug - serverName: ${serverName}, isGoogleDriveServer: ${isGoogleDriveServer}, hasStoredToken: ${hasStoredToken}`);
+        console.log(`🔍 Google Drive Debug - serverConfig.oauth_token: ${serverConfig.oauth_token ? 'PRESENT' : 'MISSING'}`);
         console.log(`🔍 Google Drive Debug - Attempting to create client regardless of token status`);
         console.log(`Creating Google Drive MCP client for ${serverName}`);
         try {
@@ -978,7 +1034,7 @@ export class MCPClientManager {
 					return;
 				}
 				const executor = executorFactory(normalized);
-				structuredTools.push(createDynamicToolInstance(normalized, executor));
+				structuredTools.push(createDynamicToolInstance(normalized, executor, serverName));
 			});
 			return structuredTools;
 		};

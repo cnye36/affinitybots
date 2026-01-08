@@ -50,22 +50,38 @@ export async function POST(
 			)
 		}
 
-		console.log(`Discovering capabilities for ${serverSlug}...`)
+		console.log(`[${serverSlug}] Starting discovery...`)
+		console.log(`[${serverSlug}] Server URL: ${config.url}`)
+		console.log(`[${serverSlug}] Has session_id: ${!!config.session_id}`)
+		console.log(`[${serverSlug}] Has oauth_token: ${!!config.oauth_token}`)
+		console.log(`[${serverSlug}] Has apiKey: ${!!(config.config?.apiKey || config.config?.api_key)}`)
+		console.log(`[${serverSlug}] Config provider: ${config.config?.provider || 'none'}`)
+
+		// For Google servers (gmail, google-drive), we store tokens in DB and use HTTP with bearer token
+		// Don't try to use sessionStore OAuth client for Google services
+		const isGoogleService = serverSlug === 'gmail' || serverSlug === 'google-drive' || 
+			config.config?.provider === 'gmail' || config.config?.provider === 'drive'
+		
+		if (isGoogleService) {
+			console.log(`[${serverSlug}] Detected Google service - will use bearerToken for HTTP discovery (not sessionStore)`)
+		}
 
 		// Discover server capabilities
 		const capabilities = await discoverServerCapabilities(
 			config.url,
 			serverSlug,
 			{
-				sessionId: config.session_id || undefined,
+				// Only use session_id for non-Google OAuth servers
+				sessionId: (!isGoogleService && config.session_id) ? config.session_id : undefined,
 				apiKey: config.config?.apiKey || config.config?.api_key || undefined,
+				// For Google servers, always use oauth_token as bearerToken for HTTP discovery
 				bearerToken: config.oauth_token || config.config?.bearer_token || undefined,
 				apiKeyHeaderName: config.config?.apiKeyHeaderName || undefined,
 			}
 		)
 
 		console.log(
-			`Discovered ${capabilities.tools.length} tools, ${capabilities.resources.length} resources, ${capabilities.prompts.length} prompts`
+			`[${serverSlug}] Discovery complete: ${capabilities.tools.length} tools, ${capabilities.resources.length} resources, ${capabilities.prompts.length} prompts`
 		)
 
 		// Store capabilities in the database

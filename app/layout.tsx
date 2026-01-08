@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { CookieBanner } from "@/components/CookieBanner";
 import { Analytics } from "@vercel/analytics/next";
 import { SupportWidget } from "@/components/support-widget/SupportWidget";
+import { GlobalErrorHandler } from "@/components/GlobalErrorHandler";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -74,6 +75,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
+        <GlobalErrorHandler />
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"

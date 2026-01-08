@@ -363,7 +363,7 @@ export default function NewAgentPage() {
 												</div>
 												<div className="flex-1 text-left">
 													<h3 className="text-lg font-semibold bg-gradient-to-r from-amber-600 to-orange-600 dark:from-amber-400 dark:to-orange-400 bg-clip-text text-transparent">
-														Add Tools
+														Add Integrations
 													</h3>
 													<p className="text-sm text-muted-foreground font-normal">Optional - extend your agent's capabilities</p>
 												</div>

@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { createClient } from "@/supabase/client"
 import { OFFICIAL_MCP_SERVERS } from "@/lib/mcp/officialMcpServers"
 import type { MCPTool, MCPResource, MCPPrompt } from "@/lib/mcp/mcpDiscovery"
-import { getStaticCapabilities } from "@/lib/mcp/staticCapabilities"
+import { getStaticCapabilities, getCategoryExamples } from "@/lib/mcp/staticCapabilities"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
@@ -101,6 +101,25 @@ export default function ServerDetailPage() {
 		loadServerData()
 	}, [serverSlug])
 
+	// Check for connected query param and trigger discovery if needed
+	useEffect(() => {
+		const connected = searchParams.get("connected")
+		if (connected === "true" && isConnected && !discovering) {
+			// Remove the query param from URL
+			const params = new URLSearchParams(searchParams.toString())
+			params.delete("connected")
+			const newUrl = params.toString() ? `/tools/${serverSlug}?${params.toString()}` : `/tools/${serverSlug}`
+			router.replace(newUrl, { scroll: false })
+			
+			// Trigger discovery after a short delay to ensure state is updated
+			setTimeout(() => {
+				console.log(`[${serverSlug}] Auto-triggering discovery after OAuth connection...`)
+				handleDiscoverCapabilities()
+			}, 500)
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [searchParams, isConnected, serverSlug, router, discovering])
+
 	async function loadServerData() {
 		setLoading(true)
 		setShowingExamples(false)
@@ -111,7 +130,13 @@ export default function ServerDetailPage() {
 			const { data: session } = await supabase.auth.getSession()
 			if (!session?.session?.user) {
 				// Not logged in - show example capabilities
-				const exampleCaps = getStaticCapabilities(serverSlug)
+				let exampleCaps = getStaticCapabilities(serverSlug)
+
+				// If no server-specific examples, use category-based examples
+				if (!exampleCaps && officialServer) {
+					exampleCaps = getCategoryExamples(officialServer.category)
+				}
+
 				if (exampleCaps) {
 					setCapabilities({
 						tools: exampleCaps.tools || [],
@@ -124,69 +149,76 @@ export default function ServerDetailPage() {
 				return
 			}
 
-			// User is logged in - check if they have this server connected
-			const { data: userServer, error: serverError } = await supabase
-				.from("user_mcp_servers")
-				.select("*")
-				.eq("server_slug", serverSlug)
-				.maybeSingle()
+		// User is logged in - check if they have this SPECIFIC server connected
+		// IMPORTANT: Each Google server (gmail, google-drive) must be checked independently
+		const { data: userServer, error: serverError } = await supabase
+			.from("user_mcp_servers")
+			.select("*")
+			.eq("server_slug", serverSlug) // Match exact server_slug (gmail vs google-drive)
+			.maybeSingle()
 
-			if (serverError) {
-				console.error("Error checking server connection:", serverError)
+		if (serverError) {
+			console.error(`[${serverSlug}] Error checking server connection:`, serverError)
+		}
+
+		// Only consider connected if:
+		// 1. Server entry exists
+		// 2. Server is enabled
+		// 3. For OAuth servers: has oauth_token OR has session_id (in progress)
+		const isActuallyConnected = userServer && 
+			userServer.is_enabled && 
+			(officialServer?.authType !== "oauth" || userServer.oauth_token || userServer.session_id)
+
+		console.log(`[${serverSlug}] Server check:`, {
+			hasEntry: !!userServer,
+			isEnabled: userServer?.is_enabled,
+			hasOAuthToken: !!userServer?.oauth_token,
+			hasSessionId: !!userServer?.session_id,
+			authType: officialServer?.authType,
+			isActuallyConnected
+		})
+
+		if (isActuallyConnected) {
+			setIsConnected(true)
+			setServerConfig(userServer)
+
+			// ONLY try to fetch stored capabilities - DO NOT auto-trigger discovery
+			// Discovery should only happen when user explicitly clicks "Refresh Capabilities"
+			try {
+				console.log(`[${serverSlug}] Fetching stored capabilities...`)
+				const response = await fetch(`/api/mcp/servers/${serverSlug}/discover`)
+				if (response.ok) {
+					const data = await response.json()
+					if (data.tools && data.tools.length > 0) {
+						// Found stored discovered capabilities - use them
+						console.log(`[${serverSlug}] Found ${data.tools.length} stored tools`)
+						setCapabilities({
+							tools: data.tools || [],
+							resources: data.resources || [],
+							prompts: data.prompts || [],
+							discoveredAt: data.discovered_at,
+						})
+						setShowingExamples(false)
+						setLoading(false)
+						return
+					} else {
+						console.log(`[${serverSlug}] No stored capabilities found - user can click "Refresh Capabilities" to discover`)
+					}
+				} else {
+					console.warn(`[${serverSlug}] Failed to fetch capabilities:`, response.status, response.statusText)
+				}
+			} catch (fetchError) {
+				console.warn(`[${serverSlug}] Error fetching stored capabilities:`, fetchError)
 			}
-
-			if (userServer) {
-				setIsConnected(true)
-				setServerConfig(userServer)
-
-				// Try to fetch live capabilities
-				try {
-					const response = await fetch(`/api/mcp/servers/${serverSlug}/discover`)
-					if (response.ok) {
-						const data = await response.json()
-						if (data.tools && data.tools.length > 0) {
-							// Found stored discovered capabilities - use them
-							setCapabilities({
-								tools: data.tools || [],
-								resources: data.resources || [],
-								prompts: data.prompts || [],
-								discoveredAt: data.discovered_at,
-							})
-							setShowingExamples(false)
-							setLoading(false)
-							return
-						}
-					}
-				} catch (fetchError) {
-					console.warn("Failed to fetch live capabilities:", fetchError)
-				}
-
-				// No stored capabilities - trigger discovery since we're connected
-				try {
-					const discoverResponse = await fetch(`/api/mcp/servers/${serverSlug}/discover`, {
-						method: "POST"
-					})
-					if (discoverResponse.ok) {
-						const discoverData = await discoverResponse.json()
-						if (discoverData.capabilities && discoverData.capabilities.tools && discoverData.capabilities.tools.length > 0) {
-							// Successfully discovered - use discovered capabilities
-							setCapabilities({
-								tools: discoverData.capabilities.tools || [],
-								resources: discoverData.capabilities.resources || [],
-								prompts: discoverData.capabilities.prompts || [],
-								discoveredAt: new Date().toISOString(),
-							})
-							setShowingExamples(false)
-							setLoading(false)
-							return
-						}
-					}
-				} catch (discoverError) {
-					console.warn("Discovery request failed:", discoverError)
-				}
-			} else {
+		} else {
 				// Not connected - show example capabilities
-				const exampleCaps = getStaticCapabilities(serverSlug)
+				let exampleCaps = getStaticCapabilities(serverSlug)
+
+				// If no server-specific examples, use category-based examples
+				if (!exampleCaps && officialServer) {
+					exampleCaps = getCategoryExamples(officialServer.category)
+				}
+
 				if (exampleCaps) {
 					setCapabilities({
 						tools: exampleCaps.tools || [],
@@ -286,9 +318,15 @@ export default function ServerDetailPage() {
 			// Immediately update state to show disconnected
 			setIsConnected(false)
 			setServerConfig(null)
-			
+
 			// Load example capabilities
-			const exampleCaps = getStaticCapabilities(serverSlug)
+			let exampleCaps = getStaticCapabilities(serverSlug)
+
+			// If no server-specific examples, use category-based examples
+			if (!exampleCaps && officialServer) {
+				exampleCaps = getCategoryExamples(officialServer.category)
+			}
+
 			if (exampleCaps) {
 				setCapabilities({
 					tools: exampleCaps.tools || [],
@@ -296,8 +334,12 @@ export default function ServerDetailPage() {
 					prompts: exampleCaps.prompts || [],
 				})
 				setShowingExamples(true)
+			} else {
+				// If no examples available, clear capabilities
+				setCapabilities(null)
+				setShowingExamples(false)
 			}
-			
+
 			// Then reload from database to confirm
 			await loadServerData()
 		} catch (error) {
@@ -478,7 +520,7 @@ export default function ServerDetailPage() {
 						</TabsTrigger>
 					</TabsList>
 
-					{/* Tools Tab */}
+					{/* Integrations Tab */}
 					<TabsContent value="tools" className="mt-6">
 						{capabilities.tools.length === 0 ? (
 							<div className="text-center py-12 text-muted-foreground">

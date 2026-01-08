@@ -31,7 +31,7 @@ const quickActions: QuickAction[] = [
   {
     href: "/tools",
     icon: Wrench,
-    title: "Manage Tools",
+    title: "Manage Integrations",
     description: "Configure and connect tools to your agents",
     color: "green"
   },

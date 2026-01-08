@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useCallback, useState, useRef } from "react"
+import { useEffect, useCallback, useState, useRef, useMemo } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { ReactFlowProvider } from "reactflow"
 import { createClient } from "@/supabase/client"
@@ -19,7 +19,8 @@ import { useAutoLayout } from "./hooks/useAutoLayout"
 export function WorkflowBuilder() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const supabase = createClient()
+  // Memoize supabase client to prevent infinite loops in useEffect dependencies
+  const supabase = useMemo(() => createClient(), [])
 
   const {
     workflowId,
@@ -610,7 +611,9 @@ export function WorkflowBuilder() {
     }
 
     loadWorkflow()
-  }, [urlWorkflowId, supabase])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlWorkflowId])
+  // Note: supabase is memoized and stable, but excluded to be extra safe
 
   const handleNameBlur = useCallback(async () => {
     if (!workflowId || !workflowName.trim()) return

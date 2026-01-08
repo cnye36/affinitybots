@@ -7,6 +7,11 @@ import {
 	AccordionItem,
 	AccordionTrigger,
 } from "@/components/ui/accordion"
+import {
+	Collapsible,
+	CollapsibleContent,
+	CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
@@ -20,10 +25,13 @@ import {
 	Loader2,
 	ArrowRight,
 	Globe,
+	ChevronDown,
+	ChevronRight,
 } from "lucide-react"
 import { ModelConfig } from "@/components/configuration/ModelConfig"
 import { PromptsConfig } from "@/components/configuration/PromptsConfig"
 import { ToolSelector } from "@/components/configuration/ToolSelector"
+import { ToolManagement } from "@/components/playground/ToolManagement"
 import { KnowledgeConfig } from "@/components/configuration/KnowledgeConfig"
 import { MemoryConfig } from "@/components/configuration/MemoryConfig"
 import { AssistantConfiguration, Assistant } from "@/types/assistant"
@@ -48,19 +56,77 @@ export function PlaygroundAgentConfig({ assistant, onConfigChange }: PlaygroundA
 	const [isSaving, setIsSaving] = useState(false)
 	const [saveError, setSaveError] = useState<string | null>(null)
 	const [toolLogos, setToolLogos] = useState<Record<string, string>>({})
+	const [configuredServers, setConfiguredServers] = useState<string[]>([])
 	const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 	const lastSavedConfigRef = useRef<string>("")
 	const isPromptEditingRef = useRef(false)
 
+	// Track the current assistant ID to detect changes
+	const currentAssistantIdRef = useRef<string>("")
+
 	// Load full assistant data when available
+	// Reset config when assistant ID changes to ensure proper isolation per agent
 	useEffect(() => {
+		const assistantId = fullAssistant?.assistant_id || assistant.assistant_id
+		
+		// If assistant ID changed, reset everything to ensure clean state
+		if (currentAssistantIdRef.current && currentAssistantIdRef.current !== assistantId) {
+			console.log(`Assistant changed from ${currentAssistantIdRef.current} to ${assistantId}, resetting config`)
+			setConfig(null)
+			setToolLogos({})
+			lastSavedConfigRef.current = ""
+		}
+		
+		currentAssistantIdRef.current = assistantId
+		
+		// Load config for the current assistant
 		if (fullAssistant) {
 			const assistantConfig = fullAssistant.config?.configurable as AssistantConfiguration
-			setConfig(assistantConfig || assistant.config?.configurable as AssistantConfiguration)
+			const configToSet = assistantConfig || assistant.config?.configurable as AssistantConfiguration
+			if (configToSet) {
+				setConfig(configToSet)
+				// Reset last saved config for this assistant
+				lastSavedConfigRef.current = JSON.stringify(configToSet)
+			}
 		} else if (assistant.config?.configurable) {
-			setConfig(assistant.config.configurable as AssistantConfiguration)
+			const configToSet = assistant.config.configurable as AssistantConfiguration
+			setConfig(configToSet)
+			lastSavedConfigRef.current = JSON.stringify(configToSet)
 		}
-	}, [fullAssistant, assistant])
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [fullAssistant?.assistant_id, assistant.assistant_id]) // Only depend on IDs, not full objects
+
+	// Load configured servers
+	useEffect(() => {
+		const fetchConfiguredServers = async () => {
+			try {
+				const [userRes, userAddedRes] = await Promise.all([
+					fetch('/api/user-mcp-servers').then(r => r.json()),
+					fetch('/api/user-added-servers').then(r => r.json())
+				])
+
+				const userServers = userRes.servers || []
+				const userAddedServers = userAddedRes.servers || []
+				
+				// Get all configured server slugs (enabled ones)
+				// This matches the logic in ToolSelector's isConfigured function
+				const configured = [
+					...userServers.filter((s: any) => s.is_enabled).map((s: any) => s.server_slug),
+					...userAddedServers.filter((s: any) => s.is_enabled).map((s: any) => s.server_slug),
+				]
+				
+				// Remove duplicates
+				const uniqueConfigured = [...new Set(configured)]
+				
+				console.log('Configured servers:', uniqueConfigured)
+				setConfiguredServers(uniqueConfigured)
+			} catch (err) {
+				console.error('Failed to fetch configured servers:', err)
+			}
+		}
+		
+		fetchConfiguredServers()
+	}, [])
 
 	// Load tool logos
 	useEffect(() => {
@@ -152,20 +218,46 @@ export function PlaygroundAgentConfig({ assistant, onConfigChange }: PlaygroundA
 				clearTimeout(saveTimeoutRef.current)
 			}
 		}
-	}, [config, fullAssistant, assistant.assistant_id, onConfigChange])
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [config, fullAssistant?.assistant_id, assistant.assistant_id])
+	// Note: onConfigChange is intentionally excluded to prevent infinite loops
+	// It's a callback that may be recreated on every render
 
-	// Initialize last saved config
+	// Initialize last saved config when config is first loaded or assistant changes
 	useEffect(() => {
 		if (config) {
-			lastSavedConfigRef.current = JSON.stringify(config)
+			const configString = JSON.stringify(config)
+			// Only update if it's different (to avoid overwriting during saves)
+			if (lastSavedConfigRef.current !== configString) {
+				lastSavedConfigRef.current = configString
+			}
 		}
-	}, [])
+	}, [config, assistant.assistant_id])
 
 	const handleConfigurableChange = (
 		field: keyof AssistantConfiguration,
 		value: unknown
 	) => {
 		if (!config) return
+		
+		// For enabled_mcp_servers, update immediately and save synchronously
+		// This ensures the state is consistent across all components
+		if (field === "enabled_mcp_servers") {
+			const newServers = value as string[]
+			// Create new config object to ensure React sees it as a change
+			const newConfig: AssistantConfiguration = {
+				...config,
+				enabled_mcp_servers: newServers,
+			}
+			// Update state immediately - this will cause re-render with new enabledTools
+			setConfig(newConfig)
+			// Update lastSavedConfigRef to prevent duplicate saves
+			lastSavedConfigRef.current = JSON.stringify(newConfig)
+			// Save immediately to backend to keep everything in sync
+			autoSave(newConfig, true)
+			return
+		}
+		
 		setConfig({
 			...config,
 			[field]: value,
@@ -213,7 +305,11 @@ export function PlaygroundAgentConfig({ assistant, onConfigChange }: PlaygroundA
 		: config.model || "Not configured"
 
 	const assistantData = fullAssistant || assistant
-	const enabledTools = config.enabled_mcp_servers || []
+	// Use the current config state for enabled tools - this ensures immediate updates
+	// Only use what's actually in the config for THIS agent
+	const enabledTools = Array.isArray(config?.enabled_mcp_servers) 
+		? (config.enabled_mcp_servers as string[])
+		: []
 	const hasKnowledge = config.knowledge_base?.isEnabled && 
 		(config.knowledge_base?.config?.sources?.length || 0) > 0
 	const knowledgeCount = config.knowledge_base?.config?.sources?.length || 0
@@ -343,49 +439,102 @@ export function PlaygroundAgentConfig({ assistant, onConfigChange }: PlaygroundA
 					{/* Tools Section */}
 					<AccordionItem value="tools" className="border border-orange-200/30 dark:border-orange-800/30 rounded-lg px-4 bg-gradient-to-br from-orange-50/30 to-amber-50/30 dark:from-orange-950/20 dark:to-amber-950/20">
 						<AccordionTrigger className="hover:no-underline py-2.5">
-							<div className="flex items-center justify-between w-full pr-2">
+								<div className="flex items-center justify-between w-full pr-2">
 								<div className="flex items-center gap-2">
 									<Wrench className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-									<span className="font-medium text-sm">Tools</span>
+									<span className="font-medium text-sm">Integrations</span>
 								</div>
-								{enabledTools.length > 0 ? (
-									<div className="flex items-center gap-1.5">
-										{enabledTools.slice(0, 3).map((serverName) => {
-											const logoUrl = toolLogos[serverName]
-											return logoUrl ? (
-												<div
-													key={serverName}
-													className="w-5 h-5 rounded border border-orange-200/50 dark:border-orange-800/50 bg-background overflow-hidden flex items-center justify-center"
-												>
-													<Image
-														src={logoUrl}
-														alt={serverName}
-														width={16}
-														height={16}
-														className="object-contain"
-													/>
-												</div>
-											) : null
-										})}
-										{enabledTools.length > 3 && (
-											<Badge variant="secondary" className="text-xs h-5 px-1.5 bg-orange-100 dark:bg-orange-950/50 text-orange-700 dark:text-orange-300 border-orange-200/50 dark:border-orange-800/50">
-												+{enabledTools.length - 3}
-											</Badge>
-										)}
-									</div>
-								) : (
-									<span className="text-xs text-muted-foreground">None</span>
-								)}
+								{(() => {
+									// Only show icons for integrations that are:
+									// 1. Enabled for THIS specific agent (in enabledTools)
+									// 2. Configured and ready to use (in configuredServers)
+									const enabledAndConfigured = enabledTools.filter(
+										serverName => configuredServers.includes(serverName)
+									)
+									
+									if (enabledAndConfigured.length === 0) {
+										return <span className="text-xs text-muted-foreground">None</span>
+									}
+									
+									return (
+										<div className="flex items-center gap-1.5">
+											{enabledAndConfigured.slice(0, 3).map((serverName) => {
+												const logoUrl = toolLogos[serverName]
+												return logoUrl ? (
+													<div
+														key={serverName}
+														className="w-5 h-5 rounded border border-orange-200/50 dark:border-orange-800/50 bg-background overflow-hidden flex items-center justify-center"
+													>
+														<Image
+															src={logoUrl}
+															alt={serverName}
+															width={16}
+															height={16}
+															className="object-contain"
+														/>
+													</div>
+												) : null
+											})}
+											{enabledAndConfigured.length > 3 && (
+												<Badge variant="secondary" className="text-xs h-5 px-1.5 bg-orange-100 dark:bg-orange-950/50 text-orange-700 dark:text-orange-300 border-orange-200/50 dark:border-orange-800/50">
+													+{enabledAndConfigured.length - 3}
+												</Badge>
+											)}
+										</div>
+									)
+								})()}
 							</div>
 						</AccordionTrigger>
 						<AccordionContent className="overflow-hidden">
-							<div className="pt-2 pb-1 w-full overflow-hidden">
-								<ToolSelector
-									enabledMCPServers={enabledTools}
-									onMCPServersChange={(servers) =>
-										handleConfigurableChange("enabled_mcp_servers", servers)
-									}
-								/>
+							<div className="pt-2 pb-1 w-full overflow-hidden space-y-3">
+								
+
+								{/* Active Integrations - Collapsible */}
+								{enabledTools.length > 0 && (
+									<Collapsible defaultOpen={true}>
+										<CollapsibleTrigger className="flex items-center gap-2 w-full py-2 px-3 rounded-md hover:bg-orange-50/50 dark:hover:bg-orange-900/10 transition-colors group">
+											<ChevronRight className="h-4 w-4 text-orange-600 dark:text-orange-400 transition-transform group-data-[state=open]:rotate-90" />
+											<span className="text-sm font-medium">Active Tools</span>
+											<Badge variant="secondary" className="ml-auto text-[10px] h-5 px-1.5">
+												{config.selected_tools?.length || 0} selected
+											</Badge>
+										</CollapsibleTrigger>
+										<CollapsibleContent className="pt-2">
+											<div className="pl-6">
+												<ToolManagement
+													agentId={assistant.assistant_id}
+													selectedTools={config.selected_tools || []}
+													onSelectedToolsChange={(tools) =>
+														handleConfigurableChange("selected_tools", tools)
+													}
+													enabledServers={enabledTools}
+												/>
+											</div>
+										</CollapsibleContent>
+									</Collapsible>
+								)}
+								{/* Available Integrations - Collapsible */}
+								<Collapsible defaultOpen={false}>
+									<CollapsibleTrigger className="flex items-center gap-2 w-full py-2 px-3 rounded-md hover:bg-orange-50/50 dark:hover:bg-orange-900/10 transition-colors group">
+										<ChevronRight className="h-4 w-4 text-orange-600 dark:text-orange-400 transition-transform group-data-[state=open]:rotate-90" />
+										<span className="text-sm font-medium">Available Integrations</span>
+										<Badge variant="secondary" className="ml-auto text-[10px] h-5 px-1.5">
+											{configuredServers.length}
+										</Badge>
+									</CollapsibleTrigger>
+									<CollapsibleContent className="pt-2">
+										<div className="pl-6">
+											<ToolSelector
+												enabledMCPServers={enabledTools}
+												onMCPServersChange={(servers) =>
+													handleConfigurableChange("enabled_mcp_servers", servers)
+												}
+												showUnconfigured={false}
+												hideHeaders={true}
+											/>
+										</div>
+									</CollapsibleContent>
+								</Collapsible>
 							</div>
 						</AccordionContent>
 					</AccordionItem>

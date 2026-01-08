@@ -564,36 +564,136 @@ export class MCPWebInterface {
   }
 
   /**
+   * Removes a server from all agents' enabled_mcp_servers arrays
+   */
+  private async removeServerFromAllAgents(serverName: string, userId: string): Promise<void> {
+    try {
+      const platformUrl = process.env.LANGGRAPH_API_URL || "http://localhost:8123"
+      const apiKey = process.env.LANGSMITH_API_KEY || ""
+      
+      // Get all assistants for this user from LangGraph Platform
+      const response = await fetch(`${platformUrl}/assistants`, {
+        headers: {
+          "X-Api-Key": apiKey,
+        },
+      })
+      
+      if (!response.ok) {
+        console.warn(`Failed to fetch assistants to clean up server ${serverName}`)
+        return
+      }
+      
+      const assistants = await response.json()
+      
+      // Update each assistant that has this server enabled
+      for (const assistant of assistants || []) {
+        const agentConfig = assistant.config?.configurable || {}
+        const enabledServers = agentConfig.enabled_mcp_servers || []
+        
+        if (Array.isArray(enabledServers) && enabledServers.includes(serverName)) {
+          // Remove the server from the enabled list
+          const updatedServers = enabledServers.filter((s: string) => s !== serverName)
+          
+          // Update the assistant config
+          const updateResponse = await fetch(`${platformUrl}/assistants/${assistant.assistant_id}`, {
+            method: "PUT",
+            headers: {
+              "X-Api-Key": apiKey,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              config: {
+                configurable: {
+                  ...agentConfig,
+                  enabled_mcp_servers: updatedServers,
+                },
+              },
+            }),
+          })
+          
+          if (!updateResponse.ok) {
+            console.warn(`Failed to update assistant ${assistant.assistant_id} to remove server ${serverName}`)
+          } else {
+            console.log(`Removed server ${serverName} from agent ${assistant.assistant_id}`)
+          }
+        }
+      }
+    } catch (error) {
+      console.error(`Error removing server ${serverName} from agents:`, error)
+      // Don't throw - this is best-effort cleanup
+    }
+  }
+
+  /**
    * Disconnects a server connection by its qualified name for the current user
+   * COMPLETELY removes all tokens, session IDs, and OAuth state
+   * Next connection will require fresh OAuth flow
    */
   async disconnectServerByName(serverName: string, userId: string): Promise<{ success: boolean; error?: string }> {
     try {
-      // Look up the server row to find any active session_id
+      console.log(`[${serverName}] Starting disconnect for user ${userId}`)
+      
+      // Look up the server row to find any active session_id and tokens
       const { data: row, error: fetchError } = await this.getSupabase()
         .from('user_mcp_servers')
-        .select('session_id')
+        .select('session_id, oauth_token, refresh_token, session_id, config')
         .eq('user_id', userId)
         .eq('server_slug', serverName)
         .single();
 
       if (fetchError) {
         if ((fetchError as any).code === 'PGRST116') {
+          console.log(`[${serverName}] No server entry found - already disconnected`)
           return { success: true }; // Nothing to do
         }
         throw new Error(fetchError.message);
       }
 
+      console.log(`[${serverName}] Found server entry:`, {
+        hasSessionId: !!row?.session_id,
+        hasOAuthToken: !!row?.oauth_token,
+        hasRefreshToken: !!row?.refresh_token,
+        hasConfig: !!row?.config
+      })
+
       // If there's an in-memory OAuth session, disconnect it
       if (row?.session_id) {
         try {
+          console.log(`[${serverName}] Disconnecting OAuth session ${row.session_id}`)
           await mcpClientFactory.disconnectOAuth(row.session_id);
+          console.log(`[${serverName}] OAuth session disconnected from factory`)
+          
+          // Also try to remove from sessionStore if it exists
+          try {
+            await sessionStore.removeClient(row.session_id);
+            console.log(`[${serverName}] Removed from sessionStore`)
+          } catch (sessionStoreError) {
+            console.warn(`[${serverName}] Warning removing from sessionStore:`, sessionStoreError)
+          }
         } catch (e) {
           // Best-effort; continue to delete DB row
-          console.warn('Warning disconnecting OAuth session for', serverName, e);
+          console.warn(`[${serverName}] Warning disconnecting OAuth session:`, e);
         }
       }
 
-      // Delete the server row
+      // Remove this server from all agents BEFORE deleting the server config
+      // This ensures agents are updated immediately and can't use the disconnected server
+      console.log(`[${serverName}] Removing from all agents for user ${userId}`)
+      await this.removeServerFromAllAgents(serverName, userId);
+
+      // Also remove from user_added_servers if it exists there
+      const { error: deleteUserAddedError } = await this.getSupabase()
+        .from('user_added_servers')
+        .delete()
+        .eq('user_id', userId)
+        .eq('server_slug', serverName);
+      
+      if (deleteUserAddedError && (deleteUserAddedError as any).code !== 'PGRST116') {
+        console.warn(`[${serverName}] Error deleting from user_added_servers: ${deleteUserAddedError.message}`)
+      }
+
+      // COMPLETELY delete the server row - this removes ALL tokens, session_id, and config
+      // This ensures next connection requires fresh OAuth flow
       const { error: deleteError } = await this.getSupabase()
         .from('user_mcp_servers')
         .delete()
@@ -604,8 +704,11 @@ export class MCPWebInterface {
         throw new Error(deleteError.message);
       }
 
+      console.log(`[${serverName}] Successfully disconnected: removed all tokens, session_id, and DB entry`)
+      console.log(`[${serverName}] Next connection will require fresh OAuth flow`)
       return { success: true };
     } catch (error) {
+      console.error(`[${serverName}] Error during disconnect:`, error)
       return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   }

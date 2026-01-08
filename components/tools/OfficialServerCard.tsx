@@ -62,6 +62,7 @@ export function OfficialServerCard({ server, onConnected, isConfigured = false, 
       logoUrl={server.logoUrl}
       logoUrlLight={server.logoUrlLight}
       logoUrlDark={server.logoUrlDark}
+      category={server.category}
       isConfigured={isConfigured}
       onClick={handleCardClick}
       compact={compact}

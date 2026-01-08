@@ -294,7 +294,7 @@ export function AgentConfigModal({
               value="tools"
               className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-600 data-[state=active]:to-purple-600 data-[state=active]:text-white"
             >
-              Tools
+              Integrations
             </TabsTrigger>
             <TabsTrigger
               value="knowledge"

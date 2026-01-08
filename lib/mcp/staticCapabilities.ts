@@ -1676,10 +1676,555 @@ export const STATIC_MCP_CAPABILITIES: Record<string, StaticServerCapabilities> =
 }
 
 /**
+ * Category-based example capabilities
+ * These are generic examples that apply to all servers in a category
+ */
+export const CATEGORY_EXAMPLE_CAPABILITIES: Record<string, StaticServerCapabilities> = {
+	"development": {
+		serverName: "development",
+		lastUpdated: "2026-01-07",
+		tools: [
+			{
+				name: "search_code",
+				description: "Search for code across repositories and projects",
+				inputSchema: {
+					type: "object",
+					properties: {
+						query: { type: "string", description: "Search query for code" },
+						language: { type: "string", description: "Programming language filter" },
+					},
+					required: ["query"],
+				},
+			},
+			{
+				name: "get_documentation",
+				description: "Retrieve documentation for libraries, frameworks, or APIs",
+				inputSchema: {
+					type: "object",
+					properties: {
+						topic: { type: "string", description: "Topic or library name" },
+						version: { type: "string", description: "Version number" },
+					},
+					required: ["topic"],
+				},
+			},
+			{
+				name: "create_snippet",
+				description: "Create or save code snippets",
+				inputSchema: {
+					type: "object",
+					properties: {
+						code: { type: "string", description: "Code content" },
+						language: { type: "string", description: "Programming language" },
+						description: { type: "string", description: "Snippet description" },
+					},
+					required: ["code"],
+				},
+			},
+		],
+	},
+	"productivity": {
+		serverName: "productivity",
+		lastUpdated: "2026-01-07",
+		tools: [
+			{
+				name: "search_documents",
+				description: "Search for documents and files",
+				inputSchema: {
+					type: "object",
+					properties: {
+						query: { type: "string", description: "Search query" },
+						file_type: { type: "string", description: "File type filter" },
+					},
+					required: ["query"],
+				},
+			},
+			{
+				name: "create_document",
+				description: "Create a new document or note",
+				inputSchema: {
+					type: "object",
+					properties: {
+						title: { type: "string", description: "Document title" },
+						content: { type: "string", description: "Document content" },
+						folder: { type: "string", description: "Folder or location" },
+					},
+					required: ["title", "content"],
+				},
+			},
+			{
+				name: "share_content",
+				description: "Share documents or content with others",
+				inputSchema: {
+					type: "object",
+					properties: {
+						item_id: { type: "string", description: "Item ID to share" },
+						recipient: { type: "string", description: "Recipient email or user" },
+						permission: { type: "string", enum: ["view", "edit", "comment"], description: "Permission level" },
+					},
+					required: ["item_id", "recipient"],
+				},
+			},
+		],
+	},
+	"project-management": {
+		serverName: "project-management",
+		lastUpdated: "2026-01-07",
+		tools: [
+			{
+				name: "list_tasks",
+				description: "List tasks or issues in a project",
+				inputSchema: {
+					type: "object",
+					properties: {
+						project_id: { type: "string", description: "Project ID" },
+						status: { type: "string", enum: ["open", "closed", "in_progress"], description: "Task status filter" },
+					},
+				},
+			},
+			{
+				name: "create_task",
+				description: "Create a new task or issue",
+				inputSchema: {
+					type: "object",
+					properties: {
+						title: { type: "string", description: "Task title" },
+						description: { type: "string", description: "Task description" },
+						assignee: { type: "string", description: "Assign to user" },
+						priority: { type: "string", enum: ["low", "medium", "high"], description: "Task priority" },
+					},
+					required: ["title"],
+				},
+			},
+			{
+				name: "update_task_status",
+				description: "Update the status of a task",
+				inputSchema: {
+					type: "object",
+					properties: {
+						task_id: { type: "string", description: "Task ID" },
+						status: { type: "string", description: "New status" },
+					},
+					required: ["task_id", "status"],
+				},
+			},
+		],
+	},
+	"database": {
+		serverName: "database",
+		lastUpdated: "2026-01-07",
+		tools: [
+			{
+				name: "execute_query",
+				description: "Execute a database query",
+				inputSchema: {
+					type: "object",
+					properties: {
+						query: { type: "string", description: "SQL or query string" },
+						database: { type: "string", description: "Database name" },
+					},
+					required: ["query"],
+				},
+			},
+			{
+				name: "list_tables",
+				description: "List all tables in a database",
+				inputSchema: {
+					type: "object",
+					properties: {
+						database: { type: "string", description: "Database name" },
+					},
+				},
+			},
+			{
+				name: "get_schema",
+				description: "Get table schema information",
+				inputSchema: {
+					type: "object",
+					properties: {
+						table_name: { type: "string", description: "Table name" },
+					},
+					required: ["table_name"],
+				},
+			},
+		],
+	},
+	"design": {
+		serverName: "design",
+		lastUpdated: "2026-01-07",
+		tools: [
+			{
+				name: "list_designs",
+				description: "List design files and projects",
+				inputSchema: {
+					type: "object",
+					properties: {
+						query: { type: "string", description: "Search query" },
+					},
+				},
+			},
+			{
+				name: "get_design",
+				description: "Get design file details and components",
+				inputSchema: {
+					type: "object",
+					properties: {
+						design_id: { type: "string", description: "Design file ID" },
+					},
+					required: ["design_id"],
+				},
+			},
+			{
+				name: "create_design",
+				description: "Create a new design file",
+				inputSchema: {
+					type: "object",
+					properties: {
+						name: { type: "string", description: "Design name" },
+						template: { type: "string", description: "Template to use" },
+					},
+					required: ["name"],
+				},
+			},
+		],
+	},
+	"automation": {
+		serverName: "automation",
+		lastUpdated: "2026-01-07",
+		tools: [
+			{
+				name: "list_workflows",
+				description: "List automation workflows",
+				inputSchema: {
+					type: "object",
+					properties: {
+						status: { type: "string", enum: ["active", "paused", "draft"], description: "Filter by status" },
+					},
+				},
+			},
+			{
+				name: "trigger_workflow",
+				description: "Manually trigger an automation workflow",
+				inputSchema: {
+					type: "object",
+					properties: {
+						workflow_id: { type: "string", description: "Workflow ID" },
+						data: { type: "object", description: "Input data for the workflow" },
+					},
+					required: ["workflow_id"],
+				},
+			},
+			{
+				name: "create_workflow",
+				description: "Create a new automation workflow",
+				inputSchema: {
+					type: "object",
+					properties: {
+						name: { type: "string", description: "Workflow name" },
+						trigger: { type: "object", description: "Trigger configuration" },
+						actions: { type: "array", description: "Actions to perform" },
+					},
+					required: ["name", "trigger", "actions"],
+				},
+			},
+		],
+	},
+	"web-scraping": {
+		serverName: "web-scraping",
+		lastUpdated: "2026-01-07",
+		tools: [
+			{
+				name: "scrape_url",
+				description: "Scrape content from a URL",
+				inputSchema: {
+					type: "object",
+					properties: {
+						url: { type: "string", description: "URL to scrape" },
+						selector: { type: "string", description: "CSS selector to extract" },
+					},
+					required: ["url"],
+				},
+			},
+			{
+				name: "navigate_page",
+				description: "Navigate to a web page",
+				inputSchema: {
+					type: "object",
+					properties: {
+						url: { type: "string", description: "URL to navigate to" },
+					},
+					required: ["url"],
+				},
+			},
+			{
+				name: "take_screenshot",
+				description: "Take a screenshot of a web page",
+				inputSchema: {
+					type: "object",
+					properties: {
+						url: { type: "string", description: "URL to screenshot" },
+						full_page: { type: "boolean", description: "Capture full page" },
+					},
+					required: ["url"],
+				},
+			},
+		],
+	},
+	"search": {
+		serverName: "search",
+		lastUpdated: "2026-01-07",
+		tools: [
+			{
+				name: "web_search",
+				description: "Search the web",
+				inputSchema: {
+					type: "object",
+					properties: {
+						query: { type: "string", description: "Search query" },
+						count: { type: "number", description: "Number of results" },
+					},
+					required: ["query"],
+				},
+			},
+			{
+				name: "search_images",
+				description: "Search for images",
+				inputSchema: {
+					type: "object",
+					properties: {
+						query: { type: "string", description: "Image search query" },
+					},
+					required: ["query"],
+				},
+			},
+			{
+				name: "search_places",
+				description: "Search for places or locations",
+				inputSchema: {
+					type: "object",
+					properties: {
+						query: { type: "string", description: "Place search query" },
+						location: { type: "string", description: "Location context" },
+					},
+					required: ["query"],
+				},
+			},
+		],
+	},
+	"monitoring": {
+		serverName: "monitoring",
+		lastUpdated: "2026-01-07",
+		tools: [
+			{
+				name: "list_issues",
+				description: "List errors and issues",
+				inputSchema: {
+					type: "object",
+					properties: {
+						project: { type: "string", description: "Project ID" },
+						status: { type: "string", enum: ["resolved", "unresolved", "ignored"], description: "Issue status" },
+					},
+				},
+			},
+			{
+				name: "get_metrics",
+				description: "Get performance metrics and statistics",
+				inputSchema: {
+					type: "object",
+					properties: {
+						metric: { type: "string", description: "Metric name" },
+						timeframe: { type: "string", description: "Time period" },
+					},
+					required: ["metric"],
+				},
+			},
+			{
+				name: "resolve_issue",
+				description: "Mark an issue as resolved",
+				inputSchema: {
+					type: "object",
+					properties: {
+						issue_id: { type: "string", description: "Issue ID" },
+					},
+					required: ["issue_id"],
+				},
+			},
+		],
+	},
+	"ecommerce": {
+		serverName: "ecommerce",
+		lastUpdated: "2026-01-07",
+		tools: [
+			{
+				name: "list_products",
+				description: "List products in the store",
+				inputSchema: {
+					type: "object",
+					properties: {
+						query: { type: "string", description: "Search query" },
+						category: { type: "string", description: "Product category" },
+					},
+				},
+			},
+			{
+				name: "get_product",
+				description: "Get product details",
+				inputSchema: {
+					type: "object",
+					properties: {
+						product_id: { type: "string", description: "Product ID" },
+					},
+					required: ["product_id"],
+				},
+			},
+			{
+				name: "update_inventory",
+				description: "Update product inventory",
+				inputSchema: {
+					type: "object",
+					properties: {
+						product_id: { type: "string", description: "Product ID" },
+						quantity: { type: "number", description: "New quantity" },
+					},
+					required: ["product_id", "quantity"],
+				},
+			},
+		],
+	},
+	"seo": {
+		serverName: "seo",
+		lastUpdated: "2026-01-07",
+		tools: [
+			{
+				name: "analyze_domain",
+				description: "Analyze SEO metrics for a domain",
+				inputSchema: {
+					type: "object",
+					properties: {
+						domain: { type: "string", description: "Domain to analyze" },
+					},
+					required: ["domain"],
+				},
+			},
+			{
+				name: "get_backlinks",
+				description: "Get backlink data for a domain",
+				inputSchema: {
+					type: "object",
+					properties: {
+						domain: { type: "string", description: "Domain name" },
+					},
+					required: ["domain"],
+				},
+			},
+			{
+				name: "keyword_research",
+				description: "Research keywords and search volume",
+				inputSchema: {
+					type: "object",
+					properties: {
+						keyword: { type: "string", description: "Keyword to research" },
+					},
+					required: ["keyword"],
+				},
+			},
+		],
+	},
+	"finance": {
+		serverName: "finance",
+		lastUpdated: "2026-01-07",
+		tools: [
+			{
+				name: "get_price",
+				description: "Get current price for an asset",
+				inputSchema: {
+					type: "object",
+					properties: {
+						symbol: { type: "string", description: "Asset symbol (e.g., BTC, AAPL)" },
+					},
+					required: ["symbol"],
+				},
+			},
+			{
+				name: "get_historical_data",
+				description: "Get historical price data",
+				inputSchema: {
+					type: "object",
+					properties: {
+						symbol: { type: "string", description: "Asset symbol" },
+						start_date: { type: "string", description: "Start date" },
+						end_date: { type: "string", description: "End date" },
+					},
+					required: ["symbol"],
+				},
+			},
+			{
+				name: "list_assets",
+				description: "List available assets or symbols",
+				inputSchema: {
+					type: "object",
+					properties: {
+						type: { type: "string", enum: ["crypto", "stocks", "forex"], description: "Asset type" },
+					},
+				},
+			},
+		],
+	},
+	"communication": {
+		serverName: "communication",
+		lastUpdated: "2026-01-07",
+		tools: [
+			{
+				name: "send_message",
+				description: "Send a message",
+				inputSchema: {
+					type: "object",
+					properties: {
+						channel: { type: "string", description: "Channel or recipient" },
+						message: { type: "string", description: "Message content" },
+					},
+					required: ["channel", "message"],
+				},
+			},
+			{
+				name: "list_messages",
+				description: "List recent messages",
+				inputSchema: {
+					type: "object",
+					properties: {
+						channel: { type: "string", description: "Channel name" },
+						limit: { type: "number", description: "Number of messages to retrieve" },
+					},
+				},
+			},
+			{
+				name: "search_messages",
+				description: "Search for messages",
+				inputSchema: {
+					type: "object",
+					properties: {
+						query: { type: "string", description: "Search query" },
+					},
+					required: ["query"],
+				},
+			},
+		],
+	},
+}
+
+/**
  * Get static capabilities for a server
+ * Falls back to category-based examples if server-specific examples aren't available
  */
 export function getStaticCapabilities(serverName: string): StaticServerCapabilities | null {
 	return STATIC_MCP_CAPABILITIES[serverName] || null
+}
+
+/**
+ * Get category-based example capabilities
+ */
+export function getCategoryExamples(category: string): StaticServerCapabilities | null {
+	return CATEGORY_EXAMPLE_CAPABILITIES[category] || null
 }
 
 /**

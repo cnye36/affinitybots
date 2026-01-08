@@ -523,10 +523,10 @@ export default async function Dashboard() {
                       </div>
                       <div>
                         <CardTitle className="text-lg bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
-                          Tools
+                          Integrations
                         </CardTitle>
                         <CardDescription>
-                          Recently configured Tools
+                          Recently configured Integrations
                         </CardDescription>
                       </div>
                     </div>
@@ -581,7 +581,7 @@ export default async function Dashboard() {
                             href="/tools"
                             className="inline-flex items-center gap-1 text-sm text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 font-medium transition-colors"
                           >
-                            View all tools
+                            View all integrations
                             <Play className="h-3 w-3" />
                           </Link>
                         )}
@@ -592,15 +592,15 @@ export default async function Dashboard() {
                           <Play className="h-8 w-8 text-muted-foreground/50" />
                         </div>
                         <p className="text-sm font-medium text-muted-foreground mb-2">
-                          You haven&apos;t configured any tools yet.
+                          You haven&apos;t configured any integrations yet.
                         </p>
                         <p className="text-xs text-muted-foreground/70 mb-4">
-                          Connect tools to extend your agents&apos; capabilities
+                          Connect integrations to extend your agents&apos; capabilities
                         </p>
                         <Button variant="outline" asChild>
                           <Link href="/tools">
                             <Play className="h-4 w-4 mr-2" />
-                            Configure Tools
+                            Configure Integrations
                           </Link>
                         </Button>
                       </div>

@@ -7,6 +7,21 @@ export interface ConfigField {
   description?: string; // help text for the field
 }
 
+export type ServerCategory =
+  | "development"
+  | "productivity"
+  | "project-management"
+  | "database"
+  | "design"
+  | "automation"
+  | "web-scraping"
+  | "search"
+  | "monitoring"
+  | "ecommerce"
+  | "seo"
+  | "finance"
+  | "communication";
+
 export interface OfficialMcpServerMeta {
   serverName: string;
   displayName: string;
@@ -21,10 +36,11 @@ export interface OfficialMcpServerMeta {
   disabled?: boolean; // if true, hide Connect and show "coming soon"
   configFields?: ConfigField[]; // Additional configuration fields beyond API key
   apiKeyHeaderName?: string; // Custom header name for API key (default: "X-API-Key")
+  category: ServerCategory; // Category for filtering and organizing servers
 }
 
 // Curated list of official MCP servers maintained by source vendors.
-// Start with GitHub; more can be appended as we add first‑party options.
+
 export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
   {
     serverName: "github",
@@ -41,6 +57,7 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     docsUrl: "https://github.com/github/github-mcp-server",
     authType: "oauth",
     requiresSetup: true,
+    category: "development",
   },
   {
     serverName: "hubspot",
@@ -51,8 +68,9 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
       "/integration-icons/hubspot-icon.png",
     url: "https://mcp.hubspot.com",
     docsUrl: "https://developers.hubspot.com/docs",
-    authType: "none",
+    authType: "oauth",
     requiresSetup: false,
+    category: "project-management",
   },
   {
     serverName: "notion",
@@ -65,6 +83,7 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     docsUrl: "https://developers.notion.com/docs",
     authType: "oauth",
     requiresSetup: true,
+    category: "productivity",
   },
   {
     serverName: "google-drive",
@@ -72,10 +91,11 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     description:
       "Access and manage your Google Drive files, folders, and permissions. Search files, create documents, upload content, and organize your Drive using your Google account via OAuth.",
     logoUrl: "/integration-icons/google-drive-icon.png",
-    url: process.env.GOOGLE_DRIVE_MCP_URL || "http://localhost:3002",
+    url: process.env.GOOGLE_DRIVE_MCP_URL || "http://localhost:3002/mcp",
     docsUrl: "https://developers.google.com/drive",
     authType: "oauth",
     requiresSetup: true,
+    category: "productivity",
   },
   {
     serverName: "gmail",
@@ -83,10 +103,11 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     description:
       "Access and manage your Gmail emails, contacts, and permissions. Search emails, create drafts, send messages, and organize your inbox using your Google account via OAuth.",
     logoUrl: "/integration-icons/gmail-icon.png",
-    url: process.env.GMAIL_MCP_URL || "http://localhost:3003",
+    url: process.env.GMAIL_MCP_URL || "http://localhost:3003/mcp",
     docsUrl: "https://developers.google.com/gmail",
     authType: "oauth",
     requiresSetup: true,
+    category: "productivity",
   },
   // {
   //   serverName: "google-calendar",
@@ -132,6 +153,7 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     authType: "api_key",
     apiKeyHeaderName: "X-Goog-Api-Key", // Google Maps requires this specific header
     requiresSetup: true,
+    category: "search",
   },
   {
     serverName: "google-big-query",
@@ -143,6 +165,7 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     docsUrl: "https://docs.cloud.google.com/bigquery/docs/use-bigquery-mcp",
     authType: "oauth",
     requiresSetup: true,
+    category: "database",
   },
   {
     serverName: "supabase",
@@ -154,6 +177,7 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     docsUrl: "https://supabase.com/docs/guides/getting-started/mcp",
     authType: "oauth",
     requiresSetup: true,
+    category: "database",
   },
   {
     serverName: "canva",
@@ -165,6 +189,20 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     docsUrl: "https://www.canva.com/help/mcp-agent-setup/",
     authType: "oauth",
     requiresSetup: true,
+    category: "design",
+  },
+  {
+    serverName: "slack",
+    displayName: "Slack",
+    description:
+      "Official MCP Slack server. Send messages, manage channels, search conversations, upload files, and interact with your Slack workspace. Requires Slack bot token for authentication.",
+    logoUrl: "/integration-icons/slack-icon.png",
+    url: process.env.SLACK_MCP_URL || "http://localhost:3007",
+    docsUrl: "https://github.com/modelcontextprotocol/servers/tree/main/src/slack",
+    authType: "api_key",
+    apiKeyHeaderName: "SLACK_BOT_TOKEN",
+    requiresSetup: true,
+    category: "communication",
   },
   {
     serverName: "context7",
@@ -176,6 +214,7 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     docsUrl: "https://context7.com/docs/overview",
     authType: "api_key",
     requiresSetup: true,
+    category: "development",
   },
   {
     serverName: "sentry",
@@ -188,6 +227,7 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     docsUrl: "https://docs.sentry.io/product/sentry-mcp/",
     authType: "oauth",
     requiresSetup: true,
+    category: "monitoring",
   },
   {
     serverName: "zapier",
@@ -195,10 +235,11 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     description:
       "Official Zapier MCP server. Connect to 8,000+ apps and 30,000+ actions through a single integration. Automate workflows across your favorite tools including Gmail, Slack, Google Sheets, and thousands more. OAuth or API key authentication.",
     logoUrl: "/integration-icons/zapier-icon.jpeg",
-    url: process.env.ZAPIER_MCP_URL || "https://mcp.zapier.com",
+    url: "https://mcp.zapier.com/mcp",
     docsUrl: "https://zapier.com/mcp",
     authType: "oauth",
     requiresSetup: true,
+    category: "automation",
   },
   {
     serverName: "make",
@@ -210,6 +251,7 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     docsUrl: "https://developers.make.com/mcp-server",
     authType: "oauth",
     requiresSetup: true,
+    category: "automation",
   },
   {
     serverName: "figma",
@@ -221,6 +263,7 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     docsUrl: "https://developers.figma.com/docs/figma-mcp-server/",
     authType: "oauth",
     requiresSetup: true,
+    category: "design",
   },
   {
     serverName: "linear",
@@ -233,6 +276,7 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     docsUrl: "https://linear.app/docs/mcp",
     authType: "oauth",
     requiresSetup: true,
+    category: "project-management",
   },
   {
     serverName: "firecrawl",
@@ -244,6 +288,7 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     docsUrl: "https://docs.firecrawl.dev/mcp-server",
     authType: "api_key",
     requiresSetup: true,
+    category: "web-scraping",
   },
   {
     serverName: "jira-confluence",
@@ -257,6 +302,7 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     docsUrl: "https://developer.atlassian.com/cloud/jira/platform/mcp-server/",
     authType: "oauth",
     requiresSetup: true,
+    category: "project-management",
   },
   {
     serverName: "apify",
@@ -268,6 +314,7 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     docsUrl: "https://docs.apify.com/platform/integrations/mcp",
     authType: "oauth",
     requiresSetup: true,
+    category: "web-scraping",
   },
   {
     serverName: "todoist",
@@ -279,6 +326,7 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     docsUrl: "https://developer.todoist.com/api/v1/#tag/Todoist-MCP",
     authType: "oauth",
     requiresSetup: true,
+    category: "project-management",
   },
   {
     serverName: "exa",
@@ -290,6 +338,7 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     docsUrl: "https://docs.exa.ai/reference/getting-started",
     authType: "api_key",
     requiresSetup: true,
+    category: "search",
   },
   {
     serverName: "browserbase",
@@ -301,6 +350,7 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     docsUrl: "https://docs.browserbase.com/integrations/mcp/introduction",
     authType: "api_key",
     requiresSetup: true,
+    category: "web-scraping",
   },
   {
     serverName: "ahrefs",
@@ -312,6 +362,7 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     docsUrl: "https://docs.ahrefs.com/docs/mcp/reference/introduction",
     authType: "oauth",
     requiresSetup: true,
+    category: "seo",
   },
   {
     serverName: "semrush",
@@ -323,6 +374,7 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     docsUrl: "https://developer.semrush.com/api/basics/semrush-mcp/",
     authType: "api_key",
     requiresSetup: true,
+    category: "seo",
   },
   {
     serverName: "prisma-postgres",
@@ -334,6 +386,7 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     docsUrl: "https://www.prisma.io/docs/postgres/integrations/mcp-server",
     authType: "api_key",
     requiresSetup: true,
+    category: "database",
   },
   {
     serverName: "snowflake",
@@ -345,6 +398,7 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     docsUrl: "https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents-mcp",
     authType: "oauth",
     requiresSetup: true,
+    category: "database",
   },
   {
     serverName: "postman",
@@ -356,6 +410,7 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     docsUrl: "https://www.postman.com/postman/postman-public-workspace/collection/681dc649440b35935978b8b7",
     authType: "api_key",
     requiresSetup: true,
+    category: "development",
   },
   {
     serverName: "asana",
@@ -367,6 +422,7 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     docsUrl: "https://developers.asana.com/docs/mcp-server",
     authType: "oauth",
     requiresSetup: true,
+    category: "project-management",
   },
   {
     serverName: "dbt-labs",
@@ -378,6 +434,7 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     docsUrl: "https://docs.getdbt.com/docs/dbt-ai/about-mcp",
     authType: "api_key",
     requiresSetup: true,
+    category: "database",
   },
   {
     serverName: "huggingface",
@@ -389,6 +446,7 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     docsUrl: "https://huggingface.co/docs/hub/en/hf-mcp-server",
     authType: "api_key",
     requiresSetup: true,
+    category: "development",
   },
   {
     serverName: "dynatrace",
@@ -401,6 +459,7 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     docsUrl: "https://github.com/dynatrace-oss/dynatrace-mcp",
     authType: "api_key",
     requiresSetup: true,
+    category: "monitoring",
   },
   {
     serverName: "aws-knowledge",
@@ -412,6 +471,7 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     docsUrl: "https://awslabs.github.io/mcp/servers/aws-knowledge-mcp-server",
     authType: "api_key",
     requiresSetup: true,
+    category: "development",
   },
   {
     serverName: "brave-search",
@@ -423,6 +483,7 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     docsUrl: "https://brave.com/search/api/",
     authType: "api_key",
     requiresSetup: true,
+    category: "search",
   },
   {
     serverName: "tavily-search",
@@ -434,6 +495,7 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     docsUrl: "https://docs.tavily.com/documentation/mcp",
     authType: "api_key",
     requiresSetup: true,
+    category: "search",
   },
   {
     serverName: "pipeboard",
@@ -445,6 +507,7 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     docsUrl: "https://pipeboard.co/guides/meta-ads-mcp-server",
     authType: "api_key",
     requiresSetup: true,
+    category: "ecommerce",
   },
   {
     serverName: "lunarcrush",
@@ -456,6 +519,7 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     docsUrl: "https://lunarcrush.com/mcpserver",
     authType: "api_key",
     requiresSetup: true,
+    category: "finance",
   },
   {
     serverName: "shopify-storefront",
@@ -467,6 +531,7 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     docsUrl: "https://shopify.dev/docs/apps/build/storefront-mcp/servers/storefront",
     authType: "none",
     requiresSetup: true,
+    category: "ecommerce",
     configFields: [
       {
         key: "domain",
@@ -488,6 +553,7 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     docsUrl: "https://monday.com/w/mcp",
     authType: "oauth",
     requiresSetup: true,
+    category: "project-management",
   },
   {
     serverName: "supermemory",
@@ -500,6 +566,7 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     docsUrl: "https://supermemory.ai/docs/supermemory-mcp/introduction",
     authType: "api_key",
     requiresSetup: true,
+    category: "productivity",
   },
   
   {
@@ -512,6 +579,7 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     docsUrl: "https://docs.coinapi.io/general/mcp-servers",
     authType: "api_key",
     requiresSetup: true,
+    category: "finance",
   },
   {
     serverName: "coinapi-finfeed-stock",
@@ -523,6 +591,7 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     docsUrl: "https://docs.coinapi.io/general/mcp-servers",
     authType: "api_key",
     requiresSetup: true,
+    category: "finance",
   },
   {
     serverName: "coinapi-finfeed-forex",
@@ -534,6 +603,7 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     docsUrl: "https://docs.coinapi.io/general/mcp-servers",
     authType: "api_key",
     requiresSetup: true,
+    category: "finance",
   },
   {
     serverName: "coinapi-finfeed-crypto",
@@ -545,6 +615,7 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     docsUrl: "https://docs.coinapi.io/general/mcp-servers",
     authType: "api_key",
     requiresSetup: true,
+    category: "finance",
   },
   {
     serverName: "alphavantage",
@@ -556,6 +627,7 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     docsUrl: "https://mcp.alphavantage.co/",
     authType: "api_key",
     requiresSetup: true,
+    category: "finance",
   },
   {
     serverName: "playwright",
@@ -567,40 +639,32 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     docsUrl: "https://playwright.dev/",
     authType: "none",
     requiresSetup: false,
+    category: "web-scraping",
   },
-  {
-    serverName: "fetch",
-    displayName: "Fetch (Web Requests)",
-    description:
-      "Official MCP fetch server. Make HTTP requests to external APIs and websites. Fetch JSON data, HTML content, download files, and integrate with REST APIs. Supports GET, POST, PUT, DELETE methods with custom headers and authentication.",
-    logoUrl: "/integration-icons/fetch-icon.svg",
-    url: process.env.FETCH_MCP_URL || "http://localhost:3006",
-    docsUrl: "https://github.com/modelcontextprotocol/servers/tree/main/src/fetch",
-    authType: "none",
-    requiresSetup: false,
-  },
-  {
-    serverName: "slack",
-    displayName: "Slack",
-    description:
-      "Official MCP Slack server. Send messages, manage channels, search conversations, upload files, and interact with your Slack workspace. Requires Slack bot token for authentication.",
-    logoUrl: "/integration-icons/slack-icon.png",
-    url: process.env.SLACK_MCP_URL || "http://localhost:3007",
-    docsUrl: "https://github.com/modelcontextprotocol/servers/tree/main/src/slack",
-    authType: "api_key",
-    apiKeyHeaderName: "SLACK_BOT_TOKEN",
-    requiresSetup: true,
-  },
+  // {
+  //   serverName: "fetch",
+  //   displayName: "Fetch (Web Requests)",
+  //   description:
+  //     "Official MCP fetch server. Make HTTP requests to external APIs and websites. Fetch JSON data, HTML content, download files, and integrate with REST APIs. Supports GET, POST, PUT, DELETE methods with custom headers and authentication.",
+  //   logoUrl: "/integration-icons/fetch-icon.svg",
+  //   url: process.env.FETCH_MCP_URL || "http://localhost:3006",
+  //   docsUrl: "https://github.com/modelcontextprotocol/servers/tree/main/src/fetch",
+  //   authType: "none",
+  //   requiresSetup: false,
+  //   category: "web-scraping",
+  // },
+  
   {
     serverName: "puppeteer",
     displayName: "Puppeteer",
     description:
       "Official MCP Puppeteer server. Headless browser automation powered by Puppeteer. Take screenshots, generate PDFs, scrape web content, fill forms, and automate browser interactions. Alternative to Playwright with different browser control capabilities.",
     logoUrl: "/integration-icons/puppeteer-icon.svg",
-    url: process.env.PUPPETEER_MCP_URL || "http://localhost:3008",
+    url: process.env.PUPPETEER_MCP_URL || "http://localhost:3007",
     docsUrl: "https://github.com/modelcontextprotocol/servers/tree/main/src/puppeteer",
     authType: "none",
     requiresSetup: false,
+    category: "web-scraping",
   }
 
 ];
