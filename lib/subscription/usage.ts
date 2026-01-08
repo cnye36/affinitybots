@@ -45,11 +45,11 @@ async function isAdminUser(userId: string): Promise<boolean> {
 	try {
 		const supabase = await getSupabaseAdmin()
 		const { data, error } = await supabase.auth.admin.getUserById(userId)
-		
+
 		if (error || !data?.user?.email) {
 			return false
 		}
-		
+
 		return isAdminEmail(data.user.email)
 	} catch (error) {
 		console.error("Error checking admin status:", error)
@@ -58,14 +58,48 @@ async function isAdminUser(userId: string): Promise<boolean> {
 }
 
 /**
+ * Check if a user has unlimited access (admin or whitelisted)
+ * These users bypass all usage limits and paywall restrictions
+ */
+async function hasUnlimitedAccessUser(userId: string): Promise<boolean> {
+	try {
+		const supabase = await getSupabaseAdmin()
+		const { data, error } = await supabase.auth.admin.getUserById(userId)
+
+		if (error || !data?.user?.email) {
+			return false
+		}
+
+		const email = data.user.email.toLowerCase()
+
+		// Check admin emails
+		if (isAdminEmail(email)) {
+			return true
+		}
+
+		// Check whitelist emails
+		const whitelistEmailsEnv = process.env.WHITELIST_EMAILS ?? ""
+		const whitelistEmails = whitelistEmailsEnv
+			.split(",")
+			.map((e) => e.trim().toLowerCase())
+			.filter((e) => e.length > 0)
+
+		return whitelistEmails.includes(email)
+	} catch (error) {
+		console.error("Error checking unlimited access status:", error)
+		return false
+	}
+}
+
+/**
  * Get user's subscription plan type
- * Admins automatically get "admin" plan with unlimited access
+ * Users with unlimited access (admin/whitelist) automatically get "admin" plan
  * Users in trial period get "pro" limits regardless of selected plan
  */
 export async function getUserPlanType(userId: string): Promise<PlanType> {
-	// Check if user is admin first
-	const isAdmin = await isAdminUser(userId)
-	if (isAdmin) {
+	// Check if user has unlimited access first
+	const hasUnlimitedAccess = await hasUnlimitedAccessUser(userId)
+	if (hasUnlimitedAccess) {
 		return "admin"
 	}
 
@@ -126,7 +160,7 @@ interface UserUsageLimitsData {
 
 /**
  * Get user's current usage from database
- * Returns safe defaults for admins if no record exists
+ * Returns safe defaults for users with unlimited access if no record exists
  */
 export async function getUserUsage(userId: string): Promise<UserUsage | null> {
 	const supabase = await getSupabaseAdmin()
@@ -137,11 +171,11 @@ export async function getUserUsage(userId: string): Promise<UserUsage | null> {
 		.eq("user_id", userId)
 		.single()
 
-	// If no record exists, check if admin and return defaults
+	// If no record exists, check if unlimited access and return defaults
 	if (error || !data) {
-		const isAdmin = await isAdminUser(userId)
-		if (isAdmin) {
-			// Return zero usage for admins (they have unlimited limits anyway)
+		const hasUnlimitedAccess = await hasUnlimitedAccessUser(userId)
+		if (hasUnlimitedAccess) {
+			// Return zero usage for unlimited access users (they have unlimited limits anyway)
 			const currentMonth = new Date().toISOString().slice(0, 7) // YYYY-MM
 			return {
 				userId,
@@ -180,12 +214,12 @@ export async function getUserUsage(userId: string): Promise<UserUsage | null> {
 
 /**
  * Check if user can create a new agent
- * Admins always have unlimited access
+ * Users with unlimited access always allowed
  */
 export async function canCreateAgent(userId: string): Promise<UsageCheckResult> {
-	// Check if admin first - admins always allowed
-	const isAdmin = await isAdminUser(userId)
-	if (isAdmin) {
+	// Check if unlimited access first - always allowed
+	const hasUnlimitedAccess = await hasUnlimitedAccessUser(userId)
+	if (hasUnlimitedAccess) {
 		return {
 			allowed: true,
 			current: 0,
@@ -212,12 +246,12 @@ export async function canCreateAgent(userId: string): Promise<UsageCheckResult> 
 
 /**
  * Check if user can activate a workflow
- * Admins always have unlimited access
+ * Users with unlimited access always allowed
  */
 export async function canActivateWorkflow(userId: string): Promise<UsageCheckResult> {
-	// Check if admin first - admins always allowed
-	const isAdmin = await isAdminUser(userId)
-	if (isAdmin) {
+	// Check if unlimited access first - always allowed
+	const hasUnlimitedAccess = await hasUnlimitedAccessUser(userId)
+	if (hasUnlimitedAccess) {
 		return {
 			allowed: true,
 			current: 0,
@@ -244,12 +278,12 @@ export async function canActivateWorkflow(userId: string): Promise<UsageCheckRes
 
 /**
  * Check if user can add an integration
- * Admins always have unlimited access
+ * Users with unlimited access always allowed
  */
 export async function canAddIntegration(userId: string): Promise<UsageCheckResult> {
-	// Check if admin first - admins always allowed
-	const isAdmin = await isAdminUser(userId)
-	if (isAdmin) {
+	// Check if unlimited access first - always allowed
+	const hasUnlimitedAccess = await hasUnlimitedAccessUser(userId)
+	if (hasUnlimitedAccess) {
 		return {
 			allowed: true,
 			current: 0,
@@ -276,7 +310,7 @@ export async function canAddIntegration(userId: string): Promise<UsageCheckResul
 
 /**
  * Check if user can make an AI request (budget check)
- * Admins always have unlimited access
+ * Users with unlimited access always allowed
  */
 export async function canMakeAIRequest(
 	userId: string,
@@ -284,9 +318,9 @@ export async function canMakeAIRequest(
 	estimatedInputTokens: number = 1000,
 	estimatedOutputTokens: number = 500
 ): Promise<UsageCheckResult & { estimatedCost: number }> {
-	// Check if admin first - admins always allowed
-	const isAdmin = await isAdminUser(userId)
-	if (isAdmin) {
+	// Check if unlimited access first - always allowed
+	const hasUnlimitedAccess = await hasUnlimitedAccessUser(userId)
+	if (hasUnlimitedAccess) {
 		const { chargedCost: estimatedCost } = calculateCostFromLlmId(llmId, estimatedInputTokens, estimatedOutputTokens)
 		return {
 			allowed: true,
@@ -465,11 +499,11 @@ export async function getUserUsageStats(userId: string): Promise<{
 /**
  * Get accessible agent IDs for a user based on their plan
  * For starter plan: only first 10 agents created are accessible
- * For pro/admin: all agents are accessible
+ * For pro/unlimited access: all agents are accessible
  */
 export async function getAccessibleAgentIds(userId: string): Promise<string[] | null> {
-	const isAdmin = await isAdminUser(userId)
-	if (isAdmin) {
+	const hasUnlimitedAccess = await hasUnlimitedAccessUser(userId)
+	if (hasUnlimitedAccess) {
 		return null // null means all agents are accessible
 	}
 
@@ -517,9 +551,9 @@ export async function isAgentAccessible(userId: string, agentId: string): Promis
  * Returns workflows that exceed the plan limit, ordered by activation date
  */
 export async function getWorkflowsToDeactivate(userId: string): Promise<string[]> {
-	const isAdmin = await isAdminUser(userId)
-	if (isAdmin) {
-		return [] // Admins never need to deactivate
+	const hasUnlimitedAccess = await hasUnlimitedAccessUser(userId)
+	if (hasUnlimitedAccess) {
+		return [] // Users with unlimited access never need to deactivate
 	}
 
 	const planType = await getUserPlanType(userId)

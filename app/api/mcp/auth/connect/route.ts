@@ -36,7 +36,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || url.origin;
+    // Construct callback URL - must match exactly what's configured in GitHub OAuth app
+    // For local dev: use http://localhost:3000 (matches GitHub app settings)
+    // For production: use NEXT_PUBLIC_BASE_URL (must be set)
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 
+      (process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : url.origin);
     const callbackUrl = `${baseUrl}/api/mcp/auth/callback`;
 
     const result = await mcpWebInterface.connectServer({

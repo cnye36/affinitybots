@@ -290,11 +290,6 @@ export async function PUT(
     }
 
     const updateData = await request.json();
-    
-    console.log("🔍 Received update data:", {
-      name: updateData.name,
-      configurable: updateData.config?.configurable,
-    });
 
     // Get current assistant from database
     const { data: currentAssistant, error: fetchError } = await supabase

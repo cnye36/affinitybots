@@ -49,21 +49,26 @@ function SignInForm() {
 						<div className="space-y-2">
 							<input type="hidden" name="plan" value={searchParams.get("plan") || ""} />
 							<Label htmlFor="email">Email</Label>
-							<Input 
-								id="email" 
-								name="email" 
-								type="email" 
+							<Input
+								id="email"
+								name="email"
+								type="email"
 								autoComplete="email"
 								placeholder="you@example.com"
 								className="h-11"
 							/>
 						</div>
 						<div className="space-y-2">
-							<Label htmlFor="password">Password</Label>
-							<Input 
-								id="password" 
-								name="password" 
-								type="password" 
+							<div className="flex items-center justify-between">
+								<Label htmlFor="password">Password</Label>
+								<Link href="/auth/forgot-password" className="text-xs text-primary hover:underline">
+									Forgot password?
+								</Link>
+							</div>
+							<Input
+								id="password"
+								name="password"
+								type="password"
 								autoComplete="current-password"
 								placeholder="Enter your password"
 								className="h-11"

@@ -119,8 +119,17 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  // Check subscription status for authenticated users (except admins and on public/auth/api routes)
-  if (user && !isAdmin && !isPublicRoute && !isAuthRoute && !isApiRoute && !isPaymentRoute) {
+  // Check if user has unlimited access (admin or whitelisted)
+  // Import at top would cause circular dependency, so we inline the check
+  const whitelistEmailsEnv = process.env.WHITELIST_EMAILS ?? ""
+  const whitelistEmails = whitelistEmailsEnv
+    .split(",")
+    .map((email) => email.trim().toLowerCase())
+    .filter((email) => email.length > 0)
+  const hasUnlimitedAccess = isAdmin || whitelistEmails.includes(userEmail)
+
+  // Check subscription status for authenticated users (except those with unlimited access and on public/auth/api routes)
+  if (user && !hasUnlimitedAccess && !isPublicRoute && !isAuthRoute && !isApiRoute && !isPaymentRoute) {
     // Get user's subscription
     const { data: subscription } = await supabase
       .from('subscriptions')
