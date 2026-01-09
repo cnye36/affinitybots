@@ -18,6 +18,14 @@ export interface PlanLimits {
 	maxIntegrations: number
 	/** Monthly AI usage budget in USD (what the user is charged, not actual cost) */
 	monthlyTokenBudgetUsd: number
+	/** Maximum number of documents in knowledge base per assistant */
+	maxKnowledgeDocuments: number
+	/** Maximum number of URLs that can be indexed per assistant */
+	maxKnowledgeURLs: number
+	/** Maximum crawl depth when indexing a website */
+	maxURLCrawlDepth: number
+	/** Maximum pages to crawl per URL */
+	maxPagesPerURL: number
 	/** Display name for the plan */
 	displayName: string
 	/** Price per month in USD */
@@ -38,6 +46,10 @@ export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
 		maxDraftWorkflows: Infinity,
 		maxIntegrations: 3,
 		monthlyTokenBudgetUsd: 5.0, // $5 worth of AI usage during trial
+		maxKnowledgeDocuments: 10, // 10 documents per assistant
+		maxKnowledgeURLs: 3, // 3 URLs per assistant
+		maxURLCrawlDepth: 2, // Max 2 levels deep
+		maxPagesPerURL: 50, // Max 50 pages per URL
 		displayName: "Free Trial",
 		pricePerMonth: 0,
 	},
@@ -47,6 +59,10 @@ export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
 		maxDraftWorkflows: Infinity,
 		maxIntegrations: Infinity, // Unlimited integrations
 		monthlyTokenBudgetUsd: 25.0, // ~$25 worth of AI usage per month
+		maxKnowledgeDocuments: 50, // 50 documents per assistant
+		maxKnowledgeURLs: 10, // 10 URLs per assistant
+		maxURLCrawlDepth: 3, // Max 3 levels deep
+		maxPagesPerURL: 100, // Max 100 pages per URL
 		displayName: "Starter",
 		pricePerMonth: 19.99,
 	},
@@ -56,6 +72,10 @@ export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
 		maxDraftWorkflows: Infinity,
 		maxIntegrations: Infinity,
 		monthlyTokenBudgetUsd: 100.0, // ~$100 worth of AI usage per month
+		maxKnowledgeDocuments: 200, // 200 documents per assistant
+		maxKnowledgeURLs: 50, // 50 URLs per assistant
+		maxURLCrawlDepth: 5, // Max 5 levels deep
+		maxPagesPerURL: 500, // Max 500 pages per URL
 		displayName: "Pro",
 		pricePerMonth: 39.99,
 	},
@@ -65,6 +85,10 @@ export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
 		maxDraftWorkflows: Infinity,
 		maxIntegrations: Infinity,
 		monthlyTokenBudgetUsd: Infinity, // Unlimited AI usage
+		maxKnowledgeDocuments: Infinity,
+		maxKnowledgeURLs: Infinity,
+		maxURLCrawlDepth: 10, // Max 10 levels even for admin
+		maxPagesPerURL: Infinity,
 		displayName: "Admin",
 		pricePerMonth: 0,
 	},

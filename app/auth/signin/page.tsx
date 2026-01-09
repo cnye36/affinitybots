@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
+import { GitHubSignInButton } from "@/components/auth/GitHubSignInButton";
 import { Header } from "@/components/home/Header";
 
 function SignInForm() {
@@ -90,7 +91,10 @@ function SignInForm() {
 						</div>
 					</div>
 
-					<GoogleSignInButton />
+					<div className="space-y-3">
+						<GoogleSignInButton />
+						<GitHubSignInButton />
+					</div>
 
 					<p className="text-center text-sm text-muted-foreground">
 						Don&apos;t have an account?{" "}

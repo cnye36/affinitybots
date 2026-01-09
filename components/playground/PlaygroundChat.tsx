@@ -10,6 +10,8 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Send, Loader2, ArrowRight } from "lucide-react"
 import { useStream } from "@langchain/langgraph-sdk/react"
 import ReactMarkdown from "react-markdown"
+import { ToolCallBadge } from "@/components/chat/ToolCallBadge"
+import type { ToolCall } from "@/components/chat/types"
 
 interface PlaygroundChatProps {
 	sessionId: string
@@ -32,7 +34,7 @@ export function PlaygroundChat({
 }: PlaygroundChatProps) {
 	const { handoffContext, currentAgentId, addStep, isExecuting, currentContext: storeContext } = usePlaygroundStore()
 	const [userPrompt, setUserPrompt] = useState("")
-	const [messages, setMessages] = useState<Array<{ role: "user" | "assistant"; content: string }>>([])
+	const [messages, setMessages] = useState<Array<{ role: "user" | "assistant"; content: string; toolCalls?: ToolCall[] }>>([])
 	const [threadId, setThreadId] = useState<string | null>(null)
 	const [isStreaming, setIsStreaming] = useState(false)
 	const prevContextRef = useRef<string | null | undefined>(previousContext)
@@ -138,6 +140,8 @@ export function PlaygroundChat({
 					messages: inputMessages,
 				},
 				{
+					// Request full message data including tool_calls
+					streamMode: ["messages", "messages-tuple"],
 					config: {
 						configurable,
 					},
@@ -179,12 +183,53 @@ export function PlaygroundChat({
 	// Update messages from thread
 	useEffect(() => {
 		if (thread.messages && thread.messages.length > 0) {
-			const threadMessages = (thread.messages as any[])
+			const allMessages = thread.messages as any[]
+
+			// Create a map of tool results by tool_call_id
+			const toolResultsMap = new Map<string, any>()
+			allMessages
+				.filter((m) => m.type === "tool")
+				.forEach((toolMsg) => {
+					if (toolMsg.tool_call_id) {
+						toolResultsMap.set(toolMsg.tool_call_id, toolMsg.content)
+					}
+				})
+
+			const threadMessages = allMessages
 				.filter((m) => m.type === "human" || m.type === "ai")
-				.map((m) => ({
-					role: m.type === "human" ? ("user" as const) : ("assistant" as const),
-					content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
-				}))
+				.map((m, idx) => {
+					// Extract tool calls from AI messages
+					let toolCalls: ToolCall[] | undefined
+					if (m.type === "ai") {
+						const rawToolCalls = m.tool_calls || m.additional_kwargs?.tool_calls
+						console.log("[PLAYGROUND] Checking for tool calls:", {
+							messageId: m.id || `m-${idx}`,
+							hasToolCalls: !!rawToolCalls,
+							toolCallsCount: rawToolCalls?.length || 0,
+							rawToolCalls,
+							hasAdditionalKwargs: !!m.additional_kwargs,
+							additionalKwargsKeys: m.additional_kwargs ? Object.keys(m.additional_kwargs) : [],
+							fullMessage: m,
+						})
+						if (rawToolCalls && Array.isArray(rawToolCalls) && rawToolCalls.length > 0) {
+							toolCalls = rawToolCalls.map((tc: any) => ({
+								id: tc.id,
+								name: tc.name || tc.function?.name,
+								args: tc.args || tc.function?.arguments,
+								arguments: tc.args || tc.function?.arguments,
+								// Try to find the result from tool messages
+								result: tc.id ? toolResultsMap.get(tc.id) : undefined,
+							}))
+							console.log("[PLAYGROUND] Extracted tool calls:", toolCalls)
+						}
+					}
+
+					return {
+						role: m.type === "human" ? ("user" as const) : ("assistant" as const),
+						content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
+						toolCalls,
+					}
+				})
 
 			setMessages(threadMessages)
 		}
@@ -248,6 +293,13 @@ export function PlaygroundChat({
 									<div className="prose prose-sm dark:prose-invert max-w-none">
 										<ReactMarkdown>{message.content}</ReactMarkdown>
 									</div>
+									{message.role === "assistant" && message.toolCalls && message.toolCalls.length > 0 && (
+										<div className="mt-3 flex flex-wrap gap-2">
+											{message.toolCalls.map((toolCall) => (
+												<ToolCallBadge key={toolCall.id} toolCall={toolCall} />
+											))}
+										</div>
+									)}
 								</div>
 							</div>
 						))

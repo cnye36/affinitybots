@@ -30,6 +30,7 @@ const CATEGORY_LABELS: Record<ServerCategory | "all", string> = {
 	"seo": "SEO",
 	"finance": "Finance",
 	"communication": "Communication",
+	"social-media": "Social Media",
 };
 
 // Category color gradients - matching the badge colors
@@ -48,6 +49,7 @@ const CATEGORY_COLORS: Record<ServerCategory | "all", string> = {
 	"seo": "from-amber-500 to-yellow-600",
 	"finance": "from-teal-600 to-cyan-600",
 	"communication": "from-indigo-500 to-blue-600",
+	"social-media": "from-red-500 to-rose-600",
 };
 
 export default function ToolsPage() {

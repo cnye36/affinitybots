@@ -81,8 +81,9 @@ class SessionStore {
 		// Also persist to Redis if available
 		if (this.redis && this.redisAvailable) {
 			try {
+				const tokens = client.getTokens();
 				const state: SerializedClientState = {
-					tokens: client.getTokens(),
+					tokens,
 					expiry: client.getTokenExpiry(),
 					providerState: (client as any).getProviderState?.(),
 					serverUrl: (client as any).serverUrl,
@@ -90,15 +91,27 @@ class SessionStore {
 					clientType: client instanceof GitHubOAuthClient ? "github" : "mcp",
 				}
 
+				console.log(`[SessionStore] Storing client to Redis for session ${sessionId}`, {
+					clientType: state.clientType,
+					hasTokens: !!tokens,
+					tokenPreview: tokens?.access_token ? `${tokens.access_token.substring(0, 20)}...` : 'none',
+					hasRefreshToken: !!tokens?.refresh_token,
+					expiresAt: state.expiry
+				});
+
 				await this.redis.setex(
 					`oauth:session:${sessionId}`,
 					3600, // 1 hour TTL
 					JSON.stringify(state)
 				)
+
+				console.log(`[SessionStore] Client stored to Redis successfully`);
 			} catch (error) {
 				console.error("Failed to store session in Redis:", error)
 				// Don't throw - in-memory is still valid
 			}
+		} else {
+			console.log(`[SessionStore] Redis not available, client only stored in memory for session ${sessionId}`);
 		}
 	}
 
@@ -114,6 +127,14 @@ class SessionStore {
 				const stateJson = await this.redis.get(`oauth:session:${sessionId}`)
 				if (stateJson) {
 					const state: SerializedClientState = JSON.parse(stateJson)
+
+					console.log(`[SessionStore] Rehydrating client from Redis for session ${sessionId}`, {
+						clientType: state.clientType,
+						hasTokens: !!state.tokens,
+						tokenPreview: state.tokens?.access_token ? `${state.tokens.access_token.substring(0, 20)}...` : 'none',
+						hasRefreshToken: !!state.tokens?.refresh_token,
+						expiresAt: state.expiry
+					});
 
 					// Rehydrate client from state
 					let client: MCPOAuthClient | GitHubOAuthClient
@@ -131,11 +152,15 @@ class SessionStore {
 
 					// Restore tokens if available
 					if (state.tokens) {
+						console.log(`[SessionStore] Restoring tokens to client via connectWithStoredSession`);
 						await client.connectWithStoredSession({
 							tokens: state.tokens,
 							expiresAt: state.expiry,
 							providerState: state.providerState,
 						})
+						console.log(`[SessionStore] Client tokens restored successfully`);
+					} else {
+						console.warn(`[SessionStore] No tokens found in Redis state for session ${sessionId}`);
 					}
 
 					// Cache in memory

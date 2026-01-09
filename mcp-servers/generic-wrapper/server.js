@@ -24,9 +24,26 @@ app.all("/mcp", async (req, res) => {
 	try {
 		console.log(`[${SERVER_NAME}] Received request:`, req.method, req.body)
 
-		// Spawn the MCP server process
+		// Extract environment variables from request headers
+		// Headers with prefix "X-Env-" will be passed as environment variables
+		// e.g., "X-Env-PINECONE_API_KEY" becomes "PINECONE_API_KEY"
+		const envVars = { ...process.env }; // Start with parent process env
+		for (const [headerName, headerValue] of Object.entries(req.headers)) {
+			if (headerName.toLowerCase().startsWith("x-env-")) {
+				const envVarName = headerName.slice(6).toUpperCase(); // Remove "X-Env-" prefix
+				// Handle both string and array header values (Express can return arrays)
+				const value = Array.isArray(headerValue) ? headerValue[0] : headerValue;
+				if (value) {
+					envVars[envVarName] = value;
+					console.log(`[${SERVER_NAME}] Setting env var from header: ${envVarName}`);
+				}
+			}
+		}
+
+		// Spawn the MCP server process with environment variables
 		const mcpProcess = spawn(MCP_COMMAND, MCP_ARGS, {
 			stdio: ["pipe", "pipe", "pipe"],
+			env: envVars,
 		})
 
 		let stdoutBuffer = ""
@@ -134,7 +151,7 @@ app.all("/mcp", async (req, res) => {
 app.options("*", (req, res) => {
 	res.setHeader("Access-Control-Allow-Origin", "*")
 	res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-	res.setHeader("Access-Control-Allow-Headers", "Content-Type")
+	res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-Env-*")
 	res.sendStatus(200)
 })
 

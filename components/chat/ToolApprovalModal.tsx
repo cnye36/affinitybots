@@ -5,20 +5,22 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { AlertTriangle, Check, X } from "lucide-react";
+import { AlertTriangle, Check, X, Shield } from "lucide-react";
 
 interface ToolCall {
   name: string;
   args: Record<string, any>;
   id: string;
+  mcpServer?: string; // Which MCP server this tool belongs to
 }
+
+type ApprovalType = "once" | "always-tool" | "always-integration";
 
 interface ToolApprovalModalProps {
   isOpen: boolean;
   toolCalls: ToolCall[];
-  onApprove: (approvedTools: ToolCall[]) => void;
+  onApprove: (approvedTools: ToolCall[], approvalType: ApprovalType) => void;
   onDeny: () => void;
-  onApproveAlways: (approvedTools: ToolCall[]) => void;
 }
 
 export function ToolApprovalModal({
@@ -26,12 +28,14 @@ export function ToolApprovalModal({
   toolCalls,
   onApprove,
   onDeny,
-  onApproveAlways,
 }: ToolApprovalModalProps) {
   const [selectedTools, setSelectedTools] = useState<Set<string>>(new Set(toolCalls.map(tc => tc.id)));
-  const [rememberChoice, setRememberChoice] = useState(false);
 
   if (!isOpen || !toolCalls.length) return null;
+
+  // Get unique MCP servers from tool calls
+  const mcpServers = Array.from(new Set(toolCalls.map(tc => tc.mcpServer).filter(Boolean)));
+  const singleIntegration = mcpServers.length === 1 ? mcpServers[0] : null;
 
   const handleToolToggle = (toolId: string) => {
     const newSelected = new Set(selectedTools);
@@ -43,14 +47,9 @@ export function ToolApprovalModal({
     setSelectedTools(newSelected);
   };
 
-  const handleApprove = () => {
+  const handleApprove = (approvalType: ApprovalType) => {
     const approvedTools = toolCalls.filter(tc => selectedTools.has(tc.id));
-    onApprove(approvedTools);
-  };
-
-  const handleApproveAlways = () => {
-    const approvedTools = toolCalls.filter(tc => selectedTools.has(tc.id));
-    onApproveAlways(approvedTools);
+    onApprove(approvedTools, approvalType);
   };
 
   const handleDeny = () => {
@@ -109,39 +108,50 @@ export function ToolApprovalModal({
         </CardContent>
         
         <div className="border-t p-4 space-y-3">
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="remember"
-              checked={rememberChoice}
-              onCheckedChange={(checked) => setRememberChoice(checked === true)}
-            />
-            <label htmlFor="remember" className="text-sm text-muted-foreground">
-              Remember this choice for similar tools
-            </label>
+          <div className="text-xs text-muted-foreground px-1">
+            Choose how to approve these tools:
           </div>
-          
-          <div className="flex gap-2 justify-end">
-            <Button variant="outline" onClick={handleDeny}>
-              <X className="h-4 w-4 mr-2" />
-              Deny All
-            </Button>
-            <Button 
-              onClick={handleApprove}
-              disabled={selectedTools.size === 0}
-            >
-              <Check className="h-4 w-4 mr-2" />
-              Approve Selected ({selectedTools.size})
-            </Button>
-            {rememberChoice && (
-              <Button 
-                variant="default"
-                onClick={handleApproveAlways}
+
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={handleDeny} className="flex-shrink-0">
+                <X className="h-4 w-4 mr-2" />
+                Deny
+              </Button>
+              <Button
+                onClick={() => handleApprove("once")}
                 disabled={selectedTools.size === 0}
+                variant="secondary"
+                className="flex-shrink-0"
               >
                 <Check className="h-4 w-4 mr-2" />
-                Approve Always
+                Approve Once ({selectedTools.size})
               </Button>
-            )}
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              <Button
+                onClick={() => handleApprove("always-tool")}
+                disabled={selectedTools.size === 0}
+                variant="default"
+                className="flex-1"
+              >
+                <Check className="h-4 w-4 mr-2" />
+                Always Approve {selectedTools.size === 1 ? "This Tool" : "These Tools"}
+              </Button>
+
+              {singleIntegration && (
+                <Button
+                  onClick={() => handleApprove("always-integration")}
+                  disabled={selectedTools.size === 0}
+                  variant="default"
+                  className="flex-1"
+                >
+                  <Shield className="h-4 w-4 mr-2" />
+                  Trust Entire Integration
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </Card>

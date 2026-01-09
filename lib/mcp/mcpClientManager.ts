@@ -61,6 +61,21 @@ function pickFirstString(...values: unknown[]): string | undefined {
 	return undefined;
 }
 
+/**
+ * Sanitizes a tool name to comply with OpenAI function naming requirements.
+ * OpenAI requires function names to match ^[a-zA-Z0-9_-]+$
+ * (letters, numbers, underscores, and hyphens only)
+ */
+function sanitizeToolName(name: string): string {
+	// Replace spaces and special characters with underscores
+	// Keep only alphanumeric characters, underscores, and hyphens
+	return name
+		.replace(/[^a-zA-Z0-9_-]/g, '_')  // Replace invalid chars with underscores
+		.replace(/_{2,}/g, '_')           // Replace multiple underscores with single
+		.replace(/^_+|_+$/g, '')          // Remove leading/trailing underscores
+		.toLowerCase();                   // Convert to lowercase for consistency
+}
+
 function isPlainObject(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -164,8 +179,9 @@ function createDynamicToolInstance(
 	serverName?: string
 ): DynamicStructuredTool<any, any, any, string> {
 	const schema = normalizeToolSchema(normalized.schema);
+	const sanitizedName = sanitizeToolName(normalized.displayName);
 	const tool = new DynamicStructuredTool<any, any, any, string>({
-		name: normalized.displayName,
+		name: sanitizedName,
 		description: normalized.description || normalized.displayName,
 		schema: schema as any,
 		func: async (input: Record<string, unknown>) => {
@@ -338,21 +354,46 @@ export class MCPClientManager {
           // Build headers for API key servers with custom header names
           let headers: Record<string, string> | undefined = (serverConfig as any).headers;
           
-          // If we have an API key and a custom header name, build the header
-          const apiKey = (serverConfig as any).config?.apiKey || (serverConfig as any).config?.api_key;
-          const apiKeyHeaderName = (serverConfig as any).config?.apiKeyHeaderName;
-          
-          if (apiKey && apiKeyHeaderName) {
-            headers = headers || {};
-            headers[apiKeyHeaderName] = apiKey;
-            // Also include Authorization header for compatibility
-            headers.Authorization = `Bearer ${apiKey}`;
-          } else if (apiKey && !headers) {
-            // Default behavior: use X-API-Key if no custom header name specified
-            headers = {
-              "X-API-Key": apiKey,
-              Authorization: `Bearer ${apiKey}`
-            };
+          // Special handling for Oktopost: build custom headers from config fields
+          if (serverName === "oktopost") {
+            const accountId = (serverConfig as any).config?.accountId;
+            const apiToken = (serverConfig as any).config?.apiToken;
+            const region = (serverConfig as any).config?.region || "us";
+            
+            if (accountId && apiToken) {
+              headers = {
+                "X-Oktopost-Account-ID": accountId,
+                "X-Oktopost-API-Key": apiToken,
+                "X-Oktopost-Region": region,
+              };
+            }
+          } else if (serverName === "pinecone") {
+            // Special handling for Pinecone: pass API key as environment variable via header
+            // The generic wrapper will extract "X-Env-PINECONE_API_KEY" and pass it as PINECONE_API_KEY env var
+            const apiKey = (serverConfig as any).config?.apiKey || (serverConfig as any).config?.api_key;
+            
+            if (apiKey) {
+              headers = {
+                "X-Env-PINECONE_API_KEY": apiKey,
+              };
+            }
+          } else {
+            // If we have an API key and a custom header name, build the header
+            const apiKey = (serverConfig as any).config?.apiKey || (serverConfig as any).config?.api_key;
+            const apiKeyHeaderName = (serverConfig as any).config?.apiKeyHeaderName;
+            
+            if (apiKey && apiKeyHeaderName) {
+              headers = headers || {};
+              headers[apiKeyHeaderName] = apiKey;
+              // Also include Authorization header for compatibility
+              headers.Authorization = `Bearer ${apiKey}`;
+            } else if (apiKey && !headers) {
+              // Default behavior: use X-API-Key if no custom header name specified
+              headers = {
+                "X-API-Key": apiKey,
+                Authorization: `Bearer ${apiKey}`
+              };
+            }
           }
           
           mcpServers[serverName] = {
@@ -521,16 +562,22 @@ export class MCPClientManager {
       // Skip sessionStore lookup for Google services - they use custom clients
       const isGoogleService = isGoogleDriveServer || isGmailServer;
 
-      if (serverConfig.session_id && !isGoogleService) {
+      // Only use existing client if server is enabled in DB
+      // This prevents auto-authentication when server was disconnected/cleared
+      if (serverConfig.session_id && !isGoogleService && serverConfig.is_enabled) {
         const existingClient = await sessionStore.getClient(serverConfig.session_id);
         if (existingClient) {
-          console.log(`Using existing OAuth session for ${serverName}`);
+          console.log(`Using existing OAuth session for ${serverName} (server is enabled)`);
           return {
             url: serverConfig.url,
             client: existingClient,
             sessionId: serverConfig.session_id
           };
         }
+      } else if (serverConfig.session_id && !serverConfig.is_enabled) {
+        // Server is not enabled - clear any stale client from sessionStore
+        console.log(`Server ${serverName} is not enabled. Clearing stale sessionStore client.`);
+        await sessionStore.removeClient(serverConfig.session_id);
       }
 
       const callbackUrl =
@@ -874,6 +921,8 @@ export class MCPClientManager {
           // Capture provider state for rehydration on callback
           let providerState: any = undefined;
           if (client instanceof MCPOAuthClient) {
+            providerState = client.getProviderState();
+          } else if (client instanceof GitHubOAuthClient) {
             providerState = client.getProviderState();
           }
 

@@ -111,6 +111,10 @@ export function AgentConfigSidebar({ assistant }: AgentConfigSidebarProps) {
 		setSaveSuccess(false)
 
 		try {
+			// Remove selected_tools from config before saving to persistent storage
+			// selected_tools is only for playground/workflow runtime context, not agent config
+			const { selected_tools, ...configToPersist } = config.config
+			
 			const response = await fetch(`/api/agents/${assistant.assistant_id}`, {
 				method: "PUT",
 				headers: {
@@ -120,7 +124,7 @@ export function AgentConfigSidebar({ assistant }: AgentConfigSidebarProps) {
 					name: config.name,
 					description: config.description,
 					metadata: config.metadata,
-					config: { configurable: config.config },
+					config: { configurable: configToPersist },
 				}),
 			})
 

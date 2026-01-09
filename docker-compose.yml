@@ -114,6 +114,25 @@ services:
             retries: 3
         restart: unless-stopped
     
+    pinecone-mcp:
+        build:
+            context: ./mcp-servers/generic-wrapper
+            dockerfile: Dockerfile
+        ports:
+            - "3008:3008"
+        environment:
+            PORT: 3008
+            MCP_COMMAND: npx
+            MCP_ARGS: "-y @pinecone-database/mcp"
+            SERVER_NAME: pinecone
+            NODE_ENV: production
+        healthcheck:
+            test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3008/health"]
+            interval: 10s
+            timeout: 5s
+            retries: 3
+        restart: unless-stopped
+    
     # Schedule worker - only needed if self-hosting (not needed for Vercel deployments)
     # For local dev, run separately with: pnpm run schedule:worker:dev
     # For production on Vercel, deploy worker to Railway/Render/Fly.io

@@ -32,10 +32,15 @@ const fallbackStore = new InMemoryStore();
 const mcpFactoryCache = new Map<string, MCPFactoryResult>();
 
 // Function to create MCP client and get tools using the new factory
-async function createMcpClientAndTools(userId: string, agentConfig: AssistantConfiguration): Promise<{ client: MultiServerMCPClient | null; tools: any[] }> {
+async function createMcpClientAndTools(
+  userId: string, 
+  agentConfig: AssistantConfiguration,
+  runtimeSelectedTools?: string[]
+): Promise<{ client: MultiServerMCPClient | null; tools: any[] }> {
   const enabledServers = agentConfig.enabled_mcp_servers || [];
   const forceRefresh = agentConfig.force_mcp_refresh || false;
-  const cacheKey = `${userId}:${enabledServers.sort().join(",")}:${forceRefresh}`;
+  // Include runtimeSelectedTools in cache key if provided (playground/workflow context)
+  const cacheKey = `${userId}:${enabledServers.sort().join(",")}:${forceRefresh}:${runtimeSelectedTools !== undefined ? runtimeSelectedTools.sort().join(",") : "all"}`;
   
   // Check cache first (unless forcing refresh)
   if (!forceRefresh && mcpFactoryCache.has(cacheKey)) {
@@ -51,18 +56,20 @@ async function createMcpClientAndTools(userId: string, agentConfig: AssistantCon
     console.log(`createMcpClientAndTools: userId=${userId}, enabledServers=${JSON.stringify(enabledServers)}`);
     console.log(`OAuth sessions configured: ${(agentConfig.mcp_oauth_sessions || []).length}`);
     console.log(`Force refresh: ${forceRefresh}`);
+    console.log(`Runtime selected tools: ${runtimeSelectedTools !== undefined ? (runtimeSelectedTools.length > 0 ? runtimeSelectedTools.join(", ") : "[] (empty)") : "undefined (all tools)"}`);
 
     // Check for expired sessions and refresh if needed
     const validation = await mcpClientFactory.validateAndRefresh(userId, agentConfig);
     if (validation.needsRefresh && validation.result) {
       console.log(`MCP sessions were refreshed due to expired sessions: ${validation.expiredSessions.join(", ")}`);
-      const result = validation.result;
-      mcpFactoryCache.set(cacheKey, result);
-      return { client: result.client, tools: result.tools };
+      // Recreate with runtimeSelectedTools if provided
+      const refreshedResult = await mcpClientFactory.createForAgent(userId, agentConfig, runtimeSelectedTools);
+      mcpFactoryCache.set(cacheKey, refreshedResult);
+      return { client: refreshedResult.client, tools: refreshedResult.tools };
     }
 
-    // Create new MCP clients
-    const result = await mcpClientFactory.createForAgent(userId, agentConfig);
+    // Create new MCP clients with runtimeSelectedTools parameter
+    const result = await mcpClientFactory.createForAgent(userId, agentConfig, runtimeSelectedTools);
     mcpFactoryCache.set(cacheKey, result);
     
     console.log(`Loaded ${result.tools.length} tools from ${result.serverCount} MCP servers`);
@@ -489,9 +496,22 @@ async function callModel(
 
   // Always attempt to load MCP tools. If none explicitly enabled, the factory
   // will fall back to all available servers for the user.
+  // Only use selected_tools if we're in playground/workflow context (not agent chat)
+  // Agent chat should always have all tools from enabled servers
+  const isPlaygroundContext = !!(configurable as any).playground_session_id;
+  const isWorkflowContext = !!(config.metadata?.workflow_id || config.metadata?.workflow_task_id);
+  // Only extract runtimeSelectedTools if we're in playground/workflow context
+  // In agent chat context, ignore selected_tools from stored agent config
+  const runtimeSelectedTools = (isPlaygroundContext || isWorkflowContext)
+    ? ((configurable as any).selected_tools as string[] | undefined)
+    : undefined;
+  
+  console.log(`🔍 Context detection: playground=${isPlaygroundContext}, workflow=${isWorkflowContext}, runtimeSelectedTools=${runtimeSelectedTools !== undefined ? (runtimeSelectedTools.length > 0 ? runtimeSelectedTools.join(", ") : "[] (empty)") : "undefined (all tools)"}`);
+  console.log(`📋 Configurable selected_tools: ${(configurable as any).selected_tools ? JSON.stringify((configurable as any).selected_tools) : "not set"}`);
+  
   let tools: any[] = [];
   const enabledServersForRun = configurable.enabled_mcp_servers || [];
-  let result = await createMcpClientAndTools(userId || assistantId || "default", configurable);
+  let result = await createMcpClientAndTools(userId || assistantId || "default", configurable, runtimeSelectedTools);
   tools = result.tools;
   if (tools.length === 0) {
     const contextMsg = enabledServersForRun.length > 0
@@ -501,7 +521,7 @@ async function callModel(
     const refreshed = await createMcpClientAndTools(userId || assistantId || "default", {
       ...configurable,
       force_mcp_refresh: true,
-    } as any);
+    } as any, runtimeSelectedTools);
     tools = refreshed.tools;
   }
   
@@ -758,18 +778,27 @@ async function createToolNode(state: any, config: any): Promise<any> {
   
   const assistantId = configurable.assistant_id;
   const enabledServers = configurable.enabled_mcp_servers || [];
+  // Only use selected_tools if we're in playground/workflow context (not agent chat)
+  const isPlaygroundContext = !!(configurable as any).playground_session_id;
+  const isWorkflowContext = !!(config.metadata?.workflow_id || config.metadata?.workflow_task_id);
+  // Only extract runtimeSelectedTools if we're in playground/workflow context
+  // In agent chat context, ignore selected_tools from stored agent config
+  const runtimeSelectedTools = (isPlaygroundContext || isWorkflowContext)
+    ? ((configurable as any).selected_tools as string[] | undefined)
+    : undefined;
   
   console.log(`🔍 Tool node execution - metadata user_id: ${config.metadata?.user_id}, configurable user_id: ${configurable.user_id}, assistant_id: ${configurable.assistant_id}, using userId: ${userId}, assistantId: ${assistantId}`);
   console.log(`Tool node for assistant ${userId || assistantId}: Loading ${enabledServers.length} servers`);
+  console.log(`Tool node context: playground=${isPlaygroundContext}, workflow=${isWorkflowContext}, runtimeSelectedTools=${runtimeSelectedTools !== undefined ? (runtimeSelectedTools.length > 0 ? runtimeSelectedTools.join(", ") : "[] (empty)") : "undefined (all tools)"}`);
   
   // Get the same tools that were used in callModel (use real userId for consistency)
-  let { tools } = await createMcpClientAndTools(userId || assistantId || "default", configurable);
+  let { tools } = await createMcpClientAndTools(userId || assistantId || "default", configurable, runtimeSelectedTools);
   if ((configurable.enabled_mcp_servers?.length || 0) > 0 && tools.length === 0) {
     console.log(`Tool node: no tools for enabled servers. Forcing refresh once...`);
     const refreshed = await createMcpClientAndTools(userId || assistantId || "default", {
       ...configurable,
       force_mcp_refresh: true,
-    } as any);
+    } as any, runtimeSelectedTools);
     tools = refreshed.tools;
   }
   
@@ -818,11 +847,19 @@ async function createToolNode(state: any, config: any): Promise<any> {
     if (hasSessionError) {
       console.log(`🔄 Session expired detected, refreshing MCP client and retrying...`);
       
-              // Force refresh the MCP client
+      // Only use selected_tools if we're in playground/workflow context (not agent chat)
+      const isPlaygroundContext = !!(configurable as any).playground_session_id;
+      const isWorkflowContext = !!(config.metadata?.workflow_id || config.metadata?.workflow_task_id);
+      // Only extract runtimeSelectedTools if we're in playground/workflow context
+      const runtimeSelectedTools = (isPlaygroundContext || isWorkflowContext)
+        ? ((configurable as any).selected_tools as string[] | undefined)
+        : undefined;
+      
+      // Force refresh the MCP client
         const { tools: freshTools } = await createMcpClientAndTools(userId || assistantId || "default", {
           ...configurable,
           force_mcp_refresh: true
-        });
+        }, runtimeSelectedTools);
       
       if (freshTools.length > 0) {
         console.log(`✅ Refreshed MCP client with ${freshTools.length} tools, retrying tool calls...`);
@@ -891,5 +928,6 @@ const workflow = new StateGraph(MessagesAnnotation)
 export const graph = workflow.compile({
   // Always use fallbackStore in local development; LangGraph Platform injects its own store
   store: fallbackStore,
- 
+  // Interrupt before tool execution for human-in-the-loop approval
+  interruptBefore: ["tools"],
 });

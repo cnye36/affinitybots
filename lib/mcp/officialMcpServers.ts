@@ -20,7 +20,8 @@ export type ServerCategory =
   | "ecommerce"
   | "seo"
   | "finance"
-  | "communication";
+  | "communication"
+  | "social-media";
 
 export interface OfficialMcpServerMeta {
   serverName: string;
@@ -425,6 +426,18 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     category: "project-management",
   },
   {
+    serverName: "intercom",
+    displayName: "Intercom",
+    description:
+      "Official Intercom MCP server. Connect to Intercom to manage your customers and conversations.",
+    logoUrl: "/integration-icons/intercom-icon.png",
+    url: "https://mcp.intercom.com/mcp",
+    docsUrl: "https://developers.intercom.com/docs/guides/mcp",
+    authType: "oauth",
+    requiresSetup: true,
+    category: "communication",
+  },
+  {
     serverName: "dbt-labs",
     displayName: "dbt Labs",
     description:
@@ -472,6 +485,18 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     authType: "api_key",
     requiresSetup: true,
     category: "development",
+  },
+  {
+    serverName: "clickup",
+    displayName: "Clickup",
+    description:
+      "Official Clickup MCP server. Connect to Clickup to manage your tasks and projects.",
+    logoUrl: "/integration-icons/clickup-icon.png",
+    url: "https://mcp.clickup.com/mcp",
+    docsUrl: "https://developer.clickup.com/docs/connect-an-ai-assistant-to-clickups-mcp-server",
+    authType: "oauth",
+    requiresSetup: true,
+    category: "project-management",
   },
   {
     serverName: "brave-search",
@@ -567,6 +592,44 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     authType: "api_key",
     requiresSetup: true,
     category: "productivity",
+  },
+  {
+    serverName: "oktopost",
+    displayName: "Oktopost",
+    description:
+      "Official Oktopost MCP server. Connect to Oktopost to manage your social media and content. Requires Account ID, API Token, and Region from Oktopost (My Profile → API).",
+    logoUrl: "/integration-icons/oktopost-social-preview-transparent.png",
+    url: "https://mcp.oktopost.com",
+    docsUrl: "https://help.oktopost.com/en/articles/628-how-to-connect-with-oktopost-s-mcp-server",
+    authType: "api_key",
+    requiresSetup: true,
+    category: "social-media",
+    configFields: [
+      {
+        key: "accountId",
+        label: "Account ID",
+        placeholder: "Your Oktopost Account ID",
+        type: "text",
+        required: true,
+        description: "Found in Oktopost under My Profile → API",
+      },
+      {
+        key: "apiToken",
+        label: "API Token",
+        placeholder: "Your Oktopost API Token",
+        type: "text",
+        required: true,
+        description: "Found in Oktopost under My Profile → API",
+      },
+      {
+        key: "region",
+        label: "Region",
+        placeholder: "us",
+        type: "text",
+        required: false,
+        description: "Your Oktopost region (default: us)",
+      },
+    ],
   },
   
   {
@@ -665,6 +728,18 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
     authType: "none",
     requiresSetup: false,
     category: "web-scraping",
+  },
+  {
+    serverName: "pinecone",
+    displayName: "Pinecone",
+    description:
+      "Official Pinecone MCP server. Connect to Pinecone vector databases to create indexes, upsert vectors, query data, and manage your vector store. Requires Pinecone API key.",
+    logoUrl: "/integration-icons/pinecone-icon.png",
+    url: process.env.PINECONE_MCP_URL || "http://localhost:3008",
+    docsUrl: "https://docs.pinecone.io/guides/operations/mcp-server",
+    authType: "api_key",
+    requiresSetup: true,
+    category: "database",
   }
 
 ];

@@ -30,10 +30,25 @@ class GitHubOAuthClientProvider implements OAuthClientProvider {
     private readonly _redirectUrl: string | URL,
     private readonly _onRedirect?: (url: URL) => void
   ) {
-    // Use pre-configured GitHub OAuth app credentials
+    // Validate that GitHub MCP OAuth credentials are configured
+    // Note: These are separate from GITHUB_CLIENT_ID (used for sign-in auth)
+    const clientId = process.env.GITHUB_MCP_CLIENT_ID;
+    const clientSecret = process.env.GITHUB_MCP_CLIENT_SECRET;
+    
+    if (!clientId || !clientSecret) {
+      throw new Error(
+        "GitHub MCP OAuth credentials not configured. Please set GITHUB_MCP_CLIENT_ID and GITHUB_MCP_CLIENT_SECRET environment variables."
+      );
+    }
+
+    // Log the client_id being used (first 10 chars for security)
+    console.log(`[GitHubOAuth] Using MCP client_id: ${clientId.substring(0, 10)}... (length: ${clientId.length})`);
+    console.log(`[GitHubOAuth] Redirect URI: ${this._redirectUrl.toString()}`);
+
+    // Use pre-configured GitHub MCP OAuth app credentials
     this._clientInformation = {
-      client_id: process.env.GITHUB_CLIENT_ID!,
-      client_secret: process.env.GITHUB_CLIENT_SECRET!,
+      client_id: clientId,
+      client_secret: clientSecret,
       redirect_uris: [this._redirectUrl.toString()],
       grant_types: ["authorization_code", "refresh_token"],
       response_types: ["code"],
@@ -58,12 +73,21 @@ class GitHubOAuthClientProvider implements OAuthClientProvider {
   }
 
   clientInformation(): OAuthClientInformation | undefined {
+    // Always return our pre-configured client information
+    // This ensures the SDK uses our GitHub OAuth app credentials, not dynamically registered ones
     return this._clientInformation;
   }
 
   saveClientInformation(clientInformation: OAuthClientInformationFull): void {
-    // We already have the client information, so we can ignore this
-    console.log("GitHub OAuth client information already configured");
+    // Ignore dynamically registered client information from the MCP server
+    // We use pre-configured GitHub OAuth app credentials from environment variables
+    // This prevents the SDK from using a UUID client_id that doesn't exist in GitHub
+    console.log("GitHub OAuth client information already configured - ignoring server-provided client_id:", clientInformation.client_id);
+    // Ensure we keep our pre-configured MCP client_id
+    if (this._clientInformation) {
+      this._clientInformation.client_id = process.env.GITHUB_MCP_CLIENT_ID!;
+      this._clientInformation.client_secret = process.env.GITHUB_MCP_CLIENT_SECRET!;
+    }
   }
 
   tokens(): OAuthTokens | undefined {
@@ -81,14 +105,23 @@ class GitHubOAuthClientProvider implements OAuthClientProvider {
 
   redirectToAuthorization(authorizationUrl: URL): void {
     // Fix the redirect_uri parameter to use the full URL
+    // Also ensure we use our pre-configured client_id, not a dynamically registered one
     const url = new URL(authorizationUrl);
     const redirectUri = this._redirectUrl.toString();
     url.searchParams.set('redirect_uri', redirectUri);
     
+    // Override client_id with our pre-configured MCP one if it's different
+    const configuredClientId = process.env.GITHUB_MCP_CLIENT_ID;
+    if (configuredClientId && url.searchParams.get('client_id') !== configuredClientId) {
+      const oldClientId = url.searchParams.get('client_id');
+      console.warn(`[GitHubOAuth] Replacing client_id in authorization URL: ${oldClientId?.substring(0, 10)}... -> ${configuredClientId.substring(0, 10)}...`);
+      url.searchParams.set('client_id', configuredClientId);
+    }
+    
     if (this._onRedirect) {
       this._onRedirect(url);
     } else {
-      console.log(`Redirect to: ${url.toString()}`);
+      console.log(`[GitHubOAuth] Redirect to: ${url.toString()}`);
     }
   }
 
@@ -127,11 +160,16 @@ export class GitHubOAuthClient {
     private onRedirect: (url: string) => void
   ) {}
 
-  async connect(): Promise<void> {
-    // Validate that we have the required environment variables
-    if (!process.env.GITHUB_CLIENT_ID || !process.env.GITHUB_CLIENT_SECRET) {
+  /**
+   * Initialize the OAuth provider and client without connecting
+   * Used during rehydration when we already have an auth code
+   * IMPORTANT: If cached tokens exist, they will be restored to the provider
+   */
+  private initialize(): void {
+    // Validate that we have the required MCP OAuth environment variables
+    if (!process.env.GITHUB_MCP_CLIENT_ID || !process.env.GITHUB_MCP_CLIENT_SECRET) {
       throw new Error(
-        "GitHub OAuth credentials not configured. Please set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET environment variables."
+        "GitHub MCP OAuth credentials not configured. Please set GITHUB_MCP_CLIENT_ID and GITHUB_MCP_CLIENT_SECRET environment variables."
       );
     }
 
@@ -146,6 +184,20 @@ export class GitHubOAuthClient {
       }
     );
 
+    // Restore pending code verifier if we have one (from restoreProviderState)
+    const pendingCodeVerifier = (this as any)._pendingCodeVerifier;
+    if (pendingCodeVerifier) {
+      this.oauthProvider.saveCodeVerifier(pendingCodeVerifier);
+      delete (this as any)._pendingCodeVerifier;
+    }
+
+    // CRITICAL: Restore tokens if we have cached tokens (from previous session)
+    // This ensures the oauthProvider has the access token for authenticated requests
+    if (this.cachedTokens) {
+      console.log("[GitHubOAuth] Restoring cached tokens to oauthProvider during initialize");
+      this.oauthProvider.restoreTokens(this.cachedTokens, this.cachedTokenExpiresAt);
+    }
+
     this.client = new Client(
       {
         name: "AffinityBots-github-mcp-client",
@@ -153,6 +205,13 @@ export class GitHubOAuthClient {
       },
       { capabilities: {} }
     );
+  }
+
+  async connect(): Promise<void> {
+    // Initialize if not already initialized
+    if (!this.client || !this.oauthProvider) {
+      this.initialize();
+    }
 
     await this.attemptConnection();
   }
@@ -182,8 +241,26 @@ export class GitHubOAuthClient {
   }
 
   async finishAuth(authCode: string): Promise<void> {
+    // Initialize if not already initialized (e.g., during rehydration)
+    // IMPORTANT: If we're rehydrating, the code verifier should already be restored via restoreProviderState()
+    // before initialize() is called. The initialize() method will pick it up from _pendingCodeVerifier.
     if (!this.client || !this.oauthProvider) {
-      throw new Error("Client not initialized");
+      console.log("[GitHubOAuth] Client not initialized, initializing before finishAuth");
+      this.initialize();
+    }
+
+    // TypeScript guard: ensure oauthProvider and client are not null after initialization
+    if (!this.oauthProvider || !this.client) {
+      throw new Error("OAuth provider or client failed to initialize");
+    }
+
+    // Verify code verifier exists (required for PKCE flow)
+    try {
+      this.oauthProvider.codeVerifier();
+      console.log("[GitHubOAuth] Code verifier verified, proceeding with finishAuth");
+    } catch (error) {
+      console.error("[GitHubOAuth] Code verifier missing:", error);
+      throw new Error("Code verifier not found. OAuth session may have expired. Please restart the OAuth flow.");
     }
 
     const baseUrl = new URL(this.serverUrl);
@@ -245,12 +322,57 @@ export class GitHubOAuthClient {
   }
 
   async listTools(): Promise<ListToolsResult> {
-    if (!this.client) {
-      throw new Error("Not connected to server");
+    // Initialize if not already initialized (e.g., when retrieved from sessionStore)
+    if (!this.client || !this.oauthProvider) {
+      console.log("[GitHubOAuth] Client not initialized in listTools, initializing...");
+
+      // Log token availability for debugging
+      console.log("[GitHubOAuth] Token status before initialization:", {
+        hasCachedTokens: !!this.cachedTokens,
+        cachedTokenPreview: this.cachedTokens?.access_token ? `${this.cachedTokens.access_token.substring(0, 20)}...` : 'none',
+        sessionId: this.sessionId
+      });
+
+      this.initialize();
+
+      // After initialization, verify tokens are available
+      if (this.oauthProvider && !this.oauthProvider.tokens()) {
+        console.error("[GitHubOAuth] Tokens still not available after initialization!");
+        console.error("[GitHubOAuth] Debug info:", {
+          hasCachedTokens: !!this.cachedTokens,
+          hasOAuthProvider: !!this.oauthProvider,
+          hasClient: !!this.client,
+          sessionId: this.sessionId
+        });
+        throw new Error("OAuth tokens not available. Please reconnect your GitHub account.");
+      }
+    }
+
+    // TypeScript guard: ensure oauthProvider and client are not null after initialization
+    if (!this.oauthProvider || !this.client) {
+      throw new Error("OAuth provider or client failed to initialize");
     }
 
     // Refresh tokens if needed before making request
     await this.refreshTokensIfNeeded();
+
+    // For HTTP-based MCP servers, we need to ensure we have a transport connection
+    // Reconnect if not connected (connections are stateless for HTTP)
+    if (!this.connected) {
+      console.log("[GitHubOAuth] Client not connected, reconnecting for listTools");
+      const baseUrl = new URL(this.serverUrl);
+      const transport = new StreamableHTTPClientTransport(baseUrl, {
+        authProvider: this.oauthProvider,
+      });
+      // Close existing connection if any
+      try {
+        this.client.close();
+      } catch (e) {
+        // Ignore close errors
+      }
+      await this.client.connect(transport);
+      this.connected = true;
+    }
 
     const request: ListToolsRequest = {
       method: "tools/list",
@@ -264,12 +386,39 @@ export class GitHubOAuthClient {
     toolName: string,
     toolArgs: Record<string, unknown>
   ): Promise<CallToolResult> {
-    if (!this.client) {
-      throw new Error("Not connected to server");
+    // Initialize if not already initialized (e.g., when retrieved from sessionStore)
+    if (!this.client || !this.oauthProvider) {
+      console.log("[GitHubOAuth] Client not initialized in callTool, initializing...");
+      this.initialize();
+    }
+
+    // TypeScript guard: ensure oauthProvider and client are not null after initialization
+    if (!this.oauthProvider || !this.client) {
+      throw new Error("OAuth provider or client failed to initialize");
     }
 
     // Refresh tokens if needed before making request
     await this.refreshTokensIfNeeded();
+
+    // For HTTP-based MCP servers, we need to ensure we have a transport connection
+    // Reconnect if not connected (connections are stateless for HTTP)
+    if (!this.connected) {
+      console.log("[GitHubOAuth] Client not connected, reconnecting for callTool");
+      const baseUrl = new URL(this.serverUrl);
+      const transport = new StreamableHTTPClientTransport(baseUrl, {
+        authProvider: this.oauthProvider,
+      });
+      // Close existing connection if any
+      if (this.client) {
+        try {
+          this.client.close();
+        } catch (e) {
+          // Ignore close errors
+        }
+      }
+      await this.client.connect(transport);
+      this.connected = true;
+    }
 
     const request: CallToolRequest = {
       method: "tools/call",
@@ -308,13 +457,41 @@ export class GitHubOAuthClient {
     return this.cachedTokenExpiresAt;
   }
 
+  /**
+   * Get provider state for rehydration (includes code verifier)
+   */
+  getProviderState(): { codeVerifier?: string } | undefined {
+    if (!this.oauthProvider) {
+      return undefined;
+    }
+    // Access the private code verifier through the provider
+    const codeVerifier = (this.oauthProvider as any)._codeVerifier;
+    if (!codeVerifier) {
+      return undefined;
+    }
+    return { codeVerifier };
+  }
+
+  /**
+   * Restore provider state (code verifier) for rehydration
+   */
+  restoreProviderState(state: { codeVerifier?: string }): void {
+    if (!this.oauthProvider && state.codeVerifier) {
+      // If provider doesn't exist yet, we'll set it during initialize()
+      // Store it temporarily
+      (this as any)._pendingCodeVerifier = state.codeVerifier;
+    } else if (this.oauthProvider && state.codeVerifier) {
+      this.oauthProvider.saveCodeVerifier(state.codeVerifier);
+    }
+  }
+
   async connectWithStoredSession(options: {
     tokens: OAuthTokens;
     expiresAt?: string;
   }): Promise<void> {
-    if (!process.env.GITHUB_CLIENT_ID || !process.env.GITHUB_CLIENT_SECRET) {
+    if (!process.env.GITHUB_MCP_CLIENT_ID || !process.env.GITHUB_MCP_CLIENT_SECRET) {
       throw new Error(
-        "GitHub OAuth credentials not configured. Please set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET environment variables."
+        "GitHub MCP OAuth credentials not configured. Please set GITHUB_MCP_CLIENT_ID and GITHUB_MCP_CLIENT_SECRET environment variables."
       );
     }
 

@@ -19,7 +19,11 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:debug": "playwright test --debug",
-    "test:all": "pnpm test && pnpm test:e2e"
+    "test:all": "pnpm test && pnpm test:e2e",
+    "analyze:bundle": "node scripts/analyze-bundle.js",
+    "analyze:deps": "node scripts/analyze-deps.js",
+    "analyze:files": "node scripts/analyze-files.js",
+    "analyze:all": "pnpm analyze:files && pnpm analyze:deps"
   },
   "type": "module",
   "dependencies": {

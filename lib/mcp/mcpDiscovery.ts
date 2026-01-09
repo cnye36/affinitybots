@@ -90,23 +90,21 @@ export async function discoverServerCapabilities(
 			if (client) {
 				console.log(`[${serverName}] ✅ Found OAuth client:`, client.constructor.name)
 				
-				// Check if client is connected before using it
-				if ("isConnected" in client && typeof (client as any).isConnected === "function") {
-					const isConnected = (client as any).isConnected()
-					console.log(`[${serverName}] Client connection status:`, isConnected)
-					if (!isConnected) {
-						console.warn(`[${serverName}] ⚠️  OAuth client is not connected; discovery will be skipped. Client may need to reconnect.`)
-						// Return empty capabilities rather than failing - static capabilities will be shown as fallback
-						return capabilities
-					}
+				// For HTTP-based MCP servers (like GitHub), connections are stateless
+				// Each request creates a new connection, so we don't need to check isConnected()
+				// Just try to use the client and handle errors if they occur
+				try {
+					console.log(`[${serverName}] Discovering via OAuth client...`)
+					capabilities.tools = await discoverToolsFromOAuthClient(client, serverName)
+					capabilities.resources = await discoverResourcesFromOAuthClient(client, serverName)
+					capabilities.prompts = await discoverPromptsFromOAuthClient(client, serverName)
+					console.log(`[${serverName}] ✅ OAuth discovery complete: ${capabilities.tools.length} tools, ${capabilities.resources.length} resources, ${capabilities.prompts.length} prompts`)
+					return capabilities
+				} catch (error) {
+					console.warn(`[${serverName}] ⚠️  OAuth client discovery failed:`, error)
+					console.warn(`[${serverName}] Falling back to HTTP discovery`)
+					// Continue to HTTP discovery below
 				}
-				
-				console.log(`[${serverName}] Discovering via OAuth client...`)
-				capabilities.tools = await discoverToolsFromOAuthClient(client, serverName)
-				capabilities.resources = await discoverResourcesFromOAuthClient(client, serverName)
-				capabilities.prompts = await discoverPromptsFromOAuthClient(client, serverName)
-				console.log(`[${serverName}] ✅ OAuth discovery complete: ${capabilities.tools.length} tools, ${capabilities.resources.length} resources, ${capabilities.prompts.length} prompts`)
-				return capabilities
 			} else {
 				console.warn(`[${serverName}] ⚠️  No OAuth client found for session ${options.sessionId}, falling back to HTTP`)
 			}

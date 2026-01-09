@@ -7,6 +7,8 @@ import { OpenAIEmbeddings } from "@langchain/openai";
 import { SupabaseVectorStore } from "@langchain/community/vectorstores/supabase";
 import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 import * as XLSX from "xlsx";
+import { getUserPlanType } from "@/lib/subscription/usage";
+import { getPlanLimits } from "@/lib/subscription/limits";
 
 export async function POST(req: Request) {
   try {
@@ -60,11 +62,44 @@ export async function POST(req: Request) {
       );
     }
 
+    // Authenticate user and check limits
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Get user's plan type and limits
+    const planType = await getUserPlanType(user.id);
+    const limits = getPlanLimits(planType);
+
     // Create a service role client to bypass RLS
     const serviceClient = createServiceClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
+
+    // Count existing documents for this assistant (excluding URLs)
+    const { data: existingDocs } = await serviceClient
+      .from("document_vectors")
+      .select("metadata")
+      .eq("metadata->>assistant_id", trimmedAssistantId)
+      .is("metadata->>source_url", null); // Only count uploaded files, not URLs
+
+    const uniqueFilenames = new Set(existingDocs?.map(v => (v.metadata as any)?.filename).filter(Boolean) || []);
+    const currentDocCount = uniqueFilenames.size;
+
+    console.log(`[Knowledge API] Current document count: ${currentDocCount}/${limits.maxKnowledgeDocuments}`);
+
+    // Check limit
+    if (currentDocCount >= limits.maxKnowledgeDocuments) {
+      return NextResponse.json({
+        error: `Document limit reached. Your ${limits.displayName} plan allows ${limits.maxKnowledgeDocuments} documents per assistant. Upgrade for more.`,
+        currentCount: currentDocCount,
+        limit: limits.maxKnowledgeDocuments
+      }, { status: 403 });
+    }
 
     // Create an entry in the 'documents' table (no assistant FK required; association is in vectors metadata)
     const { data: documentEntry, error: docError } = await serviceClient

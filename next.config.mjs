@@ -1,11 +1,33 @@
 const nextConfig = {
   // Memory and performance optimizations
   experimental: {
-    // Optimize bundle size
-    optimizePackageImports: ['@radix-ui/react-icons', 'lucide-react'],
+    // Optimize bundle size - tree-shake unused exports
+    optimizePackageImports: [
+      '@radix-ui/react-icons',
+      'lucide-react',
+      'react-icons',
+      '@radix-ui/react-dialog',
+      '@radix-ui/react-dropdown-menu',
+      '@radix-ui/react-popover',
+      '@radix-ui/react-tabs',
+      '@radix-ui/react-accordion',
+      'date-fns',
+      'framer-motion',
+    ],
     // Enable MDX support
     mdxRs: true,
   },
+  
+  // Server external packages (moved from experimental.serverComponentsExternalPackages)
+  // These packages are marked as external to prevent bundling in server components
+  serverExternalPackages: [
+    '@langchain/core',
+    '@langchain/langgraph',
+    '@modelcontextprotocol/sdk',
+    'bullmq',
+    'ioredis',
+    'pg',
+  ],
   
   // Support MDX files as pages
   pageExtensions: ['js', 'jsx', 'ts', 'tsx', 'md', 'mdx'],
@@ -28,6 +50,62 @@ const nextConfig = {
         poll: 1000,
         aggregateTimeout: 300,
         ignored: ['**/node_modules', '**/.git', '**/.next'],
+      };
+    }
+    
+    // Note: The "big strings" webpack warning is informational and expected in large apps.
+    // It occurs when webpack caches large source files (>125KB). This is normal for complex
+    // applications and doesn't affect build correctness, only cache deserialization performance.
+    
+    // Suppress Edge Runtime warnings for Supabase packages
+    // These warnings occur because Supabase checks for Node.js APIs (process.versions, process.version)
+    // for feature detection, but the code still works correctly in Edge Runtime.
+    // The @supabase/ssr package is designed to work in Edge Runtime - these are just informational warnings.
+    config.ignoreWarnings = [
+      ...(config.ignoreWarnings || []),
+      {
+        module: /node_modules\/@supabase\/(realtime-js|supabase-js)/,
+        message: /A Node\.js API is used.*which is not supported in the Edge Runtime/,
+      },
+    ];
+    
+    // Optimize bundle splitting
+    if (!isServer) {
+      config.optimization = {
+        ...config.optimization,
+        splitChunks: {
+          chunks: 'all',
+          cacheGroups: {
+            default: false,
+            vendors: false,
+            // Large vendor chunks
+            reactflow: {
+              name: 'reactflow',
+              test: /[\\/]node_modules[\\/]reactflow[\\/]/,
+              priority: 40,
+            },
+            framerMotion: {
+              name: 'framer-motion',
+              test: /[\\/]node_modules[\\/]framer-motion[\\/]/,
+              priority: 30,
+            },
+            langchain: {
+              name: 'langchain',
+              test: /[\\/]node_modules[\\/]@langchain[\\/]/,
+              priority: 20,
+            },
+            radix: {
+              name: 'radix-ui',
+              test: /[\\/]node_modules[\\/]@radix-ui[\\/]/,
+              priority: 10,
+            },
+            vendor: {
+              name: 'vendor',
+              test: /[\\/]node_modules[\\/]/,
+              priority: 5,
+            },
+          },
+        },
       };
     }
     

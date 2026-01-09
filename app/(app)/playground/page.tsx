@@ -1,7 +1,7 @@
 import { createClient } from "@/supabase/server"
 import { redirect } from "next/navigation"
-import { PlaygroundContainer } from "@/components/playground/PlaygroundContainer"
 import { Assistant } from "@/types/assistant"
+import { PlaygroundContainerWrapper } from "@/components/playground/PlaygroundContainerWrapper"
 
 export const metadata = {
 	title: "Playground | AgentHub",
@@ -56,7 +56,7 @@ export default async function PlaygroundPage() {
 
 	return (
 		<div className="h-screen">
-			<PlaygroundContainer assistants={assistants} />
+			<PlaygroundContainerWrapper assistants={assistants} />
 		</div>
 	)
 }

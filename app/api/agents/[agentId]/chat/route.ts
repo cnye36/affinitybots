@@ -38,8 +38,8 @@ async function handleResumeCommand(
           thread_id: threadId,
         },
       },
-      
-      streamMode: ["messages"],
+
+      streamMode: ["messages", "messages-tuple"],
     }
   );
 
@@ -229,7 +229,7 @@ export async function POST(
     console.log(`[CHAT API] Budget check passed. Remaining: $${(budgetCheck.limit as number - budgetCheck.current).toFixed(2)}`);
 
     // Stream the response with proper user context using SDK (yields {event, data})
-    // Using streamMode: ["messages-tuple"] to get token-by-token streaming
+    // Using streamMode: ["messages", "messages-tuple"] to get both full message data (with tool_calls) and token streaming
     const runStream = await client.runs.stream(
       threadId || null, // Let LangGraph create thread if none provided
       assistantId,
@@ -243,8 +243,8 @@ export async function POST(
         config: {
           configurable: fullConfig,
         },
-        
-        streamMode: ["messages-tuple"],
+
+        streamMode: ["messages", "messages-tuple"],
       }
     );
 

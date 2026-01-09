@@ -12,6 +12,7 @@ import rehypeRaw from "rehype-raw";
 import { cn } from "@/lib/utils";
 import { ReasoningDisplay } from "./ReasoningDisplay";
 import { WebSearchResults, extractWebSearchResults } from "./WebSearchResults";
+import { ToolCallBadge } from "./ToolCallBadge";
 
 interface MessageProps {
   message: MessageType;
@@ -149,7 +150,8 @@ export const AssistantMessage: FC<MessageProps> = ({ message, isThinking = false
   };
 
   const hasContent = shouldShowContent(message.content);
-  
+  const hasToolCalls = message.toolCalls && message.toolCalls.length > 0;
+
   // Extract web search results from content
   const { cleanedContent, hasWebSearch } = extractWebSearchResults(message.content);
 
@@ -206,15 +208,16 @@ export const AssistantMessage: FC<MessageProps> = ({ message, isThinking = false
       onMouseLeave={() => setIsHovered(false)}
     >
       <div className="text-foreground text-base leading-7 break-words">
-        {isThinking && !hasContent ? (
+        {isThinking && !hasContent && !hasToolCalls ? (
           <ThinkingDots />
-        ) : hasContent ? (
+        ) : hasContent || hasToolCalls ? (
           <>
-            <div className="markdown-content">
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                rehypePlugins={[rehypeRaw]}
-                components={{
+            {hasContent && (
+              <div className="markdown-content">
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  rehypePlugins={[rehypeRaw]}
+                  components={{
                   h1: ({ className, children, ...props }) => (
                     <h1 className={cn("mb-4 mt-6 text-2xl font-bold text-foreground first:mt-0", className)} {...props}>
                       {children}
@@ -337,14 +340,22 @@ export const AssistantMessage: FC<MessageProps> = ({ message, isThinking = false
               >
                 {cleanedContent}
               </ReactMarkdown>
-            </div>
+              </div>
+            )}
+            {message.toolCalls && message.toolCalls.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {message.toolCalls.map((toolCall) => (
+                  <ToolCallBadge key={toolCall.id} toolCall={toolCall} />
+                ))}
+              </div>
+            )}
             {message.reasoning && <ReasoningDisplay reasoning={message.reasoning} />}
             {hasWebSearch && <WebSearchResults content={message.content} />}
           </>
         ) : null}
       </div>
 
-      {isHovered && hasContent && (
+      {isHovered && (hasContent || hasToolCalls) && (
         <div
           className="text-muted-foreground absolute right-2 top-2 flex gap-1"
         >

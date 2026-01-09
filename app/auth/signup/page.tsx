@@ -10,6 +10,7 @@ import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
+import { GitHubSignInButton } from "@/components/auth/GitHubSignInButton";
 import { Header } from "@/components/home/Header";
 
 function SignUpForm() {
@@ -121,7 +122,10 @@ function SignUpForm() {
 						</div>
 					</div>
 
-					<GoogleSignInButton />
+					<div className="space-y-3">
+						<GoogleSignInButton />
+						<GitHubSignInButton />
+					</div>
 
 					<p className="text-center text-sm text-muted-foreground">
 						Already have an account?{" "}

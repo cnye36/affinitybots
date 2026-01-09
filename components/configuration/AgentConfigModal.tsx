@@ -144,12 +144,14 @@ export function AgentConfigModal({
       },
     }));
 
+    // Remove selected_tools from optimistic update (it's not persisted)
+    const { selected_tools, ...currentConfigurable } = currentAssistant.config.configurable;
     const optimistic = {
       ...currentAssistant,
       config: {
         ...currentAssistant.config,
         configurable: {
-          ...currentAssistant.config.configurable,
+          ...currentConfigurable,
           enabled_mcp_servers: servers,
         },
       },
@@ -158,6 +160,10 @@ export function AgentConfigModal({
   };
 
   const updatePayload = useMemo(() => {
+    // Remove selected_tools from config before saving to persistent storage
+    // selected_tools is only for playground/workflow runtime context, not agent config
+    const { selected_tools, ...configToPersist } = config.config;
+    
     return {
       name: config.name,
       metadata: {
@@ -165,7 +171,7 @@ export function AgentConfigModal({
         description: config.description || "",
         agent_avatar: config.agent_avatar || null,
       },
-      config: { configurable: config.config },
+      config: { configurable: configToPersist },
     };
   }, [config.agent_avatar, config.config, config.description, config.metadata, config.name]);
 

@@ -151,7 +151,11 @@ export function PlaygroundAgentConfig({ assistant, onConfigChange }: PlaygroundA
 		// Skip if prompt is being edited
 		if (isPromptEditingRef.current && !skipPrompt) return
 
-		const configString = JSON.stringify(configToSave)
+		// Remove selected_tools from config before saving to persistent storage
+		// selected_tools is only for playground/workflow runtime context, not agent config
+		const { selected_tools, ...configToPersist } = configToSave
+		
+		const configString = JSON.stringify(configToPersist)
 		if (configString === lastSavedConfigRef.current) return
 
 		setIsSaving(true)
@@ -166,7 +170,7 @@ export function PlaygroundAgentConfig({ assistant, onConfigChange }: PlaygroundA
 				body: JSON.stringify({
 					name: fullAssistant.name,
 					config: {
-						configurable: configToSave,
+						configurable: configToPersist,
 					},
 				}),
 			})

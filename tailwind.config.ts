@@ -107,6 +107,26 @@ const config: Config = {
 					height: '0'
 				}
 			},
+			'collapsible-down': {
+				from: {
+					height: '0',
+					opacity: '0'
+				},
+				to: {
+					height: 'var(--radix-collapsible-content-height)',
+					opacity: '1'
+				}
+			},
+			'collapsible-up': {
+				from: {
+					height: 'var(--radix-collapsible-content-height)',
+					opacity: '1'
+				},
+				to: {
+					height: '0',
+					opacity: '0'
+				}
+			},
 			'float': {
 				'0%, 100%': {
 					transform: 'translateY(0px)'
@@ -127,6 +147,8 @@ const config: Config = {
 		animation: {
 			'accordion-down': 'accordion-down 0.2s ease-out',
 			'accordion-up': 'accordion-up 0.2s ease-out',
+			'collapsible-down': 'collapsible-down 0.2s ease-out',
+			'collapsible-up': 'collapsible-up 0.2s ease-out',
 			'float': 'float 3s ease-in-out infinite',
 			'shimmer': 'shimmer 2s infinite'
 		}

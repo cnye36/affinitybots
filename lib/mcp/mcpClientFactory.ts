@@ -26,10 +26,17 @@ export class MCPClientFactory {
 
   /**
    * Creates MCP clients and tools for an agent based on its configuration
+   * 
+   * @param userId - User ID for the agent
+   * @param agentConfig - Agent configuration
+   * @param runtimeSelectedTools - Optional runtime tool filter (from playground/workflow).
+   *   - If provided (array, even if empty): Use it to filter tools (playground/workflow context)
+   *   - If undefined: Ignore selected_tools from config and return ALL tools (agent chat context)
    */
   async createForAgent(
     userId: string, 
-    agentConfig: AssistantConfiguration
+    agentConfig: AssistantConfiguration,
+    runtimeSelectedTools?: string[]
   ): Promise<MCPFactoryResult> {
     try {
       const enabledServers = agentConfig.enabled_mcp_servers || [];
@@ -39,6 +46,7 @@ export class MCPClientFactory {
       console.log(`Enabled servers: ${enabledServers.join(", ")}`);
       console.log(`Force refresh: ${forceRefresh}`);
       console.log(`OAuth sessions: ${(agentConfig.mcp_oauth_sessions || []).length} configured`);
+      console.log(`Runtime selected tools: ${runtimeSelectedTools !== undefined ? (runtimeSelectedTools.length > 0 ? runtimeSelectedTools.join(", ") : "[] (empty filter)") : "undefined (all tools)"}`);
 
       const result = await mcpClientManager.createMcpClientAndTools({
         userId,
@@ -48,12 +56,25 @@ export class MCPClientFactory {
 
       let tools = result.tools;
 
-      // Filter tools if selected_tools is specified in agent config
-      if (agentConfig.selected_tools && agentConfig.selected_tools.length > 0) {
-        const beforeCount = tools.length;
-        tools = tools.filter(tool => agentConfig.selected_tools!.includes(tool.name));
-        console.log(`MCPClientFactory: Filtered tools from ${beforeCount} to ${tools.length} based on selected_tools`);
-        console.log(`Selected tools: ${agentConfig.selected_tools.join(", ")}`);
+      // Apply tool filtering based on context:
+      // - If runtimeSelectedTools is provided (playground/workflow), use it
+      // - If runtimeSelectedTools is undefined (agent chat), return ALL tools (ignore config.selected_tools)
+      if (runtimeSelectedTools !== undefined) {
+        // Playground/workflow context: Use runtime filter
+        if (runtimeSelectedTools.length > 0) {
+          const beforeCount = tools.length;
+          tools = tools.filter(tool => runtimeSelectedTools.includes(tool.name));
+          console.log(`MCPClientFactory: Filtered tools from ${beforeCount} to ${tools.length} based on runtime selected_tools (playground/workflow context)`);
+          console.log(`Runtime selected tools: ${runtimeSelectedTools.join(", ")}`);
+        } else {
+          // Empty array means no tools should be available
+          const beforeCount = tools.length;
+          tools = [];
+          console.log(`MCPClientFactory: Filtered tools from ${beforeCount} to 0 based on empty runtime selected_tools array`);
+        }
+      } else {
+        // Agent chat context: Ignore selected_tools from config, return ALL tools
+        console.log(`MCPClientFactory: Returning all ${tools.length} tools (agent chat context - no filtering)`);
       }
 
       const factoryResult: MCPFactoryResult = {

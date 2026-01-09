@@ -134,11 +134,13 @@ export function ApiKeyModal({ open, onOpenChange, server, onSuccess }: ApiKeyMod
 				<form onSubmit={handleSubmit} className="space-y-4">
 					{server.authType !== "none" && (
 						<div className="space-y-2">
-							<Label htmlFor="apiKey">API Key</Label>
+							<Label htmlFor="apiKey">
+								{server.serverName === "oktopost" ? "API Token" : "API Key"}
+							</Label>
 							<Input
 								id="apiKey"
 								type="password"
-								placeholder="Enter your API key..."
+								placeholder={server.serverName === "oktopost" ? "Enter your API token..." : "Enter your API key..."}
 								value={apiKey}
 								onChange={(e) => setApiKey(e.target.value)}
 								disabled={loading}

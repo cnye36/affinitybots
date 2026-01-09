@@ -168,7 +168,7 @@ export class MCPWebInterface {
       try {
         const { data, error} = await supabase
           .from('user_mcp_servers')
-          .select('url, config, server_slug')
+          .select('url, config, server_slug, is_enabled')
           .eq('user_id', userId)
           .eq('session_id', sessionId)
           .single();
@@ -179,6 +179,23 @@ export class MCPWebInterface {
         }
       } catch (fetchError) {
         console.warn('Unexpected error loading MCP server row during OAuth finish:', fetchError);
+      }
+
+      // Check if server is already connected - if it is, require disconnect before re-authenticating
+      // This ensures users always go through the full OAuth flow when connecting
+      if (serverRow && (serverRow as any).is_enabled) {
+        console.log(`Server ${serverRow.server_slug} is already connected. Requiring fresh OAuth flow.`);
+        throw new Error('Server is already connected. Disconnect first to re-authenticate.');
+      }
+
+      // If server isn't connected in DB, clear any in-memory client and require fresh OAuth
+      // This prevents auto-authentication when the server was cleared from DB
+      if (!serverRow || !(serverRow as any).is_enabled) {
+        const existingClient = await sessionStore.getClient(sessionId);
+        if (existingClient) {
+          console.log(`Server not connected in DB but client exists in sessionStore. Clearing client to require fresh OAuth.`);
+          await sessionStore.removeClient(sessionId);
+        }
       }
 
       // Rehydrate OAuth client if serverless/dev hot-reload dropped in-memory session
@@ -195,6 +212,25 @@ export class MCPWebInterface {
             let client: GitHubOAuthClient | MCPOAuthClient;
             if (isGitHub) {
               client = new GitHubOAuthClient(serverRow.url, callbackUrl, () => {});
+              // Set sessionId on the GitHub client so it can be used during finishAuth
+              if (client instanceof GitHubOAuthClient && typeof client.setSessionId === "function") {
+                client.setSessionId(sessionId);
+              }
+              // Restore provider state (code verifier) if available
+              // IMPORTANT: This must be done BEFORE initialize() is called in finishAuth()
+              const providerState = serverRow.config?.providerState;
+              if (providerState && providerState.codeVerifier) {
+                try {
+                  client.restoreProviderState(providerState);
+                  console.log(`[GitHubOAuth] Restored provider state (code verifier) for GitHub OAuth client`);
+                } catch (restoreError) {
+                  console.error(`[GitHubOAuth] Failed to restore provider state for GitHub client:`, restoreError);
+                  throw new Error('Failed to restore OAuth session - code verifier missing. Please restart OAuth flow.');
+                }
+              } else {
+                console.error(`[GitHubOAuth] No provider state found in database for session ${sessionId}`);
+                throw new Error('OAuth session expired or invalid - code verifier missing. Please restart OAuth flow.');
+              }
             } else {
               const mcpClient = new MCPOAuthClient(serverRow.url, callbackUrl, () => {});
               const state = serverRow.config?.providerState;
@@ -238,13 +274,20 @@ export class MCPWebInterface {
         tokens = client.getTokens();
         expiresAt = client.getTokenExpiry();
       }
-      
-      console.log(`Retrieved tokens from client:`, { 
-        hasClient: !!client, 
+
+      console.log(`Retrieved tokens from client:`, {
+        hasClient: !!client,
         clientType: client?.constructor?.name,
         hasTokens: !!tokens,
         tokenPreview: tokens?.access_token ? `${tokens.access_token.substring(0, 20)}...` : 'none'
       });
+
+      // CRITICAL: Update sessionStore with the client that has fresh tokens
+      // This persists tokens to Redis so subsequent requests can access them
+      if (client) {
+        await sessionStore.setClient(sessionId, client);
+        console.log(`Updated sessionStore with fresh tokens for session ${sessionId}`);
+      }
 
       await this.updateOAuthCompletion(sessionId, userId, {
         tokens,

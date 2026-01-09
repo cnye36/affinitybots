@@ -6,6 +6,7 @@ import { TooltipIconButton } from "./TooltipIconButton";
 import { Welcome } from "./Welcome";
 import { UserMessage, AssistantMessage } from "./Message";
 import { Composer } from "./Composer";
+import { ToolApprovalBadge } from "./ToolApprovalBadge";
 import type { ChatMessage as Message } from "@/components/chat/types";
 
 interface ThreadProps {
@@ -87,15 +88,27 @@ export const Thread: FC<ThreadProps> = ({
               const isLastMessage = index === messages.length - 1;
               const isThinking = isLastMessage && message.role === "assistant" && isRunning;
 
-              return message.role === "user" ? (
-                <UserMessage key={message.id} message={message} />
-              ) : (
-                <AssistantMessage
-                  key={message.id}
-                  message={message}
-                  isThinking={isThinking}
-                />
-              );
+              if (message.role === "user") {
+                return <UserMessage key={message.id} message={message} />;
+              } else if (message.role === "approval" && message.pendingApproval) {
+                return (
+                  <div key={message.id} className="w-full flex justify-start px-[var(--thread-padding-x)] py-4">
+                    <ToolApprovalBadge
+                      toolCalls={message.pendingApproval.toolCalls}
+                      onApprove={message.pendingApproval.onApprove}
+                      onDeny={message.pendingApproval.onDeny}
+                    />
+                  </div>
+                );
+              } else {
+                return (
+                  <AssistantMessage
+                    key={message.id}
+                    message={message}
+                    isThinking={isThinking}
+                  />
+                );
+              }
             })}
 
             {/* Show thinking indicator when waiting for assistant response */}

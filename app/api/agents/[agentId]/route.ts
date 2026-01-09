@@ -214,10 +214,14 @@ function mergeConfigurations(
   const currentConfigurable = currentConfig?.configurable || {};
   const updateConfigurable = updateConfig?.configurable || {};
 
-  // Merge configurable properties
+  // Remove selected_tools from both configs (it's only for runtime playground/workflow context)
+  const { selected_tools: currentSelectedTools, ...currentWithoutSelectedTools } = currentConfigurable;
+  const { selected_tools: updateSelectedTools, ...updateWithoutSelectedTools } = updateConfigurable;
+
+  // Merge configurable properties (excluding selected_tools)
   const mergedConfigurable = {
-    ...currentConfigurable,
-    ...updateConfigurable,
+    ...currentWithoutSelectedTools,
+    ...updateWithoutSelectedTools,
   };
 
   // Ensure arrays exist and normalize types
@@ -262,6 +266,14 @@ export async function GET(
 
     if (!assistant || error) {
       return NextResponse.json({ error: "Assistant not found" }, { status: 404 });
+    }
+
+    // Clean up any stale selected_tools from agent config (should not be persisted)
+    // This ensures backwards compatibility with old configs that may have selected_tools
+    // We'll remove it from the response and let the next save clean it up in the database
+    if (assistant.config?.configurable?.selected_tools) {
+      const { selected_tools, ...cleanedConfigurable } = assistant.config.configurable;
+      assistant.config.configurable = cleanedConfigurable;
     }
 
     return NextResponse.json(assistant);

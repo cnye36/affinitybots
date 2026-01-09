@@ -5,7 +5,7 @@ import { AppSidebar } from "@/components/layout/app-sidebar";
 import { AppMobileNav } from "@/components/layout/app-mobile-nav";
 import { AutoCollapseWrapper } from "@/components/layout/auto-collapse-wrapper";
 import { AIUsageWrapper } from "@/components/layout/AIUsageWrapper";
-import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { ErrorBoundaryWrapper } from "@/components/ErrorBoundaryWrapper";
 
 export default async function AuthenticatedLayout({
   children,
@@ -27,19 +27,19 @@ export default async function AuthenticatedLayout({
   }
 
   return (
-    <ErrorBoundary>
+    <ErrorBoundaryWrapper>
       <SidebarProvider>
         <AppSidebar user={user} />
         <SidebarInset>
           <AppMobileNav />
           <AutoCollapseWrapper>
             <div className="flex flex-1 flex-col pb-24 md:pb-0">
-              <ErrorBoundary>{children}</ErrorBoundary>
+              <ErrorBoundaryWrapper>{children}</ErrorBoundaryWrapper>
             </div>
           </AutoCollapseWrapper>
         </SidebarInset>
         <AIUsageWrapper />
       </SidebarProvider>
-    </ErrorBoundary>
+    </ErrorBoundaryWrapper>
   );
 }

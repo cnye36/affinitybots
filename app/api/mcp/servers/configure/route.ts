@@ -86,6 +86,11 @@ export async function POST(request: NextRequest) {
 		// Only include API key if it was provided
 		if (apiKey) {
 			configToStore.apiKey = apiKey
+			
+			// Special handling for Oktopost: store API token in config for custom headers
+			if (serverSlug === "oktopost") {
+				configToStore.apiToken = apiKey
+			}
 		}
 		
 		// Store custom API key header name if specified
