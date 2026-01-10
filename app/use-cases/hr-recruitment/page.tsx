@@ -58,11 +58,20 @@ export default function HRRecruitmentPage() {
 		},
 		{
 			name: "Asana",
-			icon: "/integration-icons/asana-icon-dark.png",
+			iconLight: "/integration-icons/asana-icon-light.png",
+			iconDark: "/integration-icons/asana-icon-dark.png",
 			capabilities: ["Hiring pipeline", "Task tracking", "Workflow management"],
 			usedBy: ["Interview Scheduler"],
 		},
 	]
+
+	const toolIconMap: Record<string, string> = {
+		"Knowledge Base": "/integration-icons/google-docs-logo.png",
+		"Email": "/integration-icons/gmail-icon.png",
+		"Google Calendar": "/integration-icons/google-calendar-logo.png",
+		"Gmail": "/integration-icons/gmail-icon.png",
+		"Templates": "/integration-icons/google-docs-logo.png",
+	}
 
 	const workflowSteps = [
 		{
@@ -138,88 +147,94 @@ export default function HRRecruitmentPage() {
 			<Header />
 
 			{/* Hero Section - Redesigned */}
-			<section className="relative pt-24 pb-20 px-4 overflow-hidden">
+			<section className="relative pt-32 pb-20 px-4 overflow-hidden">
 				{/* Animated gradient background */}
 				<div className="absolute inset-0 bg-gradient-to-br from-green-500/5 via-emerald-500/5 to-transparent" />
 				<div className="absolute top-0 right-0 w-1/3 h-1/3 bg-gradient-to-br from-emerald-500/10 to-transparent rounded-full blur-3xl" />
 				<div className="absolute bottom-0 left-0 w-1/3 h-1/3 bg-gradient-to-tr from-green-500/10 to-transparent rounded-full blur-3xl" />
 
 				<div className="container mx-auto relative z-10">
-					<div className="max-w-5xl mx-auto">
-						<MotionDiv
-							initial={{ opacity: 0, y: 20 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{ duration: 0.6 }}
-							className="text-center mb-12"
-						>
-							<h1 className="text-5xl sm:text-6xl md:text-7xl font-bold mb-6 leading-tight">
-								Hire Faster with{" "}
-								<span className="relative inline-block">
-									<span className="bg-gradient-to-r from-green-600 via-emerald-600 to-green-600 bg-clip-text text-transparent">
-										AI-Powered Recruiting
+					<div className="grid lg:grid-cols-2 gap-12 items-center mb-16">
+						<div className="max-w-2xl mx-auto lg:mx-0">
+							<MotionDiv
+								initial={{ opacity: 0, y: 20 }}
+								animate={{ opacity: 1, y: 0 }}
+								transition={{ duration: 0.6 }}
+								className="text-center lg:text-left mb-8"
+							>
+								<h1 className="text-5xl sm:text-6xl md:text-7xl font-bold mb-6 leading-tight">
+									Hire Faster with{" "}
+									<span className="relative inline-block">
+										<span className="bg-gradient-to-r from-green-600 via-emerald-600 to-green-600 bg-clip-text text-transparent">
+											AI-Powered Recruiting
+										</span>
 									</span>
-									<div className="absolute -bottom-2 left-0 right-0 h-1 bg-gradient-to-r from-green-600 via-emerald-600 to-green-600 rounded-full" />
-								</span>
-							</h1>
-							<p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-3xl mx-auto leading-relaxed">
-								Automate resume screening, interview scheduling, and candidate communication so your HR team focuses on human connections
-							</p>
-						</MotionDiv>
+								</h1>
+								<p className="text-xl md:text-2xl text-muted-foreground mb-8 leading-relaxed">
+									Automate resume screening, interview scheduling, and candidate communication so your HR team focuses on human connections
+								</p>
+							</MotionDiv>
 
-						{/* Hero CTAs */}
-						<MotionDiv
-							initial={{ opacity: 0, y: 20 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{ duration: 0.6, delay: 0.2 }}
-							className="flex flex-col sm:flex-row gap-4 justify-center mb-16"
-						>
-							<Link href="/pricing">
-								<Button size="lg" className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-lg px-8 py-6 h-auto">
-									Get Started
-									<ArrowRight className="ml-2 h-5 w-5" />
-								</Button>
-							</Link>
-							<Link href="/playground">
-								<Button size="lg" variant="outline" className="text-lg px-8 py-6 h-auto border-2">
-									View Demo
-								</Button>
-							</Link>
-						</MotionDiv>
+							<MotionDiv
+								initial={{ opacity: 0, y: 20 }}
+								animate={{ opacity: 1, y: 0 }}
+								transition={{ duration: 0.6, delay: 0.2 }}
+								className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start"
+							>
+								<Link href="/pricing">
+									<Button
+										size="sm"
+										className="h-10 px-5 rounded-full text-sm tracking-wide bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-sm shadow-emerald-500/30"
+									>
+										Get Started
+										<ArrowRight className="ml-2 h-4 w-4" />
+									</Button>
+								</Link>
+								<Link href="/playground">
+									<Button
+										size="sm"
+										variant="outline"
+										className="h-10 px-5 rounded-full text-sm tracking-wide border border-slate-300/70 dark:border-slate-700/70 hover:border-slate-400 dark:hover:border-slate-600"
+									>
+										View Demo
+									</Button>
+								</Link>
+							</MotionDiv>
+						</div>
 
-						{/* Quick stats bar */}
 						<MotionDiv
-							initial={{ opacity: 0, y: 20 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{ duration: 0.6, delay: 0.4 }}
-							className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto mb-16"
-						>
-							{[
-								{ label: "Screening Time", value: "-75%" },
-								{ label: "Scheduling", value: "90%" },
-								{ label: "Candidates", value: "5x" },
-								{ label: "Experience", value: "85%" },
-							].map((stat, index) => (
-								<div
-									key={index}
-									className="p-4 rounded-xl bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm border border-gray-200 dark:border-gray-800 text-center"
-								>
-									<div className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-										{stat.value}
-									</div>
-									<div className="text-xs md:text-sm text-muted-foreground mt-1">{stat.label}</div>
-								</div>
-							))}
-						</MotionDiv>
-
-						{/* Hero Graphic */}
-						<MotionDiv
-							initial={{ opacity: 0, y: 20 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{ duration: 0.6, delay: 0.6 }}
+							initial={{ opacity: 0, scale: 0.92 }}
+							animate={{ opacity: 1, scale: 1 }}
+							transition={{ duration: 0.8, delay: 0.3 }}
+							className="hidden lg:block"
 						>
 							<HRRecruitmentHeroGraphic />
 						</MotionDiv>
 					</div>
+
+					<MotionDiv
+						initial={{ opacity: 0, y: 20 }}
+						animate={{ opacity: 1, y: 0 }}
+						transition={{ duration: 0.6, delay: 0.4 }}
+						className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto"
+					>
+						{[
+							{ label: "Screening Time", value: "-75%" },
+							{ label: "Scheduling", value: "90%" },
+							{ label: "Candidates", value: "5x" },
+							{ label: "Experience", value: "85%" },
+						].map((stat, index) => (
+							<div
+								key={index}
+								className="p-4 rounded-xl bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm border border-gray-200 dark:border-gray-800 text-center"
+							>
+								<div className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+									{stat.value}
+								</div>
+								<div className="text-xs md:text-sm text-muted-foreground mt-1">{stat.label}</div>
+							</div>
+						))}
+					</MotionDiv>
 				</div>
 			</section>
 
@@ -329,7 +344,7 @@ export default function HRRecruitmentPage() {
 									name: agent.name,
 									role: agent.role,
 									model: agent.model,
-									tools: agent.tools.map(tool => ({ name: tool, icon: <></> })),
+									tools: agent.tools.map(tool => ({ name: tool, icon: toolIconMap[tool] || tool })),
 									description: agent.description,
 									color: agent.color,
 								}} />
@@ -583,13 +598,32 @@ export default function HRRecruitmentPage() {
 												whileHover={{ scale: 1.1 }}
 												className="aspect-square p-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center hover:shadow-md transition-all duration-300"
 											>
-												<Image
-													src={integration.icon}
-													alt={integration.name}
-													width={32}
-													height={32}
-													className="object-contain"
-												/>
+												{integration.iconLight && integration.iconDark ? (
+													<>
+														<Image
+															src={integration.iconLight}
+															alt={integration.name}
+															width={32}
+															height={32}
+															className="object-contain dark:hidden"
+														/>
+														<Image
+															src={integration.iconDark}
+															alt={integration.name}
+															width={32}
+															height={32}
+															className="object-contain hidden dark:block"
+														/>
+													</>
+												) : integration.icon ? (
+													<Image
+														src={integration.icon}
+														alt={integration.name}
+														width={32}
+														height={32}
+														className="object-contain"
+													/>
+												) : null}
 											</MotionDiv>
 										))}
 									</div>
@@ -702,13 +736,20 @@ export default function HRRecruitmentPage() {
 						</p>
 						<div className="flex flex-col sm:flex-row gap-4 justify-center">
 							<Link href="/pricing">
-								<Button size="lg" className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-lg px-8 py-6 h-auto">
+								<Button
+									size="sm"
+									className="h-10 px-5 rounded-full text-sm tracking-wide bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-sm shadow-emerald-500/30"
+								>
 									Get Started
-									<ArrowRight className="ml-2 h-5 w-5" />
+									<ArrowRight className="ml-2 h-4 w-4" />
 								</Button>
 							</Link>
 							<Link href="/playground">
-								<Button size="lg" variant="outline" className="text-lg px-8 py-6 h-auto border-2">
+								<Button
+									size="sm"
+									variant="outline"
+									className="h-10 px-5 rounded-full text-sm tracking-wide border border-slate-300/70 dark:border-slate-700/70 hover:border-slate-400 dark:hover:border-slate-600"
+								>
 									View Demo
 								</Button>
 							</Link>

@@ -67,6 +67,17 @@ export interface OrchestratorNodeData {
   isReadOnly?: boolean;
 }
 
+export interface OutputNodeData {
+  id: string;
+  label: string;
+  description?: string;
+  status?: "idle" | "running" | "completed" | "error";
+  onConfigureOutput?: (outputId: string) => void;
+  workflowType?: "sequential" | "orchestrator";
+  isReadOnly?: boolean;
+  isActive?: boolean;
+}
+
 export type WorkflowNode = {
   id: string;
   position: { x: number; y: number };
@@ -74,6 +85,7 @@ export type WorkflowNode = {
   | { type: "task"; data: TaskNodeData }
   | { type: "trigger"; data: TriggerNodeData }
   | { type: "orchestrator"; data: OrchestratorNodeData }
+  | { type: "output"; data: OutputNodeData }
 );
 
 export interface NodeHandlers {

@@ -25,6 +25,8 @@ const getNodeDimensions = (node: WorkflowNode) => {
       return { width: 240, height: 200 } // Compact size matching agents
     case "task":
       return { width: 200, height: 180 } // Compact size for task nodes
+    case "output":
+      return { width: 240, height: 180 } // Same dimensions as trigger/task nodes
     default:
       return { width: 200, height: 180 }
   }
@@ -40,7 +42,11 @@ export function useAutoLayout() {
         return calculateOrchestratorLayout(nodes, edges, { nodeSpacing, rankSpacing })
       }
 
-      // Standard dagre layout for sequential workflows
+      // Separate output nodes - they get special positioning
+      const outputNodes = nodes.filter((n) => n.type === "output")
+      const workflowNodes = nodes.filter((n) => n.type !== "output")
+
+      // Standard dagre layout for sequential workflows (excluding output nodes)
       const dagreGraph = new dagre.graphlib.Graph()
       dagreGraph.setDefaultEdgeLabel(() => ({}))
 
@@ -53,22 +59,27 @@ export function useAutoLayout() {
         marginy: 50,
       })
 
-      // Add nodes to the graph
-      nodes.forEach((node) => {
+      // Add workflow nodes to the graph (excluding output nodes)
+      workflowNodes.forEach((node) => {
         const { width, height } = getNodeDimensions(node)
         dagreGraph.setNode(node.id, { width, height })
       })
 
-      // Add edges to the graph
-      edges.forEach((edge) => {
+      // Add edges to the graph (only edges between workflow nodes, exclude output nodes)
+      const workflowNodeIds = new Set(workflowNodes.map((n) => n.id))
+      const workflowEdges = edges.filter((e) => {
+        // Only include edges where both source and target are workflow nodes (not output nodes)
+        return workflowNodeIds.has(e.source) && workflowNodeIds.has(e.target)
+      })
+      workflowEdges.forEach((edge) => {
         dagreGraph.setEdge(edge.source, edge.target)
       })
 
       // Calculate the layout
       dagre.layout(dagreGraph)
 
-      // Apply the calculated positions to nodes
-      const layoutedNodes = nodes.map((node) => {
+      // Apply the calculated positions to workflow nodes
+      const layoutedNodes: WorkflowNode[] = workflowNodes.map((node) => {
         const nodeWithPosition = dagreGraph.node(node.id)
         const { width, height } = getNodeDimensions(node)
 
@@ -82,6 +93,44 @@ export function useAutoLayout() {
         }
       })
 
+      // Position output nodes to the right of the rightmost node with double spacing
+      if (outputNodes.length > 0 && layoutedNodes.length > 0) {
+        // Find the rightmost node
+        let rightmostNode = layoutedNodes[0]
+        let rightmostX = rightmostNode.position.x + getNodeDimensions(rightmostNode).width
+        
+        layoutedNodes.forEach((node) => {
+          const nodeRightEdge = node.position.x + getNodeDimensions(node).width
+          if (nodeRightEdge > rightmostX) {
+            rightmostX = nodeRightEdge
+            rightmostNode = node
+          }
+        })
+
+        // Position output nodes to the right with double spacing (2 * rankSpacing)
+        const doubleSpacing = rankSpacing * 2 // Double the normal spacing
+        const rightmostY = rightmostNode.position.y
+
+        outputNodes.forEach((outputNode) => {
+          const outputDims = getNodeDimensions(outputNode)
+          // Center vertically with the rightmost node
+          const outputY = rightmostY + (getNodeDimensions(rightmostNode).height / 2) - (outputDims.height / 2)
+          
+          layoutedNodes.push({
+            ...outputNode,
+            position: { x: rightmostX + doubleSpacing, y: outputY },
+          })
+        })
+      } else if (outputNodes.length > 0) {
+        // If no workflow nodes, just position output nodes at default location
+        outputNodes.forEach((outputNode) => {
+          layoutedNodes.push({
+            ...outputNode,
+            position: { x: 250, y: 100 },
+          })
+        })
+      }
+
       return layoutedNodes
     },
     []
@@ -92,6 +141,7 @@ export function useAutoLayout() {
 
 // Custom layout for orchestrator workflows
 // Trigger → Orchestrator (horizontal), then agents stack vertically below orchestrator
+// Output node positioned to the right of orchestrator with double spacing
 function calculateOrchestratorLayout(
   nodes: WorkflowNode[],
   edges: Edge[],
@@ -100,6 +150,7 @@ function calculateOrchestratorLayout(
   const triggerNode = nodes.find((n) => n.type === "trigger")
   const orchestratorNode = nodes.find((n) => n.type === "orchestrator")
   const agentNodes = nodes.filter((n) => n.type === "task")
+  const outputNodes = nodes.filter((n) => n.type === "output")
 
   if (!triggerNode || !orchestratorNode) {
     // Fallback to standard layout if structure is invalid
@@ -155,6 +206,23 @@ function calculateOrchestratorLayout(
     })
     currentAgentX += agentDims.width + options.nodeSpacing
   })
+
+  // Position output nodes to the right of orchestrator with double spacing
+  if (outputNodes.length > 0) {
+    const doubleSpacing = options.rankSpacing * 2 // Double the normal spacing
+    const outputX = orchestratorX + orchestratorDims.width + doubleSpacing
+    
+    outputNodes.forEach((outputNode) => {
+      const outputDims = getNodeDimensions(outputNode)
+      // Center vertically with orchestrator
+      const outputY = orchestratorY + (orchestratorDims.height / 2) - (outputDims.height / 2)
+      
+      layoutedNodes.push({
+        ...outputNode,
+        position: { x: outputX, y: outputY },
+      })
+    })
+  }
 
   return layoutedNodes
 }

@@ -26,6 +26,7 @@ import { WorkflowNode } from "@/types/workflow"
 import { MemoizedTaskNode } from "../tasks/TaskNode"
 import { TriggerNode } from "../triggers/TriggerNode"
 import { OrchestratorNode } from "../orchestrator/OrchestratorNode"
+import { OutputNode } from "../outputs/OutputNode"
 import { DeletableEdge } from "./edges/DeletableEdge"
 import { useWorkflowState } from "./hooks/useWorkflowState"
 import { useWorkflowValidation } from "./hooks/useWorkflowValidation"
@@ -37,6 +38,7 @@ const nodeTypes: NodeTypes = {
   task: MemoizedTaskNode,
   trigger: TriggerNode,
   orchestrator: OrchestratorNode,
+  output: OutputNode,
 }
 
 const edgeTypes: EdgeTypes = {
@@ -127,19 +129,22 @@ export function WorkflowCanvas({
   const onNodesChange: OnNodesChange = useCallback(
     (changes) => {
       if (isExecutionsView) return
-      // Handle selection changes - ensure active node is updated correctly
+      // Handle selection changes first - sync with active node before applying changes
+      // This ensures that clicking any node (even already-selected ones) activates it
       changes.forEach((change) => {
         if (change.type === "select" && setActiveNodeId) {
           if (change.selected) {
-            // Node was selected - set it as active
+            // Node was selected - always set it as active (works even for already-selected nodes)
+            // This ensures clicking backwards through nodes always works with single click
             setActiveNodeId(change.id)
-          } else if (activeNodeId === change.id) {
+          } else if (activeNodeId === change.id && !change.selected) {
             // Currently active node was deselected - clear active state
             setActiveNodeId(null)
           }
         }
       })
 
+      // Apply node changes after handling selection
       setNodes((nds) =>
         applyNodeChanges(changes, nds as Parameters<typeof applyNodeChanges>[1]) as WorkflowNode[]
       )
@@ -291,6 +296,8 @@ export function WorkflowCanvas({
 
       return {
         ...node,
+        // Don't set selected prop - let ReactFlow handle selection naturally
+        // We'll sync activeNodeId via onNodeClick and onNodesChange
         data: {
           ...node.data,
           isActive: node.id === activeNodeId,
@@ -315,12 +322,16 @@ export function WorkflowCanvas({
     }))
   }, [edges, handleEdgeDelete, isExecutionsView])
 
-  // Handle node clicks - use custom handler in executions view
+  // Handle node clicks - ensure single click always activates the node
+  // This handler should always fire when clicking any node, regardless of selection state
   const handleNodeClick = useCallback(
     (_event: React.MouseEvent, node: any) => {
       if (isExecutionsView && onNodeClick) {
         onNodeClick(node.id)
-      } else if (!isExecutionsView) {
+      } else if (!isExecutionsView && setActiveNodeId) {
+        // Always set active node on single click, regardless of current selection/active state
+        // This ensures clicking backwards through nodes always works with a single click
+        // The nodesWithData memo will sync the selected prop, so we just need to update activeNodeId
         setActiveNodeId(node.id)
       }
     },

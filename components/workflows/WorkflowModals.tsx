@@ -6,9 +6,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { AgentSelectModal } from "./AgentSelectModal"
 import { TriggerSelectModal } from "./triggers/TriggerSelectModal"
 import { TriggerConfigModal } from "./triggers/TriggerConfigModal"
-import { TaskSelectionSheet } from "./tasks/TaskSelectionSheet"
 import { WorkflowTypeSelector } from "./WorkflowTypeSelector"
 import { OrchestratorConfigModal } from "./orchestrator/OrchestratorConfigModal"
+import { OutputDetailPanel } from "./outputs/OutputDetailPanel"
 import { Assistant } from "@/types/assistant"
 
 interface WorkflowModalsProps {
@@ -35,12 +35,6 @@ interface WorkflowModalsProps {
   workflowId: string | null
   selectedTriggerId: string | null
 
-  // Task Selection Sheet (Mobile)
-  isMobile: boolean
-  isTaskSheetOpen: boolean
-  setIsTaskSheetOpen: (value: boolean) => void
-  onTaskSelect: (task: any) => void
-
   // Workflow Type Selector
   isTypeSelectionOpen: boolean
   setIsTypeSelectionOpen: (value: boolean) => void
@@ -55,6 +49,11 @@ interface WorkflowModalsProps {
   // Creating Workflow Dialog
   isCreatingWorkflow: boolean
   workflowType: "sequential" | "orchestrator" | null
+
+  // Output Panel
+  isOutputPanelOpen: boolean
+  setIsOutputPanelOpen: (value: boolean) => void
+  outputNodeId?: string
 }
 
 export function WorkflowModals({
@@ -75,10 +74,6 @@ export function WorkflowModals({
   setIsTriggerConfigOpen,
   workflowId,
   selectedTriggerId,
-  isMobile,
-  isTaskSheetOpen,
-  setIsTaskSheetOpen,
-  onTaskSelect,
   isTypeSelectionOpen,
   setIsTypeSelectionOpen,
   onSelectType,
@@ -88,6 +83,9 @@ export function WorkflowModals({
   onSaveOrchestratorConfig,
   isCreatingWorkflow,
   workflowType,
+  isOutputPanelOpen,
+  setIsOutputPanelOpen,
+  outputNodeId,
 }: WorkflowModalsProps) {
   const router = useRouter()
 
@@ -119,14 +117,6 @@ export function WorkflowModals({
         workflowId={workflowId || ""}
         triggerId={selectedTriggerId}
       />
-
-      {isMobile && (
-        <TaskSelectionSheet
-          open={isTaskSheetOpen}
-          onOpenChange={setIsTaskSheetOpen}
-          onTaskSelect={onTaskSelect}
-        />
-      )}
 
       <WorkflowTypeSelector
         open={isTypeSelectionOpen}
@@ -169,6 +159,19 @@ export function WorkflowModals({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Output Panel */}
+      {isOutputPanelOpen && workflowId && outputNodeId && (
+        <Dialog open={isOutputPanelOpen} onOpenChange={setIsOutputPanelOpen}>
+          <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+            <OutputDetailPanel
+              workflowId={workflowId}
+              outputNodeId={outputNodeId}
+              onClose={() => setIsOutputPanelOpen(false)}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </>
   )
 }

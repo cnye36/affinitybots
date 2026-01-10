@@ -51,6 +51,9 @@ export interface AgentCardProps {
  * ```
  */
 export function AgentCard({ agent, className }: AgentCardProps) {
+	const isImagePath = (icon: string) =>
+		icon.startsWith("/") || icon.startsWith("http") || icon.startsWith("data:")
+
 	const colorSchemes = {
 		blue: {
 			gradient: "from-blue-500 via-blue-600 to-cyan-500",
@@ -165,7 +168,13 @@ export function AgentCard({ agent, className }: AgentCardProps) {
 									title={tool.name}
 								>
 									{typeof tool.icon === "string" ? (
-										<img src={tool.icon} alt={tool.name} className="w-4 h-4 object-contain" />
+										isImagePath(tool.icon) ? (
+											<img src={tool.icon} alt={tool.name} className="w-4 h-4 object-contain" />
+										) : tool.icon.trim() ? (
+											<span className="text-sm leading-none">{tool.icon}</span>
+										) : (
+											<span className="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600" />
+										)
 									) : (
 										<div className="w-4 h-4">{tool.icon}</div>
 									)}

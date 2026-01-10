@@ -50,6 +50,7 @@ export function WorkflowBuilder() {
     selectedTaskForAgent,
     setSelectedTaskForAgent,
     modalState,
+    openModal,
     reset,
   } = useWorkflowState()
 
@@ -81,28 +82,18 @@ export function WorkflowBuilder() {
     isTriggerConfigOpen,
     isAgentSelectOpen,
     isOrchestratorConfigOpen,
-    isTaskSheetOpen,
+    isOutputPanelOpen,
   } = useModalControls()
 
   const { calculateLayout } = useAutoLayout()
 
   const [assistants, setAssistants] = useState<Assistant[]>([])
   const [loadingAgents, setLoadingAgents] = useState(true)
-  const [isMobile, setIsMobile] = useState(false)
   const [configOpenTaskId, setConfigOpenTaskId] = useState<string | null>(null)
   const hasOpenedTypeSelectorRef = useRef(false)
   const isCreatingWorkflowRef = useRef(false)
 
-  // Detect mobile
-  useEffect(() => {
-    const updateIsMobile = () => {
-      if (typeof window === "undefined") return
-      setIsMobile(window.innerWidth <= 768)
-    }
-    updateIsMobile()
-    window.addEventListener("resize", updateIsMobile)
-    return () => window.removeEventListener("resize", updateIsMobile)
-  }, [])
+  // Removed mobile detection - no longer needed since task sheet was removed
 
   // Listen for task test completions and persist outputs
   useEffect(() => {
@@ -558,7 +549,22 @@ export function WorkflowBuilder() {
             }
           })
 
-        let allNodes = [...triggerNodes, ...taskNodes]
+        // Load output nodes from stored nodes
+        const outputNodes: WorkflowNode[] = storedNodes
+          .filter((n) => n.type === "output")
+          .map((node) => ({
+            ...node,
+            type: "output" as const,
+            data: {
+              ...node.data,
+              workflowType: workflowTypeValue,
+              onConfigureOutput: (outputId: string) => {
+                openModal("output-panel", { outputId })
+              },
+            },
+          }))
+
+        let allNodes = [...triggerNodes, ...taskNodes, ...outputNodes]
 
         // Add orchestrator node if applicable
         if (workflow.workflow_type === "orchestrator" && workflow.orchestrator_config) {
@@ -1054,7 +1060,24 @@ export function WorkflowBuilder() {
           },
         }
 
-        setNodes((nds) => [...nds, triggerNode])
+        // Create End node
+        const endNode: WorkflowNode = {
+          id: `output-end`,
+          type: "output",
+          position: { x: 650, y: 100 },
+          data: {
+            id: `output-end`,
+            label: "End",
+            description: "Workflow result",
+            status: "idle",
+            workflowType: workflowType || "sequential",
+            onConfigureOutput: (outputId: string) => {
+              openModal("output-panel", { outputId })
+            },
+          },
+        }
+
+        setNodes((nds) => [...nds, triggerNode, endNode])
 
         // For orchestrator workflows, auto-add the orchestrator node
         if (workflowType === "orchestrator") {
@@ -1098,11 +1121,11 @@ export function WorkflowBuilder() {
           setOrchestratorConfig(defaultConfig)
 
           // Auto-layout for orchestrator workflow
-          const layoutedNodes = calculateLayout([triggerNode, orchestratorNode], [edge], { workflowType: "orchestrator" })
+          const layoutedNodes = calculateLayout([triggerNode, orchestratorNode, endNode], [edge], { workflowType: "orchestrator" })
           setNodes(layoutedNodes)
 
           // Save to DB
-          await supabase
+          const { error: saveError } = await supabase
             .from("workflows")
             .update({
               orchestrator_config: defaultConfig,
@@ -1110,13 +1133,24 @@ export function WorkflowBuilder() {
               edges: [edge],
             })
             .eq("workflow_id", workflowId)
+
+          if (saveError) {
+            console.error("Error saving orchestrator workflow:", saveError)
+          }
         } else {
           // Auto-layout for sequential workflow
-          const layoutedNodes = calculateLayout([triggerNode], [], { workflowType: "sequential" })
+          const layoutedNodes = calculateLayout([triggerNode, endNode], [], { workflowType: "sequential" })
           setNodes(layoutedNodes)
 
-          // Save to DB
-          await supabase.from("workflows").update({ nodes: layoutedNodes }).eq("workflow_id", workflowId)
+          // Save to DB and wait for completion
+          const { error: saveError } = await supabase
+            .from("workflows")
+            .update({ nodes: layoutedNodes })
+            .eq("workflow_id", workflowId)
+
+          if (saveError) {
+            console.error("Error saving sequential workflow:", saveError)
+          }
         }
 
         closeModals()
@@ -1125,14 +1159,17 @@ export function WorkflowBuilder() {
         // This ensures the URL is set after trigger creation, not during workflow creation
         const urlWorkflowId = searchParams.get("id")
         if (!urlWorkflowId && workflowId) {
-          router.replace(`/workflows/builder?id=${workflowId}`)
+          // Keep the flag true so the reload guard works
+          router.replace(`/workflows/builder?id=${workflowId}`, { scroll: false })
         }
-
-        // Reset the creating workflow flag after trigger is created
-        isCreatingWorkflowRef.current = false
 
         // Update triggers state
         setTriggers((prev) => [...prev, newTrigger])
+
+        // Reset the creating workflow flag after a short delay to allow guard to work
+        setTimeout(() => {
+          isCreatingWorkflowRef.current = false
+        }, 100)
 
         toast({ title: "Trigger added to workflow" })
 
@@ -1415,10 +1452,6 @@ export function WorkflowBuilder() {
         setIsTriggerConfigOpen={(open) => !open && closeModals()}
         workflowId={workflowId}
         selectedTriggerId={selectedTriggerId}
-        isMobile={isMobile}
-        isTaskSheetOpen={isTaskSheetOpen}
-        setIsTaskSheetOpen={(open) => !open && closeModals()}
-        onTaskSelect={() => {}}
         isTypeSelectionOpen={isWorkflowTypeSelectOpen}
         setIsTypeSelectionOpen={(open) => {
           if (!open) {
@@ -1436,6 +1469,9 @@ export function WorkflowBuilder() {
         onSaveOrchestratorConfig={handleSaveOrchestratorConfig}
         isCreatingWorkflow={isCreatingWorkflow}
         workflowType={workflowType}
+        isOutputPanelOpen={isOutputPanelOpen}
+        setIsOutputPanelOpen={(open) => !open && closeModals()}
+        outputNodeId={modalState.payload?.outputId}
       />
     </div>
   )

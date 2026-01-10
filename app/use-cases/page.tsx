@@ -172,13 +172,20 @@ export default function UseCasesPage() {
 							</p>
 							<div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
 								<a href="#use-cases">
-									<Button size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+									<Button
+										size="sm"
+										className="h-10 px-5 rounded-full text-sm tracking-wide bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-sm shadow-blue-500/30"
+									>
 										Explore Use Cases
-										<ArrowRight className="ml-2 h-5 w-5" />
+										<ArrowRight className="ml-2 h-4 w-4" />
 									</Button>
 								</a>
 								<Link href="/pricing">
-									<Button size="lg" variant="outline">
+									<Button
+										size="sm"
+										variant="outline"
+										className="h-10 px-5 rounded-full text-sm tracking-wide border border-slate-300/70 dark:border-slate-700/70 hover:border-slate-400 dark:hover:border-slate-600"
+									>
 										Get Started
 									</Button>
 								</Link>
@@ -492,18 +499,29 @@ export default function UseCasesPage() {
 					</p>
 					<div className="flex flex-col sm:flex-row gap-4 justify-center">
 						<Link href="/pricing">
-							<Button size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+							<Button
+								size="sm"
+								className="h-10 px-5 rounded-full text-sm tracking-wide bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-sm shadow-blue-500/30"
+							>
 								Start Free Trial
-								<ArrowRight className="ml-2 h-5 w-5" />
+								<ArrowRight className="ml-2 h-4 w-4" />
 							</Button>
 						</Link>
 						<Link href="/pricing">
-							<Button size="lg" variant="outline">
+							<Button
+								size="sm"
+								variant="outline"
+								className="h-10 px-5 rounded-full text-sm tracking-wide border border-slate-300/70 dark:border-slate-700/70 hover:border-slate-400 dark:hover:border-slate-600"
+							>
 								View Pricing
 							</Button>
 						</Link>
 						<Link href="/contact">
-							<Button size="lg" variant="ghost">
+							<Button
+								size="sm"
+								variant="ghost"
+								className="h-10 px-5 rounded-full text-sm tracking-wide"
+							>
 								Schedule Demo
 							</Button>
 						</Link>

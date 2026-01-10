@@ -88,8 +88,8 @@ export function useModalControls() {
     open("orchestrator-config")
   }, [open])
 
-  const openTaskSheet = useCallback(() => {
-    open("task-sheet")
+  const openOutputPanel = useCallback((outputId: string) => {
+    open("output-panel", { outputId })
   }, [open])
 
   const closeAll = useCallback(() => {
@@ -106,7 +106,7 @@ export function useModalControls() {
     openAgentSelect,
     openTaskConfig,
     openOrchestratorConfig,
-    openTaskSheet,
+    openOutputPanel,
     close: closeAll,
     isWorkflowTypeSelectOpen: isOpen("workflow-type-select"),
     isTriggerSelectOpen: isOpen("trigger-select"),
@@ -114,6 +114,6 @@ export function useModalControls() {
     isAgentSelectOpen: isOpen("agent-select"),
     isTaskConfigOpen: isOpen("task-config"),
     isOrchestratorConfigOpen: isOpen("orchestrator-config"),
-    isTaskSheetOpen: isOpen("task-sheet"),
+    isOutputPanelOpen: isOpen("output-panel"),
   }
 }

@@ -91,7 +91,15 @@ export function validateConnection(
     return { valid: false, reason: "Connection already exists" }
   }
 
-  // Enforce single outgoing connection for trigger and task nodes
+  // Output nodes cannot be source (they're terminal nodes)
+  if (sourceNode.type === "output") {
+    return {
+      valid: false,
+      reason: "Output node cannot connect to other nodes (it's a terminal node)",
+    }
+  }
+
+  // Enforce single outgoing connection for trigger, task, and output nodes
   // Orchestrator nodes can have multiple outgoing connections
   if (sourceNode.type !== "orchestrator") {
     const hasExistingOutgoing = edges.some((edge) => edge.source === sourceNode.id)
@@ -108,6 +116,7 @@ export function validateConnection(
     sourceNode.type === "trigger" && targetNode.type === "task",
     sourceNode.type === "trigger" && targetNode.type === "orchestrator",
     sourceNode.type === "task" && targetNode.type === "task",
+    sourceNode.type === "task" && targetNode.type === "output",
     sourceNode.type === "orchestrator" && targetNode.type === "task",
   ]
 
@@ -150,6 +159,9 @@ export function useWorkflowValidation(
     (nodeId: string): boolean => {
       const node = nodes.find((n) => n.id === nodeId)
       if (!node) return false
+
+      // Output nodes cannot have outgoing edges (terminal nodes)
+      if (node.type === "output") return false
 
       // Orchestrator nodes can have multiple outgoing edges
       if (node.type === "orchestrator") return true

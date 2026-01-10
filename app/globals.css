@@ -133,6 +133,28 @@
   fill: rgb(77, 77, 79) !important; 
 }
 
+/* ReactFlow Node wrapper - remove default backgrounds that create white boxes */
+.react-flow__node {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Ensure output nodes specifically don't have white backgrounds from ReactFlow wrapper */
+.react-flow__node-output {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Ensure ReactFlow handles appear on top of nodes */
+.react-flow__handle {
+  z-index: 50 !important;
+}
+
+/* Ensure output node handles are visible and on top */
+.react-flow__node-output .react-flow__handle {
+  z-index: 50 !important;
+}
+
 .dark .gradient-border::before {
   background: linear-gradient(
     45deg,

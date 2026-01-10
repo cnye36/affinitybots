@@ -21,7 +21,6 @@ export interface TriggerNodeData {
 	config: Record<string, unknown>,
 	status?: "idle" | "running" | "completed" | "error",
 	onConfigureTrigger?: (triggerId: string) => void,
-	onOpenTaskSidebar?: () => void,
 	onAddTask?: () => void,
 	hasConnectedTask?: boolean,
 	isActive?: boolean,
@@ -122,9 +121,8 @@ export const TriggerNode = memo(({ data }: { data: TriggerNodeData }) => {
 	const handleAddTask = (e: React.MouseEvent) => {
 		e.stopPropagation()
 		if (isReadOnly) return
-		// Prefer onAddTask to set active node before opening the sidebar
+		// Directly open agent selection modal
 		if (data.onAddTask) data.onAddTask()
-		if (data.onOpenTaskSidebar) data.onOpenTaskSidebar()
 	}
 
 	const handlePlayClick = async (e: React.MouseEvent) => {

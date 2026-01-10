@@ -307,7 +307,7 @@ export default function ToolsPage() {
 								className="bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300"
 							>
 								<Plus className="h-4 w-4 mr-2" />
-								Add Custom MCP Server
+								Add HTTP Server
 							</Button>
 						</div>
 					</div>

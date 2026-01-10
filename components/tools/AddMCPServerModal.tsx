@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { X, Server, Key, Shield, Sparkles, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
+import { Server, Key, Shield, Sparkles, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 type AuthType = "none" | "oauth" | "api_key" | "bearer" | "unknown" | "manual_oauth" | "manual_api_key" | "manual_bearer";
@@ -17,8 +17,19 @@ interface Props {
   onAdded?: () => void;
 }
 
+// Helper function to generate a slug from display name
+function generateSlug(displayName: string): string {
+  return displayName
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '') // Remove special characters
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+    .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
+}
+
 export function AddMCPServerModal({ open, onOpenChange, onAdded }: Props) {
-  const [serverName, setServerName] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [serverUrl, setServerUrl] = useState("");
   const [manualAuthType, setManualAuthType] = useState<"oauth" | "api_key" | "bearer" | "none">("none");
   const [apiKey, setApiKey] = useState("");
@@ -48,7 +59,7 @@ export function AddMCPServerModal({ open, onOpenChange, onAdded }: Props) {
   };
 
   const resetForm = () => {
-    setServerName("");
+    setDisplayName("");
     setServerUrl("");
     setManualAuthType("none");
     setHasManualSelection(false);
@@ -132,8 +143,15 @@ export function AddMCPServerModal({ open, onOpenChange, onAdded }: Props) {
     setError(null);
     setSuccess(null);
 
-    if (!serverName.trim() || !serverUrl.trim()) {
-      setError("Server name and URL are required");
+    if (!displayName.trim() || !serverUrl.trim()) {
+      setError("Display name and URL are required");
+      return;
+    }
+
+    // Generate server slug from display name
+    const serverSlug = generateSlug(displayName.trim());
+    if (!serverSlug) {
+      setError("Display name must contain at least one letter or number");
       return;
     }
 
@@ -150,12 +168,20 @@ export function AddMCPServerModal({ open, onOpenChange, onAdded }: Props) {
           body: JSON.stringify({ 
             serverUrl: serverUrl.trim(), 
             callbackUrl, 
-            serverName: serverName.trim() 
+            serverName: serverSlug 
           }),
         });
         const data = await res.json();
         
         if (data?.requiresAuth && data.authUrl) {
+          // Store the display name and other info for after OAuth callback
+          // The callback will need to create the user_added_servers record
+          sessionStorage.setItem('pending_mcp_server', JSON.stringify({
+            displayName: displayName.trim(),
+            serverSlug,
+            serverUrl: serverUrl.trim(),
+            authType: actualAuthType,
+          }));
           window.location.href = data.authUrl;
           return;
         }
@@ -205,9 +231,9 @@ export function AddMCPServerModal({ open, onOpenChange, onAdded }: Props) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          server_slug: serverName.trim(),
-          display_name: serverName.trim(),
-          description: `Custom MCP server: ${serverName.trim()}`,
+          server_slug: serverSlug,
+          display_name: displayName.trim(),
+          description: `Custom MCP server: ${displayName.trim()}`,
           url: serverUrl.trim(),
           auth_type: authTypeToSave,
           config,
@@ -226,7 +252,7 @@ export function AddMCPServerModal({ open, onOpenChange, onAdded }: Props) {
     }
   }
 
-  const canSubmit = serverName.trim() && serverUrl.trim();
+  const canSubmit = displayName.trim() && serverUrl.trim();
   const actualAuthTypeForConnect = effectiveAuthType.replace("manual_", "") as string;
   const canConnect = canSubmit && (
     actualAuthTypeForConnect === "none" ||
@@ -256,13 +282,6 @@ export function AddMCPServerModal({ open, onOpenChange, onAdded }: Props) {
                   Add your own HTTP MCP server. Use at your own risk.
                 </DialogDescription>
               </div>
-              <button
-                onClick={() => handleOpenChange(false)}
-                className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"
-              >
-                <X className="h-4 w-4" />
-                <span className="sr-only">Close</span>
-              </button>
             </div>
           </DialogHeader>
         </div>
@@ -272,17 +291,20 @@ export function AddMCPServerModal({ open, onOpenChange, onAdded }: Props) {
           {/* Basic Info */}
           <div className="space-y-3">
             <div className="space-y-2">
-              <Label htmlFor="server-name" className="text-sm font-medium flex items-center gap-2">
+              <Label htmlFor="display-name" className="text-sm font-medium flex items-center gap-2">
                 <Server className="h-4 w-4" />
                 Server Name
               </Label>
               <Input
-                id="server-name"
-                value={serverName}
-                onChange={(e) => setServerName(e.target.value)}
-                placeholder="e.g. my-custom-server, github-enterprise"
+                id="display-name"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="e.g. My Custom Server, GitHub Enterprise"
                 className="w-full"
               />
+              <p className="text-xs text-muted-foreground">
+                This is the name that will be displayed. A URL-safe identifier will be generated automatically.
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -294,7 +316,7 @@ export function AddMCPServerModal({ open, onOpenChange, onAdded }: Props) {
                 id="server-url"
                 value={serverUrl}
                 onChange={(e) => setServerUrl(e.target.value)}
-                placeholder="https://your-server.com/mcp or http://localhost:3000/mcp"
+                placeholder="https://your-server.com/mcp"
                 className="w-full"
               />
             </div>

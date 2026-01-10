@@ -58,11 +58,20 @@ export default function ContentCreationPage() {
 		},
 		{
 			name: "Zapier",
-			icon: "/integration-icons/zapier-icon.svg",
+			icon: "/integration-icons/zapier-icon.jpeg",
 			capabilities: ["Social media publishing", "Distribution automation", "Cross-platform sharing"],
 			usedBy: ["Editor Agent"],
 		},
 	]
+
+	const toolIconMap: Record<string, string> = {
+		"Tavily Search": "/integration-icons/tavily-color.svg",
+		"Web Browser": "🌐",
+		"Google Docs": "/integration-icons/google-docs-logo.png",
+		"Knowledge Base": "/integration-icons/google-docs-logo.png",
+		"Grammar Check": "✅",
+		"Style Guide": "📘",
+	}
 
 	const workflowSteps = [
 		{
@@ -138,7 +147,7 @@ export default function ContentCreationPage() {
 			<Header />
 
 			{/* Hero Section - Redesigned */}
-			<section className="relative pt-24 pb-20 px-4 overflow-hidden">
+			<section className="relative pt-32 pb-20 px-4 overflow-hidden">
 				{/* Animated gradient background */}
 				<div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-blue-500/5 to-transparent" />
 				<div className="absolute top-0 right-0 w-1/3 h-1/3 bg-gradient-to-br from-purple-500/10 to-transparent rounded-full blur-3xl" />
@@ -160,7 +169,6 @@ export default function ContentCreationPage() {
 										<span className="bg-gradient-to-r from-purple-600 via-violet-600 to-purple-600 bg-clip-text text-transparent">
 											10x Faster
 										</span>
-										<div className="absolute -bottom-2 left-0 right-0 h-1 bg-gradient-to-r from-purple-600 via-violet-600 to-purple-600 rounded-full" />
 									</span>
 								</h1>
 								<p className="text-xl md:text-2xl text-muted-foreground mb-8 leading-relaxed">
@@ -176,13 +184,20 @@ export default function ContentCreationPage() {
 								className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start"
 							>
 								<Link href="/pricing">
-									<Button size="lg" className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-lg px-8 py-6 h-auto">
+									<Button
+										size="sm"
+										className="h-10 px-5 rounded-full text-sm tracking-wide bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-sm shadow-purple-500/30"
+									>
 										Get Started
-										<ArrowRight className="ml-2 h-5 w-5" />
+										<ArrowRight className="ml-2 h-4 w-4" />
 									</Button>
 								</Link>
 								<Link href="/playground">
-									<Button size="lg" variant="outline" className="text-lg px-8 py-6 h-auto border-2">
+									<Button
+										size="sm"
+										variant="outline"
+										className="h-10 px-5 rounded-full text-sm tracking-wide border border-slate-300/70 dark:border-slate-700/70 hover:border-slate-400 dark:hover:border-slate-600"
+									>
 										View Demo
 									</Button>
 								</Link>
@@ -333,7 +348,7 @@ export default function ContentCreationPage() {
 									name: agent.name,
 									role: agent.role,
 									model: agent.model,
-									tools: agent.tools.map(tool => ({ name: tool, icon: <></> })),
+									tools: agent.tools.map(tool => ({ name: tool, icon: toolIconMap[tool] || tool })),
 									description: agent.description,
 									color: agent.color,
 								}} />
@@ -587,13 +602,15 @@ export default function ContentCreationPage() {
 												whileHover={{ scale: 1.1 }}
 												className="aspect-square p-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center hover:shadow-md transition-all duration-300"
 											>
-												<Image
-													src={integration.icon}
-													alt={integration.name}
-													width={32}
-													height={32}
-													className="object-contain"
-												/>
+												{integration.icon ? (
+													<Image
+														src={integration.icon}
+														alt={integration.name}
+														width={32}
+														height={32}
+														className="object-contain"
+													/>
+												) : null}
 											</MotionDiv>
 										))}
 									</div>
@@ -706,13 +723,20 @@ export default function ContentCreationPage() {
 						</p>
 						<div className="flex flex-col sm:flex-row gap-4 justify-center">
 							<Link href="/pricing">
-								<Button size="lg" className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-lg px-8 py-6 h-auto">
+								<Button
+									size="sm"
+									className="h-10 px-5 rounded-full text-sm tracking-wide bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-sm shadow-purple-500/30"
+								>
 									Get Started
-									<ArrowRight className="ml-2 h-5 w-5" />
+									<ArrowRight className="ml-2 h-4 w-4" />
 								</Button>
 							</Link>
 							<Link href="/playground">
-								<Button size="lg" variant="outline" className="text-lg px-8 py-6 h-auto border-2">
+								<Button
+									size="sm"
+									variant="outline"
+									className="h-10 px-5 rounded-full text-sm tracking-wide border border-slate-300/70 dark:border-slate-700/70 hover:border-slate-400 dark:hover:border-slate-600"
+								>
 									View Demo
 								</Button>
 							</Link>

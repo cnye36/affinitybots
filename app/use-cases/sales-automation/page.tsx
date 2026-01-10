@@ -169,7 +169,6 @@ export default function SalesAutomationPage() {
 										<span className="bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 bg-clip-text text-transparent">
 											Sales Pipeline
 										</span>
-										<div className="absolute -bottom-2 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 rounded-full" />
 									</span>
 								</h1>
 								<p className="text-xl md:text-2xl text-muted-foreground mb-8 leading-relaxed">
@@ -185,13 +184,20 @@ export default function SalesAutomationPage() {
 								className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start"
 							>
 								<Link href="/pricing">
-									<Button size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-lg px-8 py-6 h-auto">
+									<Button
+										size="sm"
+										className="h-10 px-5 rounded-full text-sm tracking-wide bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-sm shadow-blue-500/30"
+									>
 										Get Started
-										<ArrowRight className="ml-2 h-5 w-5" />
+										<ArrowRight className="ml-2 h-4 w-4" />
 									</Button>
 								</Link>
 								<Link href="/playground">
-									<Button size="lg" variant="outline" className="text-lg px-8 py-6 h-auto border-2">
+									<Button
+										size="sm"
+										variant="outline"
+										className="h-10 px-5 rounded-full text-sm tracking-wide border border-slate-300/70 dark:border-slate-700/70 hover:border-slate-400 dark:hover:border-slate-600"
+									>
 										View Demo
 									</Button>
 								</Link>
@@ -596,13 +602,15 @@ export default function SalesAutomationPage() {
 												whileHover={{ scale: 1.1 }}
 												className="aspect-square p-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center hover:shadow-md transition-all duration-300"
 											>
-												<Image
-													src={integration.icon}
-													alt={integration.name}
-													width={32}
-													height={32}
-													className="object-contain"
-												/>
+												{integration.icon ? (
+													<Image
+														src={integration.icon}
+														alt={integration.name}
+														width={32}
+														height={32}
+														className="object-contain"
+													/>
+												) : null}
 											</MotionDiv>
 										))}
 									</div>
@@ -715,13 +723,20 @@ export default function SalesAutomationPage() {
 						</p>
 						<div className="flex flex-col sm:flex-row gap-4 justify-center">
 							<Link href="/pricing">
-								<Button size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-lg px-8 py-6 h-auto">
+								<Button
+									size="sm"
+									className="h-10 px-5 rounded-full text-sm tracking-wide bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-sm shadow-blue-500/30"
+								>
 									Get Started
-									<ArrowRight className="ml-2 h-5 w-5" />
+									<ArrowRight className="ml-2 h-4 w-4" />
 								</Button>
 							</Link>
 							<Link href="/playground">
-								<Button size="lg" variant="outline" className="text-lg px-8 py-6 h-auto border-2">
+								<Button
+									size="sm"
+									variant="outline"
+									className="h-10 px-5 rounded-full text-sm tracking-wide border border-slate-300/70 dark:border-slate-700/70 hover:border-slate-400 dark:hover:border-slate-600"
+								>
 									View Demo
 								</Button>
 							</Link>

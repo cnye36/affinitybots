@@ -1,3 +1,4 @@
+import { type ReactElement } from "react"
 import { Header } from "@/components/home/Header"
 import { Footer } from "@/components/home/Footer"
 import { Button } from "@/components/ui/button"
@@ -46,13 +47,14 @@ export default function CustomerSupportPage() {
 		},
 		{
 			name: "Slack",
-			icon: "/integration-icons/slack-icon-dark.png",
+			icon: "/integration-icons/slack-icon.png",
 			capabilities: ["Team notifications", "Internal escalations", "Real-time updates"],
 			usedBy: ["Escalation Manager"],
 		},
 		{
 			name: "Linear",
-			icon: "/integration-icons/linear-symbol-dark.png",
+			iconLight: "/integration-icons/linear-symbol-light.png",
+			iconDark: "/integration-icons/linear-symbol-dark.png",
 			capabilities: ["Issue tracking", "Bug reporting", "Task assignment"],
 			usedBy: ["Ticket Categorizer", "Escalation Manager"],
 		},
@@ -63,6 +65,26 @@ export default function CustomerSupportPage() {
 			usedBy: ["Tier 1 Support Bot"],
 		},
 	]
+
+	const toolIconMap: Record<string, string | ReactElement> = {
+		"Gmail": "/integration-icons/gmail-icon.png",
+		"Slack": "/integration-icons/slack-icon.png",
+		"Linear": (
+			<>
+				<img src="/integration-icons/linear-symbol-light.png" alt="Linear" className="w-4 h-4 object-contain dark:hidden" />
+				<img src="/integration-icons/linear-symbol-dark.png" alt="Linear" className="w-4 h-4 object-contain hidden dark:block" />
+			</>
+		),
+		"Knowledge Base": "/integration-icons/google-docs-logo.png",
+		"Asana": (
+			<>
+				<img src="/integration-icons/asana-icon-light.png" alt="Asana" className="w-4 h-4 object-contain dark:hidden" />
+				<img src="/integration-icons/asana-icon-dark.png" alt="Asana" className="w-4 h-4 object-contain hidden dark:block" />
+			</>
+		),
+		"Email": "/integration-icons/gmail-icon.png",
+		"Documents": "/integration-icons/google-docs-logo.png",
+	}
 
 	const workflowSteps = [
 		{
@@ -138,7 +160,7 @@ export default function CustomerSupportPage() {
 			<Header />
 
 			{/* Hero Section - Redesigned */}
-			<section className="relative pt-24 pb-20 px-4 overflow-hidden">
+			<section className="relative pt-32 pb-20 px-4 overflow-hidden">
 				{/* Animated gradient background */}
 				<div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 via-blue-500/5 to-transparent" />
 				<div className="absolute top-0 right-0 w-1/3 h-1/3 bg-gradient-to-br from-blue-500/10 to-transparent rounded-full blur-3xl" />
@@ -160,7 +182,6 @@ export default function CustomerSupportPage() {
 										<span className="bg-gradient-to-r from-cyan-600 via-blue-600 to-cyan-600 bg-clip-text text-transparent">
 											Customer Support
 										</span>
-										<div className="absolute -bottom-2 left-0 right-0 h-1 bg-gradient-to-r from-cyan-600 via-blue-600 to-cyan-600 rounded-full" />
 									</span>
 								</h1>
 								<p className="text-xl md:text-2xl text-muted-foreground mb-8 leading-relaxed">
@@ -176,13 +197,20 @@ export default function CustomerSupportPage() {
 								className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start"
 							>
 								<Link href="/pricing">
-									<Button size="lg" className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-lg px-8 py-6 h-auto">
+									<Button
+										size="sm"
+										className="h-10 px-5 rounded-full text-sm tracking-wide bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 shadow-sm shadow-cyan-500/30"
+									>
 										Get Started
-										<ArrowRight className="ml-2 h-5 w-5" />
+										<ArrowRight className="ml-2 h-4 w-4" />
 									</Button>
 								</Link>
 								<Link href="/playground">
-									<Button size="lg" variant="outline" className="text-lg px-8 py-6 h-auto border-2">
+									<Button
+										size="sm"
+										variant="outline"
+										className="h-10 px-5 rounded-full text-sm tracking-wide border border-slate-300/70 dark:border-slate-700/70 hover:border-slate-400 dark:hover:border-slate-600"
+									>
 										View Demo
 									</Button>
 								</Link>
@@ -333,7 +361,7 @@ export default function CustomerSupportPage() {
 									name: agent.name,
 									role: agent.role,
 									model: agent.model,
-									tools: agent.tools.map(tool => ({ name: tool, icon: <></> })),
+									tools: agent.tools.map(tool => ({ name: tool, icon: toolIconMap[tool] || "" })),
 									description: agent.description,
 									color: agent.color,
 								}} />
@@ -587,13 +615,32 @@ export default function CustomerSupportPage() {
 												whileHover={{ scale: 1.1 }}
 												className="aspect-square p-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center hover:shadow-md transition-all duration-300"
 											>
-												<Image
-													src={integration.icon}
-													alt={integration.name}
-													width={32}
-													height={32}
-													className="object-contain"
-												/>
+												{integration.iconLight && integration.iconDark ? (
+													<>
+														<Image
+															src={integration.iconLight}
+															alt={integration.name}
+															width={32}
+															height={32}
+															className="object-contain dark:hidden"
+														/>
+														<Image
+															src={integration.iconDark}
+															alt={integration.name}
+															width={32}
+															height={32}
+															className="object-contain hidden dark:block"
+														/>
+													</>
+												) : integration.icon ? (
+													<Image
+														src={integration.icon}
+														alt={integration.name}
+														width={32}
+														height={32}
+														className="object-contain"
+													/>
+												) : null}
 											</MotionDiv>
 										))}
 									</div>
@@ -706,13 +753,20 @@ export default function CustomerSupportPage() {
 						</p>
 						<div className="flex flex-col sm:flex-row gap-4 justify-center">
 							<Link href="/pricing">
-								<Button size="lg" className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-lg px-8 py-6 h-auto">
+								<Button
+									size="sm"
+									className="h-10 px-5 rounded-full text-sm tracking-wide bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 shadow-sm shadow-cyan-500/30"
+								>
 									Get Started
-									<ArrowRight className="ml-2 h-5 w-5" />
+									<ArrowRight className="ml-2 h-4 w-4" />
 								</Button>
 							</Link>
 							<Link href="/playground">
-								<Button size="lg" variant="outline" className="text-lg px-8 py-6 h-auto border-2">
+								<Button
+									size="sm"
+									variant="outline"
+									className="h-10 px-5 rounded-full text-sm tracking-wide border border-slate-300/70 dark:border-slate-700/70 hover:border-slate-400 dark:hover:border-slate-600"
+								>
 									View Demo
 								</Button>
 							</Link>

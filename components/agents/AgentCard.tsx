@@ -192,7 +192,7 @@ export function AgentCard({ assistant, onDelete }: AgentCardProps) {
                     return (
                       <div
                         key={name}
-                        className="relative w-6 h-6 rounded-full ring-2 ring-border overflow-hidden bg-muted flex items-center justify-center text-[10px] hover:scale-110 hover:ring-primary/30 transition-all duration-200 shadow-sm"
+                        className="relative w-6 h-6 overflow-hidden bg-muted flex items-center justify-center text-[10px] hover:scale-110 hover:ring-primary/30 transition-all duration-200 shadow-sm"
                         title={name}
                       >
                         {src ? (

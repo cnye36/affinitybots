@@ -22,10 +22,10 @@ export const LLM_OPTIONS: readonly LlmOption[] = [
 	{ id: "openai:gpt-4.1-nano", label: "GPT-4.1 Nano" },
 	{ id: "openai:gpt-4o", label: "GPT-4o" },
 
+	{ id: "anthropic:claude-sonnet-4-5-20250929", label: "Claude Sonnet 4.5 (20250929)" },
+	{ id: "anthropic:claude-opus-4-5-20251101", label: "Claude Opus 4.5 (20251101)" },
 	{ id: "anthropic:claude-sonnet-4-20250514", label: "Claude Sonnet 4 (20250514)" },
-	{ id: "anthropic:claude-opus-4-20250514", label: "Claude Opus 4 (20250514)" },
-	{ id: "anthropic:claude-3-7-sonnet-20250219", label: "Claude 3.7 Sonnet (20250219)" },
-	{ id: "anthropic:claude-3-5-haiku-20241022", label: "Claude 3.5 Haiku (20241022)" },
+	{ id: "anthropic:claude-4-5-haiku-20251007", label: "Claude Haiku 4.5 (20251007)" },
 
 	{ id: "google-genai:gemini-3-pro-preview", label: "Gemini 3 Pro Preview" },
 	{ id: "google-genai:gemini-3-pro-image-preview", label: "Gemini 3 Pro Image Preview" },

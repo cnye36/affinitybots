@@ -11,7 +11,7 @@ export type ModalType =
   | "agent-select"
   | "task-config"
   | "orchestrator-config"
-  | "task-sheet"
+  | "output-panel"
 
 interface ModalState {
   type: ModalType
@@ -107,6 +107,8 @@ interface WorkflowState {
   canAddOutgoingEdge: (nodeId: string) => boolean
   getNode: (id: string) => WorkflowNode | undefined
   hasOutgoingEdge: (nodeId: string) => boolean
+  hasOutputNode: () => boolean
+  getOutputNode: () => WorkflowNode | undefined
 
   // Reset
   reset: () => void
@@ -148,7 +150,18 @@ export const useWorkflowState = create<WorkflowState>()(
       setOrchestratorConfig: (config) => set({ orchestratorConfig: config }),
 
       // Node actions
-      addNode: (node) => set((state) => ({ nodes: [...state.nodes, node] })),
+      addNode: (node) => {
+        const state = get()
+
+        // Prevent adding second output node
+        if (node.type === "output" && state.nodes.some(n => n.type === "output")) {
+          // Note: Toast is imported in the component that calls this
+          console.warn("Only one Output node is allowed per workflow")
+          return
+        }
+
+        set((state) => ({ nodes: [...state.nodes, node] }))
+      },
       updateNode: (id, updates) =>
         set((state) => ({
           nodes: state.nodes.map((n) => (n.id === id ? { ...n, ...updates } as WorkflowNode : n)),
@@ -216,6 +229,14 @@ export const useWorkflowState = create<WorkflowState>()(
 
       hasOutgoingEdge: (nodeId) => {
         return get().edges.some((e) => e.source === nodeId)
+      },
+
+      hasOutputNode: () => {
+        return get().nodes.some((n) => n.type === "output")
+      },
+
+      getOutputNode: () => {
+        return get().nodes.find((n) => n.type === "output")
       },
 
       // Reset

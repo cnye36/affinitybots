@@ -129,7 +129,7 @@ async function detectMemoryIntent(state: AgentState, config: LangGraphRunnableCo
 		const intentDetector = new ChatOpenAI({
 			model: "gpt-5-mini",
 			streaming: false,
-			temperature: 0, // Deterministic for intent detection
+			reasoningEffort: "high",
 		})
 
 		const intentPrompt = [
@@ -187,7 +187,7 @@ async function writeMemory(state: AgentState, config: LangGraphRunnableConfig) {
 		const memoryExtractor = new ChatOpenAI({
 			model: "gpt-5-mini",
 			streaming: false,
-			temperature: 0,
+			reasoningEffort: "high",
 		})
 
 		const extractionPrompt = [

@@ -55,7 +55,7 @@ export default function LeadCollectionPage() {
 		},
 		{
 			name: "HubSpot",
-			icon: "/integration-icons/hubspot-icon.svg",
+			icon: "/integration-icons/hubspot-icon.png",
 			capabilities: ["CRM sync", "Contact creation", "Pipeline management"],
 			usedBy: ["Data Enrichment Agent"],
 		},
@@ -67,7 +67,7 @@ export default function LeadCollectionPage() {
 		},
 		{
 			name: "Zapier",
-			icon: "/integration-icons/zapier-icon.svg",
+			icon: "/integration-icons/zapier-icon.jpeg",
 			capabilities: ["Multi-source collection", "Cross-platform sync", "Automation triggers"],
 			usedBy: ["Form Processor"],
 		},
@@ -153,64 +153,88 @@ export default function LeadCollectionPage() {
 			<Header />
 
 			{/* Hero Section */}
-			<section className="pt-32 pb-16 px-4 bg-gradient-to-br from-orange-500/10 to-amber-500/5">
-				<div className="container mx-auto">
-					<div className="max-w-4xl mx-auto text-center">
-						<h1 className="text-5xl sm:text-6xl md:text-7xl font-bold mb-6 leading-tight">
-							Capture, Score & Enrich{" "}
-							<span className="relative inline-block">
-								<span className="bg-gradient-to-r from-orange-600 via-amber-600 to-orange-600 bg-clip-text text-transparent">
-									Every Lead Automatically
-								</span>
-								<div className="absolute -bottom-2 left-0 right-0 h-1 bg-gradient-to-r from-orange-600 via-amber-600 to-orange-600 rounded-full" />
-							</span>
-						</h1>
-						<p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto">
-							Never lose a lead to manual data entry again. Automate collection, validation, scoring, and enrichment from every source
-						</p>
+			<section className="relative pt-32 pb-20 px-4 overflow-hidden">
+				<div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 via-amber-500/5 to-transparent" />
+				<div className="absolute top-0 right-0 w-1/3 h-1/3 bg-gradient-to-br from-amber-500/10 to-transparent rounded-full blur-3xl" />
+				<div className="absolute bottom-0 left-0 w-1/3 h-1/3 bg-gradient-to-tr from-orange-500/10 to-transparent rounded-full blur-3xl" />
 
-						{/* CTAs */}
-						<div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-							<Link href="/pricing">
-								<Button size="lg" className="bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700">
-									Get Started
-									<ArrowRight className="ml-2 h-5 w-5" />
-								</Button>
-							</Link>
-							<Link href="/playground">
-								<Button size="lg" variant="outline">
-									View Demo
-								</Button>
-							</Link>
+				<div className="container mx-auto relative z-10">
+					<div className="grid lg:grid-cols-2 gap-12 items-center mb-16">
+						<div className="max-w-2xl mx-auto lg:mx-0">
+							<MotionDiv
+								initial={{ opacity: 0, y: 20 }}
+								animate={{ opacity: 1, y: 0 }}
+								transition={{ duration: 0.6 }}
+								className="text-center lg:text-left mb-8"
+							>
+								<h1 className="text-5xl sm:text-6xl md:text-7xl font-bold mb-6 leading-tight">
+									Capture, Score & Enrich{" "}
+									<span className="relative inline-block">
+										<span className="bg-gradient-to-r from-orange-600 via-amber-600 to-orange-600 bg-clip-text text-transparent">
+											Every Lead Automatically
+										</span>
+									</span>
+								</h1>
+								<p className="text-xl md:text-2xl text-muted-foreground mb-8 leading-relaxed">
+									Never lose a lead to manual data entry again. Automate collection, validation, scoring, and enrichment from every source.
+								</p>
+							</MotionDiv>
+
+							<MotionDiv
+								initial={{ opacity: 0, y: 20 }}
+								animate={{ opacity: 1, y: 0 }}
+								transition={{ duration: 0.6, delay: 0.2 }}
+								className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start"
+							>
+								<Link href="/pricing">
+									<Button
+										size="sm"
+										className="h-10 px-5 rounded-full text-sm tracking-wide bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 shadow-sm shadow-orange-500/30"
+									>
+										Get Started
+										<ArrowRight className="ml-2 h-4 w-4" />
+									</Button>
+								</Link>
+								<Link href="/playground">
+									<Button
+										size="sm"
+										variant="outline"
+										className="h-10 px-5 rounded-full text-sm tracking-wide border border-slate-300/70 dark:border-slate-700/70 hover:border-slate-400 dark:hover:border-slate-600"
+									>
+										View Demo
+									</Button>
+								</Link>
+							</MotionDiv>
 						</div>
 
-						{/* Quick Stats Bar */}
-						<div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto mb-16">
-							{quickStats.map((stat, index) => (
-								<MotionDiv
-									key={index}
-									initial={{ opacity: 0, y: 20 }}
-									animate={{ opacity: 1, y: 0 }}
-									transition={{ duration: 0.4, delay: index * 0.1 }}
-									className="p-4 rounded-xl bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm border border-orange-500/20"
-								>
-									<div className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
-										{stat.value}
-									</div>
-									<div className="text-xs text-muted-foreground mt-1">{stat.label}</div>
-								</MotionDiv>
-							))}
-						</div>
-
-						{/* Hero Graphic */}
 						<MotionDiv
-							initial={{ opacity: 0, y: 20 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{ duration: 0.6, delay: 0.6 }}
+							initial={{ opacity: 0, scale: 0.92 }}
+							animate={{ opacity: 1, scale: 1 }}
+							transition={{ duration: 0.8, delay: 0.3 }}
+							className="hidden lg:block"
 						>
 							<LeadCollectionHeroGraphic />
 						</MotionDiv>
 					</div>
+
+					<MotionDiv
+						initial={{ opacity: 0, y: 20 }}
+						animate={{ opacity: 1, y: 0 }}
+						transition={{ duration: 0.6, delay: 0.4 }}
+						className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto"
+					>
+						{quickStats.map((stat, index) => (
+							<div
+								key={index}
+								className="p-4 rounded-xl bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm border border-gray-200 dark:border-gray-800 text-center"
+							>
+								<div className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
+									{stat.value}
+								</div>
+								<div className="text-xs md:text-sm text-muted-foreground mt-1">{stat.label}</div>
+							</div>
+						))}
+					</MotionDiv>
 				</div>
 			</section>
 
@@ -441,13 +465,15 @@ export default function LeadCollectionPage() {
 											title={integration.name}
 										>
 											<div className="w-10 h-10 rounded-lg bg-white dark:bg-gray-800 p-2 border border-gray-200 dark:border-gray-700 flex items-center justify-center hover:border-orange-500/50 transition-colors">
-												<Image
-													src={integration.icon}
-													alt={integration.name}
-													width={24}
-													height={24}
-													className="object-contain"
-												/>
+												{integration.icon ? (
+													<Image
+														src={integration.icon}
+														alt={integration.name}
+														width={24}
+														height={24}
+														className="object-contain"
+													/>
+												) : null}
 											</div>
 										</div>
 									))}
@@ -507,13 +533,20 @@ export default function LeadCollectionPage() {
 					</p>
 					<div className="flex flex-col sm:flex-row gap-4 justify-center">
 						<Link href="/pricing">
-							<Button size="lg" className="bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700">
+							<Button
+								size="sm"
+								className="h-10 px-5 rounded-full text-sm tracking-wide bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 shadow-sm shadow-orange-500/30"
+							>
 								Get Started
-								<ArrowRight className="ml-2 h-5 w-5" />
+								<ArrowRight className="ml-2 h-4 w-4" />
 							</Button>
 						</Link>
 						<Link href="/playground">
-							<Button size="lg" variant="outline">
+							<Button
+								size="sm"
+								variant="outline"
+								className="h-10 px-5 rounded-full text-sm tracking-wide border border-slate-300/70 dark:border-slate-700/70 hover:border-slate-400 dark:hover:border-slate-600"
+							>
 								View Demo
 							</Button>
 						</Link>
