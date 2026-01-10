@@ -20,6 +20,8 @@ import { Assistant } from "@/types/assistant";
 import Image from "next/image";
 import { OFFICIAL_MCP_SERVERS } from "@/lib/mcp/officialMcpServers";
 import { getLlmLabel } from "@/lib/llm/catalog";
+import { getMcpServerLogo } from "@/lib/utils/mcpServerLogo";
+import { useTheme } from "next-themes";
 
 interface AgentCardProps {
   assistant: Assistant;
@@ -103,28 +105,32 @@ export function AgentCard({ assistant, onDelete }: AgentCardProps) {
   // Load logos for enabled tools from official servers
   const [toolLogos, setToolLogos] = useState<Record<string, string>>({});
   const enabledServers = getEnabledMcpServers();
+  const { theme, resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    let isCancelled = false;
+    setMounted(true);
+  }, []);
 
-    async function loadLogos() {
-      // Load official server logos
-      const logos: Record<string, string> = {};
-      OFFICIAL_MCP_SERVERS.forEach((s) => {
-        if (enabledServers.includes(s.serverName) && s.logoUrl) {
-          logos[s.serverName] = s.logoUrl as string;
+  useEffect(() => {
+    if (!mounted) return;
+    
+    const currentTheme = (resolvedTheme || theme || "light") as "light" | "dark";
+    const logos: Record<string, string> = {};
+    
+    enabledServers.forEach((serverName) => {
+      const server = OFFICIAL_MCP_SERVERS.find((s) => s.serverName === serverName);
+      if (server) {
+        const logoUrl = getMcpServerLogo(server, currentTheme);
+        if (logoUrl) {
+          logos[serverName] = logoUrl;
         }
-      });
-
-      if (!isCancelled) setToolLogos(logos);
-    }
-
-    loadLogos();
-    return () => {
-      isCancelled = true;
-    };
+      }
+    });
+    
+    setToolLogos(logos);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [assistant.assistant_id]);
+  }, [mounted, theme, resolvedTheme, assistant.assistant_id, enabledServers.join(",")]);
   
   return (
     <>

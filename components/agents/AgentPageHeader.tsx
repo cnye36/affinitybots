@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { OFFICIAL_MCP_SERVERS } from "@/lib/mcp/officialMcpServers";
+import { getMcpServerLogo } from "@/lib/utils/mcpServerLogo";
+import { useTheme } from "next-themes";
 import {
   Tooltip,
   TooltipContent,
@@ -68,13 +70,26 @@ export function AgentPageHeader({ assistant }: AgentPageHeaderProps) {
     currentAssistant.config?.configurable?.model
   );
 
+  const { theme, resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+    
     let cancelled = false;
     async function loadLogos() {
+      const currentTheme = (resolvedTheme || theme || "light") as "light" | "dark";
       const initial: Record<string, string> = {};
       OFFICIAL_MCP_SERVERS.forEach((s) => {
-        if (enabledServerNames.includes(s.serverName) && s.logoUrl) {
-          initial[s.serverName] = s.logoUrl as string;
+        if (enabledServerNames.includes(s.serverName)) {
+          const logoUrl = getMcpServerLogo(s, currentTheme);
+          if (logoUrl) {
+            initial[s.serverName] = logoUrl;
+          }
         }
       });
       if (!cancelled && Object.keys(initial).length > 0) {
@@ -86,7 +101,7 @@ export function AgentPageHeader({ assistant }: AgentPageHeaderProps) {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentAssistant.assistant_id]);
+  }, [mounted, theme, resolvedTheme, currentAssistant.assistant_id, enabledServerNames.join(",")]);
 
   const formatToolLabel = (serverName: string) => {
     // e.g. "@exa/exa" -> "Exa"; "@supabase-community/supabase-mcp" -> "Supabase-mcp"

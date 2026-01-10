@@ -8,6 +8,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tool, ServerInfo } from "@/types/playground"
 import { OFFICIAL_MCP_SERVERS } from "@/lib/mcp/officialMcpServers"
 import Image from "next/image"
+import { getMcpServerLogo } from "@/lib/utils/mcpServerLogo"
+import { useTheme } from "next-themes"
 import { cn } from "@/lib/utils"
 
 interface ToolManagementProps {
@@ -131,9 +133,22 @@ export function ToolManagement({
 		}
 	}
 
+	const { theme, resolvedTheme } = useTheme()
+	const [mounted, setMounted] = useState(false)
+
+	useEffect(() => {
+		setMounted(true)
+	}, [])
+
 	const getServerLogo = (serverName: string) => {
+		if (!mounted) {
+			const server = OFFICIAL_MCP_SERVERS.find(s => s.serverName === serverName)
+			return server?.logoUrl || server?.logoUrlLight || server?.logoUrlDark
+		}
 		const server = OFFICIAL_MCP_SERVERS.find(s => s.serverName === serverName)
-		return server?.logoUrl
+		if (!server) return undefined
+		const currentTheme = (resolvedTheme || theme || "light") as "light" | "dark"
+		return getMcpServerLogo(server, currentTheme)
 	}
 
 	const getToolsForServer = (serverName: string) => {

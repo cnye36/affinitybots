@@ -12,7 +12,7 @@ import { CustomServerCard } from "@/components/tools/CustomServerCard";
 import { AddMCPServerModal } from "@/components/tools/AddMCPServerModal";
 import { useViewPreference } from "@/hooks/useViewPreference";
 
-const ITEMS_PER_PAGE = 12;
+const ITEMS_PER_PAGE = 24;
 
 // Category labels for display
 const CATEGORY_LABELS: Record<ServerCategory | "all", string> = {
@@ -341,10 +341,10 @@ export default function ToolsPage() {
 					</div>
 				</div>
 
-				{/* Search and View Controls */}
-				<div className="mb-6 flex flex-col sm:flex-row gap-4">
+				{/* Search, View Controls, and Pagination */}
+				<div className="mb-6 flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
 					{/* Search Bar */}
-					<div className="flex-1 max-w-md">
+					<div className="flex-1 max-w-md w-full lg:w-auto">
 						<div className="relative">
 							<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
 							<Input
@@ -357,24 +357,86 @@ export default function ToolsPage() {
 						</div>
 					</div>
 
-					{/* View Toggle */}
-					<div className="flex items-center gap-2">
-						<Button
-							variant={viewMode === "grid" ? "default" : "outline"}
-							size="sm"
-							onClick={() => setViewMode("grid")}
-							className={viewMode === "grid" ? "bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white border-0" : ""}
-						>
-							<Grid3x3 className="h-4 w-4" />
-						</Button>
-						<Button
-							variant={viewMode === "list" ? "default" : "outline"}
-							size="sm"
-							onClick={() => setViewMode("list")}
-							className={viewMode === "list" ? "bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white border-0" : ""}
-						>
-							<List className="h-4 w-4" />
-						</Button>
+					{/* View Toggle and Pagination */}
+					<div className="flex items-center gap-3 flex-wrap">
+						{/* View Toggle */}
+						<div className="flex items-center gap-2">
+							<Button
+								variant={viewMode === "grid" ? "default" : "outline"}
+								size="sm"
+								onClick={() => setViewMode("grid")}
+								className={viewMode === "grid" ? "bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white border-0" : ""}
+							>
+								<Grid3x3 className="h-4 w-4" />
+							</Button>
+							<Button
+								variant={viewMode === "list" ? "default" : "outline"}
+								size="sm"
+								onClick={() => setViewMode("list")}
+								className={viewMode === "list" ? "bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white border-0" : ""}
+							>
+								<List className="h-4 w-4" />
+							</Button>
+						</div>
+
+						{/* Pagination - Only show if more than 1 page */}
+						{totalPages > 1 && (
+							<div className="flex items-center gap-2">
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+									disabled={currentPage === 1}
+									className="border-2 hover:border-teal-500/50 hover:bg-teal-500/5"
+								>
+									<ChevronLeft className="h-4 w-4" />
+									<span className="hidden sm:inline">Previous</span>
+								</Button>
+
+								<div className="flex items-center gap-1">
+									{Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+										// Show first page, last page, current page, and pages around current
+										const showPage = page === 1 ||
+											page === totalPages ||
+											Math.abs(page - currentPage) <= 1;
+
+										if (!showPage) {
+											// Show ellipsis
+											if (page === 2 && currentPage > 3) {
+												return <span key={page} className="text-muted-foreground text-sm">...</span>;
+											}
+											if (page === totalPages - 1 && currentPage < totalPages - 2) {
+												return <span key={page} className="text-muted-foreground text-sm">...</span>;
+											}
+											return null;
+										}
+
+										return (
+											<Button
+												key={page}
+												variant={currentPage === page ? "default" : "outline"}
+												size="sm"
+												onClick={() => setCurrentPage(page)}
+												className={currentPage === page ? "bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white border-0 min-w-[2rem] h-8" : "border-2 hover:border-teal-500/50 hover:bg-teal-500/10 dark:hover:bg-teal-500/5 min-w-[2rem] h-8"}
+											>
+												{page}
+											</Button>
+										);
+									})}
+								</div>
+
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+									disabled={currentPage === totalPages}
+									className="border-2 hover:border-teal-500/50 hover:bg-teal-500/5"
+								>
+									<span className="hidden sm:inline">Next</span>
+									<ChevronRight className="h-4 w-4" />
+								</Button>
+							</div>
+						)}
 					</div>
 				</div>
 
@@ -410,12 +472,6 @@ export default function ToolsPage() {
 					</div>
 				</div>
 
-				{/* Top Pagination */}
-				{totalPages > 1 && (
-					<div className="mb-6">
-						<PaginationControls />
-					</div>
-				)}
 
 				{/* Tools Display */}
 				{allServers.length === 0 ? (
@@ -452,7 +508,7 @@ export default function ToolsPage() {
 				) : (
 					<>
 						{viewMode === "grid" ? (
-							<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+							<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 								{paginatedServers.map((server: any) => {
 									// Check if it's a user-added server
 									const isUserAdded = filteredUserServers.some((s: any) => s.id === server.id);

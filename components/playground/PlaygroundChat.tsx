@@ -10,8 +10,12 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Send, Loader2, ArrowRight } from "lucide-react"
 import { useStream } from "@langchain/langgraph-sdk/react"
 import ReactMarkdown from "react-markdown"
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
+import { oneDark } from "react-syntax-highlighter/dist/cjs/styles/prism"
 import { ToolCallBadge } from "@/components/chat/ToolCallBadge"
+import { MemoryBadge } from "@/components/chat/MemoryBadge"
 import type { ToolCall } from "@/components/chat/types"
+import type { EnhancedMemory } from "@/types/memory"
 
 interface PlaygroundChatProps {
 	sessionId: string
@@ -22,6 +26,16 @@ interface PlaygroundChatProps {
 	orchestratorConfig?: OrchestratorConfig
 	selectedTeam: string[]
 }
+
+interface Message {
+	role: "user" | "assistant"
+	content: string
+	toolCalls?: ToolCall[]
+	memorySaved?: EnhancedMemory
+}
+
+// Per-agent conversation state stored globally per session
+const sessionAgentStates = new Map<string, Map<string, { messages: Message[]; threadId: string | null }>>()
 
 export function PlaygroundChat({
 	sessionId,
@@ -34,18 +48,53 @@ export function PlaygroundChat({
 }: PlaygroundChatProps) {
 	const { handoffContext, currentAgentId, addStep, isExecuting, currentContext: storeContext } = usePlaygroundStore()
 	const [userPrompt, setUserPrompt] = useState("")
-	const [messages, setMessages] = useState<Array<{ role: "user" | "assistant"; content: string; toolCalls?: ToolCall[] }>>([])
+	const [messages, setMessages] = useState<Message[]>([])
 	const [threadId, setThreadId] = useState<string | null>(null)
 	const [isStreaming, setIsStreaming] = useState(false)
 	const prevContextRef = useRef<string | null | undefined>(previousContext)
+	const prevAgentIdRef = useRef<string>(agentId)
 
-	// Reset chat when agent changes (sequential mode) or mode changes
+	// Get or create session-agent storage
+	const getAgentState = (sessId: string, agtId: string) => {
+		if (!sessionAgentStates.has(sessId)) {
+			sessionAgentStates.set(sessId, new Map())
+		}
+		const sessionMap = sessionAgentStates.get(sessId)!
+		if (!sessionMap.has(agtId)) {
+			sessionMap.set(agtId, { messages: [], threadId: null })
+		}
+		return sessionMap.get(agtId)!
+	}
+
+	// Save current agent state when switching
+	const saveCurrentAgentState = () => {
+		const state = getAgentState(sessionId, prevAgentIdRef.current)
+		state.messages = messages
+		state.threadId = threadId
+	}
+
+	// Load agent state when switching to a new agent
 	useEffect(() => {
-		setMessages([])
-		setThreadId(null)
+		// Save previous agent's state before switching
+		if (prevAgentIdRef.current !== agentId) {
+			saveCurrentAgentState()
+		}
+
+		// Load new agent's state
+		const state = getAgentState(sessionId, agentId)
+		setMessages(state.messages)
+		setThreadId(state.threadId)
 		setUserPrompt("")
 		prevContextRef.current = previousContext
-	}, [agentId, mode, previousContext])
+		prevAgentIdRef.current = agentId
+	}, [agentId, sessionId])
+
+	// Save state when messages or threadId change
+	useEffect(() => {
+		const state = getAgentState(sessionId, agentId)
+		state.messages = messages
+		state.threadId = threadId
+	}, [messages, threadId, sessionId, agentId])
 
 	// Reset chat when context is cleared (new chat button)
 	useEffect(() => {
@@ -76,6 +125,14 @@ export function PlaygroundChat({
 	const handleSubmit = async (withContext: boolean = true) => {
 		if (!userPrompt.trim() && !previousContext) return
 
+		// Clear input and add message to UI immediately
+		const messageToSend = userPrompt
+		setUserPrompt("")
+
+		if (messageToSend.trim()) {
+			setMessages(prev => [...prev, { role: "user", content: messageToSend }])
+		}
+
 		try {
 			setIsStreaming(true)
 
@@ -105,12 +162,11 @@ export function PlaygroundChat({
 				configurable.available_agents = availableAgents
 
 				// User prompt becomes the goal for orchestrator
-				if (userPrompt.trim()) {
+				if (messageToSend.trim()) {
 					inputMessages.push({
 						type: "human",
-						content: userPrompt,
+						content: messageToSend,
 					})
-					setMessages(prev => [...prev, { role: "user", content: userPrompt }])
 				}
 			} else {
 				// Sequential mode: normal agent execution
@@ -123,12 +179,11 @@ export function PlaygroundChat({
 				}
 
 				// Add user prompt if provided
-				if (userPrompt.trim()) {
+				if (messageToSend.trim()) {
 					inputMessages.push({
 						type: "human",
-						content: userPrompt,
+						content: messageToSend,
 					})
-					setMessages(prev => [...prev, { role: "user", content: userPrompt }])
 				}
 
 				configurable.selected_tools = selectedTools.length > 0 ? selectedTools : undefined
@@ -153,12 +208,10 @@ export function PlaygroundChat({
 				agentId: mode === "orchestrator" ? "orchestrator" : agentId,
 				agentName: mode === "orchestrator" ? "Orchestrator Manager" : "Current Agent",
 				selectedTools,
-				userPrompt: userPrompt || undefined,
+				userPrompt: messageToSend || undefined,
 				previousContext: withContext ? previousContext : undefined,
 				toolApprovalMode: "auto",
 			})
-
-			setUserPrompt("")
 		} catch (error) {
 			console.error("Error submitting message:", error)
 		} finally {
@@ -170,13 +223,8 @@ export function PlaygroundChat({
 		// Get last assistant message
 		const lastAssistantMessage = messages.filter(m => m.role === "assistant").pop()
 		if (lastAssistantMessage) {
-			// Save context for next agent
+			// Save context for next agent (keep current agent's conversation intact)
 			handoffContext(lastAssistantMessage.content, threadId || undefined)
-			
-			// Clear chat - ready for new conversation
-			setMessages([])
-			setThreadId(null)
-			setUserPrompt("")
 		}
 	}
 
@@ -195,41 +243,49 @@ export function PlaygroundChat({
 					}
 				})
 
-			const threadMessages = allMessages
+			const mappedMessages = allMessages
 				.filter((m) => m.type === "human" || m.type === "ai")
-				.map((m, idx) => {
-					// Extract tool calls from AI messages
+				.map((m): Message | null => {
+					// Extract tool calls and memory from AI messages
 					let toolCalls: ToolCall[] | undefined
+					let memorySaved: EnhancedMemory | undefined
+
 					if (m.type === "ai") {
+						// Check for tool calls
 						const rawToolCalls = m.tool_calls || m.additional_kwargs?.tool_calls
-						console.log("[PLAYGROUND] Checking for tool calls:", {
-							messageId: m.id || `m-${idx}`,
-							hasToolCalls: !!rawToolCalls,
-							toolCallsCount: rawToolCalls?.length || 0,
-							rawToolCalls,
-							hasAdditionalKwargs: !!m.additional_kwargs,
-							additionalKwargsKeys: m.additional_kwargs ? Object.keys(m.additional_kwargs) : [],
-							fullMessage: m,
-						})
 						if (rawToolCalls && Array.isArray(rawToolCalls) && rawToolCalls.length > 0) {
 							toolCalls = rawToolCalls.map((tc: any) => ({
 								id: tc.id,
 								name: tc.name || tc.function?.name,
 								args: tc.args || tc.function?.arguments,
 								arguments: tc.args || tc.function?.arguments,
-								// Try to find the result from tool messages
 								result: tc.id ? toolResultsMap.get(tc.id) : undefined,
 							}))
-							console.log("[PLAYGROUND] Extracted tool calls:", toolCalls)
 						}
+
+						// Check for memory saved
+						if (m.additional_kwargs?.memory_saved && m.additional_kwargs?.memory_data) {
+							memorySaved = m.additional_kwargs.memory_data as EnhancedMemory
+							console.log("[PLAYGROUND] Memory saved:", memorySaved)
+						}
+					}
+
+					// Filter out the [MEMORY_SAVED] marker from content
+					let content = typeof m.content === "string" ? m.content : JSON.stringify(m.content)
+					if (content.startsWith("[MEMORY_SAVED]")) {
+						// Don't show the memory notification as regular content
+						return null
 					}
 
 					return {
 						role: m.type === "human" ? ("user" as const) : ("assistant" as const),
-						content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
+						content,
 						toolCalls,
+						memorySaved,
 					}
 				})
+
+			const threadMessages: Message[] = mappedMessages.filter((m): m is Message => m !== null)
 
 			setMessages(threadMessages)
 		}
@@ -245,10 +301,10 @@ export function PlaygroundChat({
 					<h3 className="font-semibold">Chat</h3>
 					{mode === "sequential" && messages.length > 0 && (
 						<Button
-							variant="outline"
 							size="sm"
 							onClick={handleHandoff}
 							disabled={isStreaming}
+							className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white border-0 shadow-md"
 						>
 							<ArrowRight className="h-4 w-4 mr-2" />
 							Hand Off Context
@@ -257,8 +313,11 @@ export function PlaygroundChat({
 				</div>
 
 				{previousContext && (
-					<div className="mt-2 text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded">
-						Using previous agent context
+					<div className="mt-2 text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-500/10 px-3 py-2 rounded-lg border border-blue-500/20">
+						<span className="inline-flex items-center gap-1.5">
+							<ArrowRight className="h-3 w-3" />
+							Using context from previous agent
+						</span>
 					</div>
 				)}
 			</div>
@@ -291,13 +350,46 @@ export function PlaygroundChat({
 									}`}
 								>
 									<div className="prose prose-sm dark:prose-invert max-w-none">
-										<ReactMarkdown>{message.content}</ReactMarkdown>
+										<ReactMarkdown
+											components={{
+												code({ node, inline, className, children, ...props }: any) {
+													const match = /language-(\w+)/.exec(className || "")
+													const language = match ? match[1] : ""
+
+													return !inline && language ? (
+														<SyntaxHighlighter
+															style={oneDark}
+															language={language}
+															PreTag="div"
+															className="rounded-md !my-2"
+															{...props}
+														>
+															{String(children).replace(/\n$/, "")}
+														</SyntaxHighlighter>
+													) : (
+														<code
+															className={`${className} px-1.5 py-0.5 rounded bg-muted/50 text-sm font-mono`}
+															{...props}
+														>
+															{children}
+														</code>
+													)
+												},
+											}}
+										>
+											{message.content}
+										</ReactMarkdown>
 									</div>
 									{message.role === "assistant" && message.toolCalls && message.toolCalls.length > 0 && (
 										<div className="mt-3 flex flex-wrap gap-2">
 											{message.toolCalls.map((toolCall) => (
 												<ToolCallBadge key={toolCall.id} toolCall={toolCall} />
 											))}
+										</div>
+									)}
+									{message.role === "assistant" && message.memorySaved && (
+										<div className="mt-3">
+											<MemoryBadge memory={message.memorySaved} />
 										</div>
 									)}
 								</div>
@@ -324,7 +416,7 @@ export function PlaygroundChat({
 				)}
 
 				<div className="space-y-2">
-					<Label htmlFor="user-prompt">Message (optional)</Label>
+					<Label htmlFor="user-prompt">Message</Label>
 					<Textarea
 						id="user-prompt"
 						placeholder={

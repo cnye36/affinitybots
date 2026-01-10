@@ -4,6 +4,8 @@ import { Clock, Bot, Play } from "lucide-react";
 import Image from "next/image";
 import { OFFICIAL_MCP_SERVERS } from "@/lib/mcp/officialMcpServers";
 import { StatsOverview } from "@/components/dashboard/StatsOverview";
+import { McpServerLogo } from "@/components/ui/McpServerLogo";
+import { getMcpServerLogo } from "@/lib/utils/mcpServerLogo";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { LatestWorkflows } from "@/components/dashboard/ActiveWorkflows";
 import {
@@ -306,27 +308,10 @@ export default async function Dashboard() {
         agents.forEach((a: any) => (a.enabledTools || []).forEach((q: string) => q && allServerNamesSet.add(q)));
         tools.forEach((t: any) => t?.server_slug && allServerNamesSet.add(t.server_slug));
 
-        const toolLogos: Record<string, string> = {};
-        // Build logo map from official servers
-        OFFICIAL_MCP_SERVERS.forEach((s) => {
-          if (s.logoUrl) {
-            // Seed by exact name and any server names that include the official key
-            if (allServerNamesSet.has(s.serverName)) {
-              toolLogos[s.serverName] = s.logoUrl as string;
-            }
-            Array.from(allServerNamesSet).forEach((q) => {
-              if (q.toLowerCase().includes(s.serverName.toLowerCase())) {
-                toolLogos[q] = s.logoUrl as string;
-              }
-            });
-          }
-        });
-
-        // Helper to get an official logo by server name
-        const officialLogoForServerName = (serverName: string): string | undefined => {
+        // Helper to get an official server by server name
+        const getOfficialServerByName = (serverName: string) => {
           const lower = (serverName || "").toLowerCase();
-          const match = OFFICIAL_MCP_SERVERS.find((s) => lower.includes(s.serverName.toLowerCase()) && s.logoUrl);
-          return match?.logoUrl as string | undefined;
+          return OFFICIAL_MCP_SERVERS.find((s) => lower.includes(s.serverName.toLowerCase()));
         };
 
         // --------------------------------------------------------------------
@@ -436,19 +421,27 @@ export default async function Dashboard() {
                                     {agent.enabledTools.length > 0 && (
                                       <div className="flex items-center gap-1">
                                         {agent.enabledTools.slice(0, 3).map((tool: string, index: number) => {
-                                          const logo = toolLogos[tool] || officialLogoForServerName(tool);
-                                          return logo ? (
+                                          const server = getOfficialServerByName(tool);
+                                          return server ? (
                                             <div
                                               key={index}
                                               className="p-1 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 rounded-md border border-indigo-500/20"
                                             >
-                                              <Image
-                                                src={logo}
+                                              <McpServerLogo
+                                                server={server}
                                                 alt={tool}
                                                 width={16}
                                                 height={16}
                                                 className="object-contain"
                                                 style={{ objectFit: "contain" }}
+                                                fallback={
+                                                  <span
+                                                    className="text-xs p-1 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 rounded-md border border-indigo-500/20"
+                                                    title={tool}
+                                                  >
+                                                    {getToolIcon(tool)}
+                                                  </span>
+                                                }
                                               />
                                             </div>
                                           ) : (
@@ -543,20 +536,28 @@ export default async function Dashboard() {
                             <div className="flex items-center justify-between p-4 border border-border rounded-xl hover:border-amber-500/50 hover:bg-gradient-to-br hover:from-amber-500/10 hover:to-orange-500/10 dark:hover:from-amber-500/5 dark:hover:to-orange-500/5 transition-all duration-200 group cursor-pointer">
                               <div className="flex items-center gap-3">
                                 <div className="p-2 bg-gradient-to-br from-amber-500/20 to-orange-500/20 rounded-xl border border-amber-500/30 backdrop-blur-sm">
-                                  {(toolLogos[tool.server_slug] || officialLogoForServerName(tool.server_slug)) ? (
-                                    <Image
-                                      src={toolLogos[tool.server_slug] || officialLogoForServerName(tool.server_slug) as string}
-                                      alt={tool.server_slug}
-                                      width={20}
-                                      height={20}
-                                      className="object-contain"
-                                      style={{ objectFit: "contain" }}
-                                    />
-                                  ) : (
-                                    <span className="text-base" title={tool.server_slug}>
-                                      {getToolIcon(tool.server_slug)}
-                                    </span>
-                                  )}
+                                  {(() => {
+                                    const server = getOfficialServerByName(tool.server_slug);
+                                    return server ? (
+                                      <McpServerLogo
+                                        server={server}
+                                        alt={tool.server_slug}
+                                        width={20}
+                                        height={20}
+                                        className="object-contain"
+                                        style={{ objectFit: "contain" }}
+                                        fallback={
+                                          <span className="text-base" title={tool.server_slug}>
+                                            {getToolIcon(tool.server_slug)}
+                                          </span>
+                                        }
+                                      />
+                                    ) : (
+                                      <span className="text-base" title={tool.server_slug}>
+                                        {getToolIcon(tool.server_slug)}
+                                      </span>
+                                    );
+                                  })()}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <div className="font-medium truncate group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">

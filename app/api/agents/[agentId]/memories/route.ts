@@ -48,22 +48,12 @@ export async function GET(request: NextRequest, props: { params: Promise<{ agent
       .order("updated_at", { ascending: true });
     if (storeError) throw storeError;
 
-    // Format memories for the frontend
+    // Format memories for the frontend (DisplayMemory format)
     const formattedMemories = (rows as StoreRow[]).map((row) => {
-      const { attribute, value, extracted_at, source_message } =
-        (row.value || {}) as {
-          attribute: string;
-          value: unknown;
-          extracted_at: string;
-          source_message?: string;
-        };
-
       return {
         id: row.key,
-        attribute,
-        value,
-        extracted_at,
-        source_message,
+        ...row.value,
+        created_at: row.created_at,
       };
     });
 

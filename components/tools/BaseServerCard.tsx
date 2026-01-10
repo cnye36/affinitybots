@@ -105,7 +105,7 @@ export function BaseServerCard({
   };
   
   const effectiveLogoUrl = getLogoUrl();
-  const getTruncatedDescription = (text: string, maxWords: number = 30): string => {
+  const getTruncatedDescription = (text: string, maxWords: number = 14): string => {
     const safe = text || "";
     const words = safe.split(/\s+/).filter(Boolean);
     if (words.length === 0) return "No description provided.";
@@ -117,7 +117,7 @@ export function BaseServerCard({
       return (
         <Badge
           variant="secondary"
-          className={`absolute top-3 right-3 text-xs bg-gradient-to-r ${CATEGORY_COLORS[category]} text-white border-0 shadow-sm`}
+          className={`absolute top-2 right-2 text-[10px] bg-gradient-to-r ${CATEGORY_COLORS[category]} text-white border-0 shadow-sm px-1.5 py-0.5`}
         >
           {CATEGORY_LABELS[category]}
         </Badge>
@@ -126,7 +126,7 @@ export function BaseServerCard({
       return (
         <Badge
           variant="secondary"
-          className="absolute top-3 right-3 text-xs bg-gradient-to-r from-purple-500/90 to-violet-500/90 text-white border-0 shadow-sm"
+          className="absolute top-2 right-2 text-[10px] bg-gradient-to-r from-purple-500/90 to-violet-500/90 text-white border-0 shadow-sm px-1.5 py-0.5"
         >
           Custom
         </Badge>
@@ -233,41 +233,42 @@ export function BaseServerCard({
         {isConfigured && (
           <Badge
             variant="secondary"
-            className="absolute top-3 left-3 text-xs bg-gradient-to-r from-emerald-500 to-green-500 text-white border-0 shadow-sm flex items-center gap-1 animate-in fade-in duration-300"
+            className="absolute top-2 left-2 text-[10px] bg-gradient-to-r from-emerald-500 to-green-500 text-white border-0 shadow-sm flex items-center gap-0.5 animate-in fade-in duration-300 px-1.5 py-0.5"
           >
-            <CheckCircle2 className="h-3 w-3" />
+            <CheckCircle2 className="h-2.5 w-2.5" />
             Configured
           </Badge>
         )}
 
-        <CardHeader className="flex flex-col items-center pb-2 pt-12">
-          {/* Logo without circle */}
-          <div className="mb-3 relative">
+        <CardHeader className="flex flex-col items-center pb-2 pt-8">
+          {/* Logo - smaller, consistent size */}
+          <div className="mb-2 relative w-12 h-12 flex items-center justify-center">
             {effectiveLogoUrl && !imageError ? (
               <Image
                 src={effectiveLogoUrl}
                 alt={displayName}
-                width={64}
-                height={64}
+                width={48}
+                height={48}
                 className="object-contain transition-transform duration-300 group-hover:scale-110"
+                style={{ maxWidth: '48px', maxHeight: '48px', width: 'auto', height: 'auto' }}
                 onError={() => setImageError(true)}
               />
             ) : (
-              <div className="text-5xl transition-transform duration-300 group-hover:scale-110">
+              <div className="text-3xl transition-transform duration-300 group-hover:scale-110">
                 {getFallbackEmoji()}
               </div>
             )}
           </div>
 
-          {/* Title with gradient */}
-          <CardTitle className="text-center text-lg font-semibold bg-gradient-to-r from-teal-600 to-emerald-600 dark:from-teal-400 dark:to-emerald-400 bg-clip-text text-transparent group-hover:from-teal-500 group-hover:to-emerald-500 transition-all duration-300">
+          {/* Title with gradient - smaller text */}
+          <CardTitle className="text-center text-base font-semibold bg-gradient-to-r from-teal-600 to-emerald-600 dark:from-teal-400 dark:to-emerald-400 bg-clip-text text-transparent group-hover:from-teal-500 group-hover:to-emerald-500 transition-all duration-300 line-clamp-2">
             {displayName}
           </CardTitle>
         </CardHeader>
 
-        <CardContent className="flex flex-col flex-1 justify-between pt-2">
-          <div className="mb-4 text-sm text-muted-foreground min-h-[60px] line-clamp-3">
-            {getTruncatedDescription(description, 30)}
+        <CardContent className="flex flex-col flex-1 justify-between pt-2 pb-4">
+          <div className="mb-3 text-xs text-muted-foreground min-h-[48px] line-clamp-3">
+            {getTruncatedDescription(description, 14)}
           </div>
           {children}
         </CardContent>

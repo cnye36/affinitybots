@@ -20,6 +20,8 @@ import { cn } from "@/lib/utils"
 import { useAgent } from "@/hooks/useAgent"
 import { OFFICIAL_MCP_SERVERS } from "@/lib/mcp/officialMcpServers"
 import Image from "next/image"
+import { getMcpServerLogo } from "@/lib/utils/mcpServerLogo"
+import { useTheme } from "next-themes"
 
 interface TaskNodeProps {
 	data: TaskNodeData & {
@@ -128,20 +130,33 @@ const statusConfig: Record<string, { color: string, glow: string, icon: any }> =
 			return []
 		}, [assistant])
 
+		const { theme, resolvedTheme } = useTheme()
+		const [mounted, setMounted] = useState(false)
+
+		useEffect(() => {
+			setMounted(true)
+		}, [])
+
 		// Load tool logos
 		useEffect(() => {
 			if (enabledTools.length === 0) {
 				setToolLogos({})
 				return
 			}
+			if (!mounted) return
+			
+			const currentTheme = (resolvedTheme || theme || "light") as "light" | "dark"
 			const logos: Record<string, string> = {}
 			OFFICIAL_MCP_SERVERS.forEach((s) => {
-				if (enabledTools.includes(s.serverName) && s.logoUrl) {
-					logos[s.serverName] = s.logoUrl
+				if (enabledTools.includes(s.serverName)) {
+					const logoUrl = getMcpServerLogo(s, currentTheme)
+					if (logoUrl) {
+						logos[s.serverName] = logoUrl
+					}
 				}
 			})
 			setToolLogos(logos)
-		}, [enabledTools])
+		}, [enabledTools, mounted, theme, resolvedTheme])
 
 		const handleSettingsClick = (e: React.MouseEvent) => {
 			e.stopPropagation()

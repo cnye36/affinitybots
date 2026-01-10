@@ -4,12 +4,14 @@ import { useRouter } from "next/navigation"
 import { Trash2, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/hooks/useToast"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { mutate } from "swr"
 import { Assistant } from "@/types/assistant"
 import Image from "next/image"
 import { OFFICIAL_MCP_SERVERS } from "@/lib/mcp/officialMcpServers"
 import { getLlmLabel } from "@/lib/llm/catalog"
+import { getMcpServerLogo } from "@/lib/utils/mcpServerLogo"
+import { useTheme } from "next-themes"
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -93,12 +95,29 @@ export function AgentListItem({ assistant, onDelete }: AgentListItemProps) {
 	)
 
 	const enabledServers = getEnabledMcpServers()
-	const toolLogos: Record<string, string> = {}
-	OFFICIAL_MCP_SERVERS.forEach((s) => {
-		if (enabledServers.includes(s.serverName) && s.logoUrl) {
-			toolLogos[s.serverName] = s.logoUrl as string
-		}
-	})
+	const { theme, resolvedTheme } = useTheme()
+	const [mounted, setMounted] = useState(false)
+	const [toolLogos, setToolLogos] = useState<Record<string, string>>({})
+
+	useEffect(() => {
+		setMounted(true)
+	}, [])
+
+	useEffect(() => {
+		if (!mounted) return
+		
+		const currentTheme = (resolvedTheme || theme || "light") as "light" | "dark"
+		const logos: Record<string, string> = {}
+		OFFICIAL_MCP_SERVERS.forEach((s) => {
+			if (enabledServers.includes(s.serverName)) {
+				const logoUrl = getMcpServerLogo(s, currentTheme)
+				if (logoUrl) {
+					logos[s.serverName] = logoUrl
+				}
+			}
+		})
+		setToolLogos(logos)
+	}, [mounted, theme, resolvedTheme, enabledServers.join(",")])
 
 	return (
 		<>

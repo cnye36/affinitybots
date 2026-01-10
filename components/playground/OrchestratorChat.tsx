@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Play, Loader2, ArrowRight } from "lucide-react"
 import ReactMarkdown from "react-markdown"
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
+import { oneDark } from "react-syntax-highlighter/dist/cjs/styles/prism"
 import { Client } from "@langchain/langgraph-sdk"
 
 interface OrchestratorChatProps {
@@ -331,7 +333,35 @@ export function OrchestratorChat({
 									}`}
 								>
 									<div className="prose prose-sm dark:prose-invert max-w-none">
-										<ReactMarkdown>{step.content}</ReactMarkdown>
+										<ReactMarkdown
+											components={{
+												code({ node, inline, className, children, ...props }: any) {
+													const match = /language-(\w+)/.exec(className || "")
+													const language = match ? match[1] : ""
+
+													return !inline && language ? (
+														<SyntaxHighlighter
+															style={oneDark}
+															language={language}
+															PreTag="div"
+															className="rounded-md !my-2"
+															{...props}
+														>
+															{String(children).replace(/\n$/, "")}
+														</SyntaxHighlighter>
+													) : (
+														<code
+															className={`${className} px-1.5 py-0.5 rounded bg-muted/50 text-sm font-mono`}
+															{...props}
+														>
+															{children}
+														</code>
+													)
+												},
+											}}
+										>
+											{step.content}
+										</ReactMarkdown>
 									</div>
 								</div>
 							</div>

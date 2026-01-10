@@ -11,6 +11,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { OFFICIAL_MCP_SERVERS } from "@/lib/mcp/officialMcpServers";
+import { getMcpServerLogo } from "@/lib/utils/mcpServerLogo";
+import { useTheme } from "next-themes";
 
 
 interface UserMCPServer {
@@ -167,6 +169,22 @@ export function ToolSelector({
   const ServerCard = ({ server, isConfiguredSection }: { server: any; isConfiguredSection: boolean }) => {
     const configured = isConfigured(server.serverName);
     const enabled = isEnabledForAgent(server.serverName);
+    const { theme, resolvedTheme } = useTheme();
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+      setMounted(true);
+    }, []);
+
+    const getServerLogo = () => {
+      if (!mounted) {
+        return server.logoUrl || server.logoUrlLight || server.logoUrlDark;
+      }
+      const currentTheme = (resolvedTheme || theme || "light") as "light" | "dark";
+      return getMcpServerLogo(server, currentTheme);
+    };
+
+    const logoUrl = getServerLogo();
     
     const getServerTypeBadge = () => {
       const variants = {
@@ -193,9 +211,9 @@ export function ToolSelector({
         <div className="flex items-start gap-2 w-full"></div>
             {/* Icon */}
             <div className="flex-shrink-0">
-              {server.logoUrl ? (
+              {logoUrl ? (
                 <Image
-                  src={server.logoUrl}
+                  src={logoUrl}
                   alt={server.displayName || server.serverName}
                   width={28}
                   height={28}

@@ -365,7 +365,7 @@ export async function generateAgentConfiguration(
       tools: options?.selectedTools || [], // Save selected tools
       model: finalModel,
       memory: {
-        enabled: true,
+        enabled: false, // Disabled by default - users must opt-in
         max_entries: 20,
       },
       knowledge: {
@@ -398,7 +398,7 @@ export async function generateAgentConfiguration(
       instructions: `You are a specialized assistant. Work with any tools and integrations the user enables to provide the best possible assistance.`,
       tools: [],
       model: fallbackModel,
-      memory: { enabled: true, max_entries: 20 },
+      memory: { enabled: false, max_entries: 20 }, // Disabled by default
       knowledge: { enabled: false },
       agent_avatar: avatarUrl,
     };

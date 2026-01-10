@@ -23,6 +23,9 @@ import { mcpClientFactory, MCPFactoryResult } from "../mcp/mcpClientFactory";
 import { rateLimiter, RateLimitError, TokenUsage } from "../rateLimiting";
 import { createImageGenerationTool } from "../imageGeneration";
 import { createWebSearchTool } from "../tavilySearch";
+import type { EnhancedMemory, MemoryIntent, MemoryExtraction, DisplayMemory } from "@/types/memory";
+import { INTENT_DETECTION_PROMPT, MEMORY_EXTRACTION_PROMPT } from "../memory/prompts";
+import { formatMemoriesForPrompt, selectTopMemories, findSimilarMemory } from "../memory/formatting";
 
 // Local fallback store for development. On LangGraph Platform, a persistent
 // store is injected into config.store; we only use this if none is provided.
@@ -93,147 +96,208 @@ async function createMcpClientAndTools(
   }
 }
 
-// Function to extract and write user memories
+// Function to detect if user wants something remembered
+async function detectMemoryIntent(state: AgentState, config: LangGraphRunnableConfig) {
+	const configurable =
+		(config.configurable as {
+			user_id?: string
+			assistant_id?: string
+			memory?: { enabled: boolean }
+		}) || {}
+	const assistantId = configurable.assistant_id
+	const memoryEnabled = configurable.memory?.enabled ?? false // Default to disabled
+
+	// Skip intent detection if memory is disabled or no assistantId
+	if (!assistantId || !memoryEnabled) {
+		return { messages: state.messages, should_extract_memory: false }
+	}
+
+	// We only analyze the most recent user message
+	const userMessage = state.messages.at(-1)
+	if (!userMessage || !(userMessage instanceof HumanMessage)) {
+		return { messages: state.messages, should_extract_memory: false }
+	}
+
+	// Get user message content
+	const userContent =
+		typeof userMessage.content === "string"
+			? userMessage.content
+			: JSON.stringify(userMessage.content)
+
+	try {
+		// Use fast model for intent detection
+		const intentDetector = new ChatOpenAI({
+			model: "gpt-5-mini",
+			streaming: false,
+			temperature: 0, // Deterministic for intent detection
+		})
+
+		const intentPrompt = [
+			new SystemMessage(INTENT_DETECTION_PROMPT),
+			new HumanMessage(userContent),
+		]
+
+		const response = await intentDetector.invoke(intentPrompt)
+		const intentResult: MemoryIntent = JSON.parse(response.content as string)
+
+		console.log("[Memory] Intent detection result:", intentResult)
+
+		if (intentResult.should_remember) {
+			return { messages: state.messages, should_extract_memory: true }
+		}
+	} catch (error) {
+		console.error("Error detecting memory intent:", error)
+	}
+
+	return { messages: state.messages, should_extract_memory: false }
+}
+
+// Function to extract and write user memories (enhanced version)
 async function writeMemory(state: AgentState, config: LangGraphRunnableConfig) {
-  const configurable =
-    (config.configurable as {
-      user_id?: string;
-      assistant_id?: string;
-      memory?: { enabled: boolean };
-    }) || {};
-  const userId = configurable.user_id;
-  const assistantId = configurable.assistant_id;
-  const memoryEnabled = configurable.memory?.enabled ?? true; // Default to enabled if not specified
+	const configurable =
+		(config.configurable as {
+			user_id?: string
+			assistant_id?: string
+			memory?: { enabled: boolean }
+		}) || {}
+	const assistantId = configurable.assistant_id
+	const memoryEnabled = configurable.memory?.enabled ?? false
 
-  // Skip memory writing if memory is disabled or no assistantId
-  if (!assistantId || !memoryEnabled) {
-    return { messages: state.messages, has_memory_updates: false };
-  }
+	// Skip if memory disabled or no assistantId
+	if (!assistantId || !memoryEnabled) {
+		return { messages: state.messages }
+	}
 
-  // We only analyze the most recent user message
-  const userMessage = state.messages.at(-1);
-  if (!userMessage || !(userMessage instanceof HumanMessage)) {
-    return { messages: state.messages, has_memory_updates: false }; // Not a user message, pass through
-  }
+	// Get the most recent user message
+	const userMessage = state.messages.at(-1)
+	if (!userMessage || !(userMessage instanceof HumanMessage)) {
+		return { messages: state.messages }
+	}
 
-  // Get user message content
-  const userContent =
-    typeof userMessage.content === "string"
-      ? userMessage.content
-      : JSON.stringify(userMessage.content);
+	const userContent =
+		typeof userMessage.content === "string"
+			? userMessage.content
+			: JSON.stringify(userMessage.content)
 
-  try {
-    const kvStore = (config as any).store ?? fallbackStore;
-    // Use the LLM to extract memories from the message
-    const memoryExtractor = new ChatOpenAI({
-      model: "gpt-5-mini",
-      streaming: false, // Memory extraction doesn't need streaming
-    });
+	try {
+		const kvStore = (config as any).store ?? fallbackStore
+		const namespace = ["user_profile", assistantId]
 
-    const extractionPrompt = [
-      new SystemMessage(
-        `You are a memory extraction system. Extract any personal information about the user from this message. 
-        Focus on their name, location, preferences, job, likes/dislikes, hobbies, or any other personal details.
-        Format your response as a JSON object with the extracted information as key-value pairs.
-        If no personal information is found, return an empty JSON object {}.
-        For example: {"name": "John", "location": "New York", "likes": ["coffee", "hiking"]}
-        Do not include any other text in your response, just the JSON object.`
-      ),
-      new HumanMessage(userContent),
-    ];
+		// Use enhanced extraction with rich semantic content
+		const memoryExtractor = new ChatOpenAI({
+			model: "gpt-5-mini",
+			streaming: false,
+			temperature: 0,
+		})
 
-    const extraction = await memoryExtractor.invoke(extractionPrompt);
-    const extractedData = JSON.parse(extraction.content as string);
+		const extractionPrompt = [
+			new SystemMessage(MEMORY_EXTRACTION_PROMPT),
+			new HumanMessage(userContent),
+		]
 
-    // Only store if there's data extracted
-    if (Object.keys(extractedData).length > 0) {
-      // Add a message indicating memory is being updated
-      const updatedMessages = [
-        ...state.messages,
-        new AIMessage("Updating memory..."),
-      ];
+		const response = await memoryExtractor.invoke(extractionPrompt)
+		const extraction: MemoryExtraction = JSON.parse(response.content as string)
 
-      const namespace = ["user_profile", assistantId];
-      const memoryId = uuidv4();
+		console.log("[Memory] Extracted memory:", extraction)
 
-      // Check if any of the data already exists
-      const existingMemories = await kvStore.search(namespace, {
-        filter: {},
-      });
-      const existingData: Record<string, unknown> = {};
+		// Check for similar existing memories (deduplication)
+		const existingMemories = await kvStore.search(namespace, { filter: {} })
+		const displayMemories: DisplayMemory[] = existingMemories.map((m: any) => ({
+			id: m.key,
+			...m.value,
+		}))
 
-      // Build a map of existing attribute types
-      existingMemories.forEach((memory: { value: { attribute: string; value: unknown } }) => {
-        const { attribute, value } = memory.value as {
-          attribute: string;
-          value: unknown;
-        };
-        if (attribute && value) {
-          existingData[attribute] = value;
-        }
-      });
+		const enhancedMemory: EnhancedMemory = {
+			title: extraction.title,
+			category: extraction.category,
+			content: extraction.content,
+			key_facts: extraction.key_facts,
+			importance: extraction.importance,
+			context: extraction.context,
+			extracted_at: new Date().toISOString(),
+			source_message: userContent,
+			intent_confidence: "high", // From intent detection
+		}
 
-      console.log("Extracted new user data:", extractedData);
+		// Check if this is an update to an existing memory
+		const similarMemoryKey = await findSimilarMemory(enhancedMemory, displayMemories)
 
-      // Store each piece of extracted information as a separate memory
-      for (const [key, value] of Object.entries(extractedData)) {
-        // Only store if it's new information or different from what we have
-        if (
-          !existingData[key] ||
-          JSON.stringify(existingData[key]) !== JSON.stringify(value)
-        ) {
-          await kvStore.put(namespace, `${key}_${memoryId}`, {
-            attribute: key,
-            value: value,
-            extracted_at: new Date().toISOString(),
-            source_message: userContent,
-          });
-          console.log(`Stored new memory: ${key} = ${JSON.stringify(value)}`);
-        }
-      }
+		if (similarMemoryKey) {
+			// Update existing memory
+			console.log(`[Memory] Updating existing memory: ${similarMemoryKey}`)
+			enhancedMemory.updated_at = new Date().toISOString()
+			await kvStore.put(namespace, similarMemoryKey, enhancedMemory)
+		} else {
+			// Create new memory with chronological key
+			const timestamp = Date.now()
+			const uuid = uuidv4().split("-")[0] // Short UUID
+			const memoryKey = `mem_${timestamp}_${uuid}`
+			console.log(`[Memory] Creating new memory: ${memoryKey}`)
+			await kvStore.put(namespace, memoryKey, enhancedMemory)
+		}
 
-      return { messages: updatedMessages, has_memory_updates: true };
-    }
-  } catch (error) {
-    console.error("Error extracting or storing memory:", error);
-  }
+		console.log(`[Memory] Successfully saved: "${extraction.title}"`)
 
-  // No memory updates
-  return { messages: state.messages, has_memory_updates: false };
+		// Add a special AI message to notify that memory was saved
+		const memoryNotification = new AIMessage({
+			content: `[MEMORY_SAVED]${JSON.stringify(enhancedMemory)}`,
+			additional_kwargs: {
+				memory_saved: true,
+				memory_data: enhancedMemory,
+			},
+		})
+
+		return {
+			messages: [...state.messages, memoryNotification],
+		}
+	} catch (error) {
+		console.error("[Memory] Error extracting or storing memory:", error)
+		return { messages: state.messages }
+	}
 }
 
-// Function to determine if there's memory to write
-function shouldUpdateMemory(state: typeof MessagesAnnotation.State) {
-  // Check if the writeMemory function added the has_memory_updates flag
-  interface StateWithMemoryFlag {
-    messages: Array<BaseMessage>;
-    has_memory_updates?: boolean;
-  }
-  const stateWithMemoryFlag = state as StateWithMemoryFlag;
-  return stateWithMemoryFlag.has_memory_updates === true
-    ? "agent"
-    : "skipMemory";
+// Function to determine if memory intent was detected
+function shouldExtractMemory(state: typeof MessagesAnnotation.State) {
+	interface StateWithIntentFlag {
+		messages: Array<BaseMessage>
+		should_extract_memory?: boolean
+	}
+	const stateWithIntent = state as StateWithIntentFlag
+	return stateWithIntent.should_extract_memory === true ? "writeMemory" : "agent"
 }
 
-// Function to retrieve user memories
+// Function to retrieve user memories (with smart limiting)
 async function retrieveMemories(
-  assistantId: string | undefined,
-  memoryEnabled: boolean = true,
-  config?: LangGraphRunnableConfig
-) {
-  if (!assistantId || !memoryEnabled) {
-    return [];
-  }
+	assistantId: string | undefined,
+	memoryEnabled: boolean = false,
+	config?: LangGraphRunnableConfig
+): Promise<DisplayMemory[]> {
+	if (!assistantId || !memoryEnabled) {
+		return []
+	}
 
-  const namespace = ["user_profile", assistantId];
-  try {
-    const kvStore = (config as any)?.store ?? fallbackStore;
-    const memories = await kvStore.search(namespace, { filter: {} });
-    return memories;
-  } catch (error) {
-    console.error("Error retrieving memories:", error);
-    return [];
-  }
+	const namespace = ["user_profile", assistantId]
+	try {
+		const kvStore = (config as any)?.store ?? fallbackStore
+		const rawMemories = await kvStore.search(namespace, { filter: {} })
+
+		// Convert to DisplayMemory format
+		const memories: DisplayMemory[] = rawMemories.map((m: any) => ({
+			id: m.key,
+			...m.value,
+			created_at: m.created_at,
+		}))
+
+		// Apply smart limiting - top 20 most important + recent
+		const topMemories = selectTopMemories(memories, 20)
+
+		console.log(`[Memory] Retrieved ${memories.length} total memories, using top ${topMemories.length} for context`)
+
+		return topMemories
+	} catch (error) {
+		console.error("[Memory] Error retrieving memories:", error)
+		return []
+	}
 }
 
 export async function retrieveKb(state: AgentState, config: RunnableConfig) {
@@ -459,33 +523,13 @@ async function callModel(
   
   // Agent-specific prompt (created by the Architect, visible to users)
   const agentSpecificPrompt = configurable.prompt_template || "";
-  const memoryEnabled = configurable.memory?.enabled ?? true;
-  
-  // Retrieve user memories (platform store if injected)
+  const memoryEnabled = configurable.memory?.enabled ?? false;
+
+  // Retrieve user memories (top 20 by importance + recency)
   const memories = await retrieveMemories(assistantId, memoryEnabled, config);
-  
-  // Format memories for inclusion in the prompt
-  let memoryContext = "";
-  if (memories.length > 0 && memoryEnabled) {
-    memoryContext = "\n\nUser Profile Information:\n";
-    const profileData: Record<string, unknown> = {};
-    memories.forEach((memory: { value: { attribute: string; value: unknown } }) => {
-      const { attribute, value } = memory.value as {
-        attribute: string;
-        value: unknown;
-      };
-      if (attribute && value) {
-        profileData[attribute] = value;
-      }
-    });
-    for (const [attribute, value] of Object.entries(profileData)) {
-      if (Array.isArray(value)) {
-        memoryContext += `- ${attribute}: ${value.join(", ")}\n`;
-      } else {
-        memoryContext += `- ${attribute}: ${value}\n`;
-      }
-    }
-  }
+
+  // Format memories for inclusion in the prompt (rich, categorized context)
+  const memoryContext = formatMemoriesForPrompt(memories);
   
   // Combine global immutable prompt with agent-specific prompt
   // The global prompt provides core operating instructions
@@ -883,29 +927,29 @@ async function createToolNode(state: any, config: any): Promise<any> {
 
 // Define and export the graph for LangGraph Platform
 const workflow = new StateGraph(MessagesAnnotation)
-  .addNode("retrieveKb", retrieveKb)
-  .addNode("writeMemory", writeMemory)
-  .addNode("agent", callModel)
-  .addNode("tools", createToolNode)
-  .addNode("skipMemory", (state) => state) // Pass-through node that does nothing
+	.addNode("retrieveKb", retrieveKb)
+	.addNode("detectIntent", detectMemoryIntent)
+	.addNode("writeMemory", writeMemory)
+	.addNode("agent", callModel)
+	.addNode("tools", createToolNode)
 
-  // Flow from start to Knowledge Base retrieval
-  .addEdge("__start__", "retrieveKb")
+	// Flow from start to Knowledge Base retrieval
+	.addEdge("__start__", "retrieveKb")
 
-  // Knowledge Base to memory analysis
-  .addEdge("retrieveKb", "writeMemory")
+	// Knowledge Base to intent detection
+	.addEdge("retrieveKb", "detectIntent")
 
-  // Conditional path from writeMemory based on whether there's memory to update
-  .addConditionalEdges("writeMemory", shouldUpdateMemory)
+	// Conditional path from detectIntent - extract memory or skip to agent
+	.addConditionalEdges("detectIntent", shouldExtractMemory)
 
-  // Both memory paths eventually reach agent
-  .addEdge("skipMemory", "agent")
+	// After memory extraction, go to agent
+	.addEdge("writeMemory", "agent")
 
-  // Tools normally cycle back to agent, but end immediately after image generation
-  .addConditionalEdges("tools", shouldContinueAfterTools)
+	// Tools normally cycle back to agent, but end immediately after image generation
+	.addConditionalEdges("tools", shouldContinueAfterTools)
 
-  // Conditional path from agent based on whether additional tools are needed
-  .addConditionalEdges("agent", shouldContinue);
+	// Conditional path from agent based on whether additional tools are needed
+	.addConditionalEdges("agent", shouldContinue);
 
 // ============================================================================
 // LANGGRAPH PLATFORM DEPLOYMENT

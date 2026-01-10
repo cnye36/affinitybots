@@ -41,6 +41,8 @@ import { getLlmLabel } from "@/lib/llm/catalog"
 import { toast } from "@/hooks/useToast"
 import { OFFICIAL_MCP_SERVERS } from "@/lib/mcp/officialMcpServers"
 import Image from "next/image"
+import { getMcpServerLogo } from "@/lib/utils/mcpServerLogo"
+import { useTheme } from "next-themes"
 import { usePlaygroundStore } from "@/lib/stores/playgroundStore"
 import { ContextViewer } from "./ContextViewer"
 
@@ -128,21 +130,32 @@ export function PlaygroundAgentConfig({ assistant, onConfigChange }: PlaygroundA
 		fetchConfiguredServers()
 	}, [])
 
+	const { theme, resolvedTheme } = useTheme()
+	const [mounted, setMounted] = useState(false)
+
+	useEffect(() => {
+		setMounted(true)
+	}, [])
+
 	// Load tool logos
 	useEffect(() => {
-		if (!config?.enabled_mcp_servers) return
+		if (!config?.enabled_mcp_servers || !mounted) return
 		
+		const currentTheme = (resolvedTheme || theme || "light") as "light" | "dark"
 		const logos: Record<string, string> = {}
 		config.enabled_mcp_servers.forEach((serverName) => {
 			const server = OFFICIAL_MCP_SERVERS.find(
 				(s) => s.serverName === serverName || serverName.includes(s.serverName)
 			)
-			if (server?.logoUrl) {
-				logos[serverName] = server.logoUrl
+			if (server) {
+				const logoUrl = getMcpServerLogo(server, currentTheme)
+				if (logoUrl) {
+					logos[serverName] = logoUrl
+				}
 			}
 		})
 		setToolLogos(logos)
-	}, [config?.enabled_mcp_servers])
+	}, [config?.enabled_mcp_servers, mounted, theme, resolvedTheme])
 
 	// Auto-save function
 	const autoSave = async (configToSave: AssistantConfiguration, skipPrompt = false) => {

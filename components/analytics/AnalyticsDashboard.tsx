@@ -6,10 +6,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { RefreshCcw, X, Trash2, ChevronDown, ChevronRight, AlertCircle, ExternalLink, Wrench, Search, Clock } from "lucide-react"
+import { RefreshCcw, X, Trash2, ChevronDown, ChevronRight, AlertCircle, ExternalLink, Wrench, Search, Clock, Activity, BarChart3, CheckCircle2, XCircle, Timer } from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/hooks/useToast"
 import { useSectionTheme } from "@/hooks/useSectionTheme"
+import { motion } from "framer-motion"
 
 type ActivityItem = {
 	type: "workflow" | "task"
@@ -75,6 +76,7 @@ export function AnalyticsDashboard() {
 	const [agentFilter, setAgentFilter] = useState<string>("all")
 	const [startDate, setStartDate] = useState<string>("")
 	const [endDate, setEndDate] = useState<string>("")
+	const [dateRangePreset, setDateRangePreset] = useState<string>("all")
 	const [loading, setLoading] = useState(false)
 	const [cancellingIds, setCancellingIds] = useState<Set<string>>(new Set())
 	const [cleaningUp, setCleaningUp] = useState(false)
@@ -91,6 +93,42 @@ export function AnalyticsDashboard() {
 			}
 			return next
 		})
+	}
+
+	const handleDateRangePreset = (preset: string) => {
+		setDateRangePreset(preset)
+		const now = new Date()
+		const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+
+		if (preset === "24hours") {
+			const twentyFourHoursAgo = new Date(now)
+			twentyFourHoursAgo.setHours(now.getHours() - 24)
+			setStartDate(twentyFourHoursAgo.toISOString().split("T")[0])
+			setEndDate(today.toISOString().split("T")[0])
+		} else if (preset === "7days") {
+			const sevenDaysAgo = new Date(today)
+			sevenDaysAgo.setDate(today.getDate() - 7)
+			setStartDate(sevenDaysAgo.toISOString().split("T")[0])
+			setEndDate(today.toISOString().split("T")[0])
+		} else if (preset === "30days") {
+			const thirtyDaysAgo = new Date(today)
+			thirtyDaysAgo.setDate(today.getDate() - 30)
+			setStartDate(thirtyDaysAgo.toISOString().split("T")[0])
+			setEndDate(today.toISOString().split("T")[0])
+		} else if (preset === "60days") {
+			const sixtyDaysAgo = new Date(today)
+			sixtyDaysAgo.setDate(today.getDate() - 60)
+			setStartDate(sixtyDaysAgo.toISOString().split("T")[0])
+			setEndDate(today.toISOString().split("T")[0])
+		} else if (preset === "90days") {
+			const ninetyDaysAgo = new Date(today)
+			ninetyDaysAgo.setDate(today.getDate() - 90)
+			setStartDate(ninetyDaysAgo.toISOString().split("T")[0])
+			setEndDate(today.toISOString().split("T")[0])
+		} else if (preset === "all") {
+			setStartDate("")
+			setEndDate("")
+		}
 	}
 
 	const fetchAnalytics = async () => {
@@ -251,116 +289,335 @@ export function AnalyticsDashboard() {
 				</div>
 			</div>
 
-			<Card>
-				<CardHeader>
-					<CardTitle className="text-base">Filters</CardTitle>
-				</CardHeader>
-				<CardContent className="grid gap-3 md:grid-cols-3 lg:grid-cols-6">
-					<Select value={typeFilter} onValueChange={(value) => setTypeFilter(value as any)}>
-						<SelectTrigger>
-							<SelectValue placeholder="Type" />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="all">All activity</SelectItem>
-							<SelectItem value="workflow">Workflows</SelectItem>
-							<SelectItem value="task">Tasks</SelectItem>
-						</SelectContent>
-					</Select>
+			<Card className="border-0 shadow-lg">
+				
+				<CardContent className="space-y-6">
+					{/* Date Range and Custom Dates Row */}
+					<div className="grid gap-4 md:grid-cols-3">
+						<div>
+							<label className="text-sm font-medium text-muted-foreground mb-2 block">
+								Time Range
+							</label>
+							<Select value={dateRangePreset} onValueChange={handleDateRangePreset}>
+								<SelectTrigger>
+									<SelectValue placeholder="Select range" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="24hours">Last 24 Hours</SelectItem>
+									<SelectItem value="7days">Last 7 Days</SelectItem>
+									<SelectItem value="30days">Last 30 Days</SelectItem>
+									<SelectItem value="60days">Last 60 Days</SelectItem>
+									<SelectItem value="90days">Last 90 Days</SelectItem>
+									<SelectItem value="all">All Time</SelectItem>
+									<SelectItem value="custom">Custom Range</SelectItem>
+								</SelectContent>
+							</Select>
+						</div>
+						<div>
+							<label className="text-sm font-medium text-muted-foreground mb-2 block">
+								Start Date
+							</label>
+							<Input
+								type="date"
+								value={startDate}
+								onChange={(event) => {
+									setStartDate(event.target.value)
+									setDateRangePreset("custom")
+								}}
+								placeholder="Start date"
+							/>
+						</div>
+						<div>
+							<label className="text-sm font-medium text-muted-foreground mb-2 block">
+								End Date
+							</label>
+							<Input
+								type="date"
+								value={endDate}
+								onChange={(event) => {
+									setEndDate(event.target.value)
+									setDateRangePreset("custom")
+								}}
+								placeholder="End date"
+							/>
+						</div>
+					</div>
 
-					<Select value={statusFilter} onValueChange={(value) => setStatusFilter(value)}>
-						<SelectTrigger>
-							<SelectValue placeholder="Status" />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="all">All statuses</SelectItem>
-							<SelectItem value="running">Running</SelectItem>
-							<SelectItem value="completed">Completed</SelectItem>
-							<SelectItem value="failed">Failed</SelectItem>
-							<SelectItem value="error">Error</SelectItem>
-						</SelectContent>
-					</Select>
+					{/* Activity Filters */}
+					<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+						<div>
+							<label className="text-sm font-medium text-muted-foreground mb-2 block">
+								Activity Type
+							</label>
+							<Select value={typeFilter} onValueChange={(value) => setTypeFilter(value as any)}>
+								<SelectTrigger>
+									<SelectValue placeholder="Type" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="all">All activity</SelectItem>
+									<SelectItem value="workflow">Workflows</SelectItem>
+									<SelectItem value="task">Tasks</SelectItem>
+								</SelectContent>
+							</Select>
+						</div>
 
-					<Select value={workflowFilter} onValueChange={(value) => setWorkflowFilter(value)}>
-						<SelectTrigger>
-							<SelectValue placeholder="Workflow" />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="all">All workflows</SelectItem>
-							{workflows.map((workflow) => (
-								<SelectItem key={workflow.workflow_id} value={workflow.workflow_id || ""}>
-									{workflow.name || "Untitled"}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
+						<div>
+							<label className="text-sm font-medium text-muted-foreground mb-2 block">
+								Status
+							</label>
+							<Select value={statusFilter} onValueChange={(value) => setStatusFilter(value)}>
+								<SelectTrigger>
+									<SelectValue placeholder="Status" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="all">All statuses</SelectItem>
+									<SelectItem value="running">Running</SelectItem>
+									<SelectItem value="completed">Completed</SelectItem>
+									<SelectItem value="failed">Failed</SelectItem>
+									<SelectItem value="error">Error</SelectItem>
+								</SelectContent>
+							</Select>
+						</div>
 
-					<Select value={agentFilter} onValueChange={(value) => setAgentFilter(value)}>
-						<SelectTrigger>
-							<SelectValue placeholder="Agent" />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="all">All agents</SelectItem>
-							{agents.map((agent) => (
-								<SelectItem key={agent.assistant_id} value={agent.assistant_id || ""}>
-									{agent.name || "Unnamed Agent"}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
+						<div>
+							<label className="text-sm font-medium text-muted-foreground mb-2 block">
+								Workflow
+							</label>
+							<Select value={workflowFilter} onValueChange={(value) => setWorkflowFilter(value)}>
+								<SelectTrigger>
+									<SelectValue placeholder="Workflow" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="all">All workflows</SelectItem>
+									{workflows.map((workflow) => (
+										<SelectItem key={workflow.workflow_id} value={workflow.workflow_id || ""}>
+											{workflow.name || "Untitled"}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
 
-					<Input
-						type="date"
-						value={startDate}
-						onChange={(event) => setStartDate(event.target.value)}
-						placeholder="Start date"
-					/>
-					<Input
-						type="date"
-						value={endDate}
-						onChange={(event) => setEndDate(event.target.value)}
-						placeholder="End date"
-					/>
+						<div>
+							<label className="text-sm font-medium text-muted-foreground mb-2 block">
+								Agent
+							</label>
+							<Select value={agentFilter} onValueChange={(value) => setAgentFilter(value)}>
+								<SelectTrigger>
+									<SelectValue placeholder="Agent" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="all">All agents</SelectItem>
+									{agents.map((agent) => (
+										<SelectItem key={agent.assistant_id} value={agent.assistant_id || ""}>
+											{agent.name || "Unnamed Agent"}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
+					</div>
 				</CardContent>
 			</Card>
 
-			<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-				<Card>
-					<CardHeader>
-						<CardTitle className="text-sm text-muted-foreground">Total Activity</CardTitle>
-					</CardHeader>
-					<CardContent className="text-2xl font-semibold">{stats.total}</CardContent>
-				</Card>
-				<Card>
-					<CardHeader>
-						<CardTitle className="text-sm text-muted-foreground">Workflow Runs</CardTitle>
-					</CardHeader>
-					<CardContent className="text-2xl font-semibold">{stats.workflowCount}</CardContent>
-				</Card>
-				<Card>
-					<CardHeader>
-						<CardTitle className="text-sm text-muted-foreground">Task Runs</CardTitle>
-					</CardHeader>
-					<CardContent className="text-2xl font-semibold">{stats.taskCount}</CardContent>
-				</Card>
-				<Card>
-					<CardHeader>
-						<CardTitle className="text-sm text-muted-foreground">Failures</CardTitle>
-					</CardHeader>
-					<CardContent className="text-2xl font-semibold">{stats.failed}</CardContent>
-				</Card>
-				<Card>
-					<CardHeader>
-						<CardTitle className="text-sm text-muted-foreground">Avg Duration</CardTitle>
-					</CardHeader>
-					<CardContent className="text-2xl font-semibold">
-						{formatDuration(stats.averageDuration)}
-					</CardContent>
-				</Card>
+			<div className="grid gap-6 md:grid-cols-2 xl:grid-cols-5">
+				{/* Total Activity */}
+				<motion.div
+					initial={{ opacity: 0, y: 20 }}
+					animate={{ opacity: 1, y: 0 }}
+					transition={{ duration: 0.5, delay: 0 }}
+				>
+					<Card className="group relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+						<div className="absolute inset-0 bg-gradient-to-br from-blue-500 via-cyan-500 to-teal-500 opacity-0 group-hover:opacity-10 transition-opacity duration-500" />
+						<div
+							className="absolute -inset-[1px] bg-gradient-to-r opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-sm -z-10"
+							style={{ background: "linear-gradient(135deg, rgba(59, 130, 246, 0.4), transparent)" }}
+						/>
+						<CardContent className="p-6 relative">
+							<div className="flex items-start justify-between mb-4">
+								<div className="flex-1">
+									<p className="text-sm font-medium text-muted-foreground mb-1">Total Activity</p>
+									<motion.h3
+										className="text-4xl font-bold tracking-tight bg-gradient-to-br from-blue-500 via-cyan-500 to-teal-500 bg-clip-text text-transparent"
+										initial={{ scale: 0.5 }}
+										animate={{ scale: 1 }}
+										transition={{ duration: 0.5, delay: 0.2, ease: [0.34, 1.56, 0.64, 1] }}
+									>
+										{stats.total}
+									</motion.h3>
+								</div>
+								<motion.div
+									className="p-3 rounded-2xl bg-gradient-to-br from-blue-400/20 to-teal-400/20 backdrop-blur-sm border border-border/50 shadow-lg"
+									whileHover={{ scale: 1.1, rotate: 5 }}
+									transition={{ type: "spring", stiffness: 400, damping: 10 }}
+								>
+									<Activity className="h-6 w-6 text-blue-600 dark:text-blue-100" />
+								</motion.div>
+							</div>
+							<div className="absolute top-0 -right-4 w-8 h-full bg-gradient-to-r from-transparent via-white/5 to-transparent transform rotate-12 group-hover:right-full transition-all duration-1000 ease-out" />
+						</CardContent>
+					</Card>
+				</motion.div>
+
+				{/* Workflow Runs */}
+				<motion.div
+					initial={{ opacity: 0, y: 20 }}
+					animate={{ opacity: 1, y: 0 }}
+					transition={{ duration: 0.5, delay: 0.1 }}
+				>
+					<Card className="group relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+						<div className="absolute inset-0 bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-500 opacity-0 group-hover:opacity-10 transition-opacity duration-500" />
+						<div
+							className="absolute -inset-[1px] bg-gradient-to-r opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-sm -z-10"
+							style={{ background: "linear-gradient(135deg, rgba(168, 85, 247, 0.4), transparent)" }}
+						/>
+						<CardContent className="p-6 relative">
+							<div className="flex items-start justify-between mb-4">
+								<div className="flex-1">
+									<p className="text-sm font-medium text-muted-foreground mb-1">Workflow Runs</p>
+									<motion.h3
+										className="text-4xl font-bold tracking-tight bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-500 bg-clip-text text-transparent"
+										initial={{ scale: 0.5 }}
+										animate={{ scale: 1 }}
+										transition={{ duration: 0.5, delay: 0.3, ease: [0.34, 1.56, 0.64, 1] }}
+									>
+										{stats.workflowCount}
+									</motion.h3>
+								</div>
+								<motion.div
+									className="p-3 rounded-2xl bg-gradient-to-br from-violet-400/20 to-fuchsia-400/20 backdrop-blur-sm border border-border/50 shadow-lg"
+									whileHover={{ scale: 1.1, rotate: 5 }}
+									transition={{ type: "spring", stiffness: 400, damping: 10 }}
+								>
+									<BarChart3 className="h-6 w-6 text-violet-600 dark:text-violet-100" />
+								</motion.div>
+							</div>
+							<div className="absolute top-0 -right-4 w-8 h-full bg-gradient-to-r from-transparent via-white/5 to-transparent transform rotate-12 group-hover:right-full transition-all duration-1000 ease-out" />
+						</CardContent>
+					</Card>
+				</motion.div>
+
+				{/* Task Runs */}
+				<motion.div
+					initial={{ opacity: 0, y: 20 }}
+					animate={{ opacity: 1, y: 0 }}
+					transition={{ duration: 0.5, delay: 0.2 }}
+				>
+					<Card className="group relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+						<div className="absolute inset-0 bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 opacity-0 group-hover:opacity-10 transition-opacity duration-500" />
+						<div
+							className="absolute -inset-[1px] bg-gradient-to-r opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-sm -z-10"
+							style={{ background: "linear-gradient(135deg, rgba(245, 158, 11, 0.4), transparent)" }}
+						/>
+						<CardContent className="p-6 relative">
+							<div className="flex items-start justify-between mb-4">
+								<div className="flex-1">
+									<p className="text-sm font-medium text-muted-foreground mb-1">Task Runs</p>
+									<motion.h3
+										className="text-4xl font-bold tracking-tight bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 bg-clip-text text-transparent"
+										initial={{ scale: 0.5 }}
+										animate={{ scale: 1 }}
+										transition={{ duration: 0.5, delay: 0.4, ease: [0.34, 1.56, 0.64, 1] }}
+									>
+										{stats.taskCount}
+									</motion.h3>
+								</div>
+								<motion.div
+									className="p-3 rounded-2xl bg-gradient-to-br from-amber-400/20 to-red-400/20 backdrop-blur-sm border border-border/50 shadow-lg"
+									whileHover={{ scale: 1.1, rotate: 5 }}
+									transition={{ type: "spring", stiffness: 400, damping: 10 }}
+								>
+									<CheckCircle2 className="h-6 w-6 text-amber-600 dark:text-amber-100" />
+								</motion.div>
+							</div>
+							<div className="absolute top-0 -right-4 w-8 h-full bg-gradient-to-r from-transparent via-white/5 to-transparent transform rotate-12 group-hover:right-full transition-all duration-1000 ease-out" />
+						</CardContent>
+					</Card>
+				</motion.div>
+
+				{/* Failures */}
+				<motion.div
+					initial={{ opacity: 0, y: 20 }}
+					animate={{ opacity: 1, y: 0 }}
+					transition={{ duration: 0.5, delay: 0.3 }}
+				>
+					<Card className="group relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+						<div className="absolute inset-0 bg-gradient-to-br from-red-500 via-rose-500 to-pink-500 opacity-0 group-hover:opacity-10 transition-opacity duration-500" />
+						<div
+							className="absolute -inset-[1px] bg-gradient-to-r opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-sm -z-10"
+							style={{ background: "linear-gradient(135deg, rgba(239, 68, 68, 0.4), transparent)" }}
+						/>
+						<CardContent className="p-6 relative">
+							<div className="flex items-start justify-between mb-4">
+								<div className="flex-1">
+									<p className="text-sm font-medium text-muted-foreground mb-1">Failures</p>
+									<motion.h3
+										className="text-4xl font-bold tracking-tight bg-gradient-to-br from-red-500 via-rose-500 to-pink-500 bg-clip-text text-transparent"
+										initial={{ scale: 0.5 }}
+										animate={{ scale: 1 }}
+										transition={{ duration: 0.5, delay: 0.5, ease: [0.34, 1.56, 0.64, 1] }}
+									>
+										{stats.failed}
+									</motion.h3>
+								</div>
+								<motion.div
+									className="p-3 rounded-2xl bg-gradient-to-br from-red-400/20 to-pink-400/20 backdrop-blur-sm border border-border/50 shadow-lg"
+									whileHover={{ scale: 1.1, rotate: 5 }}
+									transition={{ type: "spring", stiffness: 400, damping: 10 }}
+								>
+									<XCircle className="h-6 w-6 text-red-600 dark:text-red-100" />
+								</motion.div>
+							</div>
+							<div className="absolute top-0 -right-4 w-8 h-full bg-gradient-to-r from-transparent via-white/5 to-transparent transform rotate-12 group-hover:right-full transition-all duration-1000 ease-out" />
+						</CardContent>
+					</Card>
+				</motion.div>
+
+				{/* Avg Duration */}
+				<motion.div
+					initial={{ opacity: 0, y: 20 }}
+					animate={{ opacity: 1, y: 0 }}
+					transition={{ duration: 0.5, delay: 0.4 }}
+				>
+					<Card className="group relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+						<div className="absolute inset-0 bg-gradient-to-br from-emerald-500 via-green-500 to-lime-500 opacity-0 group-hover:opacity-10 transition-opacity duration-500" />
+						<div
+							className="absolute -inset-[1px] bg-gradient-to-r opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-sm -z-10"
+							style={{ background: "linear-gradient(135deg, rgba(34, 197, 94, 0.4), transparent)" }}
+						/>
+						<CardContent className="p-6 relative">
+							<div className="flex items-start justify-between mb-4">
+								<div className="flex-1">
+									<p className="text-sm font-medium text-muted-foreground mb-1">Avg Duration</p>
+									<motion.h3
+										className="text-4xl font-bold tracking-tight bg-gradient-to-br from-emerald-500 via-green-500 to-lime-500 bg-clip-text text-transparent"
+										initial={{ scale: 0.5 }}
+										animate={{ scale: 1 }}
+										transition={{ duration: 0.5, delay: 0.6, ease: [0.34, 1.56, 0.64, 1] }}
+									>
+										{formatDuration(stats.averageDuration)}
+									</motion.h3>
+								</div>
+								<motion.div
+									className="p-3 rounded-2xl bg-gradient-to-br from-emerald-400/20 to-lime-400/20 backdrop-blur-sm border border-border/50 shadow-lg"
+									whileHover={{ scale: 1.1, rotate: 5 }}
+									transition={{ type: "spring", stiffness: 400, damping: 10 }}
+								>
+									<Timer className="h-6 w-6 text-emerald-600 dark:text-emerald-100" />
+								</motion.div>
+							</div>
+							<div className="absolute top-0 -right-4 w-8 h-full bg-gradient-to-r from-transparent via-white/5 to-transparent transform rotate-12 group-hover:right-full transition-all duration-1000 ease-out" />
+						</CardContent>
+					</Card>
+				</motion.div>
 			</div>
 
-			<Card>
+			<Card className="border-0 shadow-lg">
 				<CardHeader>
-					<CardTitle className="text-base">Activity Feed</CardTitle>
+					<CardTitle className="text-lg">Activity Feed</CardTitle>
+					<p className="text-sm text-muted-foreground mt-1">
+						Recent workflow and task execution history
+					</p>
 				</CardHeader>
 				<CardContent className="space-y-3">
 					{loading && <div className="text-sm text-muted-foreground">Loading activity…</div>}
