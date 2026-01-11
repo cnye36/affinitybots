@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { ReasoningDisplay } from "./ReasoningDisplay";
 import { WebSearchResults, extractWebSearchResults } from "./WebSearchResults";
 import { ToolCallBadge } from "./ToolCallBadge";
+import { MemoryBadge } from "@/components/chat/MemoryBadge";
 
 interface MessageProps {
   message: MessageType;
@@ -212,6 +213,11 @@ export const AssistantMessage: FC<MessageProps> = ({ message, isThinking = false
           <ThinkingDots />
         ) : hasContent || hasToolCalls ? (
           <>
+            {message.memorySaved && (
+              <div className="mb-3">
+                <MemoryBadge memory={message.memorySaved} />
+              </div>
+            )}
             {hasContent && (
               <div className="markdown-content">
                 <ReactMarkdown
@@ -365,4 +371,3 @@ export const AssistantMessage: FC<MessageProps> = ({ message, isThinking = false
     </motion.div>
   );
 };
-

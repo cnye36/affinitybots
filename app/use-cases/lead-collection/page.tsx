@@ -7,7 +7,7 @@ import { AgentCard } from "@/components/use-cases/AgentCard"
 import LeadCollectionHeroGraphic from "@/components/use-cases/LeadCollectionHeroGraphic"
 import Link from "next/link"
 import Image from "next/image"
-import { Target, CheckSquare, TrendingUp, Database as DatabaseIcon, Database, CheckCircle, X, ArrowRight, Zap, Clock, Sparkles, Users } from "lucide-react"
+import { Target, CheckSquare, TrendingUp, Database as DatabaseIcon, Database, CheckCircle, X, ArrowRight, ArrowLeft, Zap, Clock, Sparkles, Users } from "lucide-react"
 
 export default function LeadCollectionPage() {
 	const agents = [
@@ -152,8 +152,20 @@ export default function LeadCollectionPage() {
 		<div className="min-h-screen bg-background text-foreground">
 			<Header />
 
+			{/* Back Navigation */}
+			<section className="pt-32 pb-8 px-4">
+				<div className="container mx-auto">
+					<Link href="/use-cases">
+						<Button variant="ghost" className="text-muted-foreground hover:text-foreground">
+							<ArrowLeft className="h-4 w-4 mr-2" />
+							Back to Use Cases Page
+						</Button>
+					</Link>
+				</div>
+			</section>
+
 			{/* Hero Section */}
-			<section className="relative pt-32 pb-20 px-4 overflow-hidden">
+			<section className="relative pt-8 pb-20 px-4 overflow-hidden">
 				<div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 via-amber-500/5 to-transparent" />
 				<div className="absolute top-0 right-0 w-1/3 h-1/3 bg-gradient-to-br from-amber-500/10 to-transparent rounded-full blur-3xl" />
 				<div className="absolute bottom-0 left-0 w-1/3 h-1/3 bg-gradient-to-tr from-orange-500/10 to-transparent rounded-full blur-3xl" />

@@ -5,6 +5,7 @@ import { Thread } from "@/components/chat/Thread";
 import type { ChatMessage } from "@/components/chat/types";
 import { useRef, useEffect, useState, useMemo } from "react";
 import { saveToolApproval } from "@/lib/toolApproval";
+import type { EnhancedMemory } from "@/types/memory";
 import { createBrowserClient } from "@supabase/ssr";
 
 export function Chat({ assistantId, threadId, onThreadId }: { assistantId: string, threadId?: string | null, onThreadId?: (id: string) => void }) {
@@ -137,68 +138,95 @@ export function Chat({ assistantId, threadId, onThreadId }: { assistantId: strin
       }
     });
 
-  const uiMessages: ChatMessage[] = allMessages
-    .filter((m) => m.type === "human" || m.type === "ai")
-    .map((m, idx) => {
-      // Log full message structure for AI messages to debug reasoning tokens
-      if (m.type === "ai") {
-        console.log("[CHAT] AI Message Structure:", {
+  const uiMessages: ChatMessage[] = [];
+  let pendingMemorySaved: EnhancedMemory | null = null;
+
+  for (let idx = 0; idx < allMessages.length; idx++) {
+    const m = allMessages[idx];
+    if (m.type !== "human" && m.type !== "ai") continue;
+
+    // Log full message structure for AI messages to debug reasoning tokens
+    if (m.type === "ai") {
+      console.log("[CHAT] AI Message Structure:", {
+        messageId: m.id || `m-${idx}`,
+        allKeys: Object.keys(m),
+        fullMessage: JSON.stringify(m, null, 2),
+        hasReasoningContent: !!m.reasoning_content,
+        hasResponseMetadata: !!m.response_metadata,
+        responseMetadataKeys: m.response_metadata ? Object.keys(m.response_metadata) : [],
+        responseMetadata: m.response_metadata ? JSON.stringify(m.response_metadata, null, 2) : null,
+        hasToolCalls: !!(m.tool_calls || m.additional_kwargs?.tool_calls),
+        toolCalls: m.tool_calls || m.additional_kwargs?.tool_calls,
+      });
+    }
+
+    // Extract tool calls from AI messages
+    let toolCalls: any[] | undefined;
+    if (m.type === "ai") {
+      const rawToolCalls = m.tool_calls || m.additional_kwargs?.tool_calls;
+
+      // Only log if there are actually tool calls to see
+      if (rawToolCalls && rawToolCalls.length > 0) {
+        console.log("[CHAT] FOUND MESSAGE WITH TOOL CALLS:", {
           messageId: m.id || `m-${idx}`,
-          allKeys: Object.keys(m),
-          fullMessage: JSON.stringify(m, null, 2),
-          hasReasoningContent: !!m.reasoning_content,
-          hasResponseMetadata: !!m.response_metadata,
-          responseMetadataKeys: m.response_metadata ? Object.keys(m.response_metadata) : [],
-          responseMetadata: m.response_metadata ? JSON.stringify(m.response_metadata, null, 2) : null,
-          hasToolCalls: !!(m.tool_calls || m.additional_kwargs?.tool_calls),
-          toolCalls: m.tool_calls || m.additional_kwargs?.tool_calls,
+          toolCallsCount: rawToolCalls.length,
+          rawToolCalls: JSON.stringify(rawToolCalls, null, 2),
+          toolResultsAvailable: Array.from(toolResultsMap.keys()),
         });
       }
 
-      // Extract tool calls from AI messages
-      let toolCalls: any[] | undefined;
-      if (m.type === "ai") {
-        const rawToolCalls = m.tool_calls || m.additional_kwargs?.tool_calls;
-
-        // Only log if there are actually tool calls to see
-        if (rawToolCalls && rawToolCalls.length > 0) {
-          console.log("[CHAT] FOUND MESSAGE WITH TOOL CALLS:", {
-            messageId: m.id || `m-${idx}`,
-            toolCallsCount: rawToolCalls.length,
-            rawToolCalls: JSON.stringify(rawToolCalls, null, 2),
-            toolResultsAvailable: Array.from(toolResultsMap.keys()),
-          });
-        }
-
-        if (rawToolCalls && Array.isArray(rawToolCalls) && rawToolCalls.length > 0) {
-          toolCalls = rawToolCalls.map((tc: any) => ({
-            id: tc.id,
-            name: tc.name || tc.function?.name,
-            args: tc.args || tc.function?.arguments,
-            arguments: tc.args || tc.function?.arguments,
-            // Try to find the result from tool messages
-            result: tc.id ? toolResultsMap.get(tc.id) : undefined,
-          }));
-          console.log("[CHAT] Successfully extracted tool calls for UI:", toolCalls);
-        }
+      if (rawToolCalls && Array.isArray(rawToolCalls) && rawToolCalls.length > 0) {
+        toolCalls = rawToolCalls.map((tc: any) => ({
+          id: tc.id,
+          name: tc.name || tc.function?.name,
+          args: tc.args || tc.function?.arguments,
+          arguments: tc.args || tc.function?.arguments,
+          // Try to find the result from tool messages
+          result: tc.id ? toolResultsMap.get(tc.id) : undefined,
+        }));
+        console.log("[CHAT] Successfully extracted tool calls for UI:", toolCalls);
       }
+    }
 
-      return {
-        id: m.id || `m-${idx}`,
-        role: m.type === "human" ? "user" : "assistant",
-        content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
-        createdAt: new Date(),
-        // Extract reasoning from response metadata (for models like o1/o3)
-        reasoning: m.type === "ai" ? (
-          m.reasoning_content ||
-          m.response_metadata?.reasoning_content ||
-          m.response_metadata?.reasoning ||
-          m.reasoning ||
-          undefined
-        ) : undefined,
-        toolCalls,
-      };
-    });
+    const content = typeof m.content === "string" ? m.content : JSON.stringify(m.content);
+    const memoryData =
+      m.type === "ai" && m.additional_kwargs?.memory_saved && m.additional_kwargs?.memory_data
+        ? (m.additional_kwargs.memory_data as EnhancedMemory)
+        : undefined;
+    const isMemoryMarker = m.type === "ai" && typeof content === "string" && content.startsWith("[MEMORY_SAVED]");
+
+    if (isMemoryMarker) {
+      if (memoryData) {
+        pendingMemorySaved = memoryData;
+      }
+      continue;
+    }
+
+    const message: ChatMessage = {
+      id: m.id || `m-${idx}`,
+      role: m.type === "human" ? "user" : "assistant",
+      content,
+      createdAt: new Date(),
+      // Extract reasoning from response metadata (for models like o1/o3)
+      reasoning: m.type === "ai" ? (
+        m.reasoning_content ||
+        m.response_metadata?.reasoning_content ||
+        m.response_metadata?.reasoning ||
+        m.reasoning ||
+        undefined
+      ) : undefined,
+      toolCalls,
+    };
+
+    if (pendingMemorySaved) {
+      message.memorySaved = pendingMemorySaved;
+      pendingMemorySaved = null;
+    } else if (memoryData) {
+      message.memorySaved = memoryData;
+    }
+
+    uiMessages.push(message);
+  }
 
   
   const handleSend = (text: string, attachments: any[], webSearchEnabled: boolean) => {

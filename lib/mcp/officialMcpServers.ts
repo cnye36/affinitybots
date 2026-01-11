@@ -41,8 +41,9 @@ export interface OfficialMcpServerMeta {
 }
 
 // Curated list of official MCP servers maintained by source vendors.
+// Servers are automatically sorted alphabetically by displayName.
 
-export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
+const _OFFICIAL_MCP_SERVERS_RAW: OfficialMcpServerMeta[] = [
   {
     serverName: "github",
     displayName: "GitHub",
@@ -743,6 +744,11 @@ export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [
   }
 
 ];
+
+// Sort servers alphabetically by displayName (case-insensitive)
+export const OFFICIAL_MCP_SERVERS: OfficialMcpServerMeta[] = [..._OFFICIAL_MCP_SERVERS_RAW].sort((a, b) =>
+  a.displayName.localeCompare(b.displayName, undefined, { sensitivity: "base" })
+);
 
 export function findOfficialServer(serverName: string): OfficialMcpServerMeta | undefined {
   return OFFICIAL_MCP_SERVERS.find((s) => s.serverName === serverName);

@@ -381,16 +381,30 @@ const statusConfig: Record<string, { color: string, glow: string, icon: any }> =
 				result: finalPayload?.data ?? finalPayload ?? null,
 			}
 
+			// Extract text from result if it's a complex object, otherwise use accumulatedText
+			// This matches the behavior of the execution route which extracts text from the thread
+			let resultText = accumulatedText
+			if (!resultText || !resultText.trim()) {
+				// Fallback: try to extract text from the complex result object
+				const extracted = extractTextFromPayload(testResult.result)
+				if (extracted && extracted.trim()) {
+					resultText = extracted
+				}
+			}
+
 			// Broadcast completion so the next node can display it as previous output
+			// Use the extracted text (accumulatedText) as the result, not the complex object
+			// This ensures the next task receives text context, just like in execution mode
 			try {
 				const event = new CustomEvent("taskTestCompleted", {
 					detail: {
 						workflowTaskId: props.data.workflow_task_id,
 						output: {
-							result: testResult?.result ?? accumulatedText ?? null,
+							result: resultText || null, // Use extracted text, not complex object
 							metadata: { 
 								event: testResult?.type,
 								content: testResult?.content ?? accumulatedText,
+								thread_id: (window as any).__lastTestThreadId || null,
 							},
 						},
 					},

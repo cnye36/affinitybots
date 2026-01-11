@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -10,6 +10,14 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import ReactMarkdown from "react-markdown"
 import { WorkflowNode } from "@/types/workflow"
 
 type TaskRunWithThreadData = {
@@ -77,7 +85,140 @@ type InteractionItem =
   | { type: "response"; content: string; timestamp: string; reasoning?: string | null }
   | { type: "tool"; name: string; arguments: any; result: any; timestamp: string }
 
+type ResponseFormat = "json" | "markdown" | "formatted" | "yaml"
+
+// Simple JSON to YAML converter (handles basic cases)
+function jsonToYaml(obj: any, indent = 0): string {
+  const indentStr = "  ".repeat(indent)
+  
+  if (obj === null || obj === undefined) {
+    return "null"
+  }
+  
+  if (typeof obj === "string") {
+    // Escape strings that need quotes
+    if (obj.includes("\n") || obj.includes(":") || obj.includes("#") || obj.trim() !== obj || obj === "") {
+      return JSON.stringify(obj)
+    }
+    // Don't quote simple strings
+    return obj
+  }
+  
+  if (typeof obj === "number" || typeof obj === "boolean") {
+    return String(obj)
+  }
+  
+  if (Array.isArray(obj)) {
+    if (obj.length === 0) return "[]"
+    return obj.map(item => {
+      const itemStr = jsonToYaml(item, indent + 1)
+      const lines = itemStr.split("\n")
+      const firstLine = lines[0]
+      const restLines = lines.length > 1 ? "\n" + lines.slice(1).map(line => indentStr + "  " + line).join("\n") : ""
+      return `${indentStr}- ${firstLine}${restLines}`
+    }).join("\n")
+  }
+  
+  if (typeof obj === "object") {
+    const keys = Object.keys(obj)
+    if (keys.length === 0) return "{}"
+    return keys.map(key => {
+      const value = obj[key]
+      const valueStr = jsonToYaml(value, indent + 1)
+      const lines = valueStr.split("\n")
+      const firstLine = lines[0]
+      const restLines = lines.length > 1 ? "\n" + lines.slice(1).map(line => indentStr + "  " + line).join("\n") : ""
+      return `${indentStr}${key}: ${firstLine}${restLines}`
+    }).join("\n")
+  }
+  
+  return String(obj)
+}
+
+// Format content based on selected format
+function formatContent(
+  content: string,
+  format: ResponseFormat,
+  metadata?: {
+    inputTokens?: number | null
+    outputTokens?: number | null
+    reasoningTokens?: number | null
+    durationMs?: number | null
+    timestamp?: string | null
+    toolCalls?: Array<{ id: string; name: string; arguments: any; result: any; timestamp: string }>
+    reasoning?: string | null
+  }
+): string {
+  if (!content) return ""
+  
+  try {
+    switch (format) {
+      case "json": {
+        // Create enriched object with metadata
+        const enriched: any = {
+          content: content,
+        }
+        
+        if (metadata) {
+          if (metadata.inputTokens != null) enriched.input_tokens = metadata.inputTokens
+          if (metadata.outputTokens != null) enriched.output_tokens = metadata.outputTokens
+          if (metadata.reasoningTokens != null) enriched.reasoning_tokens = metadata.reasoningTokens
+          if (metadata.durationMs != null) enriched.duration_ms = metadata.durationMs
+          if (metadata.timestamp) enriched.timestamp = metadata.timestamp
+          if (metadata.toolCalls && metadata.toolCalls.length > 0) {
+            enriched.tool_calls = metadata.toolCalls.map(call => ({
+              id: call.id,
+              name: call.name,
+              arguments: call.arguments,
+              result: call.result,
+              timestamp: call.timestamp,
+            }))
+          }
+          if (metadata.reasoning) enriched.reasoning = metadata.reasoning
+        }
+        
+        return JSON.stringify(enriched, null, 2)
+      }
+      case "yaml": {
+        // Create enriched object with metadata (same as JSON)
+        const enriched: any = {
+          content: content,
+        }
+        
+        if (metadata) {
+          if (metadata.inputTokens != null) enriched.input_tokens = metadata.inputTokens
+          if (metadata.outputTokens != null) enriched.output_tokens = metadata.outputTokens
+          if (metadata.reasoningTokens != null) enriched.reasoning_tokens = metadata.reasoningTokens
+          if (metadata.durationMs != null) enriched.duration_ms = metadata.durationMs
+          if (metadata.timestamp) enriched.timestamp = metadata.timestamp
+          if (metadata.toolCalls && metadata.toolCalls.length > 0) {
+            enriched.tool_calls = metadata.toolCalls.map(call => ({
+              id: call.id,
+              name: call.name,
+              arguments: call.arguments,
+              result: call.result,
+              timestamp: call.timestamp,
+            }))
+          }
+          if (metadata.reasoning) enriched.reasoning = metadata.reasoning
+        }
+        
+        return jsonToYaml(enriched)
+      }
+      case "markdown":
+      case "formatted":
+        // Return raw content for markdown/formatted (formatted uses ReactMarkdown to render)
+        return content
+      default:
+        return content
+    }
+  } catch {
+    return content
+  }
+}
+
 export function RunDetailPanel({ run, taskRuns, nodes, isLoading }: RunDetailPanelProps) {
+  const [responseFormat, setResponseFormat] = useState<ResponseFormat>("formatted")
   const taskNodeById = useMemo(() => {
     const entries = new Map<string, WorkflowNode>()
     nodes.forEach((node) => {
@@ -119,6 +260,13 @@ export function RunDetailPanel({ run, taskRuns, nodes, isLoading }: RunDetailPan
         agentResponse: null,
         toolCalls: [],
         reasoning: null,
+        metadata: {
+          inputTokens: null,
+          outputTokens: null,
+          reasoningTokens: null,
+          durationMs: taskRun.analytics?.duration_ms ?? null,
+          timestamp: taskRun.started_at,
+        },
       }
     }
 
@@ -167,13 +315,13 @@ export function RunDetailPanel({ run, taskRuns, nodes, isLoading }: RunDetailPan
     }
 
     // Get the most recent (last) AI response
-    const agentResponse = threadData.aiResponses.length > 0
-      ? threadData.aiResponses[threadData.aiResponses.length - 1].content
+    const lastAiResponse = threadData.aiResponses.length > 0
+      ? threadData.aiResponses[threadData.aiResponses.length - 1]
       : null
 
-    const reasoning = threadData.aiResponses.length > 0
-      ? threadData.aiResponses[threadData.aiResponses.length - 1].reasoning_content
-      : null
+    const agentResponse = lastAiResponse?.content ?? null
+    const reasoning = lastAiResponse?.reasoning_content ?? null
+    const responseTimestamp = lastAiResponse?.timestamp ?? taskRun.started_at
 
     // If we didn't extract hand-off context from the message but this isn't the first task,
     // fall back to getting it from the previous task's response
@@ -182,12 +330,26 @@ export function RunDetailPanel({ run, taskRuns, nodes, isLoading }: RunDetailPan
       handoffContext = prevResponses[prevResponses.length - 1].content
     }
 
+    // Extract token usage from metadata if available
+    const metadata = taskRun.metadata || {}
+    const usage = metadata.usage || metadata.token_usage || metadata.usage_metadata || {}
+    const inputTokens = usage.input_tokens ?? usage.prompt_tokens ?? usage.total_input_tokens ?? null
+    const outputTokens = usage.output_tokens ?? usage.completion_tokens ?? usage.total_output_tokens ?? null
+    const reasoningTokens = usage.reasoning_tokens ?? null
+
     return {
       handoffContext,
       userPrompt,
       agentResponse,
       toolCalls: threadData.toolCalls,
       reasoning,
+      metadata: {
+        inputTokens,
+        outputTokens,
+        reasoningTokens,
+        durationMs: taskRun.analytics?.duration_ms ?? null,
+        timestamp: responseTimestamp,
+      },
     }
   }
 
@@ -288,7 +450,20 @@ export function RunDetailPanel({ run, taskRuns, nodes, isLoading }: RunDetailPan
 
           <Card className="border-slate-200/50 dark:border-slate-800/50">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Task Timeline</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium">Task Timeline</CardTitle>
+                <Select value={responseFormat} onValueChange={(value) => setResponseFormat(value as ResponseFormat)}>
+                  <SelectTrigger className="w-[130px] h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="json">JSON</SelectItem>
+                    <SelectItem value="markdown">Markdown</SelectItem>
+                    <SelectItem value="formatted">Formatted</SelectItem>
+                    <SelectItem value="yaml">YAML</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </CardHeader>
             <CardContent>
               {sortedTaskRuns.length === 0 ? (
@@ -352,9 +527,15 @@ export function RunDetailPanel({ run, taskRuns, nodes, isLoading }: RunDetailPan
                                     </AccordionTrigger>
                                     <AccordionContent className="px-2 pb-2">
                                       <div className="text-xs bg-emerald-50/50 dark:bg-emerald-950/20 p-2 rounded border border-emerald-200/50 dark:border-emerald-800/50">
-                                        <div className="whitespace-pre-wrap break-words">
-                                          {interactionData.handoffContext}
-                                        </div>
+                                        {responseFormat === "formatted" ? (
+                                          <div className="prose prose-sm max-w-none dark:prose-invert break-words">
+                                            <ReactMarkdown>{formatContent(interactionData.handoffContext, responseFormat)}</ReactMarkdown>
+                                          </div>
+                                        ) : (
+                                          <div className="whitespace-pre-wrap break-words font-mono">
+                                            {formatContent(interactionData.handoffContext, responseFormat, interactionData.metadata)}
+                                          </div>
+                                        )}
                                       </div>
                                     </AccordionContent>
                                   </AccordionItem>
@@ -370,9 +551,15 @@ export function RunDetailPanel({ run, taskRuns, nodes, isLoading }: RunDetailPan
                                     </AccordionTrigger>
                                     <AccordionContent className="px-2 pb-2">
                                       <div className="text-xs bg-violet-50/50 dark:bg-violet-950/20 p-2 rounded border border-violet-200/50 dark:border-violet-800/50">
-                                        <div className="whitespace-pre-wrap break-words">
-                                          {interactionData.userPrompt}
-                                        </div>
+                                        {responseFormat === "formatted" ? (
+                                          <div className="prose prose-sm max-w-none dark:prose-invert break-words">
+                                            <ReactMarkdown>{formatContent(interactionData.userPrompt, responseFormat)}</ReactMarkdown>
+                                          </div>
+                                        ) : (
+                                          <div className="whitespace-pre-wrap break-words font-mono">
+                                            {formatContent(interactionData.userPrompt, responseFormat, interactionData.metadata)}
+                                          </div>
+                                        )}
                                       </div>
                                     </AccordionContent>
                                   </AccordionItem>
@@ -388,16 +575,26 @@ export function RunDetailPanel({ run, taskRuns, nodes, isLoading }: RunDetailPan
                                     </AccordionTrigger>
                                     <AccordionContent className="px-2 pb-2">
                                       <div className="text-xs bg-blue-50/50 dark:bg-blue-950/20 p-2 rounded border border-blue-200/50 dark:border-blue-800/50">
-                                        <div className="whitespace-pre-wrap break-words">
-                                          {interactionData.agentResponse}
-                                        </div>
-                                        {interactionData.reasoning && (
+                                        {responseFormat === "formatted" ? (
+                                          <div className="prose prose-sm max-w-none dark:prose-invert break-words">
+                                            <ReactMarkdown>{formatContent(interactionData.agentResponse, responseFormat)}</ReactMarkdown>
+                                          </div>
+                                        ) : (
+                                          <div className="whitespace-pre-wrap break-words font-mono">
+                                            {formatContent(interactionData.agentResponse, responseFormat, {
+                                              ...interactionData.metadata,
+                                              toolCalls: interactionData.toolCalls,
+                                              reasoning: interactionData.reasoning,
+                                            })}
+                                          </div>
+                                        )}
+                                        {interactionData.reasoning && responseFormat === "formatted" && (
                                           <div className="mt-2 pt-2 border-t border-blue-200/50 dark:border-blue-800/50">
                                             <div className="text-[10px] font-semibold uppercase text-blue-600/70 dark:text-blue-400/70 mb-1">
                                               Reasoning
                                             </div>
-                                            <div className="text-[10px] text-muted-foreground whitespace-pre-wrap">
-                                              {interactionData.reasoning}
+                                            <div className="text-[10px] prose prose-sm max-w-none dark:prose-invert break-words">
+                                              <ReactMarkdown>{formatContent(interactionData.reasoning, responseFormat)}</ReactMarkdown>
                                             </div>
                                           </div>
                                         )}
@@ -427,16 +624,26 @@ export function RunDetailPanel({ run, taskRuns, nodes, isLoading }: RunDetailPan
                                             <div className="text-[10px] space-y-1">
                                               <div>
                                                 <span className="font-medium">Arguments:</span>
-                                                <pre className="mt-0.5 bg-muted/50 p-1.5 rounded overflow-auto max-h-[120px]">
+                                                <pre className="mt-0.5 bg-muted/50 p-1.5 rounded overflow-auto max-h-[120px] font-mono">
                                                   {JSON.stringify(call.arguments ?? null, null, 2)}
                                                 </pre>
                                               </div>
                                               {call.result != null && (
                                                 <div>
                                                   <span className="font-medium">Result:</span>
-                                                  <pre className="mt-0.5 bg-muted/50 p-1.5 rounded overflow-auto max-h-[120px]">
+                                                  <pre className="mt-0.5 bg-muted/50 p-1.5 rounded overflow-auto max-h-[120px] font-mono">
                                                     {JSON.stringify(call.result ?? null, null, 2)}
                                                   </pre>
+                                                </div>
+                                              )}
+                                              {call.id && (
+                                                <div className="text-[9px] text-muted-foreground">
+                                                  ID: {call.id}
+                                                </div>
+                                              )}
+                                              {call.timestamp && (
+                                                <div className="text-[9px] text-muted-foreground">
+                                                  Timestamp: {new Date(call.timestamp).toLocaleString()}
                                                 </div>
                                               )}
                                             </div>

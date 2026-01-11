@@ -243,49 +243,60 @@ export function PlaygroundChat({
 					}
 				})
 
-			const mappedMessages = allMessages
-				.filter((m) => m.type === "human" || m.type === "ai")
-				.map((m): Message | null => {
-					// Extract tool calls and memory from AI messages
-					let toolCalls: ToolCall[] | undefined
-					let memorySaved: EnhancedMemory | undefined
+			const threadMessages: Message[] = []
+			let pendingMemorySaved: EnhancedMemory | null = null
 
-					if (m.type === "ai") {
-						// Check for tool calls
-						const rawToolCalls = m.tool_calls || m.additional_kwargs?.tool_calls
-						if (rawToolCalls && Array.isArray(rawToolCalls) && rawToolCalls.length > 0) {
-							toolCalls = rawToolCalls.map((tc: any) => ({
-								id: tc.id,
-								name: tc.name || tc.function?.name,
-								args: tc.args || tc.function?.arguments,
-								arguments: tc.args || tc.function?.arguments,
-								result: tc.id ? toolResultsMap.get(tc.id) : undefined,
-							}))
-						}
+			for (const m of allMessages) {
+				if (m.type !== "human" && m.type !== "ai") continue
 
-						// Check for memory saved
-						if (m.additional_kwargs?.memory_saved && m.additional_kwargs?.memory_data) {
-							memorySaved = m.additional_kwargs.memory_data as EnhancedMemory
-							console.log("[PLAYGROUND] Memory saved:", memorySaved)
-						}
+				// Extract tool calls and memory from AI messages
+				let toolCalls: ToolCall[] | undefined
+				let memorySaved: EnhancedMemory | undefined
+
+				if (m.type === "ai") {
+					// Check for tool calls
+					const rawToolCalls = m.tool_calls || m.additional_kwargs?.tool_calls
+					if (rawToolCalls && Array.isArray(rawToolCalls) && rawToolCalls.length > 0) {
+						toolCalls = rawToolCalls.map((tc: any) => ({
+							id: tc.id,
+							name: tc.name || tc.function?.name,
+							args: tc.args || tc.function?.arguments,
+							arguments: tc.args || tc.function?.arguments,
+							result: tc.id ? toolResultsMap.get(tc.id) : undefined,
+						}))
 					}
 
-					// Filter out the [MEMORY_SAVED] marker from content
-					let content = typeof m.content === "string" ? m.content : JSON.stringify(m.content)
-					if (content.startsWith("[MEMORY_SAVED]")) {
-						// Don't show the memory notification as regular content
-						return null
+					// Check for memory saved
+					if (m.additional_kwargs?.memory_saved && m.additional_kwargs?.memory_data) {
+						memorySaved = m.additional_kwargs.memory_data as EnhancedMemory
+						console.log("[PLAYGROUND] Memory saved:", memorySaved)
 					}
+				}
 
-					return {
-						role: m.type === "human" ? ("user" as const) : ("assistant" as const),
-						content,
-						toolCalls,
-						memorySaved,
+				// Filter out the [MEMORY_SAVED] marker from content
+				const content = typeof m.content === "string" ? m.content : JSON.stringify(m.content)
+				if (m.type === "ai" && content.startsWith("[MEMORY_SAVED]")) {
+					if (memorySaved) {
+						pendingMemorySaved = memorySaved
 					}
-				})
+					continue
+				}
 
-			const threadMessages: Message[] = mappedMessages.filter((m): m is Message => m !== null)
+				const message: Message = {
+					role: m.type === "human" ? ("user" as const) : ("assistant" as const),
+					content,
+					toolCalls,
+				}
+
+				if (pendingMemorySaved) {
+					message.memorySaved = pendingMemorySaved
+					pendingMemorySaved = null
+				} else if (memorySaved) {
+					message.memorySaved = memorySaved
+				}
+
+				threadMessages.push(message)
+			}
 
 			setMessages(threadMessages)
 		}

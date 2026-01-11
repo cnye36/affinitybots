@@ -58,6 +58,7 @@ export function WorkflowBuilder() {
   const [triggers, setTriggers] = useState<any[]>([])
   const [viewMode, setViewMode] = useState<"editor" | "executions">("editor")
   const [executionRunId, setExecutionRunId] = useState<string | null>(null)
+  const hasOutputNode = useMemo(() => nodes.some((node) => node.type === "output"), [nodes])
   
   // Handle execution parameter from URL
   useEffect(() => {
@@ -878,6 +879,65 @@ export function WorkflowBuilder() {
     router.push(`/agents/new?redirect=${encodeURIComponent(currentUrl)}`)
   }, [router, workflowId])
 
+  const handleAddOutputNode = useCallback(async () => {
+    if (!workflowId) return
+    if (hasOutputNode) {
+      toast({
+        title: "Output node already added",
+        description: "Only one Output node is allowed per workflow.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const outputId = `output-${Date.now()}`
+    const newNode: WorkflowNode = {
+      id: outputId,
+      type: "output",
+      position: { x: 650, y: 100 },
+      data: {
+        id: outputId,
+        label: "End",
+        description: "Workflow result",
+        status: "idle",
+        workflowType: workflowType || "sequential",
+        onConfigureOutput: (outputNodeId: string) => {
+          openModal("output-panel", { outputId: outputNodeId })
+        },
+      },
+    }
+
+    const updatedNodes = [...nodes, newNode]
+    const layoutedNodes = calculateLayout(updatedNodes, edges, {
+      workflowType: workflowType || "sequential",
+    })
+
+    setNodes(layoutedNodes)
+
+    const { error } = await supabase
+      .from("workflows")
+      .update({ nodes: layoutedNodes })
+      .eq("workflow_id", workflowId)
+
+    if (error) {
+      console.error("Error saving output node:", error)
+      toast({
+        title: "Failed to add output node",
+        variant: "destructive",
+      })
+    }
+  }, [
+    workflowId,
+    hasOutputNode,
+    nodes,
+    edges,
+    workflowType,
+    calculateLayout,
+    setNodes,
+    supabase,
+    openModal,
+  ])
+
   const handleSaveOrchestratorConfig = useCallback(
     async (config: any) => {
       if (!workflowId) return
@@ -1241,6 +1301,14 @@ export function WorkflowBuilder() {
               status: "idle" as const,
             },
           } as WorkflowNode
+        } else if (node.type === "output") {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              status: "running" as const,
+            },
+          } as WorkflowNode
         }
         return node
       })
@@ -1334,7 +1402,20 @@ export function WorkflowBuilder() {
             } catch {}
           }
 
-          if (eventType === "done") {
+        if (eventType === "done") {
+            setNodes((nodes) =>
+              nodes.map((node) =>
+                node.type === "output"
+                  ? ({
+                      ...node,
+                      data: {
+                        ...node.data,
+                        status: "completed",
+                      },
+                    } as WorkflowNode)
+                  : node
+              )
+            )
             // Set all trigger nodes to completed status
             setNodes((nodes) =>
               nodes.map((node) =>
@@ -1356,6 +1437,19 @@ export function WorkflowBuilder() {
           }
 
           if (eventType === "error") {
+            setNodes((nodes) =>
+              nodes.map((node) =>
+                node.type === "output"
+                  ? ({
+                      ...node,
+                      data: {
+                        ...node.data,
+                        status: "error",
+                      },
+                    } as WorkflowNode)
+                  : node
+              )
+            )
             // Set all trigger nodes to error status
             setNodes((nodes) =>
               nodes.map((node) =>
@@ -1381,6 +1475,19 @@ export function WorkflowBuilder() {
       setNodes((nodes) =>
         nodes.map((node) =>
           node.type === "trigger"
+            ? ({
+                ...node,
+                data: {
+                  ...node.data,
+                  status: "error",
+                },
+              } as WorkflowNode)
+            : node
+        )
+      )
+      setNodes((nodes) =>
+        nodes.map((node) =>
+          node.type === "output"
             ? ({
                 ...node,
                 data: {
@@ -1420,6 +1527,8 @@ export function WorkflowBuilder() {
             workflowType={workflowType || undefined}
             isActive={isWorkflowActive}
             onActiveToggle={(isActive) => setIsWorkflowActive(isActive)}
+            onAddOutput={handleAddOutputNode}
+            hasOutputNode={hasOutputNode}
           />
 
           <div className="flex-1 relative">

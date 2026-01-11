@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Zap, Loader2, Brain, ArrowRight } from "lucide-react"
+import { ArrowLeft, Zap, Loader2, Brain, ArrowRight, CheckCircle2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { WorkflowActiveToggle } from "./WorkflowActiveToggle"
 
@@ -20,6 +20,8 @@ interface WorkflowHeaderProps {
 	workflowType?: "sequential" | "orchestrator",
 	isActive?: boolean,
 	onActiveToggle?: (isActive: boolean) => void,
+	onAddOutput?: () => void,
+	hasOutputNode?: boolean,
 }
 
 export function WorkflowHeader({
@@ -35,6 +37,8 @@ export function WorkflowHeader({
 	workflowType = "sequential",
 	isActive = false,
 	onActiveToggle,
+	onAddOutput,
+	hasOutputNode = false,
 }: WorkflowHeaderProps) {
 	return (
 		<div className="relative bg-gradient-to-br from-blue-50/80 via-cyan-50/60 to-indigo-50/80 dark:from-blue-950/30 dark:via-cyan-950/20 dark:to-indigo-950/30 border-b border-blue-200/50 dark:border-blue-800/30 backdrop-blur-sm">
@@ -146,6 +150,27 @@ export function WorkflowHeader({
 					)}
 
 					{/* Execute Button with emerald gradient */}
+					{workflowId && mode === "editor" && onAddOutput && (
+						<Button
+							variant="outline"
+							onClick={onAddOutput}
+							disabled={hasOutputNode}
+							className={cn(
+								"group flex items-center gap-2",
+								"border-2 border-cyan-200/60 dark:border-cyan-800/60",
+								"bg-white/70 dark:bg-gray-900/60 backdrop-blur-sm",
+								"text-cyan-700 dark:text-cyan-300",
+								"hover:bg-cyan-50/70 hover:text-cyan-800 dark:hover:bg-cyan-950/40",
+								"disabled:opacity-50 disabled:cursor-not-allowed",
+							)}
+							title={hasOutputNode ? "Output node already added" : "Add output node"}
+						>
+							<CheckCircle2 className="h-4 w-4" />
+							<span className="hidden sm:inline">Add Output</span>
+							<span className="sm:hidden">Output</span>
+						</Button>
+					)}
+
 					<Button
 						onClick={onExecute}
 						disabled={executing}

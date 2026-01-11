@@ -29,6 +29,8 @@ export default function PricingPage() {
         "Up to 10 AI agents",
         "3 active workflows*",
         "5,000 AI credits per month",
+        "50 Knowledge Documents per Agent",
+        "10 Knowledge URLs per Agent",
         "Unlimited integrations",
         "Basic templates",
         "Email support",
@@ -52,6 +54,8 @@ export default function PricingPage() {
         "Up to 50 AI agents",
         "25 active workflows*",
         "25,000 AI credits per month",
+        "250 Knowledge Documents per Agent",
+        "50 Knowledge URLs per Agent",
         "Unlimited integrations",
         "Advanced templates",
         "Priority support",
@@ -76,6 +80,8 @@ export default function PricingPage() {
         "Unlimited AI agents",
         "Unlimited workflows",
         "Unlimited AI credits",
+        "Unlimited Knowledge Documents",
+        "Unlimited Knowledge URLs",
         "Custom model training",
         "Dedicated support",
         "White-label solution",
@@ -284,6 +290,12 @@ export default function PricingPage() {
                     <td className="py-4 px-6 text-center text-foreground">Unlimited</td>
                   </tr>
                   <tr className="border-b border-border hover:bg-muted/30 transition-colors">
+                    <td className="py-4 px-6 text-foreground">Knowledge Base</td>
+                    <td className="py-4 px-6 text-center text-muted-foreground">50 Docs/Agent</td>
+                    <td className="py-4 px-6 text-center text-foreground bg-primary/5">250 Docs/Agent</td>
+                    <td className="py-4 px-6 text-center text-foreground">Unlimited</td>
+                  </tr>
+                  <tr className="border-b border-border hover:bg-muted/30 transition-colors">
                     <td className="py-4 px-6 text-foreground">Draft Workflows</td>
                     <td className="py-4 px-6 text-center text-muted-foreground">
                       <Check className="h-5 w-5 text-green-500 inline" />
@@ -307,6 +319,19 @@ export default function PricingPage() {
                       <Check className="h-5 w-5 text-green-500 inline" />
                     </td>
                   </tr>
+                  <tr className="border-b border-border hover:bg-muted/30 transition-colors">
+                    <td className="py-4 px-6 text-foreground">Long-Term Memory</td>
+                    <td className="py-4 px-6 text-center text-muted-foreground">
+                      <Check className="h-5 w-5 text-green-500 inline" />
+                    </td>
+                    <td className="py-4 px-6 text-center bg-primary/5">
+                      <Check className="h-5 w-5 text-green-500 inline" />
+                    </td>
+                    <td className="py-4 px-6 text-center">
+                      <Check className="h-5 w-5 text-green-500 inline" />
+                    </td>
+                  </tr>
+                  
 
                   <tr className="border-b border-border">
                     <td colSpan={4} className="py-3 px-6 text-sm font-semibold text-muted-foreground bg-muted/50">
@@ -355,52 +380,23 @@ export default function PricingPage() {
                     <td className="py-4 px-6 text-center text-foreground bg-primary/5">Advanced</td>
                     <td className="py-4 px-6 text-center text-foreground">Advanced</td>
                   </tr>
-                  <tr className="border-b border-border hover:bg-muted/30 transition-colors">
-                    <td className="py-4 px-6 text-foreground">API Access</td>
-                    <td className="py-4 px-6 text-center text-muted-foreground">
-                      <Check className="h-5 w-5 text-green-500 inline" />
-                    </td>
-                    <td className="py-4 px-6 text-center bg-primary/5">
-                      <Check className="h-5 w-5 text-green-500 inline" />
-                    </td>
-                    <td className="py-4 px-6 text-center">
-                      <Check className="h-5 w-5 text-green-500 inline" />
-                    </td>
-                  </tr>
+                  
 
                   <tr className="border-b border-border">
                     <td colSpan={4} className="py-3 px-6 text-sm font-semibold text-muted-foreground bg-muted/50">
                       ADVANCED FEATURES
                     </td>
                   </tr>
-                  <tr className="border-b border-border hover:bg-muted/30 transition-colors">
-                    <td className="py-4 px-6 text-foreground">Custom Branding</td>
-                    <td className="py-4 px-6 text-center text-muted-foreground">-</td>
-                    <td className="py-4 px-6 text-center bg-primary/5">
-                      <Check className="h-5 w-5 text-green-500 inline" />
-                    </td>
-                    <td className="py-4 px-6 text-center">
-                      <Check className="h-5 w-5 text-green-500 inline" />
-                    </td>
-                  </tr>
+                  
                   <tr className="border-b border-border hover:bg-muted/30 transition-colors">
                     <td className="py-4 px-6 text-foreground">Team Collaboration</td>
                     <td className="py-4 px-6 text-center text-muted-foreground">-</td>
-                    <td className="py-4 px-6 text-center bg-primary/5">
-                      <Check className="h-5 w-5 text-green-500 inline" />
-                    </td>
-                    <td className="py-4 px-6 text-center">
-                      <Check className="h-5 w-5 text-green-500 inline" />
-                    </td>
-                  </tr>
-                  <tr className="border-b border-border hover:bg-muted/30 transition-colors">
-                    <td className="py-4 px-6 text-foreground">White-label Solution</td>
                     <td className="py-4 px-6 text-center text-muted-foreground">-</td>
-                    <td className="py-4 px-6 text-center text-muted-foreground bg-primary/5">-</td>
                     <td className="py-4 px-6 text-center">
                       <Check className="h-5 w-5 text-green-500 inline" />
                     </td>
                   </tr>
+                  
                   <tr className="border-b border-border hover:bg-muted/30 transition-colors">
                     <td className="py-4 px-6 text-foreground">Custom Model Training</td>
                     <td className="py-4 px-6 text-center text-muted-foreground">-</td>

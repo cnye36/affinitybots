@@ -20,7 +20,7 @@ export async function generateChatName(conversation: string): Promise<string> {
     }
 
     const model = new ChatOpenAI({
-      modelName: "gpt-4o-mini",
+      model: "gpt-4o-mini",
       openAIApiKey: process.env.OPENAI_API_KEY,
       temperature: 0.3, // Lower temperature for more consistent titles
       maxTokens: 20, // Limit tokens for short titles

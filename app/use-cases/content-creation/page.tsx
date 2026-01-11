@@ -6,7 +6,7 @@ import { MotionDiv } from "@/components/motion/MotionDiv"
 import { AgentCard } from "@/components/use-cases/AgentCard"
 import ContentCreationHeroGraphic from "@/components/use-cases/ContentCreationHeroGraphic"
 import Link from "next/link"
-import { FileText, Search, Edit, Share2, Database, CheckCircle, X, ArrowRight, Zap, Clock, Sparkles, TrendingUp } from "lucide-react"
+import { FileText, Search, Edit, Share2, Database, CheckCircle, X, ArrowRight, ArrowLeft, Zap, Clock, Sparkles, TrendingUp } from "lucide-react"
 import Image from "next/image"
 
 export default function ContentCreationPage() {
@@ -146,8 +146,20 @@ export default function ContentCreationPage() {
 		<div className="min-h-screen bg-background text-foreground">
 			<Header />
 
+			{/* Back Navigation */}
+			<section className="pt-32 pb-8 px-4">
+				<div className="container mx-auto">
+					<Link href="/use-cases">
+						<Button variant="ghost" className="text-muted-foreground hover:text-foreground">
+							<ArrowLeft className="h-4 w-4 mr-2" />
+							Back to Use Cases Page
+						</Button>
+					</Link>
+				</div>
+			</section>
+
 			{/* Hero Section - Redesigned */}
-			<section className="relative pt-32 pb-20 px-4 overflow-hidden">
+			<section className="relative pt-8 pb-20 px-4 overflow-hidden">
 				{/* Animated gradient background */}
 				<div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-blue-500/5 to-transparent" />
 				<div className="absolute top-0 right-0 w-1/3 h-1/3 bg-gradient-to-br from-purple-500/10 to-transparent rounded-full blur-3xl" />

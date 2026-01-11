@@ -210,7 +210,7 @@ export async function generateAgentName(
   ownerId: string
 ): Promise<string> {
   const model = new ChatOpenAI({
-    modelName: "gpt-4.1-mini",
+    model: "gpt-4o-mini",
     maxRetries: 2,
     timeout: 30000, // 30 second timeout
   });
@@ -285,7 +285,7 @@ export async function generateAgentConfiguration(
   }
 
   const llm = new ChatOpenAI({
-    model: "gpt-4.1-mini",
+    model: "gpt-5-mini",
     maxRetries: 2,
     timeout: 45000, // 45 second timeout
   });

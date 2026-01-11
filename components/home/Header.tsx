@@ -73,64 +73,64 @@ export function Header() {
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center space-x-6">
-          <Link
-            href="/features"
-            className="text-md font-medium hover:text-primary"
-          >
-            Features
-          </Link>
-
           <DropdownMenu>
             <DropdownMenuTrigger className="flex items-center gap-1 text-md font-medium hover:text-primary outline-none">
-              Use Cases
+              Features
               <ChevronDown className="h-4 w-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-56">
               <DropdownMenuItem asChild>
-                <Link href="/use-cases/sales-automation" className="cursor-pointer">
-                  Sales Automation
+                <Link href="/integrations" className="cursor-pointer">
+                  Integrations
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href="/use-cases/customer-support" className="cursor-pointer">
-                  Customer Support
+                <Link href="/features/ai-agents" className="cursor-pointer">
+                  AI Agents
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href="/use-cases/content-creation" className="cursor-pointer">
-                  Content Creation
+                <Link href="/features/workflows" className="cursor-pointer">
+                  Workflows
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href="/use-cases/hr-recruitment" className="cursor-pointer">
-                  HR & Recruitment
+                <Link href="/features/knowledge" className="cursor-pointer">
+                  Knowledge & Memory
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href="/use-cases/lead-collection" className="cursor-pointer">
-                  Lead Collection
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/use-cases/data-analysis" className="cursor-pointer">
-                  Data Analysis
+                <Link href="/features/playground" className="cursor-pointer">
+                  Playground
                 </Link>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <Link
-            href="/docs"
-            className="text-md font-medium hover:text-primary"
-          >
-            Docs
-          </Link>
-          <Link
-            href="/blog"
-            className="text-md font-medium hover:text-primary"
-          >
-            Blog
-          </Link>
+          <DropdownMenu>
+            <DropdownMenuTrigger className="flex items-center gap-1 text-md font-medium hover:text-primary outline-none">
+              Resources
+              <ChevronDown className="h-4 w-4" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56">
+              <DropdownMenuItem asChild>
+                <Link href="/use-cases" className="cursor-pointer">
+                  Use Cases
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/docs" className="cursor-pointer">
+                  Docs
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/blog" className="cursor-pointer">
+                  Blog
+                </Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           <Link
             href="/pricing"
             className="text-md font-medium hover:text-primary"
@@ -191,60 +191,74 @@ export function Header() {
         {mobileMenuOpen && (
           <div className="md:hidden absolute top-full left-0 right-0 bg-background shadow-lg border-b border-border">
             <nav className="container mx-auto px-4 py-4 flex flex-col space-y-4">
-              <Link
-                href="/features"
-                className="text-md font-medium hover:text-primary py-2"
-                onClick={handleNavClick}
-              >
-                Features
-              </Link>
-
               <div className="py-2">
                 <div className="text-md font-medium text-gray-900 dark:text-gray-100 mb-2">
-                  Use Cases
+                  Features
                 </div>
                 <div className="pl-4 space-y-2">
                   <Link
-                    href="/use-cases/sales-automation"
+                    href="/integrations"
                     className="block text-sm text-gray-600 dark:text-gray-400 hover:text-primary py-1"
                     onClick={handleNavClick}
                   >
-                    Sales Automation
+                    Integrations
                   </Link>
                   <Link
-                    href="/use-cases/customer-support"
+                    href="/features/ai-agents"
                     className="block text-sm text-gray-600 dark:text-gray-400 hover:text-primary py-1"
                     onClick={handleNavClick}
                   >
-                    Customer Support
+                    AI Agents
                   </Link>
                   <Link
-                    href="/use-cases/content-creation"
+                    href="/features/workflows"
                     className="block text-sm text-gray-600 dark:text-gray-400 hover:text-primary py-1"
                     onClick={handleNavClick}
                   >
-                    Content Creation
+                    Workflows
                   </Link>
                   <Link
-                    href="/use-cases/hr-recruitment"
+                    href="/features/knowledge"
                     className="block text-sm text-gray-600 dark:text-gray-400 hover:text-primary py-1"
                     onClick={handleNavClick}
                   >
-                    HR & Recruitment
+                    Knowledge & Memory
                   </Link>
                   <Link
-                    href="/use-cases/lead-collection"
+                    href="/features/playground"
                     className="block text-sm text-gray-600 dark:text-gray-400 hover:text-primary py-1"
                     onClick={handleNavClick}
                   >
-                    Lead Collection
+                    Playground
+                  </Link>
+                </div>
+              </div>
+
+              <div className="py-2">
+                <div className="text-md font-medium text-gray-900 dark:text-gray-100 mb-2">
+                  Resources
+                </div>
+                <div className="pl-4 space-y-2">
+                  <Link
+                    href="/use-cases"
+                    className="block text-sm text-gray-600 dark:text-gray-400 hover:text-primary py-1"
+                    onClick={handleNavClick}
+                  >
+                    Use Cases
                   </Link>
                   <Link
-                    href="/use-cases/data-analysis"
+                    href="/docs"
                     className="block text-sm text-gray-600 dark:text-gray-400 hover:text-primary py-1"
                     onClick={handleNavClick}
                   >
-                    Data Analysis
+                    Docs
+                  </Link>
+                  <Link
+                    href="/blog"
+                    className="block text-sm text-gray-600 dark:text-gray-400 hover:text-primary py-1"
+                    onClick={handleNavClick}
+                  >
+                    Blog
                   </Link>
                 </div>
               </div>
@@ -257,18 +271,11 @@ export function Header() {
                 Pricing
               </Link>
               <Link
-                href="/docs"
+                href="/contact"
                 className="text-md font-medium hover:text-primary py-2"
                 onClick={handleNavClick}
               >
-                Docs
-              </Link>
-              <Link
-                href="/blog"
-                className="text-md font-medium hover:text-primary py-2"
-                onClick={handleNavClick}
-              >
-                Blog
+                Contact
               </Link>
               <Link
                 href="/pricing"

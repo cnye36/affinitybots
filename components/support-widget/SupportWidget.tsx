@@ -10,7 +10,8 @@ import { useSupportChat } from "./useSupportChat"
 /**
  * Main support widget container
  * Manages state and conditionally renders bubble or chat window
- * Only visible on public pages (not in /app routes)
+ * Visible on all public pages (anywhere auth isn't required)
+ * Hidden on authenticated app routes (dashboard, agents, workflows, etc.)
  */
 export function SupportWidget() {
 	const [isOpen, setIsOpen] = useState(false)
@@ -20,25 +21,26 @@ export function SupportWidget() {
 	const { messages, isLoading, error, sendMessage, clearChat } = useSupportChat()
 
 	// Determine if widget should be visible
-	// Only show on public marketing pages, not in authenticated app
-	const publicRoutes = [
-		"/",
-		"/pricing",
-		"/features",
-		"/blog",
-		"/privacy",
-		"/terms",
-		"/about",
-		"/contact",
+	// Show on all public pages (anywhere auth isn't required)
+	// Hide only on authenticated app routes
+	const authenticatedRoutes = [
+		"/dashboard",
+		"/agents",
+		"/analytics",
+		"/admin",
+		"/playground",
+		"/settings",
+		"/tools",
+		"/workflows",
+		"/use-case-demo",
 	]
 
-	const isPublicPage = publicRoutes.some((route) => {
-		// Exact match for homepage, starts with for others (e.g., /blog/post-slug)
-		return pathname === route || (route !== "/" && pathname.startsWith(route))
+	const isAuthenticatedRoute = authenticatedRoutes.some((route) => {
+		return pathname.startsWith(route)
 	})
 
-	// Don't render on non-public pages (authenticated app)
-	if (!isPublicPage) {
+	// Don't render on authenticated app routes
+	if (isAuthenticatedRoute) {
 		return null
 	}
 

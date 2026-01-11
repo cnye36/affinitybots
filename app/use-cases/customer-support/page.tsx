@@ -7,7 +7,7 @@ import { MotionDiv } from "@/components/motion/MotionDiv"
 import { AgentCard } from "@/components/use-cases/AgentCard"
 import CustomerSupportHeroGraphic from "@/components/use-cases/CustomerSupportHeroGraphic"
 import Link from "next/link"
-import { Users, Mail, MessageSquare, Database, CheckCircle, X, ArrowRight, Zap, Bot, Target, Clock, Shield, Sparkles } from "lucide-react"
+import { Users, Mail, MessageSquare, Database, CheckCircle, X, ArrowRight, ArrowLeft, Zap, Bot, Target, Clock, Shield, Sparkles } from "lucide-react"
 import Image from "next/image"
 
 export default function CustomerSupportPage() {
@@ -159,8 +159,20 @@ export default function CustomerSupportPage() {
 		<div className="min-h-screen bg-background text-foreground">
 			<Header />
 
+			{/* Back Navigation */}
+			<section className="pt-32 pb-8 px-4">
+				<div className="container mx-auto">
+					<Link href="/use-cases">
+						<Button variant="ghost" className="text-muted-foreground hover:text-foreground">
+							<ArrowLeft className="h-4 w-4 mr-2" />
+							Back to Use Cases Page
+						</Button>
+					</Link>
+				</div>
+			</section>
+
 			{/* Hero Section - Redesigned */}
-			<section className="relative pt-32 pb-20 px-4 overflow-hidden">
+			<section className="relative pt-8 pb-20 px-4 overflow-hidden">
 				{/* Animated gradient background */}
 				<div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 via-blue-500/5 to-transparent" />
 				<div className="absolute top-0 right-0 w-1/3 h-1/3 bg-gradient-to-br from-blue-500/10 to-transparent rounded-full blur-3xl" />

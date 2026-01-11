@@ -94,15 +94,33 @@ export async function POST(
               const promptText = task.config?.input?.prompt || input?.prompt || "";
 
               // Extract previous output text
+              // Helper to extract text from complex objects (similar to execution route)
+              const extractTextFromResult = (result: unknown): string => {
+                if (typeof result === "string") return result
+                if (result == null) return ""
+                if (typeof result === "object") {
+                  // Try to extract text from common structures
+                  const obj = result as any
+                  if (typeof obj.content === "string") return obj.content
+                  if (Array.isArray(obj.content)) {
+                    return obj.content
+                      .map((part: any) => (typeof part === "string" ? part : typeof part?.text === "string" ? part.text : ""))
+                      .filter(Boolean)
+                      .join("")
+                  }
+                  if (typeof obj.text === "string") return obj.text
+                  if (typeof obj.result === "string") return obj.result
+                  // Fallback to JSON stringify
+                  return JSON.stringify(result, null, 2)
+                }
+                return String(result)
+              }
+
               const previousText = previousOutputFromClient
-                ? (typeof previousOutputFromClient === "string"
-                    ? previousOutputFromClient
-                    : JSON.stringify(previousOutputFromClient, null, 2))
-                : (typeof (input as any)?.previous_output === "string"
-                    ? (input as any).previous_output
-                    : ((input as any)?.previous_output
-                        ? JSON.stringify((input as any).previous_output, null, 2)
-                        : ""));
+                ? extractTextFromResult(previousOutputFromClient)
+                : (input as any)?.previous_output
+                  ? extractTextFromResult((input as any).previous_output)
+                  : "";
 
               // Build final prompt with optional auto-injection
               let finalPrompt = promptText;

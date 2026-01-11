@@ -50,7 +50,7 @@ export function OutputDetailPanel({
 
 	useEffect(() => {
 		fetchLatestRun()
-	}, [workflowId])
+	}, [workflowId, outputNodeId])
 
 	const handleRefresh = async () => {
 		setRefreshing(true)

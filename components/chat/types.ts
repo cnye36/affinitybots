@@ -1,3 +1,5 @@
+import type { EnhancedMemory } from "@/types/memory"
+
 export interface ToolCall {
   id: string
   name: string
@@ -15,11 +17,11 @@ export interface ChatMessage {
   createdAt?: Date
   reasoning?: string // Reasoning tokens from models like o1/o3
   toolCalls?: ToolCall[]
+  memorySaved?: EnhancedMemory
   pendingApproval?: {
     toolCalls: ToolCall[]
     onApprove: (approvedTools: ToolCall[], approvalType: "once" | "always-tool" | "always-integration") => void
     onDeny: () => void
   }
 }
-
 

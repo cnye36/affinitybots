@@ -10,9 +10,12 @@ import Link from "next/link"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import type { DisplayMemory, MemoryCategory, MemorySortBy } from "@/types/memory"
 import { MemoryCard } from "@/components/memories/MemoryCard"
 import { CATEGORY_INFO, groupByCategory, sortMemories } from "@/lib/memory/formatting"
+import { useAgent } from "@/hooks/useAgent"
+import type { Assistant } from "@/types/assistant"
 
 export default function MemoriesPage() {
 	const { id } = useParams()
@@ -22,6 +25,9 @@ export default function MemoriesPage() {
 	const [selectedCategory, setSelectedCategory] = useState<MemoryCategory | "all">("all")
 	const [sortBy, setSortBy] = useState<MemorySortBy>("importance")
 	const [searchQuery, setSearchQuery] = useState("")
+	
+	// Fetch agent data
+	const { assistant, isLoading: agentLoading } = useAgent(id as string)
 
 	useEffect(() => {
 		async function fetchMemories() {
@@ -121,15 +127,44 @@ export default function MemoriesPage() {
 		count: mems.length,
 	}))
 
+	// Get agent info for display
+	const avatarUrl = assistant?.metadata?.agent_avatar
+	const avatarFallback = assistant?.name?.charAt(0).toUpperCase() || "A"
+
 	return (
 		<div className="container py-8 max-w-6xl">
-			<div className="flex items-center mb-6">
-				<Button variant="ghost" size="icon" asChild className="mr-2">
+			<div className="flex items-center mb-6 gap-4">
+				<Button variant="ghost" size="icon" asChild>
 					<Link href={`/agents/${id}`}>
 						<ArrowLeft className="h-4 w-4" />
 					</Link>
 				</Button>
-				<h1 className="text-2xl font-bold">Agent Memories</h1>
+				{assistant && (
+					<div className="flex items-center gap-3">
+						<Avatar className="h-10 w-10 border-2 border-border">
+							{avatarUrl ? (
+								<AvatarImage src={avatarUrl} alt={assistant.name} />
+							) : (
+								<AvatarFallback
+									className="bg-gradient-to-br from-violet-500 to-purple-500 text-white font-semibold"
+									style={{
+										backgroundColor: `hsl(${
+											(assistant.name.length * 30) % 360
+										}, 70%, 50%)`,
+									}}
+								>
+									{avatarFallback}
+								</AvatarFallback>
+							)}
+						</Avatar>
+						<h1 className="text-2xl font-bold">
+							{assistant.name} Memories
+						</h1>
+					</div>
+				)}
+				{!assistant && !agentLoading && (
+					<h1 className="text-2xl font-bold">Agent Memories</h1>
+				)}
 			</div>
 
 			{error && (

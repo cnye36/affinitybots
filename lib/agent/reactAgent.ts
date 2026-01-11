@@ -10,6 +10,7 @@ import { AgentState, ToolNode } from "@langchain/langgraph/prebuilt";
 import {
   StateGraph,
   MessagesAnnotation,
+  Annotation,
   InMemoryStore,
   LangGraphRunnableConfig,
 } from "@langchain/langgraph";
@@ -26,6 +27,18 @@ import { createWebSearchTool } from "../tavilySearch";
 import type { EnhancedMemory, MemoryIntent, MemoryExtraction, DisplayMemory } from "@/types/memory";
 import { INTENT_DETECTION_PROMPT, MEMORY_EXTRACTION_PROMPT } from "../memory/prompts";
 import { formatMemoriesForPrompt, selectTopMemories, findSimilarMemory } from "../memory/formatting";
+
+// Define custom state annotation that extends MessagesAnnotation with memory extraction flag
+const AgentStateAnnotation = Annotation.Root({
+	messages: Annotation({
+		reducer: (current: BaseMessage[], update: BaseMessage[]) => current.concat(update),
+		default: () => [],
+	}),
+	should_extract_memory: Annotation<boolean>({
+		reducer: (_: boolean, update: boolean) => update,
+		default: () => false,
+	}),
+})
 
 // Local fallback store for development. On LangGraph Platform, a persistent
 // store is injected into config.store; we only use this if none is provided.
@@ -97,7 +110,7 @@ async function createMcpClientAndTools(
 }
 
 // Function to detect if user wants something remembered
-async function detectMemoryIntent(state: AgentState, config: LangGraphRunnableConfig) {
+async function detectMemoryIntent(state: typeof AgentStateAnnotation.State, config: LangGraphRunnableConfig) {
 	const configurable =
 		(config.configurable as {
 			user_id?: string
@@ -109,51 +122,78 @@ async function detectMemoryIntent(state: AgentState, config: LangGraphRunnableCo
 
 	// Skip intent detection if memory is disabled or no assistantId
 	if (!assistantId || !memoryEnabled) {
-		return { messages: state.messages, should_extract_memory: false }
+		return { messages: [], should_extract_memory: false }
 	}
 
-	// We only analyze the most recent user message
-	const userMessage = state.messages.at(-1)
-	if (!userMessage || !(userMessage instanceof HumanMessage)) {
-		return { messages: state.messages, should_extract_memory: false }
+	// We only analyze the most recent user message (system messages may be appended last)
+	let userMessage: BaseMessage | undefined
+	for (let i = state.messages.length - 1; i >= 0; i--) {
+		const candidate = state.messages[i] as any
+		if (candidate instanceof HumanMessage || candidate?.type === "human" || candidate?.role === "user") {
+			userMessage = candidate
+			break
+		}
+	}
+
+	if (!userMessage) {
+		return { messages: [], should_extract_memory: false }
 	}
 
 	// Get user message content
 	const userContent =
-		typeof userMessage.content === "string"
-			? userMessage.content
-			: JSON.stringify(userMessage.content)
+		typeof (userMessage as any).content === "string"
+			? (userMessage as any).content
+			: JSON.stringify((userMessage as any).content)
 
 	try {
-		// Use fast model for intent detection
-		const intentDetector = new ChatOpenAI({
-			model: "gpt-5-mini",
+		// Use GPT-4o mini for intent detection (gpt-4.1-mini may have temperature restrictions)
+		// Explicitly set temperature to 1 to avoid LangChain defaults
+		const modelConfig = {
+			model: "gpt-4o-mini",
 			streaming: false,
-			reasoningEffort: "high",
-		})
+			temperature: 1,
+		}
+		
+		console.log("[Memory Intent Detection] Creating ChatOpenAI with config:", JSON.stringify(modelConfig, null, 2))
+		const intentDetector = new ChatOpenAI(modelConfig)
+		
+		console.log("[Memory Intent Detection] ChatOpenAI instance created")
+		console.log("[Memory Intent Detection] Model instance temperature:", intentDetector.temperature)
+		console.log("[Memory Intent Detection] Model instance model:", intentDetector.model)
+		console.log("[Memory Intent Detection] Model instance keys:", Object.keys(intentDetector).filter(k => k.includes('temp') || k === 'model'))
 
 		const intentPrompt = [
 			new SystemMessage(INTENT_DETECTION_PROMPT),
 			new HumanMessage(userContent),
 		]
-
+		
+		console.log("[Memory Intent Detection] About to invoke model with prompt length:", userContent.length)
+		
+		// Log the actual invocation parameters that will be sent
+		try {
+			const invokeParams = (intentDetector as any).invocationParams?.({}) || {};
+			console.log("[Memory Intent Detection] Invocation params before invoke:", JSON.stringify(invokeParams, null, 2));
+		} catch (e: any) {
+			console.log("[Memory Intent Detection] Could not get invocation params:", e?.message || String(e));
+		}
+		
 		const response = await intentDetector.invoke(intentPrompt)
 		const intentResult: MemoryIntent = JSON.parse(response.content as string)
 
 		console.log("[Memory] Intent detection result:", intentResult)
 
 		if (intentResult.should_remember) {
-			return { messages: state.messages, should_extract_memory: true }
+			return { messages: [], should_extract_memory: true }
 		}
 	} catch (error) {
 		console.error("Error detecting memory intent:", error)
 	}
 
-	return { messages: state.messages, should_extract_memory: false }
+	return { messages: [], should_extract_memory: false }
 }
 
 // Function to extract and write user memories (enhanced version)
-async function writeMemory(state: AgentState, config: LangGraphRunnableConfig) {
+async function writeMemory(state: typeof AgentStateAnnotation.State, config: LangGraphRunnableConfig) {
 	const configurable =
 		(config.configurable as {
 			user_id?: string
@@ -165,36 +205,63 @@ async function writeMemory(state: AgentState, config: LangGraphRunnableConfig) {
 
 	// Skip if memory disabled or no assistantId
 	if (!assistantId || !memoryEnabled) {
-		return { messages: state.messages }
+		return { messages: [] }
 	}
 
-	// Get the most recent user message
-	const userMessage = state.messages.at(-1)
-	if (!userMessage || !(userMessage instanceof HumanMessage)) {
-		return { messages: state.messages }
+	// Get the most recent user message (system messages may be appended last)
+	let userMessage: BaseMessage | undefined
+	for (let i = state.messages.length - 1; i >= 0; i--) {
+		const candidate = state.messages[i] as any
+		if (candidate instanceof HumanMessage || candidate?.type === "human" || candidate?.role === "user") {
+			userMessage = candidate
+			break
+		}
+	}
+
+	if (!userMessage) {
+		return { messages: [] }
 	}
 
 	const userContent =
-		typeof userMessage.content === "string"
-			? userMessage.content
-			: JSON.stringify(userMessage.content)
+		typeof (userMessage as any).content === "string"
+			? (userMessage as any).content
+			: JSON.stringify((userMessage as any).content)
 
 	try {
 		const kvStore = (config as any).store ?? fallbackStore
 		const namespace = ["user_profile", assistantId]
 
-		// Use enhanced extraction with rich semantic content
-		const memoryExtractor = new ChatOpenAI({
-			model: "gpt-5-mini",
+		// Use GPT-4o mini for extraction (gpt-4.1-mini may have temperature restrictions)
+		// Explicitly set temperature to 1 to avoid LangChain defaults
+		const modelConfig = {
+			model: "gpt-4o-mini",
 			streaming: false,
-			reasoningEffort: "high",
-		})
+			temperature: 1,
+		}
+		
+		console.log("[Memory Extraction] Creating ChatOpenAI with config:", JSON.stringify(modelConfig, null, 2))
+		const memoryExtractor = new ChatOpenAI(modelConfig)
+		
+		console.log("[Memory Extraction] ChatOpenAI instance created")
+		console.log("[Memory Extraction] Model instance temperature:", memoryExtractor.temperature)
+		console.log("[Memory Extraction] Model instance model:", memoryExtractor.model)
+		console.log("[Memory Extraction] Model instance keys:", Object.keys(memoryExtractor).filter(k => k.includes('temp') || k === 'model'))
 
 		const extractionPrompt = [
 			new SystemMessage(MEMORY_EXTRACTION_PROMPT),
 			new HumanMessage(userContent),
 		]
-
+		
+		console.log("[Memory Extraction] About to invoke model with prompt length:", userContent.length)
+		
+		// Log the actual invocation parameters that will be sent
+		try {
+			const invokeParams = (memoryExtractor as any).invocationParams?.({}) || {};
+			console.log("[Memory Extraction] Invocation params before invoke:", JSON.stringify(invokeParams, null, 2));
+		} catch (e: any) {
+			console.log("[Memory Extraction] Could not get invocation params:", e?.message || String(e));
+		}
+		
 		const response = await memoryExtractor.invoke(extractionPrompt)
 		const extraction: MemoryExtraction = JSON.parse(response.content as string)
 
@@ -248,22 +315,18 @@ async function writeMemory(state: AgentState, config: LangGraphRunnableConfig) {
 		})
 
 		return {
-			messages: [...state.messages, memoryNotification],
+			messages: [memoryNotification],
 		}
 	} catch (error) {
 		console.error("[Memory] Error extracting or storing memory:", error)
-		return { messages: state.messages }
+		return { messages: [] }
 	}
 }
 
 // Function to determine if memory intent was detected
-function shouldExtractMemory(state: typeof MessagesAnnotation.State) {
-	interface StateWithIntentFlag {
-		messages: Array<BaseMessage>
-		should_extract_memory?: boolean
-	}
-	const stateWithIntent = state as StateWithIntentFlag
-	return stateWithIntent.should_extract_memory === true ? "writeMemory" : "agent"
+function shouldExtractMemory(state: typeof AgentStateAnnotation.State) {
+	console.log("[shouldExtractMemory] Checking state:", { should_extract_memory: state.should_extract_memory })
+	return state.should_extract_memory === true ? "writeMemory" : "agent"
 }
 
 // Function to retrieve user memories (with smart limiting)
@@ -300,7 +363,7 @@ async function retrieveMemories(
 	}
 }
 
-export async function retrieveKb(state: AgentState, config: RunnableConfig) {
+export async function retrieveKb(state: typeof AgentStateAnnotation.State, config: RunnableConfig) {
   const configurable = (config.configurable as { 
     user_id?: string; 
     thread_id?: string;
@@ -455,14 +518,9 @@ const DEFAULT_SYSTEM_PROMPT = GLOBAL_SYSTEM_PROMPT;
 
 // Define the function that calls the model with dynamic configuration
 async function callModel(
-  state: typeof MessagesAnnotation.State,
+  state: typeof AgentStateAnnotation.State,
   config: LangGraphRunnableConfig
 ) {
-  const store = config.store;
-  if (!store) {
-    throw new Error("store is required when compiling the graph");
-  }
-  
   // Get configuration from configurable object
   const configurable = config.configurable as AssistantConfiguration & {
     user_id?: string;
@@ -778,7 +836,7 @@ async function callModel(
 }
 
 // Define the function that determines whether to continue or not
-function shouldContinue({ messages }: typeof MessagesAnnotation.State) {
+function shouldContinue({ messages }: typeof AgentStateAnnotation.State) {
   const lastMessage = messages[messages.length - 1] as AIMessage;
 
   console.log(`Checking if should continue. Last message type: ${lastMessage.constructor.name}`);
@@ -793,7 +851,7 @@ function shouldContinue({ messages }: typeof MessagesAnnotation.State) {
   return "__end__";
 }
 
-function shouldContinueAfterTools({ messages }: typeof MessagesAnnotation.State) {
+function shouldContinueAfterTools({ messages }: typeof AgentStateAnnotation.State) {
   // If the last tool call was `generate_image`, end immediately so the UI shows
   // the tool result directly under the user message (no extra assistant chatter).
   for (let i = messages.length - 1; i >= 0; i--) {
@@ -926,7 +984,7 @@ async function createToolNode(state: any, config: any): Promise<any> {
 }
 
 // Define and export the graph for LangGraph Platform
-const workflow = new StateGraph(MessagesAnnotation)
+const workflow = new StateGraph(AgentStateAnnotation)
 	.addNode("retrieveKb", retrieveKb)
 	.addNode("detectIntent", detectMemoryIntent)
 	.addNode("writeMemory", writeMemory)
@@ -970,8 +1028,8 @@ const workflow = new StateGraph(MessagesAnnotation)
 // ============================================================================
 
 export const graph = workflow.compile({
-  // Always use fallbackStore in local development; LangGraph Platform injects its own store
-  store: fallbackStore,
+  // Let LangGraph Platform inject its persistent store when available.
+  // Local/dev runs will fall back to in-memory store in memory helpers.
   // Interrupt before tool execution for human-in-the-loop approval
   interruptBefore: ["tools"],
 });

@@ -86,7 +86,7 @@ export function StatsOverview({ stats }: StatsOverviewProps) {
 
 				const cardContent = (
 					<Card
-						className={`group relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 ${
+						className={`group relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 h-full ${
 							card.href ? "cursor-pointer" : ""
 						}`}
 						style={{
@@ -106,33 +106,35 @@ export function StatsOverview({ stats }: StatsOverviewProps) {
 							}}
 						/>
 
-						<CardContent className="p-6 relative">
+						<CardContent className="p-6 relative h-full flex flex-col">
 							{/* Header with icon */}
-							<div className="flex items-start justify-between mb-4">
-								<div className="flex-1">
+							<div className="flex items-start justify-between mb-4 flex-1">
+								<div className="flex-1 min-w-0">
 									<p className="text-sm font-medium text-muted-foreground mb-1">
 										{card.title}
 									</p>
-									<motion.h3
-										className={`text-4xl font-bold tracking-tight bg-gradient-to-br ${card.gradient} bg-clip-text text-transparent`}
-										initial={{ scale: 0.5 }}
-										animate={{ scale: 1 }}
-										transition={{
-											duration: 0.5,
-											delay: index * 0.1 + 0.2,
-											ease: [0.34, 1.56, 0.64, 1],
-										}}
-									>
-										{card.value(stats)}
-									</motion.h3>
-									{card.subtitle && typeof card.subtitle === "function" && (
-										<p className="text-sm font-medium text-green-600 dark:text-green-400 mt-1">
-											{card.subtitle(stats)}
-										</p>
-									)}
+									<div className="flex items-baseline gap-2 flex-wrap">
+										<motion.h3
+											className={`text-4xl font-bold tracking-tight bg-gradient-to-br ${card.gradient} bg-clip-text text-transparent whitespace-nowrap`}
+											initial={{ scale: 0.5 }}
+											animate={{ scale: 1 }}
+											transition={{
+												duration: 0.5,
+												delay: index * 0.1 + 0.2,
+												ease: [0.34, 1.56, 0.64, 1],
+											}}
+										>
+											{card.value(stats)}
+										</motion.h3>
+										{card.subtitle && typeof card.subtitle === "function" && (
+											<span className="text-sm font-medium text-green-600 dark:text-green-400 whitespace-nowrap">
+												{card.subtitle(stats)}
+											</span>
+										)}
+									</div>
 								</div>
 								<motion.div
-									className={`p-3 rounded-2xl ${card.iconBg} backdrop-blur-sm border border-white/10 dark:border-white/10 border-border/50 shadow-lg`}
+									className={`p-3 rounded-2xl ${card.iconBg} backdrop-blur-sm border border-white/10 dark:border-white/10 border-border/50 shadow-lg flex-shrink-0`}
 									whileHover={{ scale: 1.1, rotate: 5 }}
 									transition={{ type: "spring", stiffness: 400, damping: 10 }}
 								>
